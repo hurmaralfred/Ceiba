@@ -131,7 +131,17 @@ export default function TreePage() {
       supabase.from("family_members").select("*").eq("added_by", user.id),
     ]);
 
-    const myMembers = membersData || [];
+    // Deduplicate my own members by first name (keep the one with profile_id, or the first)
+    const normName = (s: string) =>
+      (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim().split(" ")[0];
+    const seenNames = new Map<string, any>();
+    for (const m of membersData || []) {
+      const key = `${normName(m.first_name)}|${normName(m.last_name || "")}`;
+      if (!seenNames.has(key) || (!seenNames.get(key).profile_id && m.profile_id)) {
+        seenNames.set(key, m);
+      }
+    }
+    const myMembers = Array.from(seenNames.values());
     setProfile(profileData);
 
     // Enrich members with profile data (avatar, social_link) for those who've joined
@@ -164,25 +174,34 @@ export default function TreePage() {
       if (extData && extData.length > 0) {
         const myMemberIds = new Set(myMembers.map(m => m.profile_id).filter(Boolean));
 
-        // Normalize name: remove accents, lowercase, take first word only
+        // Normalize: remove accents, lowercase, collapse spaces
         const norm = (s: string) =>
           (s || "").toLowerCase()
-            .normalize("NFD").replace(/[̀-ͯ]/g, "")
-            .trim().split(" ")[0];
+            .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+            .replace(/\s+/g, " ").trim();
 
-        // Index by profile_id AND by "firstword_firstname|firstword_lastname"
-        const myMemberNameKeys = new Set(
-          myMembers.map(m => `${norm(m.first_name)}|${norm(m.last_name || "")}`)
-        );
+        // Build multiple name keys per member for fuzzy matching:
+        // full name, first+firstlast, firstword only
+        const myNameKeys = new Set<string>();
+        myMembers.forEach(m => {
+          const fn = norm(m.first_name);
+          const ln = norm(m.last_name || "");
+          myNameKeys.add(`${fn}|${ln}`);                        // full: "jose humberto|hurtado cifuentes"
+          myNameKeys.add(`${fn.split(" ")[0]}|${ln.split(" ")[0]}`); // first words: "jose|hurtado"
+          myNameKeys.add(`${fn.split(" ")[0]}|`);               // only first name word
+        });
 
         const extended: ExtendedEntry[] = extData
           .filter(em => {
             if (em.profile_id === user.id) return false;
-            // Same Ceiba profile → same person
             if (em.profile_id && myMemberIds.has(em.profile_id)) return false;
-            // Same name (first word of each field, normalized) → same person
-            const key = `${norm(em.first_name)}|${norm(em.last_name || "")}`;
-            if (norm(em.first_name).length >= 3 && myMemberNameKeys.has(key)) return false;
+            const fn = norm(em.first_name);
+            const ln = norm(em.last_name || "");
+            // Check multiple key formats
+            if (fn.length >= 3) {
+              if (myNameKeys.has(`${fn}|${ln}`)) return false;
+              if (myNameKeys.has(`${fn.split(" ")[0]}|${ln.split(" ")[0]}`)) return false;
+            }
             return true;
           })
           .map(em => {
@@ -216,7 +235,7 @@ export default function TreePage() {
 
     const normStr = (s: string) =>
       (s || "").toLowerCase()
-        .normalize("NFD").replace(/[̀-ͯ]/g, "")
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
         .trim().split(" ")[0];
 
     const fn = normStr(first_name);
@@ -250,29 +269,60 @@ export default function TreePage() {
   // Save linking to an existing person in another tree (same real human, no duplicate)
   const saveLinkedMember = async () => {
     if (!duplicateWarning) return;
-    const first_name = [form.primer_nombre.trim(), form.segundo_nombre.trim()].filter(Boolean).join(" ");
-    const last_name = [form.primer_apellido.trim(), form.segundo_apellido.trim()].filter(Boolean).join(" ");
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     setSaving(true);
-    const kind = RELATION_GROUPS[0].options.includes(form.relation_type) ? "blood" : "affinity";
 
-    // Create the family member WITH the linked profile_id so both trees point to the same person
-    const { data: inserted, error } = await supabase.from("family_members").insert({
-      added_by: user.id,
-      first_name,
-      last_name: last_name || null,
-      email: form.email.trim() || null,
-      birth_date: form.birth_date || null,
-      relation_type: form.relation_type,
-      relation_kind: kind,
-      profile_id: duplicateWarning.matchedProfileId || null, // link to same profile if exists
-    }).select("id").single();
+    // Fetch exact name/profile_id from the original matched record
+    let exactFirstName = [form.primer_nombre.trim(), form.segundo_nombre.trim()].filter(Boolean).join(" ");
+    let exactLastName = [form.primer_apellido.trim(), form.segundo_apellido.trim()].filter(Boolean).join(" ");
+    let linkedProfileId = duplicateWarning.matchedProfileId;
+
+    if (duplicateWarning.matchedFamilyMemberId) {
+      const { data: orig } = await supabase
+        .from("family_members")
+        .select("first_name, last_name, profile_id")
+        .eq("id", duplicateWarning.matchedFamilyMemberId)
+        .maybeSingle();
+      if (orig) {
+        exactFirstName = orig.first_name;
+        exactLastName = orig.last_name || "";
+        linkedProfileId = orig.profile_id;
+      }
+    }
+
+    // Check if this person already exists in MY tree to avoid creating a 2nd entry
+    const { data: existing } = await supabase
+      .from("family_members")
+      .select("id")
+      .eq("added_by", user.id)
+      .ilike("first_name", exactFirstName)
+      .limit(1);
+
+    if (existing && existing.length > 0) {
+      // Already in my tree — just update relation if needed, don't insert again
+      await supabase
+        .from("family_members")
+        .update({ relation_type: form.relation_type, profile_id: linkedProfileId || null })
+        .eq("id", existing[0].id);
+      toast.success("Familiar vinculado correctamente");
+    } else {
+      const kind = RELATION_GROUPS[0].options.includes(form.relation_type) ? "blood" : "affinity";
+      const { error } = await supabase.from("family_members").insert({
+        added_by: user.id,
+        first_name: exactFirstName,
+        last_name: exactLastName || null,
+        email: form.email.trim() || null,
+        birth_date: form.birth_date || null,
+        relation_type: form.relation_type,
+        relation_kind: kind,
+        profile_id: linkedProfileId || null,
+      });
+      if (error) { toast.error("Error al guardar"); setSaving(false); return; }
+      toast.success("Familiar vinculado correctamente");
+    }
 
     setSaving(false);
-    if (error) { toast.error("Error al guardar"); return; }
-
-    toast.success("Familiar vinculado correctamente");
     setShowModal(false);
     setForm(EMPTY_FORM);
     setDuplicateWarning(null);
