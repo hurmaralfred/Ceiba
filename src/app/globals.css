@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --ceiba-green: #15803d;
+    --ceiba-light: #dcfce7;
+    --earth-brown: #8b3a16;
+  }
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    @apply antialiased;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-ceiba-700 hover:bg-ceiba-800 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 shadow-sm hover:shadow-md active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-secondary {
+    @apply bg-white hover:bg-gray-50 text-gray-800 font-semibold py-3 px-6 rounded-xl border border-gray-200 transition-all duration-200 shadow-sm hover:shadow-md active:scale-95;
+  }
+  .input-field {
+    @apply w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-ceiba-500 focus:ring-2 focus:ring-ceiba-100 outline-none transition-all bg-white text-gray-900 placeholder-gray-400;
+  }
+  .card {
+    @apply bg-white rounded-2xl shadow-sm border border-gray-100 p-6;
+  }
+  .relation-badge-blood {
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-ceiba-100 text-ceiba-800;
+  }
+  .relation-badge-affinity {
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-earth-100 text-earth-800;
+  }
+}
+
+/* Leaflet map */
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+  border-radius: 1rem;
+}
