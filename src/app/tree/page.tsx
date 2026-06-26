@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { TreePine, MapPin, Users, Share2, LogOut, User, Send, List, GitFork, Plus, X, Pencil } from "lucide-react";
+import { TreePine, MapPin, Users, Share2, LogOut, User, Send, List, GitFork, Plus, X, Pencil, Map } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Profile, FamilyMember, RelationType, RELATION_LABELS } from "@/lib/types";
 import { ExtendedEntry } from "@/components/tree/FamilyTreeGraph";
@@ -50,6 +50,11 @@ const FamilyTreeGraph = dynamic(
   { ssr: false, loading: () => <div className="w-full h-[520px] rounded-2xl bg-gray-100 animate-pulse" /> }
 );
 
+const MapView = dynamic(
+  () => import("@/components/map/MapView"),
+  { ssr: false, loading: () => <div className="w-full h-[520px] rounded-2xl bg-gray-100 animate-pulse" /> }
+);
+
 const RELATION_GROUPS = [
   {
     label: "Familia directa (sangre)",
@@ -72,7 +77,8 @@ export default function TreePage() {
   const [members, setMembers] = useState<FamilyMember[]>([]);
   const [extendedMembers, setExtendedMembers] = useState<ExtendedEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState<"graph" | "list">("graph");
+  const [view, setView] = useState<"graph" | "list" | "map">("graph");
+  const [myLocation, setMyLocation] = useState<[number, number] | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [editingMember, setEditingMember] = useState<FamilyMember | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -125,7 +131,7 @@ export default function TreePage() {
     if (profileIds.length > 0) {
       const { data: profilesData } = await supabase
         .from("profiles")
-        .select("id, avatar_url, social_link")
+        .select("id, avatar_url, social_link, latitude, longitude, city, country")
         .in("id", profileIds);
       if (profilesData) {
         const profileMap = Object.fromEntries(profilesData.map(p => [p.id, p]));
@@ -274,6 +280,29 @@ export default function TreePage() {
 
   const logout = async () => { await supabase.auth.signOut(); router.push("/"); };
 
+  const activateMap = () => {
+    setView("map");
+    if (myLocation) return;
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      async pos => {
+        const loc: [number, number] = [pos.coords.latitude, pos.coords.longitude];
+        setMyLocation(loc);
+        // Save location to profile
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase.from("profiles").update({
+            latitude: loc[0],
+            longitude: loc[1],
+            location_enabled: true,
+            location_updated_at: new Date().toISOString(),
+          }).eq("id", user.id);
+        }
+      },
+      () => {} // denied — no problem, map shows relatives only
+    );
+  };
+
   if (loading) return <LoadingScreen />;
 
   const bloodMembers = members.filter(m => m.relation_kind === "blood");
@@ -397,6 +426,14 @@ export default function TreePage() {
                 >
                   <List size={15} /> Lista
                 </button>
+                <button
+                  onClick={activateMap}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    view === "map" ? "bg-ceiba-700 text-white" : "text-gray-500 hover:bg-gray-100"
+                  }`}
+                >
+                  <Map size={15} /> Mapa
+                </button>
               </div>
             </div>
 
@@ -412,6 +449,43 @@ export default function TreePage() {
                 {affinityMembers.length > 0 && (
                   <MemberGroup title="Familia política" members={affinityMembers} onInvite={sendInvite} onEdit={openEdit} kind="affinity" />
                 )}
+              </div>
+            )}
+
+            {view === "map" && (
+              <div className="rounded-2xl overflow-hidden" style={{ height: "520px" }}>
+                <MapView
+                  myLocation={myLocation}
+                  relatives={[
+                    ...(profile?.latitude && profile?.longitude ? [{
+                      profile_id: profile.id,
+                      first_name: profile.first_name,
+                      last_name: profile.last_name,
+                      avatar_url: profile.avatar_url,
+                      latitude: profile.latitude,
+                      longitude: profile.longitude,
+                      city: profile.city,
+                      country: profile.country,
+                      relation_path: [],
+                      depth: 0,
+                      location_enabled: true,
+                    }] : []),
+                    ...members
+                      .filter(m => (m as any).profile?.latitude && (m as any).profile?.longitude)
+                      .map(m => ({
+                        profile_id: m.profile_id || m.id,
+                        first_name: m.first_name,
+                        last_name: m.last_name || "",
+                        latitude: (m as any).profile.latitude,
+                        longitude: (m as any).profile.longitude,
+                        city: (m as any).profile.city,
+                        country: (m as any).profile.country,
+                        relation_path: [m.relation_type],
+                        depth: 1,
+                        location_enabled: true,
+                      })),
+                  ]}
+                />
               </div>
             )}
           </div>
