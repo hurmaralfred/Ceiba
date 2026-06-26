@@ -96,10 +96,13 @@ export default function TreePage() {
         .in("added_by", joinedProfileIds);
 
       if (extData && extData.length > 0) {
-        const extended: ExtendedEntry[] = extData.map(em => ({
-          member: em as FamilyMember,
-          parentMemberId: joinedMembers.find(m => m.profile_id === em.added_by)!.id,
-        }));
+        const myMemberIds = new Set(myMembers.map(m => m.profile_id).filter(Boolean));
+        const extended: ExtendedEntry[] = extData
+          .filter(em => em.profile_id !== user.id && !myMemberIds.has(em.profile_id))
+          .map(em => ({
+            member: em as FamilyMember,
+            parentMemberId: joinedMembers.find(m => m.profile_id === em.added_by)!.id,
+          }));
         setExtendedMembers(extended);
       }
     }
