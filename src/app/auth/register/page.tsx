@@ -12,29 +12,33 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({
-    first_name: "",
-    last_name: "",
+    primer_nombre: "",
+    segundo_nombre: "",
+    primer_apellido: "",
+    segundo_apellido: "",
     email: "",
     password: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.first_name || !form.last_name || !form.email || !form.password) {
-      toast.error("Completa todos los campos");
+    if (!form.primer_nombre || !form.primer_apellido || !form.email || !form.password) {
+      toast.error("Completa los campos obligatorios");
       return;
     }
     if (form.password.length < 6) {
       toast.error("La contraseña debe tener al menos 6 caracteres");
       return;
     }
+    const first_name = [form.primer_nombre.trim(), form.segundo_nombre.trim()].filter(Boolean).join(" ");
+    const last_name = [form.primer_apellido.trim(), form.segundo_apellido.trim()].filter(Boolean).join(" ");
     setLoading(true);
     try {
       const { error } = await supabase.auth.signUp({
         email: form.email,
         password: form.password,
         options: {
-          data: { first_name: form.first_name, last_name: form.last_name },
+          data: { first_name, last_name },
         },
       });
       if (error) throw error;
@@ -61,27 +65,55 @@ export default function RegisterPage() {
 
         <div className="card">
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Primer nombre <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="text"
                   className="input-field"
-                  placeholder="Tu nombre"
-                  value={form.first_name}
-                  onChange={e => setForm(f => ({ ...f, first_name: e.target.value }))}
+                  placeholder="ej. Joselin"
+                  value={form.primer_nombre}
+                  onChange={e => setForm(f => ({ ...f, primer_nombre: e.target.value }))}
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Apellido</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Segundo nombre
+                </label>
                 <input
                   type="text"
                   className="input-field"
-                  placeholder="Tu apellido"
-                  value={form.last_name}
-                  onChange={e => setForm(f => ({ ...f, last_name: e.target.value }))}
+                  placeholder="ej. Madeleyne"
+                  value={form.segundo_nombre}
+                  onChange={e => setForm(f => ({ ...f, segundo_nombre: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Primer apellido <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  className="input-field"
+                  placeholder="ej. Constantine"
+                  value={form.primer_apellido}
+                  onChange={e => setForm(f => ({ ...f, primer_apellido: e.target.value }))}
                   required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Segundo apellido
+                </label>
+                <input
+                  type="text"
+                  className="input-field"
+                  placeholder="ej. Zambrano"
+                  value={form.segundo_apellido}
+                  onChange={e => setForm(f => ({ ...f, segundo_apellido: e.target.value }))}
                 />
               </div>
             </div>
