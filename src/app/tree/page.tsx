@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 import { TreePine, MapPin, Users, Share2, LogOut, User, Send, List, GitFork, Plus, X, Pencil, Map, Image, Calendar, MessageCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Profile, FamilyMember, RelationType, RELATION_LABELS } from "@/lib/types";
-import { ExtendedEntry, MemberLink } from "@/components/tree/FamilyTreeGraph";
+import type { ExtendedEntry, MemberLink } from "@/components/tree/FamilyTreeGraph";
 
 // Infer my relation to an extended member based on the parent's relation to me
 function inferRelation(parentRelation: RelationType, childRelation: string): string | null {
