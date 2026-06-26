@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { invitedBy, joinerName, relationLabel } = await req.json();
+  const { invitedBy, joinerName, relationLabel, message } = await req.json();
   if (!invitedBy) return NextResponse.json({ error: "Missing invitedBy" }, { status: 400 });
 
   const supabase = createClient();
@@ -32,7 +32,9 @@ export async function POST(req: NextRequest) {
 
   const payload = JSON.stringify({
     title: "¡Familiar se unió a Ceiba! 🌳",
-    body: `${joinerName} (${relationLabel}) aceptó tu invitación y ya está en tu árbol.`,
+    body: message
+      ? `${joinerName} (${relationLabel}) ${message}.`
+      : `${joinerName} (${relationLabel}) aceptó tu invitación y ya está en tu árbol.`,
     icon: "/icons/icon-192.png",
     url: "/tree",
   });

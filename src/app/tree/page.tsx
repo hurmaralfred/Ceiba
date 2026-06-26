@@ -435,13 +435,18 @@ export default function TreePage() {
 
         {/* Family list / graph */}
         {members.length === 0 ? (
-          <div className="card text-center py-12">
-            <Users size={48} className="text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-700 mb-2">Tu árbol está vacío</h3>
-            <p className="text-gray-400 mb-6">Agrega familiares para empezar a construir tu red.</p>
-            <button onClick={() => setShowModal(true)} className="btn-primary">
-              Agregar familiar
+          <div className="card text-center py-10 px-6">
+            <div className="w-20 h-20 rounded-3xl bg-ceiba-50 flex items-center justify-center mx-auto mb-5">
+              <TreePine size={40} className="text-ceiba-400" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-800 mb-2">Tu árbol familiar te espera</h3>
+            <p className="text-gray-500 mb-6 max-w-xs mx-auto leading-relaxed">
+              Agrega a tu mamá, papá, hermanos o pareja. Cuando ellos se registren, sus familiares se conectarán solos a tu árbol.
+            </p>
+            <button onClick={() => setShowModal(true)} className="btn-primary mb-4">
+              <Plus size={16} className="inline mr-1" /> Agregar primer familiar
             </button>
+            <p className="text-xs text-gray-400">💡 Empieza por quien más conoces de tu familia</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -496,42 +501,53 @@ export default function TreePage() {
               </div>
             )}
 
-            {view === "map" && (
-              <div className="rounded-2xl overflow-hidden" style={{ height: "520px" }}>
-                <MapView
-                  myLocation={myLocation}
-                  relatives={[
-                    ...(profile?.latitude && profile?.longitude ? [{
-                      profile_id: profile.id,
-                      first_name: profile.first_name,
-                      last_name: profile.last_name,
-                      avatar_url: profile.avatar_url,
-                      latitude: profile.latitude,
-                      longitude: profile.longitude,
-                      city: profile.city,
-                      country: profile.country,
-                      relation_path: [],
-                      depth: 0,
-                      location_enabled: true,
-                    }] : []),
-                    ...members
-                      .filter(m => (m as any).profile?.latitude && (m as any).profile?.longitude)
-                      .map(m => ({
-                        profile_id: m.profile_id || m.id,
-                        first_name: m.first_name,
-                        last_name: m.last_name || "",
-                        latitude: (m as any).profile.latitude,
-                        longitude: (m as any).profile.longitude,
-                        city: (m as any).profile.city,
-                        country: (m as any).profile.country,
-                        relation_path: [m.relation_type],
-                        depth: 1,
-                        location_enabled: true,
-                      })),
-                  ]}
-                />
-              </div>
-            )}
+            {view === "map" && (() => {
+              const mapRelatives = [
+                ...(profile?.latitude && profile?.longitude ? [{
+                  profile_id: profile.id,
+                  first_name: profile.first_name,
+                  last_name: profile.last_name,
+                  avatar_url: profile.avatar_url,
+                  latitude: profile.latitude,
+                  longitude: profile.longitude,
+                  city: profile.city,
+                  country: profile.country,
+                  relation_path: [],
+                  depth: 0,
+                  location_enabled: true,
+                }] : []),
+                ...members
+                  .filter(m => (m as any).profile?.latitude && (m as any).profile?.longitude)
+                  .map(m => ({
+                    profile_id: m.profile_id || m.id,
+                    first_name: m.first_name,
+                    last_name: m.last_name || "",
+                    latitude: (m as any).profile.latitude,
+                    longitude: (m as any).profile.longitude,
+                    city: (m as any).profile.city,
+                    country: (m as any).profile.country,
+                    relation_path: [m.relation_type],
+                    depth: 1,
+                    location_enabled: true,
+                  })),
+              ];
+              if (!myLocation && mapRelatives.length === 0) {
+                return (
+                  <div className="card text-center py-10">
+                    <MapPin size={40} className="text-gray-300 mx-auto mb-4" />
+                    <h3 className="font-bold text-gray-700 mb-2">Sin ubicaciones aún</h3>
+                    <p className="text-gray-400 text-sm max-w-xs mx-auto">
+                      Permite el acceso a tu ubicación para aparecer en el mapa. Tu familia también debe activarlo desde su perfil.
+                    </p>
+                  </div>
+                );
+              }
+              return (
+                <div className="rounded-2xl overflow-hidden" style={{ height: "520px" }}>
+                  <MapView myLocation={myLocation} relatives={mapRelatives} />
+                </div>
+              );
+            })()}
           </div>
         )}
       </div>

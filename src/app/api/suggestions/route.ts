@@ -35,6 +35,32 @@ export async function POST(req: NextRequest) {
       .eq("id", id)
       .eq("suggested_to", user.id);
 
+    // Notify suggester if accepted
+    if (status === "accepted" && body.suggested_by_profile_id) {
+      const { data: acceptorProfile } = await supabase
+        .from("profiles")
+        .select("first_name, last_name")
+        .eq("id", user.id)
+        .single();
+
+      if (acceptorProfile) {
+        const { RELATION_LABELS } = await import("@/lib/types");
+        fetch(`${process.env.NEXT_PUBLIC_APP_URL || ""}/api/push/notify`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-internal-secret": process.env.INTERNAL_SECRET || "",
+          },
+          body: JSON.stringify({
+            invitedBy: body.suggested_by_profile_id,
+            joinerName: `${acceptorProfile.first_name} ${acceptorProfile.last_name || ""}`.trim(),
+            relationLabel: RELATION_LABELS[relation_type as keyof typeof RELATION_LABELS] || relation_type,
+            message: "aceptó tu sugerencia de conexión familiar",
+          }),
+        }).catch(() => {});
+      }
+    }
+
     // If accepted, add to family_members
     if (status === "accepted") {
       const { data: existing } = await supabase
