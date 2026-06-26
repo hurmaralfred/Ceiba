@@ -113,12 +113,29 @@ export default function TreePage() {
 
     const [{ data: profileData }, { data: membersData }] = await Promise.all([
       supabase.from("profiles").select("*").eq("id", user.id).single(),
-      supabase.from("family_members").select("*, profile:profiles(id, first_name, last_name, avatar_url, social_link)").eq("added_by", user.id),
+      supabase.from("family_members").select("*").eq("added_by", user.id),
     ]);
 
     const myMembers = membersData || [];
     setProfile(profileData);
-    setMembers(myMembers);
+
+    // Enrich members with profile data (avatar, social_link) for those who've joined
+    const profileIds = myMembers.map(m => m.profile_id).filter(Boolean) as string[];
+    let enrichedMembers = myMembers;
+    if (profileIds.length > 0) {
+      const { data: profilesData } = await supabase
+        .from("profiles")
+        .select("id, avatar_url, social_link")
+        .in("id", profileIds);
+      if (profilesData) {
+        const profileMap = Object.fromEntries(profilesData.map(p => [p.id, p]));
+        enrichedMembers = myMembers.map(m => ({
+          ...m,
+          profile: m.profile_id ? profileMap[m.profile_id] : undefined,
+        }));
+      }
+    }
+    setMembers(enrichedMembers);
 
     // Load extended network: family members of family who've joined Ceiba
     const joinedMembers = myMembers.filter(m => m.profile_id);
