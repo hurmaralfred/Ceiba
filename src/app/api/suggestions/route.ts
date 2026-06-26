@@ -54,8 +54,8 @@ export async function POST(req: NextRequest) {
           relation_kind,
         }).select("id").single();
 
-        // Generate suggestions from this accepted member too
         if (inserted) {
+          // Forward: suggest this person to my connected family
           await supabase.rpc("generate_family_suggestions", {
             p_adder_id: user.id,
             p_first_name: first_name,
@@ -63,6 +63,14 @@ export async function POST(req: NextRequest) {
             p_relation_type: relation_type,
             p_family_member_id: inserted.id,
           });
+          // Reverse: suggest my family to the suggested_by person
+          if (body.suggested_by_profile_id) {
+            await supabase.rpc("generate_reverse_suggestions", {
+              p_new_user_id: body.suggested_by_profile_id,
+              p_connector_id: user.id,
+              p_my_relation: relation_type,
+            });
+          }
         }
       }
     }

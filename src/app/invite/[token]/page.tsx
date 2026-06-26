@@ -92,12 +92,29 @@ export default function AcceptInvitePage() {
         });
       }
 
-      // 6. Send push notification to inviter
+      // 6. Bidirectional suggestions
       const { data: myProfile } = await supabase
         .from("profiles")
         .select("first_name, last_name")
         .eq("id", user.id)
         .single();
+
+      // Forward: suggest acceptor to inviter's network
+      supabase.rpc("generate_family_suggestions", {
+        p_adder_id: invitation.invited_by,
+        p_first_name: myProfile?.first_name || "",
+        p_last_name: myProfile?.last_name || "",
+        p_relation_type: inviterRelation,
+        p_family_member_id: invitation.family_member_id,
+      }).catch(() => {});
+      // Reverse: suggest inviter's family to acceptor
+      supabase.rpc("generate_reverse_suggestions", {
+        p_new_user_id: user.id,
+        p_connector_id: invitation.invited_by,
+        p_my_relation: myRelation,
+      }).catch(() => {});
+
+      // 7. Send push notification to inviter
 
       if (myProfile) {
         fetch("/api/push/notify", {
