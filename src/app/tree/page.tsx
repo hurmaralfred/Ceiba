@@ -228,6 +228,18 @@ export default function TreePage() {
     loadData();
   };
 
+  const deleteMember = async () => {
+    if (!editingMember) return;
+    if (!confirm(`¿Eliminar a ${editingMember.first_name} ${editingMember.last_name || ""}?`)) return;
+    const { error } = await supabase.from("family_members").delete().eq("id", editingMember.id);
+    if (error) { toast.error("Error al eliminar"); return; }
+    toast.success("Familiar eliminado");
+    setShowModal(false);
+    setEditingMember(null);
+    setForm(EMPTY_FORM);
+    loadData();
+  };
+
   const sendInvite = async (member: FamilyMember) => {
     if (!member.email) { toast.error("Este familiar no tiene correo registrado"); return; }
     const { data, error } = await supabase
@@ -439,19 +451,25 @@ export default function TreePage() {
               </div>
             </div>
             <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => { setShowModal(false); setForm(EMPTY_FORM); }}
-                className="flex-1 btn-secondary"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={editingMember ? updateMember : saveMember}
-                disabled={saving}
-                className="flex-1 btn-primary"
-              >
-                {saving ? "Guardando..." : editingMember ? "Guardar cambios" : "Agregar"}
-              </button>
+              {editingMember ? (
+                <>
+                  <button onClick={deleteMember} className="btn-secondary text-red-500 border-red-200 hover:bg-red-50">
+                    Eliminar
+                  </button>
+                  <button onClick={updateMember} disabled={saving} className="flex-1 btn-primary">
+                    {saving ? "Guardando..." : "Guardar cambios"}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button onClick={() => { setShowModal(false); setForm(EMPTY_FORM); }} className="flex-1 btn-secondary">
+                    Cancelar
+                  </button>
+                  <button onClick={saveMember} disabled={saving} className="flex-1 btn-primary">
+                    {saving ? "Guardando..." : "Agregar"}
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
