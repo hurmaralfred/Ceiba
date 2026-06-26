@@ -1,9 +1,9 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { TreePine, Plus, Trash2, ChevronRight, ChevronLeft, Check } from "lucide-react";
+import { TreePine, Plus, Trash2, ChevronRight, ChevronLeft, Check, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { RelationType, RELATION_LABELS } from "@/lib/types";
+import { RelationType, RELATION_LABELS, INVERSE_RELATION } from "@/lib/types";
 import toast from "react-hot-toast";
 
 type FamilyEntry = {
@@ -13,7 +13,17 @@ type FamilyEntry = {
   relation_type: RelationType;
 };
 
-const STEPS = ["Tu perfil", "Tu familia", "¡Listo!"];
+type NameMatch = {
+  family_member_id: string;
+  adder_id: string;
+  adder_first_name: string;
+  adder_last_name: string;
+  relation_type: string;
+  relation_kind: string;
+};
+
+// Steps: 0=Profile, 1=NameMatches (conditional), 2=AddFamily, 3=Done
+const STEPS = ["Tu perfil", "Conexiones", "Tu familia", "¡Listo!"];
 
 const RELATION_GROUPS = [
   {
@@ -34,16 +44,32 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [userFirstName, setUserFirstName] = useState("");
+  const [userLastName, setUserLastName] = useState("");
 
   const [profile, setProfile] = useState({ bio: "", birth_year: "", city: "", country: "" });
   const [members, setMembers] = useState<FamilyEntry[]>([
     { first_name: "", last_name: "", email: "", relation_type: "father" },
   ]);
 
+  // Name match step
+  const [nameMatches, setNameMatches] = useState<NameMatch[]>([]);
+  const [respondingMatch, setRespondingMatch] = useState<string | null>(null);
+
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) router.push("/auth/login");
-      else setUserId(data.user.id);
+    supabase.auth.getUser().then(async ({ data }) => {
+      if (!data.user) { router.push("/auth/login"); return; }
+      setUserId(data.user.id);
+      // Load the user's name from their profile (set by trigger on registration)
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("first_name, last_name")
+        .eq("id", data.user.id)
+        .single();
+      if (prof) {
+        setUserFirstName(prof.first_name || "");
+        setUserLastName(prof.last_name || "");
+      }
     });
   }, []);
 
@@ -70,12 +96,50 @@ export default function OnboardingPage() {
         country: profile.country,
       }).eq("id", userId);
       if (error) throw error;
-      setStep(1);
+
+      // Check for name matches
+      if (userFirstName && userLastName) {
+        const { data: matches } = await supabase.rpc("find_name_matches", {
+          p_first_name: userFirstName,
+          p_last_name: userLastName,
+          p_user_id: userId,
+        });
+        if (matches && matches.length > 0) {
+          setNameMatches(matches);
+          setStep(1); // Show matches step
+        } else {
+          setStep(2); // Skip to add family
+        }
+      } else {
+        setStep(2);
+      }
     } catch (err: any) {
       toast.error(err.message);
     } finally {
       setLoading(false);
     }
+  };
+
+  const confirmMatch = async (match: NameMatch) => {
+    if (!userId) return;
+    setRespondingMatch(match.family_member_id);
+    try {
+      const { error } = await supabase.rpc("confirm_name_match", {
+        p_family_member_id: match.family_member_id,
+        p_user_id: userId,
+      });
+      if (error) throw error;
+      setNameMatches(prev => prev.filter(m => m.family_member_id !== match.family_member_id));
+      toast.success(`¡Conectado con ${match.adder_first_name}!`);
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setRespondingMatch(null);
+    }
+  };
+
+  const rejectMatch = (family_member_id: string) => {
+    setNameMatches(prev => prev.filter(m => m.family_member_id !== family_member_id));
   };
 
   const saveFamily = async () => {
@@ -97,13 +161,19 @@ export default function OnboardingPage() {
       }));
       const { error } = await supabase.from("family_members").insert(rows);
       if (error) throw error;
-      setStep(2);
+      setStep(3);
     } catch (err: any) {
       toast.error(err.message);
     } finally {
       setLoading(false);
     }
   };
+
+  // Visual step index (0-based for the dots, skipping the conditional step)
+  const visualStep = step === 0 ? 0 : step === 1 ? 1 : step === 2 ? 2 : 3;
+  const hasMatches = nameMatches.length > 0 || step === 1;
+  const displaySteps = hasMatches ? STEPS : ["Tu perfil", "Tu familia", "¡Listo!"];
+  const displayStep = step === 0 ? 0 : step === 1 ? 1 : step === 2 ? (hasMatches ? 2 : 1) : (hasMatches ? 3 : 2);
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-ceiba-950 to-ceiba-800 flex flex-col items-center px-4 py-12">
@@ -118,17 +188,17 @@ export default function OnboardingPage() {
 
       {/* Step indicator */}
       <div className="flex items-center gap-2 mb-8">
-        {STEPS.map((s, i) => (
+        {displaySteps.map((s, i) => (
           <div key={i} className="flex items-center gap-2">
             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
-              i < step ? "bg-ceiba-400 text-white" :
-              i === step ? "bg-white text-ceiba-800" :
+              i < displayStep ? "bg-ceiba-400 text-white" :
+              i === displayStep ? "bg-white text-ceiba-800" :
               "bg-white/20 text-white/50"
             }`}>
-              {i < step ? <Check size={16} /> : i + 1}
+              {i < displayStep ? <Check size={16} /> : i + 1}
             </div>
-            {i < STEPS.length - 1 && (
-              <div className={`w-10 h-0.5 ${i < step ? "bg-ceiba-400" : "bg-white/20"}`} />
+            {i < displaySteps.length - 1 && (
+              <div className={`w-10 h-0.5 ${i < displayStep ? "bg-ceiba-400" : "bg-white/20"}`} />
             )}
           </div>
         ))}
@@ -171,14 +241,91 @@ export default function OnboardingPage() {
             </div>
             <div className="flex justify-end pt-2">
               <button onClick={saveProfile} disabled={loading} className="btn-primary flex items-center gap-2">
+                {loading ? "Buscando conexiones..." : "Continuar"} <ChevronRight size={18} />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 1: Name Matches */}
+        {step === 1 && (
+          <div>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-ceiba-100 rounded-xl flex items-center justify-center">
+                <Users size={20} className="text-ceiba-700" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-gray-800">¡Alguien ya te conoce!</h2>
+                <p className="text-gray-500 text-sm">Estas personas te agregaron antes de que te unieras.</p>
+              </div>
+            </div>
+
+            {nameMatches.length > 0 ? (
+              <div className="space-y-3 mb-6">
+                {nameMatches.map(match => {
+                  const inverseRelation = INVERSE_RELATION[match.relation_type as RelationType] || "other";
+                  const relationLabel = RELATION_LABELS[match.relation_type as RelationType] || match.relation_type;
+                  const myLabel = RELATION_LABELS[inverseRelation as RelationType] || inverseRelation;
+                  return (
+                    <div key={match.family_member_id} className="border border-ceiba-100 rounded-2xl p-4 bg-ceiba-50">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <div className="w-8 h-8 bg-ceiba-700 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                              {match.adder_first_name[0]}{match.adder_last_name?.[0] || ""}
+                            </div>
+                            <span className="font-semibold text-gray-900">
+                              {match.adder_first_name} {match.adder_last_name}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-600 ml-10">
+                            te agregó como su{" "}
+                            <span className="font-semibold text-ceiba-700">{relationLabel}</span>
+                          </p>
+                          <p className="text-xs text-gray-400 ml-10 mt-0.5">
+                            Aparecerías en su árbol como su {relationLabel} y él/ella como tu {myLabel}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 mt-3">
+                        <button
+                          onClick={() => confirmMatch(match)}
+                          disabled={respondingMatch === match.family_member_id}
+                          className="flex-1 flex items-center justify-center gap-1 bg-ceiba-700 text-white text-sm font-bold py-2 rounded-xl hover:bg-ceiba-800 transition-colors disabled:opacity-50"
+                        >
+                          <Check size={16} /> Sí, soy yo
+                        </button>
+                        <button
+                          onClick={() => rejectMatch(match.family_member_id)}
+                          disabled={respondingMatch === match.family_member_id}
+                          className="flex-1 flex items-center justify-center gap-1 bg-gray-100 text-gray-600 text-sm font-bold py-2 rounded-xl hover:bg-gray-200 transition-colors"
+                        >
+                          No soy yo
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="bg-ceiba-50 rounded-2xl p-4 mb-6 text-center text-ceiba-700 font-medium">
+                ¡Listo! Conexiones confirmadas.
+              </div>
+            )}
+
+            <div className="flex justify-between">
+              <button onClick={() => setStep(0)} className="btn-secondary flex items-center gap-2">
+                <ChevronLeft size={18} /> Atrás
+              </button>
+              <button onClick={() => setStep(2)} className="btn-primary flex items-center gap-2">
                 Continuar <ChevronRight size={18} />
               </button>
             </div>
           </div>
         )}
 
-        {/* Step 1: Family */}
-        {step === 1 && (
+        {/* Step 2: Family */}
+        {step === 2 && (
           <div>
             <h2 className="text-xl font-bold text-gray-800 mb-1">Agrega a tus familiares</h2>
             <p className="text-gray-500 text-sm mb-5">
@@ -231,7 +378,7 @@ export default function OnboardingPage() {
             </button>
 
             <div className="flex justify-between pt-4 mt-2">
-              <button onClick={() => setStep(0)} className="btn-secondary flex items-center gap-2">
+              <button onClick={() => setStep(nameMatches.length > 0 ? 1 : 0)} className="btn-secondary flex items-center gap-2">
                 <ChevronLeft size={18} /> Atrás
               </button>
               <button onClick={saveFamily} disabled={loading} className="btn-primary flex items-center gap-2">
@@ -241,8 +388,8 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* Step 2: Done */}
-        {step === 2 && (
+        {/* Step 3: Done */}
+        {step === 3 && (
           <div className="text-center py-6">
             <div className="w-20 h-20 bg-ceiba-100 rounded-full flex items-center justify-center mx-auto mb-6">
               <TreePine size={40} className="text-ceiba-600" />

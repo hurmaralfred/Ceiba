@@ -9,6 +9,7 @@ import { Profile, FamilyMember, RelationType, RELATION_LABELS } from "@/lib/type
 import { ExtendedEntry } from "@/components/tree/FamilyTreeGraph";
 import InstallBanner from "@/components/InstallBanner";
 import SuggestionCards from "@/components/SuggestionCards";
+import NameMatchCards from "@/components/NameMatchCards";
 import toast from "react-hot-toast";
 
 const FamilyTreeGraph = dynamic(
@@ -224,6 +225,7 @@ export default function TreePage() {
         )}
 
         {/* Suggestions */}
+        <NameMatchCards onAccepted={loadData} />
         <SuggestionCards onAccepted={loadData} />
 
         {/* Stats */}
