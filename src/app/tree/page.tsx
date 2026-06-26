@@ -24,7 +24,7 @@ export default function TreePage() {
 
     const [{ data: profileData }, { data: membersData }] = await Promise.all([
       supabase.from("profiles").select("*").eq("id", user.id).single(),
-      supabase.from("family_members").select("*, profile:profiles(*)").eq("added_by", user.id),
+      supabase.from("family_members").select("*").eq("added_by", user.id),
     ]);
 
     setProfile(profileData);
