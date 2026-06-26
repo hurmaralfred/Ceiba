@@ -2,10 +2,16 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { TreePine, MapPin, Users, Share2, LogOut, User, Mail, Send } from "lucide-react";
+import dynamic from "next/dynamic";
+import { TreePine, MapPin, Users, Share2, LogOut, User, Send, List, GitFork } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Profile, FamilyMember, RELATION_LABELS } from "@/lib/types";
 import toast from "react-hot-toast";
+
+const FamilyTreeGraph = dynamic(
+  () => import("@/components/tree/FamilyTreeGraph"),
+  { ssr: false, loading: () => <div className="w-full h-[520px] rounded-2xl bg-gray-100 animate-pulse" /> }
+);
 
 export default function TreePage() {
   const router = useRouter();
@@ -13,6 +19,7 @@ export default function TreePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [members, setMembers] = useState<FamilyMember[]>([]);
   const [loading, setLoading] = useState(true);
+  const [view, setView] = useState<"graph" | "list">("graph");
 
   useEffect(() => {
     loadData();
@@ -127,7 +134,7 @@ export default function TreePage() {
           <StatCard label="En Ceiba" value={joinedMembers.length} color="blue" />
         </div>
 
-        {/* Family list */}
+        {/* Family list / graph */}
         {members.length === 0 ? (
           <div className="card text-center py-12">
             <Users size={48} className="text-gray-300 mx-auto mb-4" />
@@ -136,12 +143,40 @@ export default function TreePage() {
             <Link href="/onboarding" className="btn-primary">Agregar familiares</Link>
           </div>
         ) : (
-          <div className="space-y-6">
-            {bloodMembers.length > 0 && (
-              <MemberGroup title="Familia de sangre" members={bloodMembers} onInvite={sendInvite} kind="blood" />
+          <div className="space-y-4">
+            {/* View toggle */}
+            <div className="flex items-center gap-2 justify-end">
+              <button
+                onClick={() => setView("graph")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  view === "graph" ? "bg-ceiba-700 text-white" : "text-gray-500 hover:bg-gray-100"
+                }`}
+              >
+                <GitFork size={15} /> Árbol
+              </button>
+              <button
+                onClick={() => setView("list")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  view === "list" ? "bg-ceiba-700 text-white" : "text-gray-500 hover:bg-gray-100"
+                }`}
+              >
+                <List size={15} /> Lista
+              </button>
+            </div>
+
+            {view === "graph" && profile && (
+              <FamilyTreeGraph profile={profile} members={members} />
             )}
-            {affinityMembers.length > 0 && (
-              <MemberGroup title="Familia política" members={affinityMembers} onInvite={sendInvite} kind="affinity" />
+
+            {view === "list" && (
+              <div className="space-y-6">
+                {bloodMembers.length > 0 && (
+                  <MemberGroup title="Familia de sangre" members={bloodMembers} onInvite={sendInvite} kind="blood" />
+                )}
+                {affinityMembers.length > 0 && (
+                  <MemberGroup title="Familia política" members={affinityMembers} onInvite={sendInvite} kind="affinity" />
+                )}
+              </div>
             )}
           </div>
         )}
