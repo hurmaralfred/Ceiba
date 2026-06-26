@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import { TreePine, MapPin, Users, Share2, LogOut, User, Send, List, GitFork, Plus, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Profile, FamilyMember, RelationType, RELATION_LABELS } from "@/lib/types";
+import { ExtendedEntry } from "@/components/tree/FamilyTreeGraph";
 import toast from "react-hot-toast";
 
 const FamilyTreeGraph = dynamic(
@@ -33,6 +34,7 @@ export default function TreePage() {
   const supabase = createClient();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [members, setMembers] = useState<FamilyMember[]>([]);
+  const [extendedMembers, setExtendedMembers] = useState<ExtendedEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<"graph" | "list">("graph");
   const [showModal, setShowModal] = useState(false);
@@ -50,8 +52,28 @@ export default function TreePage() {
       supabase.from("family_members").select("*").eq("added_by", user.id),
     ]);
 
+    const myMembers = membersData || [];
     setProfile(profileData);
-    setMembers(membersData || []);
+    setMembers(myMembers);
+
+    // Load extended network: family members of family who've joined Ceiba
+    const joinedMembers = myMembers.filter(m => m.profile_id);
+    if (joinedMembers.length > 0) {
+      const joinedProfileIds = joinedMembers.map(m => m.profile_id!);
+      const { data: extData } = await supabase
+        .from("family_members")
+        .select("*")
+        .in("added_by", joinedProfileIds);
+
+      if (extData && extData.length > 0) {
+        const extended: ExtendedEntry[] = extData.map(em => ({
+          member: em as FamilyMember,
+          parentMemberId: joinedMembers.find(m => m.profile_id === em.added_by)!.id,
+        }));
+        setExtendedMembers(extended);
+      }
+    }
+
     setLoading(false);
   };
 
@@ -203,7 +225,7 @@ export default function TreePage() {
             </div>
 
             {view === "graph" && profile && (
-              <FamilyTreeGraph profile={profile} members={members} />
+              <FamilyTreeGraph profile={profile} members={members} extendedMembers={extendedMembers} />
             )}
 
             {view === "list" && (
