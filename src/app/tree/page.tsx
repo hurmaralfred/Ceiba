@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Profile, FamilyMember, RelationType, RELATION_LABELS } from "@/lib/types";
 import { ExtendedEntry } from "@/components/tree/FamilyTreeGraph";
 import InstallBanner from "@/components/InstallBanner";
+import SuggestionCards from "@/components/SuggestionCards";
 import toast from "react-hot-toast";
 
 const FamilyTreeGraph = dynamic(
@@ -111,16 +112,32 @@ export default function TreePage() {
     if (!user) return;
     setSaving(true);
     const kind = RELATION_GROUPS[0].options.includes(form.relation_type) ? "blood" : "affinity";
-    const { error } = await supabase.from("family_members").insert({
+    const { data: inserted, error } = await supabase.from("family_members").insert({
       added_by: user.id,
       first_name: form.first_name.trim(),
       last_name: form.last_name.trim() || null,
       email: form.email.trim() || null,
       relation_type: form.relation_type,
       relation_kind: kind,
-    });
+    }).select("id").single();
     setSaving(false);
     if (error) { toast.error("Error al guardar"); return; }
+
+    // Generate suggestions for connected family members
+    if (inserted) {
+      fetch("/api/suggestions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "generate",
+          first_name: form.first_name.trim(),
+          last_name: form.last_name.trim() || "",
+          relation_type: form.relation_type,
+          family_member_id: inserted.id,
+        }),
+      }).catch(() => {});
+    }
+
     toast.success("Familiar agregado");
     setShowModal(false);
     setForm(EMPTY_FORM);
@@ -205,6 +222,9 @@ export default function TreePage() {
             </div>
           </div>
         )}
+
+        {/* Suggestions */}
+        <SuggestionCards onAccepted={loadData} />
 
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4 mb-6">

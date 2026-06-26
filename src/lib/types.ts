@@ -1,6 +1,7 @@
 export type RelationType =
   | 'father' | 'mother' | 'son' | 'daughter'
   | 'brother' | 'sister'
+  | 'nephew' | 'niece'
   | 'spouse' | 'partner'
   | 'grandfather_paternal' | 'grandmother_paternal'
   | 'grandfather_maternal' | 'grandmother_maternal'
@@ -47,7 +48,6 @@ export interface FamilyMember {
   invitation_token?: string
   invitation_sent_at?: string
   created_at: string
-  // joined profile data
   profile?: Profile
 }
 
@@ -90,6 +90,20 @@ export interface FamilyTreeNode {
   country?: string
 }
 
+export interface RelationshipSuggestion {
+  id: string
+  suggested_to: string
+  first_name: string
+  last_name?: string
+  suggested_relation: RelationType
+  suggested_relation_kind: RelationKind
+  suggested_by_profile_id: string
+  suggested_by_name: string
+  family_member_id?: string
+  status: 'pending' | 'accepted' | 'rejected'
+  created_at: string
+}
+
 // Label maps
 export const RELATION_LABELS: Record<RelationType, string> = {
   father: 'Padre',
@@ -98,6 +112,8 @@ export const RELATION_LABELS: Record<RelationType, string> = {
   daughter: 'Hija',
   brother: 'Hermano',
   sister: 'Hermana',
+  nephew: 'Sobrino',
+  niece: 'Sobrina',
   spouse: 'Esposo/a',
   partner: 'Pareja',
   grandfather_paternal: 'Abuelo paterno',
@@ -119,13 +135,21 @@ export const RELATION_LABELS: Record<RelationType, string> = {
   other: 'Otro familiar',
 }
 
+export const BLOOD_RELATIONS = new Set<RelationType>([
+  'father','mother','son','daughter','brother','sister','nephew','niece',
+  'grandfather_paternal','grandmother_paternal','grandfather_maternal','grandmother_maternal',
+  'grandson','granddaughter','uncle','aunt','cousin',
+])
+
 export const INVERSE_RELATION: Record<RelationType, RelationType> = {
   father: 'son',
   mother: 'son',
   son: 'father',
-  daughter: 'father',
+  daughter: 'mother',
   brother: 'brother',
-  sister: 'brother',
+  sister: 'sister',
+  nephew: 'uncle',
+  niece: 'aunt',
   spouse: 'spouse',
   partner: 'partner',
   grandfather_paternal: 'grandson',
@@ -134,8 +158,8 @@ export const INVERSE_RELATION: Record<RelationType, RelationType> = {
   grandmother_maternal: 'grandson',
   grandson: 'grandfather_paternal',
   granddaughter: 'grandmother_paternal',
-  uncle: 'cousin',
-  aunt: 'cousin',
+  uncle: 'nephew',
+  aunt: 'niece',
   cousin: 'cousin',
   father_in_law: 'son',
   mother_in_law: 'son',
