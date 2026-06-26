@@ -1,131 +1,178 @@
 "use client";
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { TreePine, ArrowLeft, Send, MessageCircle } from "lucide-react";
+import { TreePine, ArrowLeft, Users, MessageCircle, Plus, ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import toast from "react-hot-toast";
 
-interface Message {
-  id: string;
-  sender_id: string;
-  content: string;
-  created_at: string;
-  sender?: {
-    first_name: string;
-    last_name: string;
-    avatar_url?: string;
-  };
+const GROUP_ROOM_ID = "00000000-0000-0000-0000-000000000001";
+
+interface Conversation {
+  roomId: string;
+  type: "group" | "direct";
+  name: string;
+  avatar?: string;
+  lastMessage?: string;
+  lastAt?: string;
+  unread: boolean;
+  otherUserId?: string;
 }
 
-function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" });
-}
-
-function formatDateLabel(iso: string) {
+function timeAgo(iso: string) {
   const d = new Date(iso);
-  const today = new Date();
-  const yesterday = new Date();
-  yesterday.setDate(today.getDate() - 1);
-  if (d.toDateString() === today.toDateString()) return "Hoy";
-  if (d.toDateString() === yesterday.toDateString()) return "Ayer";
-  return d.toLocaleDateString("es", { weekday: "long", day: "numeric", month: "long" });
+  const now = new Date();
+  const diff = Math.floor((now.getTime() - d.getTime()) / 1000);
+  if (diff < 60) return "ahora";
+  if (diff < 3600) return `${Math.floor(diff / 60)}m`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+  return d.toLocaleDateString("es", { day: "numeric", month: "short" });
 }
 
-export default function ChatPage() {
+export default function ChatListPage() {
   const router = useRouter();
   const supabase = createClient();
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [text, setText] = useState("");
-  const [sending, setSending] = useState(false);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [familyMembers, setFamilyMembers] = useState<any[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
-  const [myProfile, setMyProfile] = useState<any>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [loading, setLoading] = useState(true);
+  const [showNewDM, setShowNewDM] = useState(false);
 
   useEffect(() => { init(); }, []);
-
-  const scrollToBottom = useCallback(() => {
-    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
-  }, []);
 
   const init = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { router.push("/auth/login"); return; }
     setUserId(user.id);
-
-    const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single();
-    setMyProfile(profile);
-
-    await loadMessages();
-
-    // Realtime subscription
-    const channel = supabase
-      .channel("family-chat")
-      .on("postgres_changes", {
-        event: "INSERT",
-        schema: "public",
-        table: "family_messages",
-      }, async (payload) => {
-        const newMsg = payload.new as Message;
-        // Fetch sender profile
-        const { data: sender } = await supabase
-          .from("profiles")
-          .select("first_name, last_name, avatar_url")
-          .eq("id", newMsg.sender_id)
-          .single();
-        setMessages(prev => [...prev, { ...newMsg, sender: sender || undefined }]);
-        scrollToBottom();
-      })
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
-  };
-
-  const loadMessages = async () => {
-    const { data } = await supabase
-      .from("family_messages")
-      .select("*, sender:profiles!sender_id(first_name, last_name, avatar_url)")
-      .order("created_at", { ascending: true })
-      .limit(100);
-    setMessages(data || []);
+    await Promise.all([loadConversations(user.id), loadFamilyMembers(user.id)]);
     setLoading(false);
-    scrollToBottom();
   };
 
-  const send = async () => {
-    const content = text.trim();
-    if (!content || !userId) return;
-    setSending(true);
-    setText("");
-    const { error } = await supabase.from("family_messages").insert({
-      sender_id: userId,
-      content,
+  const loadConversations = async (uid: string) => {
+    const convs: Conversation[] = [];
+
+    // 1. Group chat — always show
+    const { data: lastGroupMsg } = await supabase
+      .from("family_messages")
+      .select("content, created_at")
+      .eq("room_id", GROUP_ROOM_ID)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    convs.push({
+      roomId: GROUP_ROOM_ID,
+      type: "group",
+      name: "Chat Familiar",
+      lastMessage: lastGroupMsg?.content,
+      lastAt: lastGroupMsg?.created_at,
+      unread: false,
     });
-    if (error) {
-      toast.error("Error al enviar");
-      setText(content);
+
+    // 2. DM rooms this user belongs to
+    const { data: memberOf } = await supabase
+      .from("chat_room_members")
+      .select("room_id, last_read_at, room:chat_rooms!room_id(id, type, created_at)")
+      .eq("user_id", uid);
+
+    const dmRoomIds = (memberOf || [])
+      .filter((m: any) => m.room?.type === "direct")
+      .map((m: any) => m.room_id);
+
+    for (const roomId of dmRoomIds) {
+      // Get the other member
+      const { data: others } = await supabase
+        .from("chat_room_members")
+        .select("user_id, profile:profiles!user_id(first_name, last_name, avatar_url)")
+        .eq("room_id", roomId)
+        .neq("user_id", uid);
+
+      const other = others?.[0];
+      if (!other) continue;
+
+      const { data: lastMsg } = await supabase
+        .from("family_messages")
+        .select("content, created_at")
+        .eq("room_id", roomId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const myMembership = memberOf?.find((m: any) => m.room_id === roomId);
+      const unread = lastMsg
+        ? new Date(lastMsg.created_at) > new Date(myMembership?.last_read_at || 0)
+        : false;
+
+      convs.push({
+        roomId,
+        type: "direct",
+        name: `${(other.profile as any).first_name} ${(other.profile as any).last_name}`,
+        avatar: (other.profile as any).avatar_url,
+        lastMessage: lastMsg?.content,
+        lastAt: lastMsg?.created_at,
+        unread,
+        otherUserId: other.user_id,
+      });
     }
-    setSending(false);
-    inputRef.current?.focus();
+
+    convs.sort((a, b) => {
+      if (!a.lastAt) return 1;
+      if (!b.lastAt) return -1;
+      return new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime();
+    });
+
+    setConversations(convs);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      send();
-    }
+  const loadFamilyMembers = async (uid: string) => {
+    const { data } = await supabase
+      .from("family_members")
+      .select("profile_id, first_name, last_name, profile:profiles!profile_id(id, first_name, last_name, avatar_url)")
+      .eq("added_by", uid)
+      .not("profile_id", "is", null);
+    setFamilyMembers((data || []).filter(m => m.profile_id));
   };
 
-  // Group messages by date
-  const grouped: { date: string; messages: Message[] }[] = [];
-  messages.forEach(m => {
-    const label = formatDateLabel(m.created_at);
-    const last = grouped[grouped.length - 1];
-    if (!last || last.date !== label) grouped.push({ date: label, messages: [m] });
-    else last.messages.push(m);
-  });
+  const startDM = async (otherUserId: string) => {
+    if (!userId) return;
+
+    // Check if DM room already exists between these two users
+    const { data: myRooms } = await supabase
+      .from("chat_room_members")
+      .select("room_id")
+      .eq("user_id", userId);
+
+    const myRoomIds = (myRooms || []).map(r => r.room_id);
+
+    if (myRoomIds.length > 0) {
+      const { data: shared } = await supabase
+        .from("chat_room_members")
+        .select("room_id, room:chat_rooms!room_id(type)")
+        .eq("user_id", otherUserId)
+        .in("room_id", myRoomIds);
+
+      const existingDM = shared?.find((r: any) => r.room?.type === "direct");
+      if (existingDM) {
+        router.push(`/chat/${existingDM.room_id}`);
+        return;
+      }
+    }
+
+    // Create new DM room
+    const { data: room, error } = await supabase
+      .from("chat_rooms")
+      .insert({ type: "direct", created_by: userId })
+      .select("id")
+      .single();
+
+    if (error || !room) return;
+
+    await supabase.from("chat_room_members").insert([
+      { room_id: room.id, user_id: userId },
+      { room_id: room.id, user_id: otherUserId },
+    ]);
+
+    router.push(`/chat/${room.id}`);
+  };
 
   if (loading) return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -134,109 +181,96 @@ export default function ChatPage() {
   );
 
   return (
-    <main className="h-screen flex flex-col bg-gray-50">
-      {/* Nav */}
-      <nav className="bg-ceiba-800 text-white px-4 py-4 flex items-center gap-3 shadow-lg flex-shrink-0">
-        <Link href="/tree" className="text-ceiba-300 hover:text-white transition-colors">
+    <main className="min-h-screen bg-gray-50">
+      <nav className="bg-ceiba-800 text-white px-4 py-4 flex items-center gap-3 shadow-lg">
+        <Link href="/tree" className="text-ceiba-300 hover:text-white">
           <ArrowLeft size={20} />
         </Link>
         <div className="flex items-center gap-2 font-display text-lg font-bold flex-1">
-          <TreePine size={20} className="text-ceiba-300" /> Chat familiar
+          <TreePine size={20} className="text-ceiba-300" /> Mensajes
         </div>
-        <div className="flex items-center gap-1.5 bg-white/10 px-2 py-1 rounded-full">
-          <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-          <span className="text-xs text-ceiba-200">En vivo</span>
-        </div>
+        <button
+          onClick={() => setShowNewDM(!showNewDM)}
+          className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors"
+        >
+          <Plus size={15} /> Nuevo mensaje
+        </button>
       </nav>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-        {messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full text-center">
-            <MessageCircle size={48} className="text-gray-300 mb-4" />
-            <h3 className="font-bold text-gray-600 mb-1">¡Sé el primero en escribir!</h3>
-            <p className="text-gray-400 text-sm">Este es el chat de tu familia en Ceiba.</p>
+      <div className="max-w-lg mx-auto">
+        {/* New DM picker */}
+        {showNewDM && (
+          <div className="bg-white border-b border-gray-100 px-4 py-3">
+            <p className="text-xs font-semibold text-gray-500 mb-2">Enviar mensaje a:</p>
+            {familyMembers.length === 0 ? (
+              <p className="text-sm text-gray-400">Ningún familiar tiene Ceiba aún.</p>
+            ) : (
+              <div className="flex gap-2 flex-wrap">
+                {familyMembers.map(m => (
+                  <button
+                    key={m.profile_id}
+                    onClick={() => { setShowNewDM(false); startDM(m.profile_id); }}
+                    className="flex items-center gap-2 bg-gray-100 hover:bg-ceiba-50 rounded-full px-3 py-1.5 text-sm font-medium transition-colors"
+                  >
+                    <div className="w-6 h-6 rounded-full bg-ceiba-700 overflow-hidden flex items-center justify-center text-white text-xs font-bold">
+                      {(m.profile as any)?.avatar_url
+                        ? <img src={(m.profile as any).avatar_url} className="w-full h-full object-cover" alt="" />
+                        : `${m.first_name[0]}${(m.last_name || "")[0]}`}
+                    </div>
+                    {m.first_name} {m.last_name}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
-        {grouped.map(group => (
-          <div key={group.date}>
-            {/* Date divider */}
-            <div className="flex items-center gap-3 my-4">
-              <div className="h-px bg-gray-200 flex-1" />
-              <span className="text-xs text-gray-400 font-medium px-2">{group.date}</span>
-              <div className="h-px bg-gray-200 flex-1" />
-            </div>
-
-            {/* Messages in group */}
-            <div className="space-y-3">
-              {group.messages.map((m, i) => {
-                const isMe = m.sender_id === userId;
-                const prevMsg = group.messages[i - 1];
-                const showAvatar = !isMe && (!prevMsg || prevMsg.sender_id !== m.sender_id);
-                const showName = showAvatar;
-
-                return (
-                  <div key={m.id} className={`flex items-end gap-2 ${isMe ? "flex-row-reverse" : "flex-row"}`}>
-                    {/* Avatar */}
-                    {!isMe && (
-                      <div className="w-7 h-7 flex-shrink-0">
-                        {showAvatar && (
-                          <div className="w-7 h-7 rounded-full bg-ceiba-700 overflow-hidden flex items-center justify-center text-white text-xs font-bold">
-                            {m.sender?.avatar_url
-                              ? <img src={m.sender.avatar_url} className="w-full h-full object-cover" alt="" />
-                              : `${m.sender?.first_name?.[0]}${m.sender?.last_name?.[0]}`
-                            }
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    <div className={`max-w-[72%] ${isMe ? "items-end" : "items-start"} flex flex-col`}>
-                      {showName && !isMe && (
-                        <span className="text-xs text-gray-500 mb-1 ml-1">
-                          {m.sender?.first_name} {m.sender?.last_name}
-                        </span>
-                      )}
-                      <div className={`px-3 py-2 rounded-2xl text-sm leading-relaxed ${
-                        isMe
-                          ? "bg-ceiba-700 text-white rounded-br-sm"
-                          : "bg-white text-gray-900 shadow-sm rounded-bl-sm"
-                      }`}>
-                        {m.content}
-                      </div>
-                      <span className="text-[10px] text-gray-400 mt-1 mx-1">{formatTime(m.created_at)}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-        <div ref={bottomRef} />
-      </div>
-
-      {/* Input */}
-      <div className="bg-white border-t border-gray-200 px-4 py-3 flex-shrink-0">
-        <div className="flex items-end gap-2 max-w-2xl mx-auto">
-          <textarea
-            ref={inputRef}
-            className="flex-1 border border-gray-200 rounded-2xl px-4 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ceiba-400 max-h-28"
-            rows={1}
-            placeholder="Escribe un mensaje..."
-            value={text}
-            onChange={e => setText(e.target.value)}
-            onKeyDown={handleKeyDown}
-          />
-          <button
-            onClick={send}
-            disabled={!text.trim() || sending}
-            className="w-10 h-10 bg-ceiba-700 hover:bg-ceiba-800 disabled:opacity-40 text-white rounded-full flex items-center justify-center transition-colors flex-shrink-0"
-          >
-            <Send size={16} />
-          </button>
+        {/* Conversation list */}
+        <div className="divide-y divide-gray-100">
+          {conversations.map(conv => (
+            <Link
+              key={conv.roomId}
+              href={`/chat/${conv.roomId}`}
+              className="flex items-center gap-3 px-4 py-4 bg-white hover:bg-gray-50 transition-colors"
+            >
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 overflow-hidden ${
+                conv.type === "group" ? "bg-ceiba-700" : "bg-blue-600"
+              }`}>
+                {conv.type === "group"
+                  ? <Users size={22} className="text-white" />
+                  : conv.avatar
+                    ? <img src={conv.avatar} className="w-full h-full object-cover" alt="" />
+                    : <span className="text-white font-bold text-sm">{conv.name[0]}</span>
+                }
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <span className={`font-semibold text-gray-900 ${conv.unread ? "font-bold" : ""}`}>
+                    {conv.name}
+                  </span>
+                  {conv.lastAt && (
+                    <span className="text-xs text-gray-400 flex-shrink-0">{timeAgo(conv.lastAt)}</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <p className={`text-sm truncate ${conv.unread ? "text-gray-900 font-medium" : "text-gray-500"}`}>
+                    {conv.lastMessage || "Sin mensajes aún"}
+                  </p>
+                  {conv.unread && <div className="w-2 h-2 rounded-full bg-ceiba-600 flex-shrink-0" />}
+                </div>
+              </div>
+              <ChevronRight size={16} className="text-gray-300 flex-shrink-0" />
+            </Link>
+          ))}
         </div>
-        <p className="text-center text-[10px] text-gray-300 mt-1">Enter para enviar · Shift+Enter para nueva línea</p>
+
+        {conversations.length === 0 && (
+          <div className="text-center py-20 px-6">
+            <MessageCircle size={48} className="text-gray-300 mx-auto mb-4" />
+            <h3 className="font-bold text-gray-600 mb-2">Sin conversaciones</h3>
+            <p className="text-gray-400 text-sm">Comienza un mensaje directo con un familiar o únete al chat grupal.</p>
+          </div>
+        )}
       </div>
     </main>
   );
