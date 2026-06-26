@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 import { TreePine, MapPin, Users, Share2, LogOut, User, Send, List, GitFork, Plus, X, Pencil, Map, Image, Calendar, MessageCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Profile, FamilyMember, RelationType, RELATION_LABELS } from "@/lib/types";
-import { ExtendedEntry } from "@/components/tree/FamilyTreeGraph";
+import { ExtendedEntry, MemberLink } from "@/components/tree/FamilyTreeGraph";
 
 // Infer my relation to an extended member based on the parent's relation to me
 function inferRelation(parentRelation: RelationType, childRelation: string): string | null {
@@ -78,7 +78,9 @@ export default function TreePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [members, setMembers] = useState<FamilyMember[]>([]);
   const [extendedMembers, setExtendedMembers] = useState<ExtendedEntry[]>([]);
+  const [memberLinks, setMemberLinks] = useState<MemberLink[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [view, setView] = useState<"graph" | "list" | "map">("graph");
   const [myLocation, setMyLocation] = useState<[number, number] | null>(null);
   const [showModal, setShowModal] = useState(false);
@@ -123,6 +125,7 @@ export default function TreePage() {
   };
 
   const loadData = async () => {
+    try {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { router.push("/auth/login"); return; }
 
@@ -133,7 +136,7 @@ export default function TreePage() {
 
     // Deduplicate my own members by first name (keep the one with profile_id, or the first)
     const normName = (s: string) =>
-      (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim().split(" ")[0];
+      (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().split(" ")[0];
     const seenNames = new Map<string, any>();
     for (const m of membersData || []) {
       const key = `${normName(m.first_name)}|${normName(m.last_name || "")}`;
@@ -191,6 +194,17 @@ export default function TreePage() {
           myNameKeys.add(`${fn.split(" ")[0]}|`);               // only first name word
         });
 
+        // For peer link detection: build a map from norm-name key → direct member
+        const myMemberByName = new Map<string, any>();
+        myMembers.forEach(m => {
+          const fn = norm(m.first_name).split(" ")[0];
+          const ln = norm(m.last_name || "").split(" ")[0];
+          myMemberByName.set(`${fn}|${ln}`, m);
+          myMemberByName.set(`${fn}|`, m);
+        });
+
+        const crossLinks: MemberLink[] = [];
+
         const extended: ExtendedEntry[] = extData
           .filter(em => {
             if (em.profile_id === user.id) return false;
@@ -199,27 +213,56 @@ export default function TreePage() {
             const ln = norm(em.last_name || "");
             // Check multiple key formats
             if (fn.length >= 3) {
-              if (myNameKeys.has(`${fn}|${ln}`)) return false;
-              if (myNameKeys.has(`${fn.split(" ")[0]}|${ln.split(" ")[0]}`)) return false;
+              const fn0 = fn.split(" ")[0];
+              const ln0 = ln.split(" ")[0];
+              const isDuplicate =
+                myNameKeys.has(`${fn}|${ln}`) ||
+                myNameKeys.has(`${fn0}|${ln0}`);
+              if (isDuplicate) {
+                // This extended member IS a direct member — create a peer link
+                const directMember = myMemberByName.get(`${fn0}|${ln0}`) || myMemberByName.get(`${fn0}|`);
+                const parentMember = joinedMembers.find(m => m.profile_id === em.added_by);
+                if (directMember && parentMember && directMember.id !== parentMember.id) {
+                  // Avoid duplicate links
+                  const alreadyExists = crossLinks.some(
+                    l => (l.fromMemberId === parentMember.id && l.toMemberId === directMember.id) ||
+                         (l.fromMemberId === directMember.id && l.toMemberId === parentMember.id)
+                  );
+                  if (!alreadyExists) {
+                    crossLinks.push({
+                      fromMemberId: parentMember.id,
+                      toMemberId: directMember.id,
+                      relation: em.relation_type,
+                    });
+                  }
+                }
+                return false; // still filter from extended nodes
+              }
             }
             return true;
           })
           .map(em => {
             const parentMember = joinedMembers.find(m => m.profile_id === em.added_by);
-            const inferredRelation = parentMember
-              ? inferRelation(parentMember.relation_type as RelationType, em.relation_type)
-              : null;
+            if (!parentMember) return null; // skip orphaned entries
+            const inferredRelation = inferRelation(parentMember.relation_type as RelationType, em.relation_type);
             return {
               member: em as FamilyMember,
-              parentMemberId: parentMember!.id,
+              parentMemberId: parentMember.id,
               inferredRelation,
             };
-          });
+          })
+          .filter((e): e is ExtendedEntry => e !== null);
         setExtendedMembers(extended);
+        setMemberLinks(crossLinks);
       }
     }
 
-    setLoading(false);
+    } catch (err: any) {
+      console.error("loadData error:", err);
+      setLoadError(err?.message || String(err));
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Check if the name being added already exists in a connected family member's tree
@@ -500,6 +543,14 @@ export default function TreePage() {
   };
 
   if (loading) return <LoadingScreen />;
+  if (loadError) return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+      <div className="bg-red-50 border border-red-200 rounded-2xl p-6 max-w-lg w-full">
+        <p className="text-red-700 font-bold mb-2">Error al cargar</p>
+        <p className="text-red-600 text-sm break-all">{loadError}</p>
+      </div>
+    </div>
+  );
 
   const bloodMembers = members.filter(m => m.relation_kind === "blood");
   const affinityMembers = members.filter(m => m.relation_kind === "affinity");
@@ -652,6 +703,7 @@ export default function TreePage() {
                 profile={profile}
                 members={members}
                 extendedMembers={extendedMembers}
+                memberLinks={memberLinks}
                 onNodeClick={(memberId) => router.push(`/member/${memberId}`)}
               />
             )}

@@ -5,14 +5,22 @@ import { FamilyMember, Profile, RELATION_LABELS } from "@/lib/types";
 
 export interface ExtendedEntry {
   member: FamilyMember;
-  parentMemberId: string; // family_members.id of the level-1 node
-  inferredRelation?: string | null; // relation from MY perspective (e.g. "nephew" instead of "son")
+  parentMemberId: string;
+  inferredRelation?: string | null;
+}
+
+// Relationship between two level-1 members (e.g. Juan Carlos ↔ Jose Humberto = hermanos)
+export interface MemberLink {
+  fromMemberId: string; // family_members.id of level-1 node A
+  toMemberId: string;   // family_members.id of level-1 node B
+  relation: string;     // e.g. "brother"
 }
 
 interface Props {
   profile: Profile;
   members: FamilyMember[];
   extendedMembers?: ExtendedEntry[];
+  memberLinks?: MemberLink[];        // peer relationships between direct members
   onNodeClick?: (memberId: string) => void;
 }
 
@@ -27,8 +35,33 @@ interface NodeDatum extends d3.SimulationNodeDatum {
 interface LinkDatum extends d3.SimulationLinkDatum<NodeDatum> {
   source: string | NodeDatum;
   target: string | NodeDatum;
-  kind: "blood" | "affinity";
+  kind: "blood" | "affinity" | "peer";
+  label?: string;
 }
+
+// Rules to infer lateral links between extended members of the same parent node.
+// Each rule: if member A has relation in `a` and member B has relation in `b` → connect them.
+const EXTENDED_PEER_RULES: Array<{ a: string[]; b: string[]; label: string }> = [
+  // Parejas
+  { a: ["father"],               b: ["mother"],               label: "Pareja" },
+  { a: ["grandfather_paternal"], b: ["grandmother_paternal"],  label: "Pareja" },
+  { a: ["grandfather_maternal"], b: ["grandmother_maternal"],  label: "Pareja" },
+  { a: ["father_in_law"],        b: ["mother_in_law"],         label: "Pareja" },
+  { a: ["stepfather"],           b: ["stepmother"],            label: "Pareja" },
+  // Abuelos → padres
+  { a: ["grandfather_paternal","grandmother_paternal"], b: ["father"],  label: "Padre/Hijo" },
+  { a: ["grandfather_maternal","grandmother_maternal"], b: ["mother"],  label: "Padre/Hijo" },
+  // Hermanos entre sí
+  { a: ["brother","sister","half_brother","half_sister"],
+    b: ["brother","sister","half_brother","half_sister"],    label: "Hermanos" },
+  // Tíos son hermanos de los padres
+  { a: ["uncle","aunt"], b: ["father","stepfather"],  label: "Hermanos" },
+  { a: ["uncle","aunt"], b: ["mother","stepmother"],  label: "Hermanos" },
+  // Sobrinos son hijos de hermanos
+  { a: ["nephew","niece"], b: ["brother","sister","half_brother","half_sister"], label: "Sobrino/a" },
+  // Esposo/a en línea política
+  { a: ["spouse","partner"], b: ["father","mother","son","daughter","brother","sister"], label: "Pareja" },
+];
 
 const COLORS = {
   root: "#15803d",
@@ -41,9 +74,10 @@ const COLORS = {
 const LINK_COLORS = {
   blood: "#86efac",
   affinity: "#fcd34d",
+  peer: "#93c5fd",   // blue for peer/sibling links between members
 };
 
-export default function FamilyTreeGraph({ profile, members, extendedMembers = [], onNodeClick }: Props) {
+export default function FamilyTreeGraph({ profile, members, extendedMembers = [], memberLinks = [], onNodeClick }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const onNodeClickRef = useRef(onNodeClick);
@@ -54,6 +88,9 @@ export default function FamilyTreeGraph({ profile, members, extendedMembers = []
 
     const width = containerRef.current.clientWidth || 800;
     const height = 520;
+
+    // Wrap entire D3 block so a crash doesn't leave page blank
+    try {
 
     // Build nodes
     const nodes: NodeDatum[] = [
@@ -77,6 +114,7 @@ export default function FamilyTreeGraph({ profile, members, extendedMembers = []
     ];
 
     // Build links
+    const memberIdSet = new Set(members.map(m => m.id));
     const links: LinkDatum[] = [
       ...members.map((m) => ({
         source: "root",
@@ -88,7 +126,64 @@ export default function FamilyTreeGraph({ profile, members, extendedMembers = []
         target: m.id,
         kind: m.relation_kind as "blood" | "affinity",
       })),
+      // Peer links: connections between level-1 members (e.g. siblings)
+      ...memberLinks
+        .filter(l => memberIdSet.has(l.fromMemberId) && memberIdSet.has(l.toMemberId))
+        .map(l => ({
+          source: l.fromMemberId,
+          target: l.toMemberId,
+          kind: "peer" as const,
+          label: RELATION_LABELS[l.relation as keyof typeof RELATION_LABELS] ?? l.relation,
+        })),
     ];
+
+    // Infer lateral links between extended members of the same parent node
+    // (e.g. father ↔ mother, grandfather ↔ father, siblings ↔ siblings)
+    try {
+      const extByParent = new Map<string, ExtendedEntry[]>();
+      for (const e of extendedMembers) {
+        if (!e?.parentMemberId || !e?.member?.id) continue;
+        if (!extByParent.has(e.parentMemberId)) extByParent.set(e.parentMemberId, []);
+        extByParent.get(e.parentMemberId)!.push(e);
+      }
+      const existingLinkKeys = new Set<string>();
+      for (const l of links) {
+        const s = typeof l.source === "string" ? l.source : (l.source as NodeDatum)?.id;
+        const t = typeof l.target === "string" ? l.target : (l.target as NodeDatum)?.id;
+        if (s && t) existingLinkKeys.add([s, t].sort().join("|"));
+      }
+      for (const group of extByParent.values()) {
+        for (let i = 0; i < group.length; i++) {
+          for (let j = i + 1; j < group.length; j++) {
+            const a = group[i];
+            const b = group[j];
+            if (!a?.member?.relation_type || !b?.member?.relation_type) continue;
+            const aRel = a.member.relation_type;
+            const bRel = b.member.relation_type;
+            for (const rule of EXTENDED_PEER_RULES) {
+              const match =
+                (rule.a.includes(aRel) && rule.b.includes(bRel)) ||
+                (rule.a.includes(bRel) && rule.b.includes(aRel));
+              if (match) {
+                const key = [a.member.id, b.member.id].sort().join("|");
+                if (!existingLinkKeys.has(key)) {
+                  existingLinkKeys.add(key);
+                  links.push({
+                    source: a.member.id,
+                    target: b.member.id,
+                    kind: "peer" as const,
+                    label: rule.label,
+                  });
+                }
+                break;
+              }
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("Extended peer links error (non-fatal):", e);
+    }
 
     // Clear
     d3.select(svgRef.current).selectAll("*").remove();
@@ -130,16 +225,19 @@ export default function FamilyTreeGraph({ profile, members, extendedMembers = []
       .selectAll<SVGLineElement, LinkDatum>("line")
       .data(links)
       .join("line")
-      .attr("stroke", (d) => LINK_COLORS[d.kind])
+      .attr("stroke", (d) => LINK_COLORS[d.kind] ?? "#86efac")
       .attr("stroke-width", (d) => {
+        if (d.kind === "peer") return 2;
         const target = d.target as NodeDatum;
         return target.level === 2 ? 1.5 : 2.5;
       })
       .attr("stroke-opacity", (d) => {
+        if (d.kind === "peer") return 0.8;
         const target = d.target as NodeDatum;
         return target.level === 2 ? 0.5 : 0.7;
       })
       .attr("stroke-dasharray", (d) => {
+        if (d.kind === "peer") return "4,2";
         const target = d.target as NodeDatum;
         return target.level === 2 ? "5,3" : "none";
       });
@@ -246,9 +344,24 @@ export default function FamilyTreeGraph({ profile, members, extendedMembers = []
     });
 
     return () => { simulation.stop(); };
-  }, [profile, members, extendedMembers]);
+    } catch (err) {
+      console.error("FamilyTreeGraph D3 error:", err);
+      // Show error in SVG so we can see what failed
+      if (svgRef.current) {
+        d3.select(svgRef.current).selectAll("*").remove();
+        d3.select(svgRef.current)
+          .attr("width", "100%").attr("height", 80)
+          .append("text")
+          .attr("x", 16).attr("y", 40)
+          .attr("fill", "#ef4444")
+          .attr("font-size", "13px")
+          .text(`Error en árbol: ${String(err).slice(0, 120)}`);
+      }
+    }
+  }, [profile, members, extendedMembers, memberLinks]);
 
   const hasExtended = extendedMembers.length > 0;
+  const hasPeerLinks = memberLinks.length > 0;
 
   return (
     <div ref={containerRef} className="w-full rounded-2xl overflow-hidden border border-gray-200 bg-gray-50">
@@ -262,6 +375,14 @@ export default function FamilyTreeGraph({ profile, members, extendedMembers = []
         {hasExtended && (
           <span className="flex items-center gap-1.5">
             <span className="w-3 h-0.5 bg-gray-400 inline-block border-dashed" /> 2° grado
+          </span>
+        )}
+        {hasPeerLinks && (
+          <span className="flex items-center gap-1.5">
+            <svg width="14" height="6" viewBox="0 0 14 6">
+              <line x1="0" y1="3" x2="14" y2="3" stroke="#93c5fd" strokeWidth="2" strokeDasharray="4,2"/>
+            </svg>
+            Vínculo
           </span>
         )}
         <span className="ml-auto">Arrastra · Zoom con scroll</span>
