@@ -7,6 +7,7 @@ import { TreePine, MapPin, Users, Share2, LogOut, User, Send, List, GitFork, Plu
 import { createClient } from "@/lib/supabase/client";
 import { Profile, FamilyMember, RelationType, RELATION_LABELS } from "@/lib/types";
 import { ExtendedEntry } from "@/components/tree/FamilyTreeGraph";
+import InstallBanner from "@/components/InstallBanner";
 import toast from "react-hot-toast";
 
 const FamilyTreeGraph = dynamic(
@@ -145,6 +146,7 @@ export default function TreePage() {
         </div>
       </nav>
 
+      <InstallBanner />
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Profile header */}
         {profile && (
