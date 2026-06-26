@@ -3,15 +3,30 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { TreePine, MapPin, Users, Share2, LogOut, User, Send, List, GitFork } from "lucide-react";
+import { TreePine, MapPin, Users, Share2, LogOut, User, Send, List, GitFork, Plus, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { Profile, FamilyMember, RELATION_LABELS } from "@/lib/types";
+import { Profile, FamilyMember, RelationType, RELATION_LABELS } from "@/lib/types";
 import toast from "react-hot-toast";
 
 const FamilyTreeGraph = dynamic(
   () => import("@/components/tree/FamilyTreeGraph"),
   { ssr: false, loading: () => <div className="w-full h-[520px] rounded-2xl bg-gray-100 animate-pulse" /> }
 );
+
+const RELATION_GROUPS = [
+  {
+    label: "Familia directa (sangre)",
+    kind: "blood" as const,
+    options: ["father","mother","brother","sister","son","daughter","grandfather_paternal","grandmother_paternal","grandfather_maternal","grandmother_maternal","grandson","granddaughter","uncle","aunt","cousin"] as RelationType[],
+  },
+  {
+    label: "Familia política (afinidad)",
+    kind: "affinity" as const,
+    options: ["spouse","partner","father_in_law","mother_in_law","brother_in_law","sister_in_law","stepfather","stepmother","stepchild"] as RelationType[],
+  },
+];
+
+const EMPTY_FORM = { first_name: "", last_name: "", email: "", relation_type: "father" as RelationType };
 
 export default function TreePage() {
   const router = useRouter();
@@ -20,10 +35,11 @@ export default function TreePage() {
   const [members, setMembers] = useState<FamilyMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<"graph" | "list">("graph");
+  const [showModal, setShowModal] = useState(false);
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useEffect(() => { loadData(); }, []);
 
   const loadData = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -39,39 +55,43 @@ export default function TreePage() {
     setLoading(false);
   };
 
+  const saveMember = async () => {
+    if (!form.first_name.trim()) { toast.error("El nombre es obligatorio"); return; }
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    setSaving(true);
+    const kind = RELATION_GROUPS[0].options.includes(form.relation_type) ? "blood" : "affinity";
+    const { error } = await supabase.from("family_members").insert({
+      added_by: user.id,
+      first_name: form.first_name.trim(),
+      last_name: form.last_name.trim() || null,
+      email: form.email.trim() || null,
+      relation_type: form.relation_type,
+      relation_kind: kind,
+    });
+    setSaving(false);
+    if (error) { toast.error("Error al guardar"); return; }
+    toast.success("Familiar agregado");
+    setShowModal(false);
+    setForm(EMPTY_FORM);
+    loadData();
+  };
+
   const sendInvite = async (member: FamilyMember) => {
-    if (!member.email) {
-      toast.error("Este familiar no tiene correo registrado");
-      return;
-    }
-    // In production, this would call a Supabase Edge Function to send the email
-    // For now, generate the invite link and copy it
+    if (!member.email) { toast.error("Este familiar no tiene correo registrado"); return; }
     const { data, error } = await supabase
       .from("invitations")
-      .insert({
-        invited_by: profile!.id,
-        family_member_id: member.id,
-        email: member.email,
-        relation_type: member.relation_type,
-      })
-      .select("token")
-      .single();
-
+      .insert({ invited_by: profile!.id, family_member_id: member.id, email: member.email, relation_type: member.relation_type })
+      .select("token").single();
     if (error) { toast.error("Error al generar invitación"); return; }
-
     const inviteLink = `${window.location.origin}/invite/${data.token}`;
     await navigator.clipboard.writeText(inviteLink);
-    toast.success("¡Enlace de invitación copiado! Compártelo con tu familiar.");
-
-    // Mark as sent
+    toast.success("¡Enlace copiado! Compártelo con tu familiar.");
     await supabase.from("family_members").update({ invitation_sent: true, invitation_sent_at: new Date().toISOString() }).eq("id", member.id);
     loadData();
   };
 
-  const logout = async () => {
-    await supabase.auth.signOut();
-    router.push("/");
-  };
+  const logout = async () => { await supabase.auth.signOut(); router.push("/"); };
 
   if (loading) return <LoadingScreen />;
 
@@ -121,9 +141,17 @@ export default function TreePage() {
                 <span className="text-gray-600">{pendingMembers.length} por unirse</span>
               </div>
             </div>
-            <Link href="/invite" className="btn-primary text-sm flex items-center gap-2 flex-shrink-0">
-              <Share2 size={16} /> Invitar
-            </Link>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                onClick={() => setShowModal(true)}
+                className="flex items-center gap-1.5 bg-ceiba-100 text-ceiba-800 hover:bg-ceiba-200 font-semibold text-sm px-3 py-2 rounded-xl transition-colors"
+              >
+                <Plus size={16} /> Agregar
+              </button>
+              <Link href="/invite" className="btn-primary text-sm flex items-center gap-2">
+                <Share2 size={16} /> Invitar
+              </Link>
+            </div>
           </div>
         )}
 
@@ -140,28 +168,38 @@ export default function TreePage() {
             <Users size={48} className="text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-700 mb-2">Tu árbol está vacío</h3>
             <p className="text-gray-400 mb-6">Agrega familiares para empezar a construir tu red.</p>
-            <Link href="/onboarding" className="btn-primary">Agregar familiares</Link>
+            <button onClick={() => setShowModal(true)} className="btn-primary">
+              Agregar familiar
+            </button>
           </div>
         ) : (
           <div className="space-y-4">
-            {/* View toggle */}
-            <div className="flex items-center gap-2 justify-end">
+            {/* View toggle + add button */}
+            <div className="flex items-center gap-2">
               <button
-                onClick={() => setView("graph")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  view === "graph" ? "bg-ceiba-700 text-white" : "text-gray-500 hover:bg-gray-100"
-                }`}
+                onClick={() => setShowModal(true)}
+                className="flex items-center gap-1.5 bg-ceiba-700 text-white hover:bg-ceiba-800 font-semibold text-sm px-3 py-1.5 rounded-lg transition-colors"
               >
-                <GitFork size={15} /> Árbol
+                <Plus size={15} /> Agregar familiar
               </button>
-              <button
-                onClick={() => setView("list")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  view === "list" ? "bg-ceiba-700 text-white" : "text-gray-500 hover:bg-gray-100"
-                }`}
-              >
-                <List size={15} /> Lista
-              </button>
+              <div className="ml-auto flex items-center gap-2">
+                <button
+                  onClick={() => setView("graph")}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    view === "graph" ? "bg-ceiba-700 text-white" : "text-gray-500 hover:bg-gray-100"
+                  }`}
+                >
+                  <GitFork size={15} /> Árbol
+                </button>
+                <button
+                  onClick={() => setView("list")}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    view === "list" ? "bg-ceiba-700 text-white" : "text-gray-500 hover:bg-gray-100"
+                  }`}
+                >
+                  <List size={15} /> Lista
+                </button>
+              </div>
             </div>
 
             {view === "graph" && profile && (
@@ -181,6 +219,85 @@ export default function TreePage() {
           </div>
         )}
       </div>
+
+      {/* Add Member Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-bold text-gray-900">Agregar familiar</h2>
+              <button onClick={() => { setShowModal(false); setForm(EMPTY_FORM); }} className="text-gray-400 hover:text-gray-600">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Nombre *</label>
+                  <input
+                    type="text"
+                    className="input-field text-sm"
+                    placeholder="Nombre"
+                    value={form.first_name}
+                    onChange={e => setForm(f => ({ ...f, first_name: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Apellido</label>
+                  <input
+                    type="text"
+                    className="input-field text-sm"
+                    placeholder="Apellido"
+                    value={form.last_name}
+                    onChange={e => setForm(f => ({ ...f, last_name: e.target.value }))}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Correo (para invitarlo)</label>
+                <input
+                  type="email"
+                  className="input-field text-sm"
+                  placeholder="correo@ejemplo.com"
+                  value={form.email}
+                  onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Parentesco *</label>
+                <select
+                  className="input-field text-sm"
+                  value={form.relation_type}
+                  onChange={e => setForm(f => ({ ...f, relation_type: e.target.value as RelationType }))}
+                >
+                  {RELATION_GROUPS.map(group => (
+                    <optgroup key={group.kind} label={group.label}>
+                      {group.options.map(opt => (
+                        <option key={opt} value={opt}>{RELATION_LABELS[opt]}</option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => { setShowModal(false); setForm(EMPTY_FORM); }}
+                className="flex-1 btn-secondary"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={saveMember}
+                disabled={saving}
+                className="flex-1 btn-primary"
+              >
+                {saving ? "Guardando..." : "Agregar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
