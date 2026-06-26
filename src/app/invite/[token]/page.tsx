@@ -79,6 +79,23 @@ export default function AcceptInvitePage() {
         await supabase.from("family_members").update({ profile_id: user.id }).eq("id", invitation.family_member_id);
       }
 
+      // Send push notification to the inviter
+      const joinerProfile = await supabase.from("profiles").select("first_name, last_name").eq("id", user.id).single();
+      if (joinerProfile.data) {
+        fetch("/api/push/notify", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-internal-secret": process.env.NEXT_PUBLIC_INTERNAL_SECRET || "",
+          },
+          body: JSON.stringify({
+            invitedBy: invitation.invited_by,
+            joinerName: `${joinerProfile.data.first_name} ${joinerProfile.data.last_name}`,
+            relationLabel: RELATION_LABELS[invitation.relation_type as keyof typeof RELATION_LABELS] || invitation.relation_type,
+          }),
+        }).catch(() => {});
+      }
+
       toast.success("¡Conexión familiar confirmada!");
       router.push("/tree");
     } catch (err: any) {
