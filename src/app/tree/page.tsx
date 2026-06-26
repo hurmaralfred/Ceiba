@@ -68,7 +68,7 @@ const RELATION_GROUPS = [
   },
 ];
 
-const EMPTY_FORM = { first_name: "", last_name: "", email: "", relation_type: "father" as RelationType };
+const EMPTY_FORM = { primer_nombre: "", segundo_nombre: "", primer_apellido: "", segundo_apellido: "", first_name: "", last_name: "", email: "", relation_type: "father" as RelationType };
 
 export default function TreePage() {
   const router = useRouter();
@@ -184,15 +184,18 @@ export default function TreePage() {
   };
 
   const saveMember = async () => {
-    if (!form.first_name.trim()) { toast.error("El nombre es obligatorio"); return; }
+    if (!form.primer_nombre.trim()) { toast.error("El primer nombre es obligatorio"); return; }
+    if (!form.primer_apellido.trim()) { toast.error("El primer apellido es obligatorio"); return; }
+    const first_name = [form.primer_nombre.trim(), form.segundo_nombre.trim()].filter(Boolean).join(" ");
+    const last_name = [form.primer_apellido.trim(), form.segundo_apellido.trim()].filter(Boolean).join(" ");
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     setSaving(true);
     const kind = RELATION_GROUPS[0].options.includes(form.relation_type) ? "blood" : "affinity";
     const { data: inserted, error } = await supabase.from("family_members").insert({
       added_by: user.id,
-      first_name: form.first_name.trim(),
-      last_name: form.last_name.trim() || null,
+      first_name,
+      last_name: last_name || null,
       email: form.email.trim() || null,
       relation_type: form.relation_type,
       relation_kind: kind,
@@ -207,8 +210,8 @@ export default function TreePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "generate",
-          first_name: form.first_name.trim(),
-          last_name: form.last_name.trim() || "",
+          first_name,
+          last_name: last_name || "",
           relation_type: form.relation_type,
           family_member_id: inserted.id,
         }),
@@ -223,7 +226,13 @@ export default function TreePage() {
 
   const openEdit = (member: FamilyMember) => {
     setEditingMember(member);
+    const nameParts = (member.first_name || "").split(" ");
+    const lastParts = (member.last_name || "").split(" ");
     setForm({
+      primer_nombre: nameParts[0] || "",
+      segundo_nombre: nameParts[1] || "",
+      primer_apellido: lastParts[0] || "",
+      segundo_apellido: lastParts[1] || "",
       first_name: member.first_name,
       last_name: member.last_name || "",
       email: member.email || "",
@@ -233,12 +242,14 @@ export default function TreePage() {
   };
 
   const updateMember = async () => {
-    if (!editingMember || !form.first_name.trim()) return;
+    if (!editingMember || !form.primer_nombre.trim()) return;
+    const first_name = [form.primer_nombre.trim(), form.segundo_nombre.trim()].filter(Boolean).join(" ");
+    const last_name = [form.primer_apellido.trim(), form.segundo_apellido.trim()].filter(Boolean).join(" ");
     setSaving(true);
     const kind = RELATION_GROUPS[0].options.includes(form.relation_type) ? "blood" : "affinity";
     const { error } = await supabase.from("family_members").update({
-      first_name: form.first_name.trim(),
-      last_name: form.last_name.trim() || null,
+      first_name,
+      last_name: last_name || null,
       email: form.email.trim() || null,
       relation_type: form.relation_type,
       relation_kind: kind,
@@ -507,23 +518,43 @@ export default function TreePage() {
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Nombre *</label>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Primer nombre <span className="text-red-500">*</span></label>
                   <input
                     type="text"
                     className="input-field text-sm"
-                    placeholder="Nombre"
-                    value={form.first_name}
-                    onChange={e => setForm(f => ({ ...f, first_name: e.target.value }))}
+                    placeholder="ej. Hugo"
+                    value={form.primer_nombre}
+                    onChange={e => setForm(f => ({ ...f, primer_nombre: e.target.value }))}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Apellido</label>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Segundo nombre</label>
                   <input
                     type="text"
                     className="input-field text-sm"
-                    placeholder="Apellido"
-                    value={form.last_name}
-                    onChange={e => setForm(f => ({ ...f, last_name: e.target.value }))}
+                    placeholder="ej. Armando"
+                    value={form.segundo_nombre}
+                    onChange={e => setForm(f => ({ ...f, segundo_nombre: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Primer apellido <span className="text-red-500">*</span></label>
+                  <input
+                    type="text"
+                    className="input-field text-sm"
+                    placeholder="ej. Hurtado"
+                    value={form.primer_apellido}
+                    onChange={e => setForm(f => ({ ...f, primer_apellido: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Segundo apellido</label>
+                  <input
+                    type="text"
+                    className="input-field text-sm"
+                    placeholder="ej. Martínez"
+                    value={form.segundo_apellido}
+                    onChange={e => setForm(f => ({ ...f, segundo_apellido: e.target.value }))}
                   />
                 </div>
               </div>
