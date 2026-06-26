@@ -163,15 +163,26 @@ export default function TreePage() {
 
       if (extData && extData.length > 0) {
         const myMemberIds = new Set(myMembers.map(m => m.profile_id).filter(Boolean));
-        const myMemberNames = new Set(
-          myMembers.map(m => `${m.first_name.toLowerCase()}|${(m.last_name || "").toLowerCase()}`)
+
+        // Normalize name: remove accents, lowercase, take first word only
+        const norm = (s: string) =>
+          (s || "").toLowerCase()
+            .normalize("NFD").replace(/[̀-ͯ]/g, "")
+            .trim().split(" ")[0];
+
+        // Index by profile_id AND by "firstword_firstname|firstword_lastname"
+        const myMemberNameKeys = new Set(
+          myMembers.map(m => `${norm(m.first_name)}|${norm(m.last_name || "")}`)
         );
+
         const extended: ExtendedEntry[] = extData
           .filter(em => {
             if (em.profile_id === user.id) return false;
-            if (myMemberIds.has(em.profile_id)) return false;
-            const nameKey = `${em.first_name.toLowerCase()}|${(em.last_name || "").toLowerCase()}`;
-            if (myMemberNames.has(nameKey)) return false;
+            // Same Ceiba profile → same person
+            if (em.profile_id && myMemberIds.has(em.profile_id)) return false;
+            // Same name (first word of each field, normalized) → same person
+            const key = `${norm(em.first_name)}|${norm(em.last_name || "")}`;
+            if (norm(em.first_name).length >= 3 && myMemberNameKeys.has(key)) return false;
             return true;
           })
           .map(em => {
@@ -203,8 +214,13 @@ export default function TreePage() {
 
     if (!myMembers || myMembers.length === 0) return null;
 
-    const fn = first_name.toLowerCase();
-    const ln = last_name.toLowerCase();
+    const normStr = (s: string) =>
+      (s || "").toLowerCase()
+        .normalize("NFD").replace(/[̀-ͯ]/g, "")
+        .trim().split(" ")[0];
+
+    const fn = normStr(first_name);
+    const ln = normStr(last_name);
 
     for (const member of myMembers) {
       const { data: theirMembers } = await supabase
@@ -213,10 +229,9 @@ export default function TreePage() {
         .eq("added_by", member.profile_id);
 
       const match = (theirMembers || []).find(m => {
-        const mfn = (m.first_name || "").toLowerCase();
-        const mln = (m.last_name || "").toLowerCase();
-        return mfn === fn || (mfn.includes(fn) && fn.length >= 3) ||
-               (ln && mln && (mln === ln || mln.includes(ln)));
+        const mfn = normStr(m.first_name || "");
+        const mln = normStr(m.last_name || "");
+        return fn.length >= 3 && mfn === fn && (ln.length < 2 || mln === ln || mln.length < 2);
       });
 
       if (match) {
