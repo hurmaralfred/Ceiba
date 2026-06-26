@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { TreePine, ArrowLeft, Users, MessageCircle, Plus, ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import toast from "react-hot-toast";
+import BottomNav from "@/components/BottomNav";
 
 const GROUP_ROOM_ID = "00000000-0000-0000-0000-000000000001";
 
@@ -79,15 +81,22 @@ export default function ChatListPage() {
       .map((m: any) => m.room_id);
 
     for (const roomId of dmRoomIds) {
-      // Get the other member
+      // Get the other member's user_id (no join)
       const { data: others } = await supabase
         .from("chat_room_members")
-        .select("user_id, profile:profiles!user_id(first_name, last_name, avatar_url)")
+        .select("user_id")
         .eq("room_id", roomId)
         .neq("user_id", uid);
 
-      const other = others?.[0];
-      if (!other) continue;
+      const otherUserId = others?.[0]?.user_id;
+      if (!otherUserId) continue;
+
+      // Fetch profile separately
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("first_name, last_name, avatar_url")
+        .eq("id", otherUserId)
+        .maybeSingle();
 
       const { data: lastMsg } = await supabase
         .from("family_messages")
@@ -105,12 +114,12 @@ export default function ChatListPage() {
       convs.push({
         roomId,
         type: "direct",
-        name: `${(other.profile as any).first_name} ${(other.profile as any).last_name}`,
-        avatar: (other.profile as any).avatar_url,
+        name: profile ? `${profile.first_name} ${profile.last_name}` : "Familiar",
+        avatar: profile?.avatar_url,
         lastMessage: lastMsg?.content,
         lastAt: lastMsg?.created_at,
         unread,
-        otherUserId: other.user_id,
+        otherUserId,
       });
     }
 
@@ -124,54 +133,99 @@ export default function ChatListPage() {
   };
 
   const loadFamilyMembers = async (uid: string) => {
-    const { data } = await supabase
+    // Step 1: get family members
+    const { data: members } = await supabase
       .from("family_members")
-      .select("profile_id, first_name, last_name, profile:profiles!profile_id(id, first_name, last_name, avatar_url)")
+      .select("profile_id, first_name, last_name")
       .eq("added_by", uid)
       .not("profile_id", "is", null);
-    setFamilyMembers((data || []).filter(m => m.profile_id));
+
+    if (!members || members.length === 0) return;
+
+    // Step 2: fetch profile data separately (avoids FK join issue)
+    const profileIds = members.map(m => m.profile_id).filter(Boolean);
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, first_name, last_name, avatar_url")
+      .in("id", profileIds);
+
+    const profileMap = Object.fromEntries((profiles || []).map(p => [p.id, p]));
+
+    setFamilyMembers(
+      members
+        .filter(m => m.profile_id)
+        .map(m => ({ ...m, profile: profileMap[m.profile_id] || null }))
+    );
   };
 
   const startDM = async (otherUserId: string) => {
-    if (!userId) return;
+    if (!userId || !otherUserId) return;
 
-    // Check if DM room already exists between these two users
-    const { data: myRooms } = await supabase
-      .from("chat_room_members")
-      .select("room_id")
-      .eq("user_id", userId);
-
-    const myRoomIds = (myRooms || []).map(r => r.room_id);
-
-    if (myRoomIds.length > 0) {
-      const { data: shared } = await supabase
+    try {
+      // Step 1: get rooms where current user is a member
+      const { data: myRooms, error: myRoomsErr } = await supabase
         .from("chat_room_members")
-        .select("room_id, room:chat_rooms!room_id(type)")
-        .eq("user_id", otherUserId)
-        .in("room_id", myRoomIds);
+        .select("room_id")
+        .eq("user_id", userId);
 
-      const existingDM = shared?.find((r: any) => r.room?.type === "direct");
-      if (existingDM) {
-        router.push(`/chat/${existingDM.room_id}`);
+      if (myRoomsErr) throw myRoomsErr;
+
+      const myRoomIds = (myRooms || []).map(r => r.room_id);
+
+      if (myRoomIds.length > 0) {
+        // Step 2: rooms where the other user is also a member
+        const { data: otherRooms } = await supabase
+          .from("chat_room_members")
+          .select("room_id")
+          .eq("user_id", otherUserId)
+          .in("room_id", myRoomIds);
+
+        const sharedRoomIds = (otherRooms || []).map(r => r.room_id);
+
+        if (sharedRoomIds.length > 0) {
+          // Step 3: check which shared rooms are "direct" type
+          const { data: rooms } = await supabase
+            .from("chat_rooms")
+            .select("id, type")
+            .in("id", sharedRoomIds)
+            .eq("type", "direct");
+
+          if (rooms && rooms.length > 0) {
+            router.push(`/chat/${rooms[0].id}`);
+            return;
+          }
+        }
+      }
+
+      // Create new DM room
+      const { data: room, error: roomErr } = await supabase
+        .from("chat_rooms")
+        .insert({ type: "direct", created_by: userId })
+        .select("id")
+        .single();
+
+      if (roomErr || !room) {
+        console.error("Error creating DM room:", roomErr);
+        toast.error("Error al crear conversación. ¿Corriste el SQL de chat?");
         return;
       }
+
+      const { error: membersErr } = await supabase.from("chat_room_members").insert([
+        { room_id: room.id, user_id: userId },
+        { room_id: room.id, user_id: otherUserId },
+      ]);
+
+      if (membersErr) {
+        console.error("Error adding members:", membersErr);
+        toast.error("Error al configurar conversación");
+        return;
+      }
+
+      router.push(`/chat/${room.id}`);
+    } catch (err) {
+      console.error("startDM error:", err);
+      toast.error("Error al abrir conversación");
     }
-
-    // Create new DM room
-    const { data: room, error } = await supabase
-      .from("chat_rooms")
-      .insert({ type: "direct", created_by: userId })
-      .select("id")
-      .single();
-
-    if (error || !room) return;
-
-    await supabase.from("chat_room_members").insert([
-      { room_id: room.id, user_id: userId },
-      { room_id: room.id, user_id: otherUserId },
-    ]);
-
-    router.push(`/chat/${room.id}`);
   };
 
   if (loading) return (
@@ -197,7 +251,7 @@ export default function ChatListPage() {
         </button>
       </nav>
 
-      <div className="max-w-lg mx-auto">
+      <div className="max-w-lg mx-auto pb-20">
         {/* New DM picker */}
         {showNewDM && (
           <div className="bg-white border-b border-gray-100 px-4 py-3">
@@ -272,6 +326,7 @@ export default function ChatListPage() {
           </div>
         )}
       </div>
+      <BottomNav />
     </main>
   );
 }

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { TreePine, ArrowLeft, Camera, Upload, X, Trash2, ZoomIn } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
+import BottomNav from "@/components/BottomNav";
 
 interface Photo {
   id: string;
@@ -121,7 +122,7 @@ export default function PhotosPage() {
         <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
       </nav>
 
-      <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
+      <div className="max-w-2xl mx-auto px-4 py-6 pb-24 space-y-4">
         {/* Upload preview */}
         {pendingPreview && (
           <div className="card">
@@ -220,6 +221,7 @@ export default function PhotosPage() {
           </div>
         </div>
       )}
+      <BottomNav />
     </main>
   );
 }

@@ -44,6 +44,7 @@ import InstallBanner from "@/components/InstallBanner";
 import SuggestionCards from "@/components/SuggestionCards";
 import NameMatchCards from "@/components/NameMatchCards";
 import BirthdayWidget from "@/components/BirthdayWidget";
+import BottomNav from "@/components/BottomNav";
 import toast from "react-hot-toast";
 
 const FamilyTreeGraph = dynamic(
@@ -381,7 +382,7 @@ export default function TreePage() {
         </div>
       </nav>
 
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="max-w-4xl mx-auto px-4 py-8 pb-24">
         {/* Profile header */}
         {profile && (
           <div className="card mb-6 flex items-center gap-5">
@@ -675,6 +676,7 @@ export default function TreePage() {
           </div>
         </div>
       )}
+      <BottomNav />
     </div>
   );
 }
@@ -706,38 +708,40 @@ function MemberGroup({ title, members, onInvite, onEdit, kind }: {
       <div className="divide-y divide-gray-100">
         {members.map(m => (
           <div key={m.id} className="py-3 flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-xl flex-shrink-0 overflow-hidden ${
-              m.profile_id ? "bg-ceiba-700" : "bg-gray-200"
-            }`}>
-              {(m as any).profile?.avatar_url ? (
-                <img src={(m as any).profile.avatar_url} alt={m.first_name} className="w-full h-full object-cover" />
-              ) : (
-                <div className={`w-full h-full flex items-center justify-center text-sm font-bold ${
-                  m.profile_id ? "text-white" : "text-gray-600"
-                }`}>
-                  {m.first_name[0]}{m.last_name ? m.last_name[0] : ""}
-                </div>
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="font-semibold text-gray-900 truncate">{m.first_name} {m.last_name}</div>
-              <div className="text-xs text-gray-500 flex items-center gap-2 flex-wrap">
-                <span>{RELATION_LABELS[m.relation_type]}</span>
-                {m.profile_id && <span className="text-ceiba-600 font-medium">· En Ceiba</span>}
-                {m.invitation_sent && !m.profile_id && <span className="text-amber-600">· Invitado</span>}
-                {(m as any).profile?.social_link && (
-                  <a
-                    href={(m as any).profile.social_link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-500 hover:underline truncate max-w-[120px]"
-                    onClick={e => e.stopPropagation()}
-                  >
-                    🔗 Red social
-                  </a>
+            <Link href={`/member/${m.id}`} className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity">
+              <div className={`w-10 h-10 rounded-xl flex-shrink-0 overflow-hidden ${
+                m.profile_id ? "bg-ceiba-700" : "bg-gray-200"
+              }`}>
+                {(m as any).profile?.avatar_url ? (
+                  <img src={(m as any).profile.avatar_url} alt={m.first_name} className="w-full h-full object-cover" />
+                ) : (
+                  <div className={`w-full h-full flex items-center justify-center text-sm font-bold ${
+                    m.profile_id ? "text-white" : "text-gray-600"
+                  }`}>
+                    {m.first_name[0]}{m.last_name ? m.last_name[0] : ""}
+                  </div>
                 )}
               </div>
-            </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-gray-900 truncate">{m.first_name} {m.last_name}</div>
+                <div className="text-xs text-gray-500 flex items-center gap-2 flex-wrap">
+                  <span>{RELATION_LABELS[m.relation_type]}</span>
+                  {m.profile_id && <span className="text-ceiba-600 font-medium">· En Ceiba</span>}
+                  {m.invitation_sent && !m.profile_id && <span className="text-amber-600">· Invitado</span>}
+                  {(m as any).profile?.social_link && (
+                    <a
+                      href={(m as any).profile.social_link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-500 hover:underline truncate max-w-[120px]"
+                      onClick={e => e.stopPropagation()}
+                    >
+                      🔗 Red social
+                    </a>
+                  )}
+                </div>
+              </div>
+            </Link>
             <div className="flex items-center gap-2 flex-shrink-0">
               <button
                 onClick={() => onEdit(m)}

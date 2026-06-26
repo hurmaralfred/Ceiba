@@ -66,15 +66,20 @@ export default function ChatRoomPage() {
       setRoomName("Chat Familiar");
       setRoomType("group");
     } else {
+      // Get other member's user_id (no FK join)
       const { data: members } = await supabase
         .from("chat_room_members")
-        .select("user_id, profile:profiles!user_id(first_name, last_name, avatar_url)")
+        .select("user_id")
         .eq("room_id", roomId)
         .neq("user_id", user.id);
-      const other = members?.[0];
-      if (other) {
-        const p = other.profile as any;
-        setRoomName(`${p.first_name} ${p.last_name}`);
+      const otherUserId = members?.[0]?.user_id;
+      if (otherUserId) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("first_name, last_name")
+          .eq("id", otherUserId)
+          .maybeSingle();
+        if (profile) setRoomName(`${profile.first_name} ${profile.last_name}`);
       }
       setRoomType("direct");
 

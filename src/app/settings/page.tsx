@@ -5,6 +5,7 @@ import Link from "next/link";
 import { TreePine, ArrowLeft, MapPin, Cake, Link as LinkIcon, Eye, Shield, LogOut, Bell } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
+import BottomNav from "@/components/BottomNav";
 
 interface PrivacySettings {
   location_enabled: boolean;
@@ -105,7 +106,7 @@ export default function SettingsPage() {
         </div>
       </nav>
 
-      <div className="max-w-md mx-auto px-4 py-6 space-y-4">
+      <div className="max-w-md mx-auto px-4 py-6 pb-24 space-y-4">
 
         {/* Privacy */}
         <div className="card">
@@ -179,6 +180,7 @@ export default function SettingsPage() {
           Ceiba · Tu familia, conectada · v1.0
         </p>
       </div>
+      <BottomNav />
     </main>
   );
 }

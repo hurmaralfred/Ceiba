@@ -5,6 +5,7 @@ import Link from "next/link";
 import { TreePine, ArrowLeft, Plus, X, Trash2, Calendar, MapPin, Heart, Baby, GraduationCap, Users, Star, BookOpen } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
+import BottomNav from "@/components/BottomNav";
 
 interface FamilyEvent {
   id: string;
@@ -123,7 +124,7 @@ export default function EventsPage() {
         </button>
       </nav>
 
-      <div className="max-w-lg mx-auto px-4 py-6 space-y-6">
+      <div className="max-w-lg mx-auto px-4 py-6 pb-24 space-y-6">
         {events.length === 0 && (
           <div className="card text-center py-14">
             <Calendar size={48} className="text-gray-300 mx-auto mb-4" />
@@ -240,6 +241,7 @@ export default function EventsPage() {
           </div>
         </div>
       )}
+      <BottomNav />
     </main>
   );
 }
