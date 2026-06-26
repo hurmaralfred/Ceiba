@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Download, X, Share } from "lucide-react";
+import { Download, X, Share, Smartphone } from "lucide-react";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -10,27 +10,18 @@ interface BeforeInstallPromptEvent extends Event {
 export default function InstallBanner() {
   const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(null);
   const [isIOS, setIsIOS] = useState(false);
-  const [dismissed, setDismissed] = useState(false);
+  const [showIOSInstructions, setShowIOSInstructions] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
 
   useEffect(() => {
-    // Already installed as PWA
     if (window.matchMedia("(display-mode: standalone)").matches) {
       setIsInstalled(true);
       return;
     }
 
-    // Check if dismissed before
-    if (localStorage.getItem("ceiba-install-dismissed")) {
-      setDismissed(true);
-      return;
-    }
-
-    // Detect iOS
     const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
     setIsIOS(ios);
 
-    // Chrome / Android install prompt
     const handler = (e: Event) => {
       e.preventDefault();
       setInstallEvent(e as BeforeInstallPromptEvent);
@@ -47,56 +38,66 @@ export default function InstallBanner() {
     setInstallEvent(null);
   };
 
-  const handleDismiss = () => {
-    setDismissed(true);
-    localStorage.setItem("ceiba-install-dismissed", "1");
-  };
+  if (isInstalled) return null;
 
-  // Already installed or dismissed
-  if (isInstalled || dismissed) return null;
-
-  // iOS: show manual instructions
+  // iOS: button that shows instructions
   if (isIOS) {
     return (
-      <div className="mx-4 mb-4 bg-ceiba-50 border border-ceiba-200 rounded-2xl p-4 flex items-start gap-3">
-        <Share size={20} className="text-ceiba-700 flex-shrink-0 mt-0.5" />
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-ceiba-800">Instala Ceiba en tu iPhone</p>
-          <p className="text-xs text-ceiba-700 mt-0.5">
-            Toca <strong>Compartir</strong> <Share size={11} className="inline" /> → <strong>"Agregar a pantalla de inicio"</strong>
-          </p>
-        </div>
-        <button onClick={handleDismiss} className="text-ceiba-400 hover:text-ceiba-600 flex-shrink-0">
-          <X size={18} />
+      <>
+        <button
+          onClick={() => setShowIOSInstructions(true)}
+          className="flex items-center gap-2 bg-ceiba-50 border border-ceiba-200 text-ceiba-800 text-sm font-semibold px-4 py-2 rounded-xl hover:bg-ceiba-100 transition-colors"
+        >
+          <Smartphone size={16} /> Instalar app
         </button>
-      </div>
+
+        {showIOSInstructions && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center p-4">
+            <div className="bg-white rounded-2xl p-6 w-full max-w-sm">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-bold text-gray-900">Instalar Ceiba en iPhone</h3>
+                <button onClick={() => setShowIOSInstructions(false)}>
+                  <X size={20} className="text-gray-400" />
+                </button>
+              </div>
+              <ol className="space-y-3 text-sm text-gray-700">
+                <li className="flex items-center gap-3">
+                  <span className="w-6 h-6 bg-ceiba-700 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+                  Toca el botón <Share size={16} className="inline mx-1 text-blue-500" /> <strong>Compartir</strong> en Safari
+                </li>
+                <li className="flex items-center gap-3">
+                  <span className="w-6 h-6 bg-ceiba-700 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+                  Desplázate y toca <strong>"Agregar a pantalla de inicio"</strong>
+                </li>
+                <li className="flex items-center gap-3">
+                  <span className="w-6 h-6 bg-ceiba-700 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
+                  Toca <strong>"Agregar"</strong> para confirmar
+                </li>
+              </ol>
+              <button
+                onClick={() => setShowIOSInstructions(false)}
+                className="mt-5 w-full bg-ceiba-700 text-white font-bold py-3 rounded-xl"
+              >
+                Entendido
+              </button>
+            </div>
+          </div>
+        )}
+      </>
     );
   }
 
-  // Chrome / Android: show install button
+  // Android / Chrome: direct install button
   if (installEvent) {
     return (
-      <div className="mx-4 mb-4 bg-ceiba-700 rounded-2xl p-4 flex items-center gap-3 shadow-lg">
-        <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
-          <Download size={20} className="text-white" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold text-white">Instala Ceiba</p>
-          <p className="text-xs text-ceiba-200">Úsala como app en tu teléfono</p>
-        </div>
-        <button
-          onClick={handleInstall}
-          className="bg-white text-ceiba-800 font-bold text-sm px-4 py-2 rounded-xl hover:bg-ceiba-50 transition-colors flex-shrink-0"
-        >
-          Instalar
-        </button>
-        <button onClick={handleDismiss} className="text-ceiba-300 hover:text-white flex-shrink-0">
-          <X size={18} />
-        </button>
-      </div>
+      <button
+        onClick={handleInstall}
+        className="flex items-center gap-2 bg-ceiba-700 text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-ceiba-800 transition-colors"
+      >
+        <Download size={16} /> Instalar app
+      </button>
     );
   }
 
-  // Fallback: browser doesn't support beforeinstallprompt (e.g. Firefox, desktop Safari)
   return null;
 }

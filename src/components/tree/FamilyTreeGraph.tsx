@@ -6,6 +6,7 @@ import { FamilyMember, Profile, RELATION_LABELS } from "@/lib/types";
 export interface ExtendedEntry {
   member: FamilyMember;
   parentMemberId: string; // family_members.id of the level-1 node
+  inferredRelation?: string | null; // relation from MY perspective (e.g. "nephew" instead of "son")
 }
 
 interface Props {
@@ -61,11 +62,13 @@ export default function FamilyTreeGraph({ profile, members, extendedMembers = []
         relation: RELATION_LABELS[m.relation_type] ?? m.relation_type,
         level: 1 as const,
       })),
-      ...extendedMembers.map(({ member: m }) => ({
+      ...extendedMembers.map(({ member: m, inferredRelation }) => ({
         id: m.id,
         name: m.first_name,
         type: m.relation_kind as "blood" | "affinity",
-        relation: RELATION_LABELS[m.relation_type] ?? m.relation_type,
+        relation: inferredRelation
+          ? (RELATION_LABELS[inferredRelation] ?? inferredRelation)
+          : (RELATION_LABELS[m.relation_type] ?? m.relation_type),
         level: 2 as const,
       })),
     ];

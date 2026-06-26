@@ -7,6 +7,38 @@ import { TreePine, MapPin, Users, Share2, LogOut, User, Send, List, GitFork, Plu
 import { createClient } from "@/lib/supabase/client";
 import { Profile, FamilyMember, RelationType, RELATION_LABELS } from "@/lib/types";
 import { ExtendedEntry } from "@/components/tree/FamilyTreeGraph";
+
+// Infer my relation to an extended member based on the parent's relation to me
+function inferRelation(parentRelation: RelationType, childRelation: string): string | null {
+  switch (parentRelation) {
+    case "spouse": case "partner":
+      if (childRelation === "son") return "son";
+      if (childRelation === "daughter") return "daughter";
+      if (childRelation === "stepchild") return "stepchild";
+      break;
+    case "brother": case "sister":
+      if (childRelation === "son") return "nephew";
+      if (childRelation === "daughter") return "niece";
+      break;
+    case "father": case "mother":
+      if (childRelation === "son") return "brother";
+      if (childRelation === "daughter") return "sister";
+      break;
+    case "son": case "daughter":
+      if (childRelation === "son") return "grandson";
+      if (childRelation === "daughter") return "granddaughter";
+      break;
+    case "uncle": case "aunt":
+      if (childRelation === "son" || childRelation === "daughter") return "cousin";
+      break;
+    case "grandfather_paternal": case "grandfather_maternal":
+    case "grandmother_paternal": case "grandmother_maternal":
+      if (childRelation === "son") return "uncle";
+      if (childRelation === "daughter") return "aunt";
+      break;
+  }
+  return null;
+}
 import InstallBanner from "@/components/InstallBanner";
 import SuggestionCards from "@/components/SuggestionCards";
 import NameMatchCards from "@/components/NameMatchCards";
@@ -108,10 +140,17 @@ export default function TreePage() {
             if (myMemberNames.has(nameKey)) return false;
             return true;
           })
-          .map(em => ({
-            member: em as FamilyMember,
-            parentMemberId: joinedMembers.find(m => m.profile_id === em.added_by)!.id,
-          }));
+          .map(em => {
+            const parentMember = joinedMembers.find(m => m.profile_id === em.added_by);
+            const inferredRelation = parentMember
+              ? inferRelation(parentMember.relation_type as RelationType, em.relation_type)
+              : null;
+            return {
+              member: em as FamilyMember,
+              parentMemberId: parentMember!.id,
+              inferredRelation,
+            };
+          });
         setExtendedMembers(extended);
       }
     }
@@ -187,7 +226,8 @@ export default function TreePage() {
         <Link href="/tree" className="flex items-center gap-2 font-display text-xl font-bold">
           <TreePine size={24} className="text-ceiba-300" /> Ceiba
         </Link>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          <InstallBanner />
           <Link href="/map" className="flex items-center gap-1 text-ceiba-200 hover:text-white text-sm transition-colors">
             <MapPin size={16} /> Mapa
           </Link>
@@ -203,7 +243,6 @@ export default function TreePage() {
         </div>
       </nav>
 
-      <InstallBanner />
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Profile header */}
         {profile && (
