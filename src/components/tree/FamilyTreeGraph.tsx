@@ -13,6 +13,7 @@ interface Props {
   profile: Profile;
   members: FamilyMember[];
   extendedMembers?: ExtendedEntry[];
+  onNodeClick?: (memberId: string) => void;
 }
 
 interface NodeDatum extends d3.SimulationNodeDatum {
@@ -42,9 +43,11 @@ const LINK_COLORS = {
   affinity: "#fcd34d",
 };
 
-export default function FamilyTreeGraph({ profile, members, extendedMembers = [] }: Props) {
+export default function FamilyTreeGraph({ profile, members, extendedMembers = [], onNodeClick }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const onNodeClickRef = useRef(onNodeClick);
+  onNodeClickRef.current = onNodeClick;
 
   useEffect(() => {
     if (!svgRef.current || !containerRef.current) return;
@@ -141,13 +144,18 @@ export default function FamilyTreeGraph({ profile, members, extendedMembers = []
         return target.level === 2 ? "5,3" : "none";
       });
 
-    // Drag
+    // Drag — track if user actually dragged to distinguish from tap
+    let wasDragged = false;
     const drag = d3.drag<SVGGElement, NodeDatum>()
       .on("start", (event, d) => {
+        wasDragged = false;
         if (!event.active) simulation.alphaTarget(0.3).restart();
         d.fx = d.x; d.fy = d.y;
       })
-      .on("drag", (event, d) => { d.fx = event.x; d.fy = event.y; })
+      .on("drag", (event, d) => {
+        wasDragged = true;
+        d.fx = event.x; d.fy = event.y;
+      })
       .on("end", (event, d) => {
         if (!event.active) simulation.alphaTarget(0);
         d.fx = null; d.fy = null;
@@ -157,8 +165,14 @@ export default function FamilyTreeGraph({ profile, members, extendedMembers = []
       .selectAll<SVGGElement, NodeDatum>("g")
       .data(nodes)
       .join("g")
-      .attr("cursor", "grab")
-      .call(drag);
+      .attr("cursor", (d) => d.level === 0 ? "grab" : "pointer")
+      .call(drag)
+      .on("click", (event, d) => {
+        if (wasDragged) return; // ignore drag-end clicks
+        if (d.level === 1 && onNodeClickRef.current) {
+          onNodeClickRef.current(d.id);
+        }
+      });
 
     // Glow for root
     node.filter((d) => d.type === "root")

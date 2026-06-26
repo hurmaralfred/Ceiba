@@ -494,7 +494,12 @@ export default function TreePage() {
             </div>
 
             {view === "graph" && profile && (
-              <FamilyTreeGraph profile={profile} members={members} extendedMembers={extendedMembers} />
+              <FamilyTreeGraph
+                profile={profile}
+                members={members}
+                extendedMembers={extendedMembers}
+                onNodeClick={(memberId) => router.push(`/member/${memberId}`)}
+              />
             )}
 
             {view === "list" && (
