@@ -291,6 +291,32 @@ export default function TreePage() {
 
   const logout = async () => { await supabase.auth.signOut(); router.push("/"); };
 
+  const shareTree = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // Get existing token or create one
+    let { data: existing } = await supabase
+      .from("shared_trees")
+      .select("token")
+      .eq("profile_id", user.id)
+      .single();
+
+    if (!existing) {
+      const { data: created, error } = await supabase
+        .from("shared_trees")
+        .insert({ profile_id: user.id })
+        .select("token")
+        .single();
+      if (error || !created) { toast.error("Error al generar link"); return; }
+      existing = created;
+    }
+
+    const link = `${window.location.origin}/share/${existing.token}`;
+    await navigator.clipboard.writeText(link);
+    toast.success("¡Link copiado! Compártelo con tu familia.");
+  };
+
   const activateMap = () => {
     setView("map");
     if (myLocation) return;
@@ -333,9 +359,9 @@ export default function TreePage() {
           <Link href="/map" className="flex items-center gap-1 text-ceiba-200 hover:text-white text-sm transition-colors">
             <MapPin size={16} /> Mapa
           </Link>
-          <Link href="/invite" className="flex items-center gap-1 text-ceiba-200 hover:text-white text-sm transition-colors">
-            <Share2 size={16} /> Invitar
-          </Link>
+          <button onClick={shareTree} className="flex items-center gap-1 text-ceiba-200 hover:text-white text-sm transition-colors">
+            <Share2 size={16} /> Compartir
+          </button>
           <Link href="/profile" className="flex items-center gap-1 text-ceiba-200 hover:text-white text-sm transition-colors">
             <User size={16} />
           </Link>
@@ -382,9 +408,9 @@ export default function TreePage() {
               >
                 <Plus size={16} /> Agregar
               </button>
-              <Link href="/invite" className="btn-primary text-sm flex items-center gap-2">
-                <Share2 size={16} /> Invitar
-              </Link>
+              <button onClick={shareTree} className="btn-primary text-sm flex items-center gap-2">
+                <Share2 size={16} /> Compartir árbol
+              </button>
             </div>
           </div>
         )}
