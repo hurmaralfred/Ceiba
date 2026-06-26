@@ -17,6 +17,7 @@ function inferRelation(parentRelation: RelationType, childRelation: string): str
       if (childRelation === "stepchild") return "stepchild";
       break;
     case "brother": case "sister":
+    case "half_brother": case "half_sister":
       if (childRelation === "son") return "nephew";
       if (childRelation === "daughter") return "niece";
       break;
@@ -53,7 +54,7 @@ const RELATION_GROUPS = [
   {
     label: "Familia directa (sangre)",
     kind: "blood" as const,
-    options: ["father","mother","brother","sister","son","daughter","grandfather_paternal","grandmother_paternal","grandfather_maternal","grandmother_maternal","grandson","granddaughter","uncle","aunt","cousin"] as RelationType[],
+    options: ["father","mother","brother","sister","half_brother","half_sister","son","daughter","grandfather_paternal","grandmother_paternal","grandfather_maternal","grandmother_maternal","grandson","granddaughter","uncle","aunt","cousin"] as RelationType[],
   },
   {
     label: "Familia política (afinidad)",

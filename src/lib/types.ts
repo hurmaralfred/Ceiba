@@ -1,6 +1,6 @@
 export type RelationType =
   | 'father' | 'mother' | 'son' | 'daughter'
-  | 'brother' | 'sister'
+  | 'brother' | 'sister' | 'half_brother' | 'half_sister'
   | 'nephew' | 'niece'
   | 'spouse' | 'partner'
   | 'grandfather_paternal' | 'grandmother_paternal'
@@ -112,6 +112,8 @@ export const RELATION_LABELS: Record<RelationType, string> = {
   daughter: 'Hija',
   brother: 'Hermano',
   sister: 'Hermana',
+  half_brother: 'Medio hermano',
+  half_sister: 'Media hermana',
   nephew: 'Sobrino',
   niece: 'Sobrina',
   spouse: 'Esposo/a',
@@ -136,9 +138,9 @@ export const RELATION_LABELS: Record<RelationType, string> = {
 }
 
 export const BLOOD_RELATIONS = new Set<RelationType>([
-  'father','mother','son','daughter','brother','sister','nephew','niece',
-  'grandfather_paternal','grandmother_paternal','grandfather_maternal','grandmother_maternal',
-  'grandson','granddaughter','uncle','aunt','cousin',
+  'father','mother','son','daughter','brother','sister','half_brother','half_sister',
+  'nephew','niece','grandfather_paternal','grandmother_paternal',
+  'grandfather_maternal','grandmother_maternal','grandson','granddaughter','uncle','aunt','cousin',
 ])
 
 export const INVERSE_RELATION: Record<RelationType, RelationType> = {
@@ -148,6 +150,8 @@ export const INVERSE_RELATION: Record<RelationType, RelationType> = {
   daughter: 'mother',
   brother: 'brother',
   sister: 'sister',
+  half_brother: 'half_brother',
+  half_sister: 'half_sister',
   nephew: 'uncle',
   niece: 'aunt',
   spouse: 'spouse',

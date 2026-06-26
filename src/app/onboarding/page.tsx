@@ -29,7 +29,7 @@ const RELATION_GROUPS = [
   {
     label: "Familia directa (sangre)",
     kind: "blood" as const,
-    options: ["father","mother","brother","sister","son","daughter","grandfather_paternal","grandmother_paternal","grandfather_maternal","grandmother_maternal","grandson","granddaughter","uncle","aunt","cousin"] as RelationType[],
+    options: ["father","mother","brother","sister","half_brother","half_sister","son","daughter","grandfather_paternal","grandmother_paternal","grandfather_maternal","grandmother_maternal","grandson","granddaughter","uncle","aunt","cousin"] as RelationType[],
   },
   {
     label: "Familia política (afinidad)",
