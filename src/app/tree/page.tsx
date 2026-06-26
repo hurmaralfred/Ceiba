@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { TreePine, MapPin, Users, Share2, LogOut, User, Send, List, GitFork, Plus, X, Pencil, Map, Image, Calendar } from "lucide-react";
+import { TreePine, MapPin, Users, Share2, LogOut, User, Send, List, GitFork, Plus, X, Pencil, Map, Image, Calendar, MessageCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Profile, FamilyMember, RelationType, RELATION_LABELS } from "@/lib/types";
 import { ExtendedEntry } from "@/components/tree/FamilyTreeGraph";
@@ -369,15 +369,15 @@ export default function TreePage() {
           <Link href="/events" className="flex items-center gap-1 text-ceiba-200 hover:text-white text-sm transition-colors">
             <Calendar size={16} /> Historia
           </Link>
+          <Link href="/chat" className="flex items-center gap-1 text-ceiba-200 hover:text-white text-sm transition-colors">
+            <MessageCircle size={16} /> Chat
+          </Link>
           <button onClick={shareTree} className="flex items-center gap-1 text-ceiba-200 hover:text-white text-sm transition-colors">
             <Share2 size={16} /> Compartir
           </button>
-          <Link href="/profile" className="flex items-center gap-1 text-ceiba-200 hover:text-white text-sm transition-colors">
+          <Link href="/settings" className="flex items-center gap-1 text-ceiba-200 hover:text-white text-sm transition-colors">
             <User size={16} />
           </Link>
-          <button onClick={logout} className="text-ceiba-400 hover:text-white transition-colors">
-            <LogOut size={18} />
-          </button>
         </div>
       </nav>
 
