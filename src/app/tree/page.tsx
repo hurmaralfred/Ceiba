@@ -85,6 +85,11 @@ export default function TreePage() {
   const [editingMember, setEditingMember] = useState<FamilyMember | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [duplicateWarning, setDuplicateWarning] = useState<{
+    connectedMember: { first_name: string; last_name: string; relation_type: string };
+    matchedName: string;
+    matchedRelation: string;
+  } | null>(null);
 
   useEffect(() => {
     loadData();
@@ -185,13 +190,61 @@ export default function TreePage() {
     setLoading(false);
   };
 
-  const saveMember = async () => {
+  // Check if the name being added already exists in a connected family member's tree
+  const checkExtendedDuplicate = async (first_name: string, last_name: string, userId: string) => {
+    // Get my connected Ceiba members
+    const { data: myMembers } = await supabase
+      .from("family_members")
+      .select("profile_id, first_name, last_name, relation_type")
+      .eq("added_by", userId)
+      .not("profile_id", "is", null);
+
+    if (!myMembers || myMembers.length === 0) return null;
+
+    const fn = first_name.toLowerCase();
+    const ln = last_name.toLowerCase();
+
+    for (const member of myMembers) {
+      const { data: theirMembers } = await supabase
+        .from("family_members")
+        .select("first_name, last_name, relation_type")
+        .eq("added_by", member.profile_id);
+
+      const match = (theirMembers || []).find(m => {
+        const mfn = (m.first_name || "").toLowerCase();
+        const mln = (m.last_name || "").toLowerCase();
+        return mfn === fn || (mfn.includes(fn) && fn.length >= 3) ||
+               (ln && mln && (mln === ln || mln.includes(ln)));
+      });
+
+      if (match) {
+        return {
+          connectedMember: member,
+          matchedName: `${match.first_name} ${match.last_name || ""}`.trim(),
+          matchedRelation: match.relation_type,
+        };
+      }
+    }
+    return null;
+  };
+
+  const saveMember = async (force = false) => {
     if (!form.primer_nombre.trim()) { toast.error("El primer nombre es obligatorio"); return; }
     if (!form.primer_apellido.trim()) { toast.error("El primer apellido es obligatorio"); return; }
     const first_name = [form.primer_nombre.trim(), form.segundo_nombre.trim()].filter(Boolean).join(" ");
     const last_name = [form.primer_apellido.trim(), form.segundo_apellido.trim()].filter(Boolean).join(" ");
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
+
+    // Check for duplicates in extended family (only on first attempt)
+    if (!force) {
+      const dup = await checkExtendedDuplicate(first_name, last_name, user.id);
+      if (dup) {
+        setDuplicateWarning(dup);
+        return; // Show warning, don't save yet
+      }
+    }
+    setDuplicateWarning(null);
     setSaving(true);
     const kind = RELATION_GROUPS[0].options.includes(form.relation_type) ? "blood" : "affinity";
     const { data: inserted, error } = await supabase.from("family_members").insert({
@@ -572,7 +625,7 @@ export default function TreePage() {
               <h2 className="text-lg font-bold text-gray-900">
                 {editingMember ? "Editar familiar" : "Agregar familiar"}
               </h2>
-              <button onClick={() => { setShowModal(false); setEditingMember(null); setForm(EMPTY_FORM); }} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => { setShowModal(false); setEditingMember(null); setForm(EMPTY_FORM); setDuplicateWarning(null); }} className="text-gray-400 hover:text-gray-600">
                 <X size={20} />
               </button>
             </div>
@@ -669,10 +722,37 @@ export default function TreePage() {
                 </>
               ) : (
                 <>
-                  <button onClick={() => { setShowModal(false); setForm(EMPTY_FORM); }} className="flex-1 btn-secondary">
+                  {/* Duplicate warning */}
+                  {duplicateWarning && (
+                    <div className="w-full mb-2 bg-amber-50 border border-amber-200 rounded-xl p-3">
+                      <p className="text-xs font-semibold text-amber-800 mb-1">⚠️ Posible duplicado</p>
+                      <p className="text-xs text-amber-700 leading-relaxed mb-2">
+                        <span className="font-bold">{duplicateWarning.matchedName}</span> ya está en el árbol de{" "}
+                        <span className="font-bold">{duplicateWarning.connectedMember.first_name} {duplicateWarning.connectedMember.last_name}</span>{" "}
+                        (tu {RELATION_LABELS[duplicateWarning.connectedMember.relation_type as RelationType] || duplicateWarning.connectedMember.relation_type}){" "}
+                        como <span className="font-bold">{RELATION_LABELS[duplicateWarning.matchedRelation as RelationType] || duplicateWarning.matchedRelation}</span>.
+                        ¿Es la misma persona?
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setDuplicateWarning(null)}
+                          className="flex-1 text-xs font-semibold bg-amber-100 text-amber-800 hover:bg-amber-200 px-3 py-1.5 rounded-lg transition-colors"
+                        >
+                          Son diferentes
+                        </button>
+                        <button
+                          onClick={() => saveMember(true)}
+                          className="flex-1 text-xs font-semibold bg-amber-600 text-white hover:bg-amber-700 px-3 py-1.5 rounded-lg transition-colors"
+                        >
+                          Sí, agregar igual
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  <button onClick={() => { setShowModal(false); setForm(EMPTY_FORM); setDuplicateWarning(null); }} className="flex-1 btn-secondary">
                     Cancelar
                   </button>
-                  <button onClick={saveMember} disabled={saving} className="flex-1 btn-primary">
+                  <button onClick={() => saveMember()} disabled={saving} className="flex-1 btn-primary">
                     {saving ? "Guardando..." : "Agregar"}
                   </button>
                 </>
