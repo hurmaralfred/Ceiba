@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { TreePine, MapPin, Users, Share2, LogOut, User, Send, List, GitFork, Plus, X, Pencil, Map, Image, Calendar, MessageCircle } from "lucide-react";
+import { TreePine, MapPin, Users, Share2, LogOut, User, Send, List, GitFork, Plus, X, Pencil, Map as MapIcon, Image, Calendar, MessageCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Profile, FamilyMember, RelationType, RELATION_LABELS } from "@/lib/types";
 import type { ExtendedEntry, MemberLink } from "@/components/tree/FamilyTreeGraph";
@@ -693,7 +693,7 @@ export default function TreePage() {
                     view === "map" ? "bg-ceiba-700 text-white" : "text-gray-500 hover:bg-gray-100"
                   }`}
                 >
-                  <Map size={15} /> Mapa
+                  <MapIcon size={15} /> Mapa
                 </button>
               </div>
             </div>
