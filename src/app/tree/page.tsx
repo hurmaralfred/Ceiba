@@ -89,6 +89,8 @@ export default function TreePage() {
     connectedMember: { first_name: string; last_name: string; relation_type: string };
     matchedName: string;
     matchedRelation: string;
+    matchedProfileId: string | null;
+    matchedFamilyMemberId: string | null;
   } | null>(null);
 
   useEffect(() => {
@@ -192,7 +194,7 @@ export default function TreePage() {
 
   // Check if the name being added already exists in a connected family member's tree
   const checkExtendedDuplicate = async (first_name: string, last_name: string, userId: string) => {
-    // Get my connected Ceiba members
+    // Get my connected Ceiba members (who are on Ceiba)
     const { data: myMembers } = await supabase
       .from("family_members")
       .select("profile_id, first_name, last_name, relation_type")
@@ -207,7 +209,7 @@ export default function TreePage() {
     for (const member of myMembers) {
       const { data: theirMembers } = await supabase
         .from("family_members")
-        .select("first_name, last_name, relation_type")
+        .select("id, first_name, last_name, relation_type, profile_id")
         .eq("added_by", member.profile_id);
 
       const match = (theirMembers || []).find(m => {
@@ -222,10 +224,44 @@ export default function TreePage() {
           connectedMember: member,
           matchedName: `${match.first_name} ${match.last_name || ""}`.trim(),
           matchedRelation: match.relation_type,
+          matchedProfileId: match.profile_id || null,
+          matchedFamilyMemberId: match.id,
         };
       }
     }
     return null;
+  };
+
+  // Save linking to an existing person in another tree (same real human, no duplicate)
+  const saveLinkedMember = async () => {
+    if (!duplicateWarning) return;
+    const first_name = [form.primer_nombre.trim(), form.segundo_nombre.trim()].filter(Boolean).join(" ");
+    const last_name = [form.primer_apellido.trim(), form.segundo_apellido.trim()].filter(Boolean).join(" ");
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    setSaving(true);
+    const kind = RELATION_GROUPS[0].options.includes(form.relation_type) ? "blood" : "affinity";
+
+    // Create the family member WITH the linked profile_id so both trees point to the same person
+    const { data: inserted, error } = await supabase.from("family_members").insert({
+      added_by: user.id,
+      first_name,
+      last_name: last_name || null,
+      email: form.email.trim() || null,
+      birth_date: form.birth_date || null,
+      relation_type: form.relation_type,
+      relation_kind: kind,
+      profile_id: duplicateWarning.matchedProfileId || null, // link to same profile if exists
+    }).select("id").single();
+
+    setSaving(false);
+    if (error) { toast.error("Error al guardar"); return; }
+
+    toast.success("Familiar vinculado correctamente");
+    setShowModal(false);
+    setForm(EMPTY_FORM);
+    setDuplicateWarning(null);
+    loadData();
   };
 
   const saveMember = async (force = false) => {
@@ -725,26 +761,26 @@ export default function TreePage() {
                   {/* Duplicate warning */}
                   {duplicateWarning && (
                     <div className="w-full mb-2 bg-amber-50 border border-amber-200 rounded-xl p-3">
-                      <p className="text-xs font-semibold text-amber-800 mb-1">⚠️ Posible duplicado</p>
-                      <p className="text-xs text-amber-700 leading-relaxed mb-2">
+                      <p className="text-xs font-semibold text-amber-800 mb-1">⚠️ Ya existe en otro árbol</p>
+                      <p className="text-xs text-amber-700 leading-relaxed mb-3">
                         <span className="font-bold">{duplicateWarning.matchedName}</span> ya está en el árbol de{" "}
                         <span className="font-bold">{duplicateWarning.connectedMember.first_name} {duplicateWarning.connectedMember.last_name}</span>{" "}
                         (tu {RELATION_LABELS[duplicateWarning.connectedMember.relation_type as RelationType] || duplicateWarning.connectedMember.relation_type}){" "}
                         como <span className="font-bold">{RELATION_LABELS[duplicateWarning.matchedRelation as RelationType] || duplicateWarning.matchedRelation}</span>.
-                        ¿Es la misma persona?
                       </p>
                       <div className="flex gap-2">
                         <button
-                          onClick={() => setDuplicateWarning(null)}
-                          className="flex-1 text-xs font-semibold bg-amber-100 text-amber-800 hover:bg-amber-200 px-3 py-1.5 rounded-lg transition-colors"
+                          onClick={() => { setDuplicateWarning(null); saveMember(true); }}
+                          className="flex-1 text-xs font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200 px-3 py-1.5 rounded-lg transition-colors"
                         >
-                          Son diferentes
+                          Son personas diferentes
                         </button>
                         <button
-                          onClick={() => saveMember(true)}
-                          className="flex-1 text-xs font-semibold bg-amber-600 text-white hover:bg-amber-700 px-3 py-1.5 rounded-lg transition-colors"
+                          onClick={saveLinkedMember}
+                          disabled={saving}
+                          className="flex-1 text-xs font-semibold bg-ceiba-700 text-white hover:bg-ceiba-800 px-3 py-1.5 rounded-lg transition-colors"
                         >
-                          Sí, agregar igual
+                          {saving ? "Vinculando..." : "Sí, es la misma persona"}
                         </button>
                       </div>
                     </div>
