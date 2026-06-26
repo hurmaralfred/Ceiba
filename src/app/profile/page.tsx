@@ -23,7 +23,7 @@ export default function ProfilePage() {
     social_link: "",
     city: "",
     country: "",
-    birth_year: "",
+    birth_date: "",
     phone: "",
   });
 
@@ -42,7 +42,7 @@ export default function ProfilePage() {
         social_link: data.social_link || "",
         city: data.city || "",
         country: data.country || "",
-        birth_year: data.birth_year ? String(data.birth_year) : "",
+        birth_date: (data as any).birth_date || "",
         phone: data.phone || "",
       });
       if (data.avatar_url) setPhotoPreview(data.avatar_url);
@@ -86,7 +86,7 @@ export default function ProfilePage() {
       social_link: form.social_link.trim() || null,
       city: form.city.trim() || null,
       country: form.country.trim() || null,
-      birth_year: form.birth_year ? parseInt(form.birth_year) : null,
+      birth_date: form.birth_date || null,
       phone: form.phone.trim() || null,
       ...(avatar_url ? { avatar_url } : {}),
     }).eq("id", user.id);
@@ -189,10 +189,10 @@ export default function ProfilePage() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Año de nacimiento</label>
-              <input type="number" className="input-field" min="1900" max="2020" placeholder="1985"
-                value={form.birth_year}
-                onChange={e => setForm(f => ({ ...f, birth_year: e.target.value }))}
+              <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de nacimiento</label>
+              <input type="date" className="input-field"
+                value={form.birth_date}
+                onChange={e => setForm(f => ({ ...f, birth_date: e.target.value }))}
               />
             </div>
             <div>

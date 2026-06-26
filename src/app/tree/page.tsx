@@ -43,6 +43,7 @@ function inferRelation(parentRelation: RelationType, childRelation: string): str
 import InstallBanner from "@/components/InstallBanner";
 import SuggestionCards from "@/components/SuggestionCards";
 import NameMatchCards from "@/components/NameMatchCards";
+import BirthdayWidget from "@/components/BirthdayWidget";
 import toast from "react-hot-toast";
 
 const FamilyTreeGraph = dynamic(
@@ -68,7 +69,7 @@ const RELATION_GROUPS = [
   },
 ];
 
-const EMPTY_FORM = { primer_nombre: "", segundo_nombre: "", primer_apellido: "", segundo_apellido: "", first_name: "", last_name: "", email: "", relation_type: "father" as RelationType };
+const EMPTY_FORM = { primer_nombre: "", segundo_nombre: "", primer_apellido: "", segundo_apellido: "", first_name: "", last_name: "", email: "", birth_date: "", relation_type: "father" as RelationType };
 
 export default function TreePage() {
   const router = useRouter();
@@ -197,6 +198,7 @@ export default function TreePage() {
       first_name,
       last_name: last_name || null,
       email: form.email.trim() || null,
+      birth_date: form.birth_date || null,
       relation_type: form.relation_type,
       relation_kind: kind,
     }).select("id").single();
@@ -236,6 +238,7 @@ export default function TreePage() {
       first_name: member.first_name,
       last_name: member.last_name || "",
       email: member.email || "",
+      birth_date: (member as any).birth_date || "",
       relation_type: member.relation_type as RelationType,
     });
     setShowModal(true);
@@ -251,6 +254,7 @@ export default function TreePage() {
       first_name,
       last_name: last_name || null,
       email: form.email.trim() || null,
+      birth_date: form.birth_date || null,
       relation_type: form.relation_type,
       relation_kind: kind,
     }).eq("id", editingMember.id);
@@ -414,6 +418,9 @@ export default function TreePage() {
             </div>
           </div>
         )}
+
+        {/* Birthdays */}
+        {profile && <BirthdayWidget userId={profile.id} />}
 
         {/* Suggestions */}
         <NameMatchCards onAccepted={loadData} />
@@ -584,15 +591,26 @@ export default function TreePage() {
                   />
                 </div>
               </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Correo (para invitarlo)</label>
-                <input
-                  type="email"
-                  className="input-field text-sm"
-                  placeholder="correo@ejemplo.com"
-                  value={form.email}
-                  onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Correo (para invitarlo)</label>
+                  <input
+                    type="email"
+                    className="input-field text-sm"
+                    placeholder="correo@ejemplo.com"
+                    value={form.email}
+                    onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Fecha de nacimiento</label>
+                  <input
+                    type="date"
+                    className="input-field text-sm"
+                    value={form.birth_date}
+                    onChange={e => setForm(f => ({ ...f, birth_date: e.target.value }))}
+                  />
+                </div>
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Parentesco *</label>
