@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { TreePine, MapPin, Users, Share2, LogOut, User, Send, List, GitFork, Plus, X } from "lucide-react";
+import { TreePine, MapPin, Users, Share2, LogOut, User, Send, List, GitFork, Plus, X, Pencil } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Profile, FamilyMember, RelationType, RELATION_LABELS } from "@/lib/types";
 import { ExtendedEntry } from "@/components/tree/FamilyTreeGraph";
@@ -73,6 +73,7 @@ export default function TreePage() {
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<"graph" | "list">("graph");
   const [showModal, setShowModal] = useState(false);
+  const [editingMember, setEditingMember] = useState<FamilyMember | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
 
@@ -192,6 +193,37 @@ export default function TreePage() {
 
     toast.success("Familiar agregado");
     setShowModal(false);
+    setForm(EMPTY_FORM);
+    loadData();
+  };
+
+  const openEdit = (member: FamilyMember) => {
+    setEditingMember(member);
+    setForm({
+      first_name: member.first_name,
+      last_name: member.last_name || "",
+      email: member.email || "",
+      relation_type: member.relation_type as RelationType,
+    });
+    setShowModal(true);
+  };
+
+  const updateMember = async () => {
+    if (!editingMember || !form.first_name.trim()) return;
+    setSaving(true);
+    const kind = RELATION_GROUPS[0].options.includes(form.relation_type) ? "blood" : "affinity";
+    const { error } = await supabase.from("family_members").update({
+      first_name: form.first_name.trim(),
+      last_name: form.last_name.trim() || null,
+      email: form.email.trim() || null,
+      relation_type: form.relation_type,
+      relation_kind: kind,
+    }).eq("id", editingMember.id);
+    setSaving(false);
+    if (error) { toast.error("Error al guardar"); return; }
+    toast.success("Familiar actualizado");
+    setShowModal(false);
+    setEditingMember(null);
     setForm(EMPTY_FORM);
     loadData();
   };
@@ -333,10 +365,10 @@ export default function TreePage() {
             {view === "list" && (
               <div className="space-y-6">
                 {bloodMembers.length > 0 && (
-                  <MemberGroup title="Familia de sangre" members={bloodMembers} onInvite={sendInvite} kind="blood" />
+                  <MemberGroup title="Familia de sangre" members={bloodMembers} onInvite={sendInvite} onEdit={openEdit} kind="blood" />
                 )}
                 {affinityMembers.length > 0 && (
-                  <MemberGroup title="Familia política" members={affinityMembers} onInvite={sendInvite} kind="affinity" />
+                  <MemberGroup title="Familia política" members={affinityMembers} onInvite={sendInvite} onEdit={openEdit} kind="affinity" />
                 )}
               </div>
             )}
@@ -344,13 +376,15 @@ export default function TreePage() {
         )}
       </div>
 
-      {/* Add Member Modal */}
+      {/* Add / Edit Member Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-bold text-gray-900">Agregar familiar</h2>
-              <button onClick={() => { setShowModal(false); setForm(EMPTY_FORM); }} className="text-gray-400 hover:text-gray-600">
+              <h2 className="text-lg font-bold text-gray-900">
+                {editingMember ? "Editar familiar" : "Agregar familiar"}
+              </h2>
+              <button onClick={() => { setShowModal(false); setEditingMember(null); setForm(EMPTY_FORM); }} className="text-gray-400 hover:text-gray-600">
                 <X size={20} />
               </button>
             </div>
@@ -412,11 +446,11 @@ export default function TreePage() {
                 Cancelar
               </button>
               <button
-                onClick={saveMember}
+                onClick={editingMember ? updateMember : saveMember}
                 disabled={saving}
                 className="flex-1 btn-primary"
               >
-                {saving ? "Guardando..." : "Agregar"}
+                {saving ? "Guardando..." : editingMember ? "Guardar cambios" : "Agregar"}
               </button>
             </div>
           </div>
@@ -440,8 +474,9 @@ function StatCard({ label, value, color }: { label: string; value: number; color
   );
 }
 
-function MemberGroup({ title, members, onInvite, kind }: {
-  title: string; members: FamilyMember[]; onInvite: (m: FamilyMember) => void; kind: string;
+function MemberGroup({ title, members, onInvite, onEdit, kind }: {
+  title: string; members: FamilyMember[]; onInvite: (m: FamilyMember) => void;
+  onEdit: (m: FamilyMember) => void; kind: string;
 }) {
   return (
     <div className="card">
@@ -451,7 +486,7 @@ function MemberGroup({ title, members, onInvite, kind }: {
       </h2>
       <div className="divide-y divide-gray-100">
         {members.map(m => (
-          <div key={m.id} className="py-3 flex items-center gap-4">
+          <div key={m.id} className="py-3 flex items-center gap-3">
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold flex-shrink-0 ${
               m.profile_id ? "bg-ceiba-700 text-white" : "bg-gray-200 text-gray-600"
             }`}>
@@ -465,14 +500,23 @@ function MemberGroup({ title, members, onInvite, kind }: {
                 {m.invitation_sent && !m.profile_id && <span className="text-amber-600">· Invitado</span>}
               </div>
             </div>
-            {!m.profile_id && (
+            <div className="flex items-center gap-2 flex-shrink-0">
               <button
-                onClick={() => onInvite(m)}
-                className="flex items-center gap-1 text-ceiba-700 hover:text-ceiba-900 text-xs font-semibold border border-ceiba-200 rounded-lg px-3 py-1.5 hover:bg-ceiba-50 transition-colors"
+                onClick={() => onEdit(m)}
+                className="p-1.5 text-gray-400 hover:text-ceiba-700 hover:bg-ceiba-50 rounded-lg transition-colors"
+                title="Editar"
               >
-                <Send size={12} /> {m.email ? "Invitar" : "Sin correo"}
+                <Pencil size={14} />
               </button>
-            )}
+              {!m.profile_id && (
+                <button
+                  onClick={() => onInvite(m)}
+                  className="flex items-center gap-1 text-ceiba-700 hover:text-ceiba-900 text-xs font-semibold border border-ceiba-200 rounded-lg px-3 py-1.5 hover:bg-ceiba-50 transition-colors"
+                >
+                  <Send size={12} /> {m.email ? "Invitar" : "Sin correo"}
+                </button>
+              )}
+            </div>
           </div>
         ))}
       </div>
