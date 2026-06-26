@@ -24,12 +24,27 @@ interface Props {
   onNodeClick?: (memberId: string) => void;
 }
 
+// Generación vertical: negativo = ancestros (arriba), positivo = descendientes (abajo)
+const GENERATION_LEVEL: Record<string, number> = {
+  grandfather_paternal: -2, grandmother_paternal: -2,
+  grandfather_maternal: -2, grandmother_maternal: -2,
+  father: -1, mother: -1, father_in_law: -1, mother_in_law: -1,
+  stepfather: -1, stepmother: -1, uncle: -1, aunt: -1,
+  brother: 0, sister: 0, half_brother: 0, half_sister: 0,
+  spouse: 0, partner: 0, cousin: 0,
+  brother_in_law: 0, sister_in_law: 0,
+  son: 1, daughter: 1, stepchild: 1, nephew: 1, niece: 1,
+  grandson: 2, granddaughter: 2,
+};
+const ROW_HEIGHT = 145;
+
 interface NodeDatum extends d3.SimulationNodeDatum {
   id: string;
   name: string;
   type: "root" | "blood" | "affinity";
   relation: string;
   level: 0 | 1 | 2;
+  generation: number; // vertical row (negative = ancestor, positive = descendant)
 }
 
 interface LinkDatum extends d3.SimulationLinkDatum<NodeDatum> {
@@ -92,26 +107,42 @@ export default function FamilyTreeGraph({ profile, members, extendedMembers = []
     // Wrap entire D3 block so a crash doesn't leave page blank
     try {
 
-    // Build nodes
+    // Build nodes with generation level for hierarchical layout
+    const memberGenMap = new Map<string, number>(); // memberId → generation
+    members.forEach(m => memberGenMap.set(m.id, GENERATION_LEVEL[m.relation_type] ?? 0));
+
     const nodes: NodeDatum[] = [
-      { id: "root", name: profile.first_name, type: "root", relation: "Tú", level: 0 },
+      { id: "root", name: profile.first_name, type: "root", relation: "Tú", level: 0, generation: 0 },
       ...members.map((m) => ({
         id: m.id,
         name: m.first_name,
         type: m.relation_kind as "blood" | "affinity",
         relation: RELATION_LABELS[m.relation_type] ?? m.relation_type,
         level: 1 as const,
+        generation: GENERATION_LEVEL[m.relation_type] ?? 0,
       })),
-      ...extendedMembers.map(({ member: m, inferredRelation }) => ({
-        id: m.id,
-        name: m.first_name,
-        type: m.relation_kind as "blood" | "affinity",
-        relation: inferredRelation
-          ? (RELATION_LABELS[inferredRelation] ?? inferredRelation)
-          : (RELATION_LABELS[m.relation_type] ?? m.relation_type),
-        level: 2 as const,
-      })),
+      ...extendedMembers.map(({ member: m, parentMemberId, inferredRelation }) => {
+        const parentGen = memberGenMap.get(parentMemberId) ?? 0;
+        const extGen = parentGen + (GENERATION_LEVEL[m.relation_type] ?? 0);
+        return {
+          id: m.id,
+          name: m.first_name,
+          type: m.relation_kind as "blood" | "affinity",
+          relation: inferredRelation
+            ? (RELATION_LABELS[inferredRelation] ?? inferredRelation)
+            : (RELATION_LABELS[m.relation_type] ?? m.relation_type),
+          level: 2 as const,
+          generation: extGen,
+        };
+      }),
     ];
+
+    // Compute dynamic height based on generation range
+    const gens = nodes.map(n => n.generation);
+    const minGen = Math.min(...gens, 0);
+    const maxGen = Math.max(...gens, 0);
+    const topPad = (Math.abs(minGen) + 1) * ROW_HEIGHT;
+    const totalHeight = Math.max(500, (maxGen - minGen + 2) * ROW_HEIGHT);
 
     // Build links
     const memberIdSet = new Set(members.map(m => m.id));
@@ -191,11 +222,11 @@ export default function FamilyTreeGraph({ profile, members, extendedMembers = []
     const svg = d3
       .select(svgRef.current)
       .attr("width", width)
-      .attr("height", height)
-      .attr("viewBox", `0 0 ${width} ${height}`);
+      .attr("height", totalHeight)
+      .attr("viewBox", `0 0 ${width} ${totalHeight}`);
 
     svg.append("rect")
-      .attr("width", width).attr("height", height)
+      .attr("width", width).attr("height", totalHeight)
       .attr("fill", "#f9fafb").attr("rx", 16);
 
     const g = svg.append("g");
@@ -211,14 +242,15 @@ export default function FamilyTreeGraph({ profile, members, extendedMembers = []
       .force("link",
         d3.forceLink<NodeDatum, LinkDatum>(links)
           .id((d) => d.id)
-          .distance((d) => {
-            const target = d.target as NodeDatum;
-            return target.level === 2 ? 110 : 150;
-          })
+          .distance((d) => d.kind === "peer" ? 110 : 100)
+          .strength((d) => d.kind === "peer" ? 0.8 : 0.2) // peer links pull horizontally, parent-child lines are guided by forceY
       )
-      .force("charge", d3.forceManyBody().strength(-350))
-      .force("center", d3.forceCenter(width / 2, height / 2))
-      .force("collision", d3.forceCollide((d: NodeDatum) => d.level === 2 ? 45 : 55));
+      // Strong vertical force: ancestors go up, descendants go down
+      .force("y", d3.forceY<NodeDatum>((d) => topPad + d.generation * ROW_HEIGHT).strength(2.5))
+      // Gentle centering horizontally
+      .force("x", d3.forceX<NodeDatum>(width / 2).strength(0.06))
+      .force("charge", d3.forceManyBody().strength(-450))
+      .force("collision", d3.forceCollide<NodeDatum>((d) => d.level === 2 ? 48 : 56));
 
     // Links
     const link = g.append("g")
