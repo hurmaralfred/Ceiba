@@ -21,6 +21,7 @@ export interface Profile {
   email?: string
   phone?: string
   avatar_url?: string
+  social_link?: string
   bio?: string
   birth_year?: number
   gender?: string

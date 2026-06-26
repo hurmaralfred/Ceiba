@@ -113,7 +113,7 @@ export default function TreePage() {
 
     const [{ data: profileData }, { data: membersData }] = await Promise.all([
       supabase.from("profiles").select("*").eq("id", user.id).single(),
-      supabase.from("family_members").select("*").eq("added_by", user.id),
+      supabase.from("family_members").select("*, profile:profiles(id, first_name, last_name, avatar_url, social_link)").eq("added_by", user.id),
     ]);
 
     const myMembers = membersData || [];
@@ -292,12 +292,24 @@ export default function TreePage() {
         {/* Profile header */}
         {profile && (
           <div className="card mb-6 flex items-center gap-5">
-            <div className="w-16 h-16 rounded-2xl bg-ceiba-700 flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
-              {profile.first_name[0]}{profile.last_name[0]}
+            <div className="w-16 h-16 rounded-2xl bg-ceiba-700 flex-shrink-0 overflow-hidden">
+              {profile.avatar_url ? (
+                <img src={profile.avatar_url} alt={profile.first_name} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-white text-2xl font-bold">
+                  {profile.first_name[0]}{profile.last_name[0]}
+                </div>
+              )}
             </div>
             <div className="flex-1 min-w-0">
               <h1 className="text-xl font-bold text-gray-900">{profile.first_name} {profile.last_name}</h1>
               {profile.city && <p className="text-gray-500 text-sm">{profile.city}{profile.country ? `, ${profile.country}` : ""}</p>}
+              {profile.social_link && (
+                <a href={profile.social_link} target="_blank" rel="noopener noreferrer"
+                  className="text-xs text-blue-500 hover:underline truncate block">
+                  🔗 {profile.social_link.replace(/^https?:\/\/(www\.)?/, "").split("/")[0]}
+                </a>
+              )}
               <div className="flex gap-3 mt-2 text-sm">
                 <span className="text-ceiba-700 font-semibold">{members.length} familiares</span>
                 <span className="text-gray-400">·</span>
@@ -506,17 +518,36 @@ function MemberGroup({ title, members, onInvite, onEdit, kind }: {
       <div className="divide-y divide-gray-100">
         {members.map(m => (
           <div key={m.id} className="py-3 flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold flex-shrink-0 ${
-              m.profile_id ? "bg-ceiba-700 text-white" : "bg-gray-200 text-gray-600"
+            <div className={`w-10 h-10 rounded-xl flex-shrink-0 overflow-hidden ${
+              m.profile_id ? "bg-ceiba-700" : "bg-gray-200"
             }`}>
-              {m.first_name[0]}{m.last_name ? m.last_name[0] : ""}
+              {(m as any).profile?.avatar_url ? (
+                <img src={(m as any).profile.avatar_url} alt={m.first_name} className="w-full h-full object-cover" />
+              ) : (
+                <div className={`w-full h-full flex items-center justify-center text-sm font-bold ${
+                  m.profile_id ? "text-white" : "text-gray-600"
+                }`}>
+                  {m.first_name[0]}{m.last_name ? m.last_name[0] : ""}
+                </div>
+              )}
             </div>
             <div className="flex-1 min-w-0">
               <div className="font-semibold text-gray-900 truncate">{m.first_name} {m.last_name}</div>
-              <div className="text-xs text-gray-500 flex items-center gap-2">
+              <div className="text-xs text-gray-500 flex items-center gap-2 flex-wrap">
                 <span>{RELATION_LABELS[m.relation_type]}</span>
                 {m.profile_id && <span className="text-ceiba-600 font-medium">· En Ceiba</span>}
                 {m.invitation_sent && !m.profile_id && <span className="text-amber-600">· Invitado</span>}
+                {(m as any).profile?.social_link && (
+                  <a
+                    href={(m as any).profile.social_link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-500 hover:underline truncate max-w-[120px]"
+                    onClick={e => e.stopPropagation()}
+                  >
+                    🔗 Red social
+                  </a>
+                )}
               </div>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
