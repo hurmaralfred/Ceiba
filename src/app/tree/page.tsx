@@ -97,8 +97,17 @@ export default function TreePage() {
 
       if (extData && extData.length > 0) {
         const myMemberIds = new Set(myMembers.map(m => m.profile_id).filter(Boolean));
+        const myMemberNames = new Set(
+          myMembers.map(m => `${m.first_name.toLowerCase()}|${(m.last_name || "").toLowerCase()}`)
+        );
         const extended: ExtendedEntry[] = extData
-          .filter(em => em.profile_id !== user.id && !myMemberIds.has(em.profile_id))
+          .filter(em => {
+            if (em.profile_id === user.id) return false;
+            if (myMemberIds.has(em.profile_id)) return false;
+            const nameKey = `${em.first_name.toLowerCase()}|${(em.last_name || "").toLowerCase()}`;
+            if (myMemberNames.has(nameKey)) return false;
+            return true;
+          })
           .map(em => ({
             member: em as FamilyMember,
             parentMemberId: joinedMembers.find(m => m.profile_id === em.added_by)!.id,
