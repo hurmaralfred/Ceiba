@@ -44,6 +44,7 @@ import InstallBanner from "@/components/InstallBanner";
 import SuggestionCards from "@/components/SuggestionCards";
 import NameMatchCards from "@/components/NameMatchCards";
 import BirthdayWidget from "@/components/BirthdayWidget";
+import TodayWidget from "@/components/TodayWidget";
 import BottomNav from "@/components/BottomNav";
 import toast from "react-hot-toast";
 
@@ -630,6 +631,9 @@ export default function TreePage() {
             </div>
           </div>
         )}
+
+        {/* Hoy en tu familia */}
+        {profile && <TodayWidget userId={profile.id} />}
 
         {/* Birthdays */}
         {profile && <BirthdayWidget userId={profile.id} />}

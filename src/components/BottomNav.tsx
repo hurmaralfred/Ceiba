@@ -1,14 +1,14 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { TreePine, MessageCircle, Camera, BookOpen, Settings } from "lucide-react";
+import { TreePine, Bell, Camera, MessageCircle, Settings } from "lucide-react";
 
 const TABS = [
-  { href: "/tree",   icon: TreePine,      label: "Árbol"    },
-  { href: "/chat",   icon: MessageCircle, label: "Chat"     },
-  { href: "/photos", icon: Camera,        label: "Fotos"    },
-  { href: "/events", icon: BookOpen,      label: "Historia" },
-  { href: "/settings", icon: Settings,   label: "Ajustes"  },
+  { href: "/tree",    icon: TreePine,      label: "Árbol"   },
+  { href: "/feed",    icon: Bell,          label: "Feed"    },
+  { href: "/photos",  icon: Camera,        label: "Fotos"   },
+  { href: "/chat",    icon: MessageCircle, label: "Chat"    },
+  { href: "/settings", icon: Settings,    label: "Ajustes" },
 ];
 
 export default function BottomNav() {

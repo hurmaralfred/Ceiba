@@ -72,11 +72,15 @@ create table public.family_members (
   )),
   -- Is this a blood relation or by marriage/affinity?
   relation_kind text not null default 'blood' check (relation_kind in ('blood', 'affinity', 'other')),
+  birth_date date,
   invitation_sent boolean default false,
   invitation_token text unique,
   invitation_sent_at timestamptz,
   created_at timestamptz default now()
 );
+
+-- Run this if birth_date column doesn't exist yet:
+-- alter table public.family_members add column if not exists birth_date date;
 
 alter table public.family_members enable row level security;
 
