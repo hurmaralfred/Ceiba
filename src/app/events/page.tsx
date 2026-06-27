@@ -124,9 +124,9 @@ export default function EventsPage() {
         </button>
       </nav>
 
-      <div className="max-w-lg mx-auto px-4 py-6 pb-24 space-y-6">
+      <div className="max-w-lg mx-auto px-4 py-4 pb-28">
         {events.length === 0 && (
-          <div className="card text-center py-14">
+          <div className="card text-center py-14 mt-4">
             <Calendar size={48} className="text-gray-300 mx-auto mb-4" />
             <h3 className="font-bold text-gray-700 mb-2">Sin eventos registrados</h3>
             <p className="text-gray-400 text-sm mb-6 max-w-xs mx-auto">
@@ -138,53 +138,89 @@ export default function EventsPage() {
           </div>
         )}
 
-        {years.map(year => (
-          <div key={year}>
-            <div className="flex items-center gap-3 mb-3">
-              <div className="h-px bg-gray-200 flex-1" />
-              <span className="text-sm font-bold text-gray-400">{year}</span>
-              <div className="h-px bg-gray-200 flex-1" />
-            </div>
-            <div className="space-y-3">
-              {byYear[year].map(event => {
-                const typeInfo = getTypeInfo(event.event_type);
-                return (
-                  <div key={event.id} className="card flex gap-4">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${typeInfo.color}`}>
-                      {typeInfo.icon}
+        {/* ── Visual timeline ── */}
+        {years.length > 0 && (
+          <div className="relative">
+            {/* Vertical spine */}
+            <div className="absolute left-[27px] top-0 bottom-0 w-0.5 bg-gray-200" />
+
+            <div className="space-y-1">
+              {years.map(year => (
+                <div key={year}>
+                  {/* Year marker */}
+                  <div className="flex items-center gap-3 py-3 relative">
+                    <div className="w-14 h-7 bg-ceiba-800 rounded-full flex items-center justify-center shrink-0 z-10 shadow-sm">
+                      <span className="text-xs font-bold text-white">{year}</span>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2">
-                        <h3 className="font-bold text-gray-900">{event.title}</h3>
-                        {event.created_by === userId && (
-                          <button onClick={() => deleteEvent(event.id)} className="text-gray-300 hover:text-red-400 transition-colors flex-shrink-0">
-                            <Trash2 size={14} />
-                          </button>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-gray-500 mt-0.5 flex-wrap">
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${typeInfo.color}`}>{typeInfo.label}</span>
-                        <span>{formatDate(event.event_date)}</span>
-                        {event.location && <span className="flex items-center gap-0.5"><MapPin size={10} />{event.location}</span>}
-                      </div>
-                      {event.description && (
-                        <p className="text-sm text-gray-600 mt-1.5 leading-relaxed">{event.description}</p>
-                      )}
-                      <div className="flex items-center gap-1.5 mt-2">
-                        <div className="w-5 h-5 rounded-full bg-ceiba-200 overflow-hidden flex items-center justify-center text-ceiba-700 text-xs font-bold">
-                          {event.creator?.avatar_url
-                            ? <img src={event.creator.avatar_url} className="w-full h-full object-cover" />
-                            : `${event.creator?.first_name?.[0]}${event.creator?.last_name?.[0]}`}
-                        </div>
-                        <span className="text-xs text-gray-400">{event.creator?.first_name} {event.creator?.last_name}</span>
-                      </div>
-                    </div>
+                    <div className="h-px bg-gray-200 flex-1" />
                   </div>
-                );
-              })}
+
+                  {/* Events for this year */}
+                  {byYear[year].map((event, idx) => {
+                    const typeInfo = getTypeInfo(event.event_type);
+                    const isLast = idx === byYear[year].length - 1;
+                    return (
+                      <div key={event.id} className={`flex gap-3 ${isLast ? "mb-2" : "mb-1"}`}>
+                        {/* Timeline dot */}
+                        <div className="flex flex-col items-center shrink-0 w-14">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center z-10 shadow-sm border-2 border-white ${typeInfo.color}`}>
+                            {typeInfo.icon}
+                          </div>
+                        </div>
+
+                        {/* Event card */}
+                        <div className="flex-1 bg-white rounded-2xl shadow-sm border border-gray-100 p-3.5 mb-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-bold text-gray-900 text-sm leading-tight">{event.title}</h3>
+                              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1">
+                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${typeInfo.color}`}>
+                                  {typeInfo.icon && <span className="[&>svg]:w-2.5 [&>svg]:h-2.5">{typeInfo.icon}</span>}
+                                  {typeInfo.label}
+                                </span>
+                                <span className="text-[10px] text-gray-400">
+                                  {new Date(event.event_date).toLocaleDateString("es", { day: "numeric", month: "short" })}
+                                </span>
+                                {event.location && (
+                                  <span className="flex items-center gap-0.5 text-[10px] text-gray-400">
+                                    <MapPin size={9} />{event.location}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            {event.created_by === userId && (
+                              <button onClick={() => deleteEvent(event.id)}
+                                className="text-gray-200 hover:text-red-400 transition-colors shrink-0 p-0.5">
+                                <Trash2 size={13} />
+                              </button>
+                            )}
+                          </div>
+
+                          {event.description && (
+                            <p className="text-xs text-gray-600 mt-2 leading-relaxed border-t border-gray-50 pt-2">
+                              {event.description}
+                            </p>
+                          )}
+
+                          <div className="flex items-center gap-1.5 mt-2">
+                            <div className="w-4 h-4 rounded-full bg-ceiba-200 overflow-hidden flex items-center justify-center text-ceiba-700 text-[9px] font-bold shrink-0">
+                              {event.creator?.avatar_url
+                                ? <img src={event.creator.avatar_url} className="w-full h-full object-cover" alt="" />
+                                : `${event.creator?.first_name?.[0]}${event.creator?.last_name?.[0]}`}
+                            </div>
+                            <span className="text-[10px] text-gray-400">
+                              Registrado por {event.creator?.first_name}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
             </div>
           </div>
-        ))}
+        )}
       </div>
 
       {/* Modal */}

@@ -259,3 +259,32 @@ returns table(
   from family_graph
   where profile_id != start_profile_id;
 $$;
+
+-- ============================================================
+-- PHOTO TAGS — tag family members in photos
+-- ============================================================
+create table public.photo_tags (
+  id uuid primary key default uuid_generate_v4(),
+  photo_id uuid references public.family_photos(id) on delete cascade not null,
+  -- Either a family_member record (non-joined) or a real profile (joined)
+  member_id uuid references public.family_members(id) on delete cascade,
+  profile_id uuid references public.profiles(id) on delete cascade,
+  member_name text not null, -- denormalized for display
+  tagged_by uuid references public.profiles(id) on delete cascade not null,
+  created_at timestamptz default now(),
+  constraint at_least_one_id check (member_id is not null or profile_id is not null)
+);
+
+alter table public.photo_tags enable row level security;
+
+create policy "Anyone can view photo tags" on public.photo_tags
+  for select using (true);
+
+create policy "Users can tag photos" on public.photo_tags
+  for insert with check (tagged_by = auth.uid());
+
+create policy "Users can remove tags they created" on public.photo_tags
+  for delete using (tagged_by = auth.uid());
+
+-- Run in Supabase SQL editor to apply:
+-- (table is new — just run the create table above)
