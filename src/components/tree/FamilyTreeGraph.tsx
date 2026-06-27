@@ -56,7 +56,7 @@ const POS_HINT: Record<string, number> = {
   sister_in_law: -3, brother_in_law: 3,
   cousin: 4,
   daughter: -1, son: 1, stepchild: 0,
-  niece: -2, nephew: 2,
+  niece: -3, nephew: 3,
   granddaughter: -1, grandson: 1,
 };
 
@@ -198,6 +198,9 @@ function buildLayout(
     });
   };
 
+  const SIBLING_TYPES = new Set(["brother","sister","half_brother","half_sister"]);
+  const NEPHEW_NIECE = new Set(["nephew","niece"]);
+
   // Root → direct members
   members.forEach(m => {
     const gen = GENERATION[m.relation_type] ?? 0;
@@ -207,8 +210,14 @@ function buildLayout(
       const to = posMap.get("root");
       if (from && to) edges.push({ x1: from.x + NW/2, y1: from.y + NH, x2: to.x + NW/2, y2: to.y, kind: m.relation_kind as "blood" | "affinity" });
     } else if (gen > 0) {
-      // descendant: root bottom → descendant top
-      addEdge("root", m.id, m.relation_kind as "blood" | "affinity");
+      if (NEPHEW_NIECE.has(m.relation_type)) {
+        // Nephew/niece → connect from a sibling if one exists, otherwise from root
+        const sibling = members.find(s => SIBLING_TYPES.has(s.relation_type));
+        addEdge(sibling?.id ?? "root", m.id, m.relation_kind as "blood" | "affinity");
+      } else {
+        // son/daughter/grandchild/stepchild: connect from root
+        addEdge("root", m.id, m.relation_kind as "blood" | "affinity");
+      }
     } else {
       // same gen: horizontal connector
       const from = posMap.get("root");
