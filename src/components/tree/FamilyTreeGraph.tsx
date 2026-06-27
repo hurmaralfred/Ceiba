@@ -76,7 +76,9 @@ interface LayoutNode {
   posHint: number;
   kind: "root" | "blood" | "affinity";
   isLevel2: boolean;
-  memberId?: string; // for click (level-1 members)
+  memberId?: string;  // for click (level-1 members)
+  avatarUrl?: string; // profile avatar if joined
+  isJoined?: boolean; // has a real profile in Ceiba
   x: number;
   y: number;
 }
@@ -115,7 +117,8 @@ function buildLayout(
 
   const raw: Omit<LayoutNode, "x" | "y">[] = [
     { id: "root", name: profile.first_name, relation: "Tú",
-      generation: 0, posHint: 0, kind: "root", isLevel2: false },
+      generation: 0, posHint: 0, kind: "root", isLevel2: false,
+      avatarUrl: profile.avatar_url, isJoined: true },
     ...members.map(m => ({
       id: m.id,
       name: m.first_name,
@@ -125,6 +128,8 @@ function buildLayout(
       kind: m.relation_kind as "blood" | "affinity",
       isLevel2: false,
       memberId: m.id,
+      avatarUrl: (m as any).profile?.avatar_url,
+      isJoined: !!m.profile_id,
     })),
     ...extendedMembers.map(({ member: m, parentMemberId, inferredRelation }) => {
       const parentGen = memberGenMap.get(parentMemberId) ?? 0;
@@ -313,6 +318,9 @@ export default function FamilyTreeGraph({
             Vínculo directo
           </span>
         )}
+        <span className="flex items-center gap-1.5">
+          <span className="w-3 h-3 rounded-full bg-green-500 inline-block" /> En Ceiba
+        </span>
         <span className="ml-auto text-gray-400">Arrastra · Pellizca para zoom</span>
       </div>
 
@@ -341,6 +349,7 @@ export default function FamilyTreeGraph({
           {nodes.map((n) => {
             const isRoot = n.id === "root";
             const isLevel2 = n.isLevel2;
+            const isJoined = n.isJoined && !isRoot;
             const colors = isRoot
               ? KIND_COLORS.root
               : isLevel2
@@ -348,6 +357,14 @@ export default function FamilyTreeGraph({
                 : (n.kind === "blood" ? KIND_COLORS.blood : KIND_COLORS.affinity);
             const rx = 10;
             const clickable = !isRoot && !isLevel2 && !!n.memberId;
+            // joined members get a brighter border
+            const strokeColor = isJoined ? "#4ade80" : colors.stroke;
+            const strokeW = isRoot ? 2.5 : isJoined ? 2.5 : 1.5;
+
+            // Avatar circle size and position
+            const AV = 22; // avatar diameter
+            const avX = NW - AV / 2 - 6;
+            const avY = NH / 2;
 
             return (
               <g
@@ -365,16 +382,40 @@ export default function FamilyTreeGraph({
                 <rect
                   width={NW} height={NH} rx={rx}
                   fill={colors.fill}
-                  stroke={colors.stroke}
-                  strokeWidth={isRoot ? 2.5 : 1.5}
+                  stroke={strokeColor}
+                  strokeWidth={strokeW}
                 />
                 {/* Root star badge */}
                 {isRoot && (
                   <circle cx={NW - 10} cy={10} r={7} fill="#fbbf24" />
                 )}
+                {/* Avatar for joined members */}
+                {(isJoined || isRoot) && n.avatarUrl && (
+                  <>
+                    <clipPath id={`clip-${n.id}`}>
+                      <circle cx={avX} cy={avY} r={AV / 2} />
+                    </clipPath>
+                    <image
+                      href={n.avatarUrl}
+                      x={avX - AV / 2} y={avY - AV / 2}
+                      width={AV} height={AV}
+                      clipPath={`url(#clip-${n.id})`}
+                      preserveAspectRatio="xMidYMid slice"
+                    />
+                    <circle cx={avX} cy={avY} r={AV / 2} fill="none" stroke={strokeColor} strokeWidth={1} />
+                  </>
+                )}
+                {/* Green online dot for joined (no avatar) */}
+                {isJoined && !n.avatarUrl && (
+                  <>
+                    <circle cx={NW - 9} cy={9} r={6} fill="#16a34a" />
+                    <circle cx={NW - 9} cy={9} r={3.5} fill="#4ade80" />
+                  </>
+                )}
                 {/* Name */}
                 <text
-                  x={NW / 2} y={isLevel2 ? NH / 2 - 6 : NH / 2 - 7}
+                  x={n.avatarUrl && (isJoined || isRoot) ? (NW - AV - 10) / 2 : NW / 2}
+                  y={isLevel2 ? NH / 2 - 6 : NH / 2 - 7}
                   textAnchor="middle"
                   dominantBaseline="middle"
                   fill={colors.text}
@@ -386,7 +427,8 @@ export default function FamilyTreeGraph({
                 </text>
                 {/* Relation badge */}
                 <text
-                  x={NW / 2} y={NH / 2 + 9}
+                  x={n.avatarUrl && (isJoined || isRoot) ? (NW - AV - 10) / 2 : NW / 2}
+                  y={NH / 2 + 9}
                   textAnchor="middle"
                   dominantBaseline="middle"
                   fill={isLevel2 ? colors.text : "rgba(255,255,255,0.8)"}

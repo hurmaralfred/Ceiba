@@ -45,6 +45,7 @@ import SuggestionCards from "@/components/SuggestionCards";
 import NameMatchCards from "@/components/NameMatchCards";
 import BirthdayWidget from "@/components/BirthdayWidget";
 import TodayWidget from "@/components/TodayWidget";
+import NetworkBanner from "@/components/NetworkBanner";
 import BottomNav from "@/components/BottomNav";
 import toast from "react-hot-toast";
 
@@ -631,6 +632,12 @@ export default function TreePage() {
             </div>
           </div>
         )}
+
+        {/* Red familiar progress */}
+        <NetworkBanner
+          totalMembers={members.length}
+          joinedMembers={members.filter(m => m.profile_id).length}
+        />
 
         {/* Hoy en tu familia */}
         {profile && <TodayWidget userId={profile.id} />}
