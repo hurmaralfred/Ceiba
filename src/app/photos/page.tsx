@@ -133,6 +133,11 @@ export default function PhotosPage() {
       }
 
       toast.success("¡Foto publicada!");
+      fetch("/api/notify/new-content", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "photo", caption: caption.trim() || null }),
+      }).catch(() => {});
       setPendingFile(null); setPendingPreview(null);
       setCaption(""); setPendingTags([]); setShowTagPicker(false);
       await loadPhotos();

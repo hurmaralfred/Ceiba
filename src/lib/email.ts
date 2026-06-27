@@ -162,6 +162,44 @@ export async function sendBirthdayEmail(
   return resend.emails.send({ from: FROM, to, subject, html });
 }
 
+// ─── Email: Nueva foto o evento ─────────────────────────────────────────────
+export async function sendNewContentEmail(
+  to: string,
+  recipientName: string,
+  uploaderName: string,
+  type: "photo" | "event",
+  title?: string
+) {
+  const isPhoto = type === "photo";
+  const emoji = isPhoto ? "📸" : "📅";
+  const ctaPath = isPhoto ? "/photos" : "/events";
+  const displayTitle = isPhoto
+    ? (title ? `"${title}"` : "Nueva foto familiar")
+    : (title || "Nuevo evento");
+
+  const html = layout(`
+    <h2 style="margin:0 0 8px;font-size:22px;color:#166534;">${emoji} ${uploaderName} ${isPhoto ? "compartió una foto" : "registró un evento"}</h2>
+    <p style="color:#475569;line-height:1.6;margin:0 0 20px;">
+      Hola ${recipientName}, tu familiar <strong>${uploaderName}</strong> acaba de agregar
+      ${isPhoto ? "una nueva foto" : `el evento <strong>${title || "un evento"}</strong>`} en Ceiba.
+    </p>
+    <div style="background:#f0fdf4;border-radius:12px;padding:20px;margin-bottom:24px;text-align:center;">
+      <div style="font-size:40px;margin-bottom:8px;">${emoji}</div>
+      <div style="font-weight:600;color:#166534;font-size:16px;">${displayTitle}</div>
+    </div>
+    <div style="text-align:center;">
+      ${btn(`Ver ${isPhoto ? "fotos" : "eventos"} →`, `${APP_URL}${ctaPath}`)}
+    </div>
+  `);
+
+  return resend.emails.send({
+    from: FROM,
+    to,
+    subject: `${emoji} ${uploaderName} ${isPhoto ? "compartió una foto" : `registró "${displayTitle}"`} en Ceiba`,
+    html,
+  });
+}
+
 // ─── Email: Digest semanal ───────────────────────────────────────────────────
 export async function sendWeeklyDigestEmail(
   to: string,

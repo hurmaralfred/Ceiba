@@ -76,6 +76,11 @@ export default function EventsPage() {
     setSaving(false);
     if (error) { toast.error("Error al guardar"); return; }
     toast.success("Evento registrado");
+    fetch("/api/notify/new-content", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "event", title: form.title.trim() }),
+    }).catch(() => {});
     setShowModal(false);
     setForm(EMPTY_FORM);
     await loadEvents();
