@@ -87,7 +87,13 @@ export default function RegisterPage() {
       }
 
       toast.success("¡Cuenta creada!");
-      router.push("/onboarding");
+      // If user came from a general invite link (/join?ref=...), connect them first
+      const joinRef = typeof window !== "undefined" ? sessionStorage.getItem("join_ref") : null;
+      if (joinRef) {
+        router.push(`/join/connect?ref=${joinRef}`);
+      } else {
+        router.push("/onboarding");
+      }
     } catch (err: any) {
       toast.error(err.message || "Error al crear la cuenta");
     } finally {
