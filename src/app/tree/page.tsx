@@ -318,7 +318,22 @@ export default function TreePage() {
             // with their raw connector-relative label would be wrong.
             if (e.inferredRelation === null) return false;
             return true;
-          });
+          })
+          // Deduplicate within the extended set by normalized name
+          // (handles cases where the same person was added and deleted multiple times)
+          .reduce<ExtendedEntry[]>((acc, e) => {
+            const fn = norm(e.member.first_name).split(" ")[0];
+            const ln = norm(e.member.last_name || "").split(" ")[0];
+            const key = `${fn}|${ln}|${e.inferredRelation}`;
+            if (!acc.some(x => {
+              const xfn = norm(x.member.first_name).split(" ")[0];
+              const xln = norm(x.member.last_name || "").split(" ")[0];
+              return `${xfn}|${xln}|${x.inferredRelation}` === key;
+            })) {
+              acc.push(e);
+            }
+            return acc;
+          }, []);
         setExtendedMembers(extended);
         setMemberLinks(crossLinks);
       }
