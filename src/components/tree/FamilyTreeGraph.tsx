@@ -311,26 +311,75 @@ function buildLayout(
     edges.push({ x1: from.x + NW / 2, y1: from.y + NH, x2: to.x + NW / 2, y2: to.y, kind });
   };
 
-  const SIBLING_TYPES = new Set(["brother", "sister", "half_brother", "half_sister"]);
-  const NEPHEW_NIECE = new Set(["nephew", "niece"]);
+  // ── Edge rules ────────────────────────────────────────────────
+  // Only draw lines for relationships that have a clear parent→child meaning.
+  // Siblings, cousins, tíos, cuñados appear in their generation row without line
+  // (their position already communicates the relationship).
+  const SIBLING_TYPES   = new Set(["brother","sister","half_brother","half_sister"]);
+  const NEPHEW_NIECE    = new Set(["nephew","niece"]);
+  const GRANDCHILD_TYPES = new Set(["grandson","granddaughter"]);
+  // Direct ancestors that draw a line to root
+  const DIRECT_ANCESTORS = new Set([
+    "father","mother","stepfather","stepmother",
+    "grandfather_paternal","grandmother_paternal",
+    "grandfather_maternal","grandmother_maternal",
+  ]);
+  // In-laws that draw a line to root (optional — kept subtle)
+  const INLAW_ANCESTORS = new Set(["father_in_law","mother_in_law"]);
+  // Spouse/partner: horizontal link
+  const COUPLE_TYPES = new Set(["spouse","partner"]);
 
   members.forEach(m => {
     const gen = GENERATION[m.relation_type] ?? 0;
+
     if (gen < 0) {
-      const from = posMap.get(m.id);
-      const to = posMap.get("root");
-      if (from && to) edges.push({ x1: from.x + NW / 2, y1: from.y + NH, x2: to.x + NW / 2, y2: to.y, kind: m.relation_kind as "blood" | "affinity" });
+      // Only direct ancestors and in-law parents get a connecting line
+      if (DIRECT_ANCESTORS.has(m.relation_type)) {
+        const from = posMap.get(m.id);
+        const to   = posMap.get("root");
+        if (from && to) edges.push({
+          x1: from.x + NW / 2, y1: from.y + NH,
+          x2: to.x + NW / 2,   y2: to.y,
+          kind: m.relation_kind as "blood" | "affinity",
+        });
+      } else if (INLAW_ANCESTORS.has(m.relation_type)) {
+        const from = posMap.get(m.id);
+        const to   = posMap.get("root");
+        if (from && to) edges.push({
+          x1: from.x + NW / 2, y1: from.y + NH,
+          x2: to.x + NW / 2,   y2: to.y,
+          kind: "peer", // dashed — in-law, not blood ancestor
+        });
+      }
+      // uncle, aunt → no line (appears in parent row but not connected to root)
+
     } else if (gen > 0) {
       if (NEPHEW_NIECE.has(m.relation_type)) {
+        // Connect from the sibling that "owns" this nephew/niece
         const sibling = members.find(s => SIBLING_TYPES.has(s.relation_type));
-        addEdge(sibling?.id ?? "root", m.id, m.relation_kind as "blood" | "affinity");
+        if (sibling) addEdge(sibling.id, m.id, m.relation_kind as "blood" | "affinity");
+        // If no sibling found, no line (don't connect to root — would be confusing)
+      } else if (GRANDCHILD_TYPES.has(m.relation_type)) {
+        // Connect from root's child (son/daughter) if available
+        const child = members.find(s => ["son","daughter"].includes(s.relation_type));
+        addEdge(child?.id ?? "root", m.id, m.relation_kind as "blood" | "affinity");
       } else {
+        // son, daughter, stepchild → connect from root
         addEdge("root", m.id, m.relation_kind as "blood" | "affinity");
       }
+
     } else {
-      const from = posMap.get("root");
-      const to = posMap.get(m.id);
-      if (from && to) edges.push({ x1: from.x + NW / 2, y1: from.y + NH / 2, x2: to.x + NW / 2, y2: to.y + NH / 2, kind: m.relation_kind as "blood" | "affinity" });
+      // Gen 0 (same generation): only draw a line for spouse/partner
+      if (COUPLE_TYPES.has(m.relation_type)) {
+        const from = posMap.get("root");
+        const to   = posMap.get(m.id);
+        if (from && to) edges.push({
+          x1: from.x + NW / 2, y1: from.y + NH / 2,
+          x2: to.x + NW / 2,   y2: to.y + NH / 2,
+          kind: "peer", // dashed heart-line between partners
+        });
+      }
+      // siblings, cousins, in-laws (same gen) → no line
     }
   });
 
