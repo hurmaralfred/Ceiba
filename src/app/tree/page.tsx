@@ -74,7 +74,11 @@ function inferRelation(parentRelation: RelationType, childRelation: string): str
     // ── My uncles / aunts ─────────────────────────────────────
     case "uncle": case "aunt":
       if (childRelation === "son" || childRelation === "daughter") return "cousin";
-      if (["spouse","partner"].includes(childRelation)) return "uncle"; // uncle's spouse = uncle/aunt simplified
+      // Uncle's siblings = also my uncles/aunts
+      if (["brother","half_brother"].includes(childRelation)) return "uncle";
+      if (["sister","half_sister"].includes(childRelation))   return "aunt";
+      // Uncle's spouse = also my uncle/aunt (by marriage)
+      if (["spouse","partner"].includes(childRelation)) return parentRelation === "uncle" ? "aunt" : "uncle";
       break;
 
     // ── My grandparents ───────────────────────────────────────
