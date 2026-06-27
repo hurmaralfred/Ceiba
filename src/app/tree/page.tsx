@@ -303,7 +303,22 @@ export default function TreePage() {
               inferredRelation,
             };
           })
-          .filter((e): e is ExtendedEntry => e !== null);
+          .filter((e): e is ExtendedEntry => {
+            if (e === null) return false;
+            // Discard members whose relation couldn't be inferred — showing them
+            // with their raw connector-relative label would be wrong (e.g. uncle's
+            // father appearing as "Padre" instead of "Abuelo").
+            if (e.inferredRelation === null) return false;
+            // Don't pull grandparents (or higher) from the extended network.
+            // They either already exist as direct members, or the user should add
+            // them directly.  Showing them twice creates confusing duplicate nodes.
+            const HIGHER_GEN = new Set([
+              "grandfather_paternal","grandmother_paternal",
+              "grandfather_maternal","grandmother_maternal",
+            ]);
+            if (HIGHER_GEN.has(e.inferredRelation)) return false;
+            return true;
+          });
         setExtendedMembers(extended);
         setMemberLinks(crossLinks);
       }

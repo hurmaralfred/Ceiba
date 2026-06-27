@@ -61,7 +61,7 @@ export default function LandingPage() {
           <div className="flex items-center gap-3 mb-4 pb-4 border-b border-white/10">
             <div className="w-12 h-12 rounded-2xl bg-ceiba-600 flex items-center justify-center text-white font-bold text-lg">AH</div>
             <div>
-              <div className="font-bold text-white">Alfredo Hurtado</div>
+              <div className="font-bold text-white">Alfredo</div>
               <div className="text-ceiba-300 text-xs flex items-center gap-1"><MapPin size={10} /> Bogotá, Colombia</div>
             </div>
             <div className="ml-auto text-right">
@@ -71,10 +71,10 @@ export default function LandingPage() {
           </div>
           {/* Members */}
           {[
-            { init: "JH", name: "Joselin Hurtado", rel: "Esposa", ceiba: true, color: "bg-emerald-600" },
-            { init: "HH", name: "Hugo Hurtado", rel: "Hermano", ceiba: true, color: "bg-blue-600" },
-            { init: "EH", name: "Ezequiel Hurtado", rel: "Hijo", ceiba: false, color: "bg-gray-400" },
-            { init: "MH", name: "María Hurtado", rel: "Madre", ceiba: true, color: "bg-purple-600" },
+            { init: "JH", name: "Joselin", rel: "Esposa", ceiba: true, color: "bg-emerald-600" },
+            { init: "HH", name: "Hugo", rel: "Hermano", ceiba: true, color: "bg-blue-600" },
+            { init: "EH", name: "Ezequiel", rel: "Hijo", ceiba: false, color: "bg-gray-400" },
+            { init: "MH", name: "María", rel: "Madre", ceiba: true, color: "bg-purple-600" },
           ].map((m, i) => (
             <div key={i} className="flex items-center gap-3 py-2.5">
               <div className={`w-9 h-9 rounded-xl ${m.color} flex items-center justify-center text-white text-xs font-bold flex-shrink-0`}>
