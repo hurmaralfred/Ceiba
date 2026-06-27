@@ -390,25 +390,36 @@ export default function OnboardingPage() {
 
         {/* Step 3: Done */}
         {step === 3 && (
-          <div className="text-center py-6">
-            <div className="w-20 h-20 bg-ceiba-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <TreePine size={40} className="text-ceiba-600" />
-            </div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">¡Tu árbol está listo!</h2>
-            <p className="text-gray-500 mb-8">
-              Ahora invita a tus familiares para que la red crezca. Cuantos más se unan, más conexiones descubrirás.
-            </p>
-            <div className="space-y-3">
-              <button onClick={() => router.push("/tree")} className="btn-primary w-full">
-                Ver mi árbol familiar
-              </button>
-              <button onClick={() => router.push("/invite")} className="btn-secondary w-full">
-                Invitar familiares ahora
-              </button>
-            </div>
-          </div>
+          <DoneStep onTree={() => router.push("/tree")} onInvite={() => router.push("/invite")} />
         )}
       </div>
     </main>
+  );
+}
+
+function DoneStep({ onTree, onInvite }: { onTree: () => void; onInvite: () => void }) {
+  // Fire welcome email once on mount (fire-and-forget)
+  useEffect(() => {
+    fetch("/api/email/welcome", { method: "POST" }).catch(() => {});
+  }, []);
+
+  return (
+    <div className="text-center py-6">
+      <div className="w-20 h-20 bg-ceiba-100 rounded-full flex items-center justify-center mx-auto mb-6">
+        <TreePine size={40} className="text-ceiba-600" />
+      </div>
+      <h2 className="text-2xl font-bold text-gray-800 mb-2">¡Tu árbol está listo!</h2>
+      <p className="text-gray-500 mb-8">
+        Ahora invita a tus familiares para que la red crezca. Cuantos más se unan, más conexiones descubrirás.
+      </p>
+      <div className="space-y-3">
+        <button onClick={onTree} className="btn-primary w-full">
+          Ver mi árbol familiar
+        </button>
+        <button onClick={onInvite} className="btn-secondary w-full">
+          Invitar familiares ahora
+        </button>
+      </div>
+    </div>
   );
 }

@@ -127,15 +127,26 @@ export default function AcceptInvitePage() {
         p_my_relation: myRelation,
       }).catch(() => {});
 
-      // 7. Push notification
+      // 7. Push + email al invitador
       if (myProfile) {
+        const joinerName = `${myProfile.first_name} ${myProfile.last_name}`;
+        const relLabel = RELATION_LABELS[inviterRelation] || inviterRelation;
+        const secret = process.env.NEXT_PUBLIC_INTERNAL_SECRET || "";
+
         fetch("/api/push/notify", {
           method: "POST",
-          headers: { "Content-Type": "application/json", "x-internal-secret": process.env.NEXT_PUBLIC_INTERNAL_SECRET || "" },
+          headers: { "Content-Type": "application/json", "x-internal-secret": secret },
+          body: JSON.stringify({ invitedBy: invitation.invited_by, joinerName, relationLabel: relLabel }),
+        }).catch(() => {});
+
+        fetch("/api/email/member-joined", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-internal-secret": secret },
           body: JSON.stringify({
-            invitedBy: invitation.invited_by,
-            joinerName: `${myProfile.first_name} ${myProfile.last_name}`,
-            relationLabel: RELATION_LABELS[inviterRelation] || inviterRelation,
+            to: inviter?.email,
+            ownerName: inviter?.first_name,
+            joinerName,
+            relationLabel: relLabel,
           }),
         }).catch(() => {});
       }

@@ -23,7 +23,8 @@
     "tailwind-merge": "^2.4.0",
     "date-fns": "^3.6.0",
     "d3": "^7.9.0",
-    "web-push": "^3.6.7"
+    "web-push": "^3.6.7",
+    "resend": "^4.0.0"
   },
   "devDependencies": {
     "typescript": "^5",
