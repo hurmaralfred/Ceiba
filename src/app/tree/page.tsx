@@ -100,6 +100,7 @@ function inferRelation(parentRelation: RelationType, childRelation: string): str
   return null;
 }
 import InstallBanner from "@/components/InstallBanner";
+import TreeErrorBoundary from "@/components/TreeErrorBoundary";
 import SuggestionCards from "@/components/SuggestionCards";
 import NameMatchCards from "@/components/NameMatchCards";
 import BirthdayWidget from "@/components/BirthdayWidget";
@@ -462,6 +463,13 @@ export default function TreePage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
+    // Hard limit: prevent runaway trees
+    const MAX_MEMBERS = 150;
+    if (members.length >= MAX_MEMBERS) {
+      toast.error(`Límite de ${MAX_MEMBERS} familiares alcanzado`);
+      return;
+    }
+
     // Check for duplicates in extended family (only on first attempt)
     if (!force) {
       const dup = await checkExtendedDuplicate(first_name, last_name, user.id);
@@ -790,13 +798,15 @@ export default function TreePage() {
             </div>
 
             {view === "graph" && profile && (
-              <FamilyTreeGraph
-                profile={profile}
-                members={members}
-                extendedMembers={extendedMembers}
-                memberLinks={memberLinks}
-                onNodeClick={(memberId) => router.push(`/member/${memberId}`)}
-              />
+              <TreeErrorBoundary>
+                <FamilyTreeGraph
+                  profile={profile}
+                  members={members}
+                  extendedMembers={extendedMembers}
+                  memberLinks={memberLinks}
+                  onNodeClick={(memberId) => router.push(`/member/${memberId}`)}
+                />
+              </TreeErrorBoundary>
             )}
 
             {view === "list" && (
