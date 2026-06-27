@@ -8,34 +8,80 @@ import { createClient } from "@/lib/supabase/client";
 import { Profile, FamilyMember, RelationType, RELATION_LABELS } from "@/lib/types";
 import type { ExtendedEntry, MemberLink } from "@/components/tree/FamilyTreeGraph";
 
-// Infer my relation to an extended member based on the parent's relation to me
+// Infer my relation to an extended member based on the connector's relation to me.
+// parentRelation = how the connector is related to ME
+// childRelation  = how the extended member is related to the CONNECTOR
 function inferRelation(parentRelation: RelationType, childRelation: string): string | null {
   switch (parentRelation) {
+
+    // ── My spouse / partner ───────────────────────────────────
     case "spouse": case "partner":
-      if (childRelation === "son") return "son";
-      if (childRelation === "daughter") return "daughter";
-      if (childRelation === "stepchild") return "stepchild";
+      if (childRelation === "son")        return "son";
+      if (childRelation === "daughter")   return "daughter";
+      if (childRelation === "stepchild")  return "stepchild";
+      if (["brother","half_brother"].includes(childRelation)) return "brother_in_law";
+      if (["sister","half_sister"].includes(childRelation))   return "sister_in_law";
+      if (childRelation === "father")     return "father_in_law";
+      if (childRelation === "mother")     return "mother_in_law";
+      if (childRelation === "nephew")     return "nephew";
+      if (childRelation === "niece")      return "niece";
       break;
+
+    // ── My siblings ───────────────────────────────────────────
     case "brother": case "sister":
     case "half_brother": case "half_sister":
-      if (childRelation === "son") return "nephew";
-      if (childRelation === "daughter") return "niece";
+      if (childRelation === "son")       return "nephew";
+      if (childRelation === "daughter")  return "niece";
+      if (["spouse","partner"].includes(childRelation)) return "brother_in_law";
       break;
+
+    // ── My in-law siblings ────────────────────────────────────
+    case "brother_in_law": case "sister_in_law":
+      if (childRelation === "son")       return "nephew";
+      if (childRelation === "daughter")  return "niece";
+      break;
+
+    // ── My parents & step-parents ─────────────────────────────
     case "father": case "mother":
-      if (childRelation === "son") return "brother";
-      if (childRelation === "daughter") return "sister";
+    case "stepfather": case "stepmother":
+      if (childRelation === "son")       return "brother";
+      if (childRelation === "daughter")  return "sister";
+      // Father/mother's siblings = my uncles/aunts
+      if (["brother","half_brother"].includes(childRelation)) return "uncle";
+      if (["sister","half_sister"].includes(childRelation))   return "aunt";
+      // Father/mother's parents = my grandparents
+      if (childRelation === "father")    return "grandfather_paternal";
+      if (childRelation === "mother")    return "grandmother_paternal";
+      // Father/mother's spouse (other than me) = step-parent
+      if (["spouse","partner"].includes(childRelation)) return parentRelation === "father" ? "stepmother" : "stepfather";
       break;
-    case "son": case "daughter":
-      if (childRelation === "son") return "grandson";
-      if (childRelation === "daughter") return "granddaughter";
+
+    // ── My in-law parents ─────────────────────────────────────
+    case "father_in_law": case "mother_in_law":
+      if (["brother","half_brother"].includes(childRelation)) return "brother_in_law";
+      if (["sister","half_sister"].includes(childRelation))   return "sister_in_law";
+      if (childRelation === "son")       return "brother_in_law";
+      if (childRelation === "daughter")  return "sister_in_law";
       break;
+
+    // ── My children ───────────────────────────────────────────
+    case "son": case "daughter": case "stepchild":
+      if (childRelation === "son")       return "grandson";
+      if (childRelation === "daughter")  return "granddaughter";
+      if (["spouse","partner"].includes(childRelation)) return "son"; // son/daughter-in-law → simplified
+      break;
+
+    // ── My uncles / aunts ─────────────────────────────────────
     case "uncle": case "aunt":
       if (childRelation === "son" || childRelation === "daughter") return "cousin";
+      if (["spouse","partner"].includes(childRelation)) return "uncle"; // uncle's spouse = uncle/aunt simplified
       break;
+
+    // ── My grandparents ───────────────────────────────────────
     case "grandfather_paternal": case "grandfather_maternal":
     case "grandmother_paternal": case "grandmother_maternal":
-      if (childRelation === "son") return "uncle";
-      if (childRelation === "daughter") return "aunt";
+      if (childRelation === "son")       return "uncle";
+      if (childRelation === "daughter")  return "aunt";
       break;
   }
   return null;
