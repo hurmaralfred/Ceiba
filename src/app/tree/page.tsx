@@ -79,6 +79,9 @@ function inferRelation(parentRelation: RelationType, childRelation: string): str
       if (["sister","half_sister"].includes(childRelation))   return "aunt";
       // Uncle's spouse = also my uncle/aunt (by marriage)
       if (["spouse","partner"].includes(childRelation)) return parentRelation === "uncle" ? "aunt" : "uncle";
+      // Uncle's parents = my grandparents
+      if (childRelation === "father") return "grandfather_paternal";
+      if (childRelation === "mother") return "grandmother_paternal";
       break;
 
     // ── My grandparents ───────────────────────────────────────
@@ -86,6 +89,12 @@ function inferRelation(parentRelation: RelationType, childRelation: string): str
     case "grandmother_paternal": case "grandmother_maternal":
       if (childRelation === "son")       return "uncle";
       if (childRelation === "daughter")  return "aunt";
+      // Grandparent's siblings = also my great-uncles/aunts (show as uncle/aunt, closest label)
+      if (["brother","half_brother"].includes(childRelation)) return "uncle";
+      if (["sister","half_sister"].includes(childRelation))   return "aunt";
+      // Grandparent's parents = my great-grandparents (show as grandparent, closest label we have)
+      if (childRelation === "father") return "grandfather_paternal";
+      if (childRelation === "mother") return "grandmother_paternal";
       break;
   }
   return null;
@@ -306,17 +315,8 @@ export default function TreePage() {
           .filter((e): e is ExtendedEntry => {
             if (e === null) return false;
             // Discard members whose relation couldn't be inferred — showing them
-            // with their raw connector-relative label would be wrong (e.g. uncle's
-            // father appearing as "Padre" instead of "Abuelo").
+            // with their raw connector-relative label would be wrong.
             if (e.inferredRelation === null) return false;
-            // Don't pull grandparents (or higher) from the extended network.
-            // They either already exist as direct members, or the user should add
-            // them directly.  Showing them twice creates confusing duplicate nodes.
-            const HIGHER_GEN = new Set([
-              "grandfather_paternal","grandmother_paternal",
-              "grandfather_maternal","grandmother_maternal",
-            ]);
-            if (HIGHER_GEN.has(e.inferredRelation)) return false;
             return true;
           });
         setExtendedMembers(extended);
