@@ -82,6 +82,9 @@ function inferRelation(parentRelation: RelationType, childRelation: string): str
       // Uncle's parents = my grandparents
       if (childRelation === "father") return "grandfather_paternal";
       if (childRelation === "mother") return "grandmother_paternal";
+      // Uncle's grandparents = my great-grandparents (shown as abuelos, closest label we have)
+      if (["grandfather_paternal","grandfather_maternal"].includes(childRelation)) return "grandfather_paternal";
+      if (["grandmother_paternal","grandmother_maternal"].includes(childRelation)) return "grandmother_paternal";
       break;
 
     // ── My grandparents ───────────────────────────────────────
@@ -206,8 +209,32 @@ export default function TreePage() {
         seenNames.set(key, m);
       }
     }
-    const myMembers = Array.from(seenNames.values());
+    let myMembers = Array.from(seenNames.values());
     setProfile(profileData);
+
+    // Auto-link members who registered independently (match by email)
+    const unlinked = myMembers.filter(m => !m.profile_id && m.email);
+    if (unlinked.length > 0) {
+      const { data: matchedProfiles } = await supabase
+        .from("profiles")
+        .select("id, email")
+        .in("email", unlinked.map(m => m.email));
+      if (matchedProfiles && matchedProfiles.length > 0) {
+        await Promise.all(matchedProfiles.map(p => {
+          const member = unlinked.find(m => m.email === p.email);
+          if (!member) return;
+          return supabase.from("family_members").update({ profile_id: p.id }).eq("id", member.id);
+        }));
+        // Refresh members after linking
+        const { data: refreshed } = await supabase.from("family_members").select("*").eq("added_by", user.id);
+        const seen2 = new Map<string, any>();
+        for (const m of refreshed || []) {
+          const key = `${normName(m.first_name)}|${normName(m.last_name || "")}`;
+          if (!seen2.has(key) || (!seen2.get(key).profile_id && m.profile_id)) seen2.set(key, m);
+        }
+        myMembers = Array.from(seen2.values());
+      }
+    }
 
     // Enrich members with profile data (avatar, social_link) for those who've joined
     const profileIds = myMembers.map(m => m.profile_id).filter(Boolean) as string[];
