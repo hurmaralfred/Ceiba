@@ -212,27 +212,48 @@ export default function TreePage() {
     let myMembers = Array.from(seenNames.values());
     setProfile(profileData);
 
-    // Auto-link members who registered independently (match by email)
-    const unlinked = myMembers.filter(m => !m.profile_id && m.email);
+    // Auto-link members who registered independently (match by email OR name+apellido)
+    const unlinked = myMembers.filter(m => !m.profile_id);
     if (unlinked.length > 0) {
-      const { data: matchedProfiles } = await supabase
+      // Load all registered profiles to match against
+      const { data: allProfiles } = await supabase
         .from("profiles")
-        .select("id, email")
-        .in("email", unlinked.map(m => m.email));
-      if (matchedProfiles && matchedProfiles.length > 0) {
-        await Promise.all(matchedProfiles.map(p => {
-          const member = unlinked.find(m => m.email === p.email);
-          if (!member) return;
-          return supabase.from("family_members").update({ profile_id: p.id }).eq("id", member.id);
-        }));
-        // Refresh members after linking
-        const { data: refreshed } = await supabase.from("family_members").select("*").eq("added_by", user.id);
-        const seen2 = new Map<string, any>();
-        for (const m of refreshed || []) {
-          const key = `${normName(m.first_name)}|${normName(m.last_name || "")}`;
-          if (!seen2.has(key) || (!seen2.get(key).profile_id && m.profile_id)) seen2.set(key, m);
+        .select("id, email, first_name, last_name")
+        .neq("id", user.id);
+
+      if (allProfiles && allProfiles.length > 0) {
+        const updates: Promise<any>[] = [];
+
+        for (const member of unlinked) {
+          const mFn = normName(member.first_name);
+          const mLn = normName(member.last_name || "");
+
+          // Match by email (exact) OR by first word of first_name + first word of last_name
+          const match = allProfiles.find(p => {
+            if (member.email && p.email && member.email.toLowerCase() === p.email.toLowerCase()) return true;
+            const pFn = normName(p.first_name || "");
+            const pLn = normName(p.last_name || "");
+            return mFn && mLn && pFn === mFn && pLn === mLn;
+          });
+
+          if (match) {
+            updates.push(
+              supabase.from("family_members").update({ profile_id: match.id }).eq("id", member.id)
+            );
+          }
         }
-        myMembers = Array.from(seen2.values());
+
+        if (updates.length > 0) {
+          await Promise.all(updates);
+          // Refresh members after linking
+          const { data: refreshed } = await supabase.from("family_members").select("*").eq("added_by", user.id);
+          const seen2 = new Map<string, any>();
+          for (const m of refreshed || []) {
+            const key = `${normName(m.first_name)}|${normName(m.last_name || "")}`;
+            if (!seen2.has(key) || (!seen2.get(key).profile_id && m.profile_id)) seen2.set(key, m);
+          }
+          myMembers = Array.from(seen2.values());
+        }
       }
     }
 
