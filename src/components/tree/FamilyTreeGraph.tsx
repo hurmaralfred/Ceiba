@@ -103,6 +103,7 @@ const RELATION_SHAPE: Record<string, string> = {
   root: "hexagon",
   grandfather_paternal: "shield", grandmother_paternal: "shield",
   grandfather_maternal: "shield", grandmother_maternal: "shield",
+  bisabuelo: "default", // great-grandparents → rounded rect (distinct from shield of abuelos)
   father: "arch", mother: "arch",
   father_in_law: "arch", mother_in_law: "arch",
   stepfather: "arch", stepmother: "arch",
@@ -267,8 +268,24 @@ function buildLayout(
       const rel = inferredRelation
         ? (RELATION_LABELS[inferredRelation as keyof typeof RELATION_LABELS] ?? inferredRelation)
         : (RELATION_LABELS[m.relation_type as keyof typeof RELATION_LABELS] ?? m.relation_type);
+
+      // Detect bisabuelos: generation ≤ -3 with a grandparent-type inferred relation
+      const isGreatGrandparent = extGen <= -3 && !!inferredRelation &&
+        (inferredRelation.includes("grandfather") || inferredRelation.includes("grandmother"));
+
+      const finalRelType = isGreatGrandparent
+        ? "bisabuelo"
+        : (inferredRelation || m.relation_type);
+
+      const finalRelLabel = isGreatGrandparent
+        ? (["father","grandfather_paternal","grandfather_maternal"].includes(m.relation_type)
+            ? "Bisabuelo" : "Bisabuela")
+        : rel;
+
       return {
-        id: m.id, name: m.first_name, relation: rel, relationType: m.relation_type,
+        id: m.id, name: m.first_name,
+        relation: finalRelLabel,
+        relationType: finalRelType,
         generation: extGen, posHint: extHint,
         kind: m.relation_kind as "blood" | "affinity",
         isLevel2: true,
@@ -462,6 +479,7 @@ export default function FamilyTreeGraph({
       <div className="flex items-center gap-3 px-4 py-2 border-b border-white/10 bg-white/5 backdrop-blur text-xs text-gray-300 flex-wrap">
         {[
           { label: "Tú",       shape: "hexagon",       style: STYLES.root },
+          { label: "Bisabuelos", shape: "default",       style: STYLES.ext2 },
           { label: "Abuelos",  shape: "shield",        style: STYLES.gp   },
           { label: "Padres",   shape: "arch",          style: STYLES.par  },
           { label: "Hermanos", shape: "parallelogram", style: STYLES.sib  },
@@ -584,7 +602,7 @@ export default function FamilyTreeGraph({
             const isLevel2 = n.isLevel2;
             const isJoined = n.isJoined && !isRoot;
             const style = getStyle(n.relationType, n.kind, isLevel2);
-            const shape = isLevel2 ? "default" : (RELATION_SHAPE[n.relationType] ?? "default");
+            const shape = RELATION_SHAPE[n.relationType] ?? "default";
             const clickable = !isRoot && !isLevel2 && !!n.memberId;
 
             const hasAvatar = !!(n.avatarUrl && (isJoined || isRoot));
