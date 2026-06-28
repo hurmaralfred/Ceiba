@@ -455,7 +455,6 @@ export default function FamilyTreeGraph({
   }, []);
 
   const EDGE_COLORS = { blood: "#86efac", affinity: "#fcd34d", peer: "#93c5fd" };
-  const AV = 20;
 
   return (
     <div className="w-full rounded-2xl overflow-hidden border border-gray-200 bg-[#0a0f1a]">
@@ -499,6 +498,25 @@ export default function FamilyTreeGraph({
         preserveAspectRatio="xMidYMin meet"
       >
         <defs>
+          {/* Animations */}
+          <style>{`
+            @keyframes ceiba-glow-pulse {
+              0%, 100% { opacity: 0.50; }
+              50%       { opacity: 0.90; }
+            }
+            @keyframes ceiba-glow-pulse-root {
+              0%, 100% { opacity: 0.75; }
+              50%       { opacity: 1.00; }
+            }
+            @keyframes ceiba-edge-flow {
+              from { stroke-dashoffset: 24; }
+              to   { stroke-dashoffset: 0; }
+            }
+            .glow-pulse      { animation: ceiba-glow-pulse      3.2s ease-in-out infinite; }
+            .glow-pulse-root { animation: ceiba-glow-pulse-root 2.5s ease-in-out infinite; }
+            .edge-flow       { animation: ceiba-edge-flow       1.8s linear infinite; }
+          `}</style>
+
           {/* Gradient fills — userSpaceOnUse so y=0..NH maps to top-to-bottom per node */}
           {GRAD_DEFS.map(([id, top, bottom]) => (
             <linearGradient key={id} id={id} gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2={NH}>
@@ -542,18 +560,23 @@ export default function FamilyTreeGraph({
 
         <g ref={gRef}>
           {/* Edges */}
-          {edges.map((e, i) => (
-            <path
-              key={i}
-              d={elbowPath(e.x1, e.y1, e.x2, e.y2)}
-              fill="none"
-              stroke={EDGE_COLORS[e.kind]}
-              strokeWidth={e.kind === "peer" ? 1.5 : 2}
-              strokeDasharray={e.kind === "peer" ? "5,3" : undefined}
-              strokeLinecap="round"
-              opacity={0.6}
-            />
-          ))}
+          {edges.map((e, i) => {
+            const isPeer = e.kind === "peer";
+            const isBlood = e.kind === "blood";
+            return (
+              <path
+                key={i}
+                d={elbowPath(e.x1, e.y1, e.x2, e.y2)}
+                fill="none"
+                stroke={EDGE_COLORS[e.kind]}
+                strokeWidth={isPeer ? 1.5 : 2}
+                strokeDasharray={isPeer ? "5,3" : isBlood ? "8,6" : undefined}
+                strokeLinecap="round"
+                opacity={isPeer ? 0.45 : 0.7}
+                className={isBlood ? "edge-flow" : undefined}
+              />
+            );
+          })}
 
           {/* Nodes */}
           {nodes.map((n) => {
@@ -565,9 +588,7 @@ export default function FamilyTreeGraph({
             const clickable = !isRoot && !isLevel2 && !!n.memberId;
 
             const hasAvatar = !!(n.avatarUrl && (isJoined || isRoot));
-            const AV_X = NW - AV / 2 - 6;
-            const AV_Y = NH / 2;
-            const textX = hasAvatar ? (NW - AV - 14) / 2 : NW / 2;
+            const textX = NW / 2;
 
             // Stroke: joined gets bright green, otherwise the style's stroke
             const strokeColor = isJoined ? "#4ade80" : style.stroke;
@@ -580,7 +601,7 @@ export default function FamilyTreeGraph({
                 onClick={clickable ? () => onNodeClick?.(n.memberId!) : undefined}
                 style={{ cursor: clickable ? "pointer" : "default" }}
               >
-                {/* Glow — only for direct (non-level2) nodes */}
+                {/* Glow — only for direct (non-level2) nodes; pulses for joined/root */}
                 {!isLevel2 && style.glowId && (
                   <path
                     d={nodePath(shape, NW, NH)}
@@ -589,6 +610,7 @@ export default function FamilyTreeGraph({
                     strokeWidth={strokeW}
                     filter={`url(#${style.glowId})`}
                     opacity={isRoot ? 0.8 : 0.55}
+                    className={isRoot ? "glow-pulse-root" : (isJoined ? "glow-pulse" : undefined)}
                   />
                 )}
 
@@ -600,6 +622,15 @@ export default function FamilyTreeGraph({
                   strokeWidth={strokeW}
                   filter={isLevel2 ? "url(#shadow-sm)" : undefined}
                 />
+
+                {/* Semi-dark overlay for text readability when photo is shown */}
+                {hasAvatar && (
+                  <path
+                    d={nodePath(shape, NW, NH)}
+                    fill="rgba(0,0,0,0.45)"
+                    style={{ pointerEvents: "none" }}
+                  />
+                )}
 
                 {/* Shine overlay */}
                 <path
@@ -616,20 +647,20 @@ export default function FamilyTreeGraph({
                   </>
                 )}
 
-                {/* Avatar for joined members */}
+                {/* Avatar — fills the geometric shape as a semi-transparent overlay */}
                 {hasAvatar && (
                   <>
                     <clipPath id={`clip-${n.id}`}>
-                      <circle cx={AV_X} cy={AV_Y} r={AV / 2} />
+                      <path d={nodePath(shape, NW, NH)} />
                     </clipPath>
                     <image
                       href={n.avatarUrl}
-                      x={AV_X - AV / 2} y={AV_Y - AV / 2}
-                      width={AV} height={AV}
+                      x={0} y={0}
+                      width={NW} height={NH}
                       clipPath={`url(#clip-${n.id})`}
                       preserveAspectRatio="xMidYMid slice"
+                      opacity={0.38}
                     />
-                    <circle cx={AV_X} cy={AV_Y} r={AV / 2} fill="none" stroke="#4ade80" strokeWidth={1.5} />
                   </>
                 )}
 
