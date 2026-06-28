@@ -14,9 +14,10 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { message } = await req.json();
+  const { message, type = "broadcast", location } = await req.json();
   if (!message?.trim()) return NextResponse.json({ error: "Mensaje vacío" }, { status: 400 });
   if (message.trim().length > 300) return NextResponse.json({ error: "Máximo 300 caracteres" }, { status: 400 });
+  if (!["broadcast", "emergency"].includes(type)) return NextResponse.json({ error: "Tipo inválido" }, { status: 400 });
 
   const service = createServiceClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -27,6 +28,8 @@ export async function POST(req: NextRequest) {
   await service.from("announcements").insert({
     created_by: user.id,
     message: message.trim(),
+    type,
+    ...(location ? { location_lat: location.lat, location_lng: location.lng } : {}),
   });
 
   // Nombre del remitente
@@ -64,11 +67,16 @@ export async function POST(req: NextRequest) {
     .select("*")
     .in("user_id", recipientIds);
 
+  const isEmergency = type === "emergency";
+  const locationText = location ? ` · Ver ubicación en el feed` : "";
   const payload = JSON.stringify({
-    title: `📢 ${senderName}`,
-    body: message.trim(),
+    title: isEmergency ? `🚨 EMERGENCIA — ${senderName}` : `📢 ${senderName}`,
+    body: isEmergency
+      ? `${message.trim()}${locationText}`
+      : message.trim(),
     icon: "/icons/icon-192.png",
     url: "/feed",
+    requireInteraction: isEmergency, // keeps emergency notifications visible until dismissed
   });
 
   const results = await Promise.allSettled(

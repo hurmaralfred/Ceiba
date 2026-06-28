@@ -178,10 +178,10 @@ export default function FeedPage() {
       });
     });
 
-    // ── 5. Anuncios familiares (broadcast) ────────────────────
+    // ── 5. Anuncios familiares (broadcast + emergencias) ──────
     const { data: announcements } = await supabase
       .from("announcements")
-      .select("id, message, created_at, profiles:created_by(first_name, last_name, avatar_url)")
+      .select("id, message, type, created_at, profiles:created_by(first_name, last_name, avatar_url)")
       .gte("created_at", cutoff.toISOString())
       .order("created_at", { ascending: false })
       .limit(20);
@@ -189,20 +189,29 @@ export default function FeedPage() {
     (announcements || []).forEach((a: any) => {
       const sender = Array.isArray(a.profiles) ? a.profiles[0] : a.profiles;
       const name = sender ? `${sender.first_name} ${sender.last_name || ""}`.trim() : "Un familiar";
+      const isEmergency = a.type === "emergency";
       feedItems.push({
         id: `ann-${a.id}`,
         type: "announcement",
-        title: `📢 ${name}`,
+        title: isEmergency ? `🚨 EMERGENCIA — ${name}` : `📢 ${name}`,
         subtitle: a.message,
         date: new Date(a.created_at),
         imageUrl: sender?.avatar_url,
-        accent: "border-amber-400 bg-amber-50",
-        icon: <Megaphone size={18} className="text-amber-600" />,
+        accent: isEmergency ? "border-red-500 bg-red-50" : "border-amber-400 bg-amber-50",
+        icon: isEmergency
+          ? <span className="text-lg">🚨</span>
+          : <Megaphone size={18} className="text-amber-600" />,
       });
     });
 
     // ── Sort: birthdays first, then by date desc ───────────────
     feedItems.sort((a, b) => {
+      // Emergencias siempre primero
+      const aEmerg = a.type === "announcement" && a.title.startsWith("🚨");
+      const bEmerg = b.type === "announcement" && b.title.startsWith("🚨");
+      if (aEmerg && !bEmerg) return -1;
+      if (bEmerg && !aEmerg) return 1;
+      // Luego cumpleaños
       if (a.type === "birthday" && b.type !== "birthday") return -1;
       if (b.type === "birthday" && a.type !== "birthday") return 1;
       return b.date.getTime() - a.date.getTime();

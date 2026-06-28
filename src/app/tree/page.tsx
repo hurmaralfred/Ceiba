@@ -152,6 +152,9 @@ export default function TreePage() {
   const [showBroadcast, setShowBroadcast] = useState(false);
   const [broadcastMsg, setBroadcastMsg] = useState("");
   const [broadcastSending, setBroadcastSending] = useState(false);
+  const [showSOS, setShowSOS] = useState(false);
+  const [sosStep, setSosStep] = useState<1 | 2>(1); // step 1 = confirm, step 2 = sending
+  const [sosLocation, setSosLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [editingMember, setEditingMember] = useState<FamilyMember | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
@@ -634,6 +637,41 @@ export default function TreePage() {
 
   const logout = async () => { await supabase.auth.signOut(); router.push("/"); };
 
+  const openSOS = () => {
+    setSosStep(1);
+    setSosLocation(null);
+    setShowSOS(true);
+    // Try to get location in background
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        pos => setSosLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        () => {} // silently ignore if denied
+      );
+    }
+  };
+
+  const sendSOS = async () => {
+    setSosStep(2);
+    try {
+      const res = await fetch("/api/broadcast", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: "Necesito ayuda. Por favor contáctenme.",
+          type: "emergency",
+          location: sosLocation,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Error");
+      toast.success(`🚨 Alerta enviada a ${data.recipients} familiar${data.recipients !== 1 ? "es" : ""}`);
+      setShowSOS(false);
+    } catch (err: any) {
+      toast.error(err.message || "No se pudo enviar la alerta");
+      setSosStep(1);
+    }
+  };
+
   const sendBroadcast = async () => {
     if (!broadcastMsg.trim()) return;
     setBroadcastSending(true);
@@ -850,6 +888,13 @@ export default function TreePage() {
                   <Megaphone size={15} /> Anunciar
                 </button>
               )}
+              <button
+                onClick={openSOS}
+                className="flex items-center gap-1.5 bg-red-600 text-white hover:bg-red-700 font-bold text-sm px-3 py-1.5 rounded-lg transition-colors ml-auto"
+                title="Botón de pánico — alerta de emergencia"
+              >
+                🚨 SOS
+              </button>
               <div className="ml-auto flex items-center gap-2">
                 <button
                   onClick={() => setView("graph")}
@@ -951,6 +996,49 @@ export default function TreePage() {
           </div>
         )}
       </div>
+
+      {/* SOS Modal */}
+      {showSOS && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 border-2 border-red-500">
+            {sosStep === 1 ? (
+              <>
+                <div className="text-center mb-5">
+                  <div className="text-5xl mb-3">🚨</div>
+                  <h2 className="text-xl font-bold text-red-600">Alerta de emergencia</h2>
+                  <p className="text-gray-500 text-sm mt-2">
+                    Todos tus familiares en Ceiba recibirán una notificación de emergencia inmediatamente.
+                    {sosLocation && <span className="block mt-1 text-green-600 text-xs">✓ Ubicación detectada</span>}
+                  </p>
+                </div>
+                <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-5 text-sm text-red-700 text-center">
+                  "Necesito ayuda. Por favor contáctenme."
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowSOS(false)}
+                    className="flex-1 border border-gray-200 text-gray-600 rounded-xl py-3 text-sm font-medium hover:bg-gray-50 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={sendSOS}
+                    className="flex-1 bg-red-600 hover:bg-red-700 text-white rounded-xl py-3 text-sm font-bold transition-colors"
+                  >
+                    Confirmar SOS
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-4">
+                <div className="text-4xl mb-3 animate-pulse">🚨</div>
+                <p className="text-red-600 font-bold">Enviando alerta...</p>
+                <p className="text-gray-400 text-sm mt-1">Notificando a toda tu familia</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Broadcast Modal */}
       {showBroadcast && (
