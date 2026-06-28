@@ -108,6 +108,11 @@ export default function LoginPage() {
                 </button>
               </div>
             </div>
+            <div className="text-right -mt-1">
+              <Link href="/auth/forgot-password" className="text-xs text-ceiba-700 hover:underline">
+                ¿Olvidaste tu contraseña?
+              </Link>
+            </div>
             <button type="submit" disabled={loading} className="btn-primary w-full mt-2">
               {loading ? "Entrando..." : "Iniciar sesión"}
             </button>
