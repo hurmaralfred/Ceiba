@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { TreePine, MapPin, Users, Share2, LogOut, User, Send, List, GitFork, Plus, X, Pencil, Map as MapIcon, Image, Calendar, MessageCircle } from "lucide-react";
+import { TreePine, MapPin, Users, Share2, LogOut, User, Send, List, GitFork, Plus, X, Pencil, Map as MapIcon, Image, Calendar, MessageCircle, Megaphone } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Profile, FamilyMember, RelationType, RELATION_LABELS } from "@/lib/types";
 import type { ExtendedEntry, MemberLink } from "@/components/tree/FamilyTreeGraph";
@@ -149,6 +149,9 @@ export default function TreePage() {
   const [view, setView] = useState<"graph" | "list" | "map">("graph");
   const [myLocation, setMyLocation] = useState<[number, number] | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [showBroadcast, setShowBroadcast] = useState(false);
+  const [broadcastMsg, setBroadcastMsg] = useState("");
+  const [broadcastSending, setBroadcastSending] = useState(false);
   const [editingMember, setEditingMember] = useState<FamilyMember | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
@@ -631,6 +634,27 @@ export default function TreePage() {
 
   const logout = async () => { await supabase.auth.signOut(); router.push("/"); };
 
+  const sendBroadcast = async () => {
+    if (!broadcastMsg.trim()) return;
+    setBroadcastSending(true);
+    try {
+      const res = await fetch("/api/broadcast", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: broadcastMsg.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Error");
+      toast.success(`📢 Mensaje enviado a ${data.recipients} familiar${data.recipients !== 1 ? "es" : ""}`);
+      setBroadcastMsg("");
+      setShowBroadcast(false);
+    } catch (err: any) {
+      toast.error(err.message || "No se pudo enviar");
+    } finally {
+      setBroadcastSending(false);
+    }
+  };
+
   const shareTree = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
@@ -817,6 +841,15 @@ export default function TreePage() {
               >
                 <Plus size={15} /> Agregar familiar
               </button>
+              {joinedMembers.length > 0 && (
+                <button
+                  onClick={() => setShowBroadcast(true)}
+                  className="flex items-center gap-1.5 bg-amber-500 text-white hover:bg-amber-600 font-semibold text-sm px-3 py-1.5 rounded-lg transition-colors"
+                  title="Enviar mensaje a toda la familia"
+                >
+                  <Megaphone size={15} /> Anunciar
+                </button>
+              )}
               <div className="ml-auto flex items-center gap-2">
                 <button
                   onClick={() => setView("graph")}
@@ -918,6 +951,54 @@ export default function TreePage() {
           </div>
         )}
       </div>
+
+      {/* Broadcast Modal */}
+      {showBroadcast && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">📢</span>
+                <h2 className="text-lg font-bold text-gray-900">Mensaje familiar</h2>
+              </div>
+              <button onClick={() => { setShowBroadcast(false); setBroadcastMsg(""); }}>
+                <X size={20} className="text-gray-400 hover:text-gray-600" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-500 mb-4">
+              Todos los familiares en Ceiba recibirán una notificación con tu mensaje.
+            </p>
+            <textarea
+              className="w-full border border-gray-200 rounded-xl p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-amber-400"
+              rows={4}
+              maxLength={300}
+              placeholder="Ej: Reunión familiar este domingo a las 2pm en casa de abuela 🏠"
+              value={broadcastMsg}
+              onChange={e => setBroadcastMsg(e.target.value)}
+              autoFocus
+            />
+            <div className="flex items-center justify-between mt-1 mb-4">
+              <span className="text-xs text-gray-400">{broadcastMsg.length}/300</span>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setShowBroadcast(false); setBroadcastMsg(""); }}
+                className="flex-1 border border-gray-200 text-gray-600 rounded-xl py-2.5 text-sm font-medium hover:bg-gray-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={sendBroadcast}
+                disabled={broadcastSending || !broadcastMsg.trim()}
+                className="flex-1 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
+              >
+                <Megaphone size={15} />
+                {broadcastSending ? "Enviando..." : "Enviar a todos"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Add / Edit Member Modal */}
       {showModal && (

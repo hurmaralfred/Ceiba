@@ -2,13 +2,13 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { TreePine, Cake, UserPlus, Camera, Calendar, RefreshCw, Bell, Heart, Baby, GraduationCap, Users, Star, BookOpen } from "lucide-react";
+import { TreePine, Cake, UserPlus, Camera, Calendar, RefreshCw, Bell, Heart, Baby, GraduationCap, Users, Star, BookOpen, Megaphone } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { RELATION_LABELS, RelationType } from "@/lib/types";
 import BottomNav from "@/components/BottomNav";
 
 // ── Types ──────────────────────────────────────────────────────
-type FeedItemType = "birthday" | "joined" | "photo" | "event";
+type FeedItemType = "birthday" | "joined" | "photo" | "event" | "announcement";
 
 interface FeedItem {
   id: string;
@@ -178,6 +178,29 @@ export default function FeedPage() {
       });
     });
 
+    // ── 5. Anuncios familiares (broadcast) ────────────────────
+    const { data: announcements } = await supabase
+      .from("announcements")
+      .select("id, message, created_at, profiles:created_by(first_name, last_name, avatar_url)")
+      .gte("created_at", cutoff.toISOString())
+      .order("created_at", { ascending: false })
+      .limit(20);
+
+    (announcements || []).forEach((a: any) => {
+      const sender = Array.isArray(a.profiles) ? a.profiles[0] : a.profiles;
+      const name = sender ? `${sender.first_name} ${sender.last_name || ""}`.trim() : "Un familiar";
+      feedItems.push({
+        id: `ann-${a.id}`,
+        type: "announcement",
+        title: `📢 ${name}`,
+        subtitle: a.message,
+        date: new Date(a.created_at),
+        imageUrl: sender?.avatar_url,
+        accent: "border-amber-400 bg-amber-50",
+        icon: <Megaphone size={18} className="text-amber-600" />,
+      });
+    });
+
     // ── Sort: birthdays first, then by date desc ───────────────
     feedItems.sort((a, b) => {
       if (a.type === "birthday" && b.type !== "birthday") return -1;
@@ -255,7 +278,7 @@ function FeedCard({ item }: { item: FeedItem }) {
 
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-gray-900 leading-snug">{item.title}</p>
-        <p className="text-xs text-gray-500 mt-0.5 truncate">{item.subtitle}</p>
+        <p className={`text-xs text-gray-500 mt-0.5 ${item.type === "announcement" ? "whitespace-pre-wrap" : "truncate"}`}>{item.subtitle}</p>
         <p className="text-[10px] text-gray-400 mt-1">{timeAgo(item.date)}</p>
       </div>
 
