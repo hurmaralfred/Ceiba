@@ -49,6 +49,7 @@ export interface FamilyMember {
   invitation_token?: string
   invitation_sent_at?: string
   is_deceased?: boolean
+  parent_member_id?: string | null
   created_at: string
   profile?: Profile
 }

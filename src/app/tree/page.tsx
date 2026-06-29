@@ -207,7 +207,7 @@ const RELATION_GROUPS = [
   },
 ];
 
-const EMPTY_FORM = { primer_nombre: "", segundo_nombre: "", primer_apellido: "", segundo_apellido: "", first_name: "", last_name: "", email: "", birth_date: "", relation_type: "father" as RelationType, is_deceased: false };
+const EMPTY_FORM = { primer_nombre: "", segundo_nombre: "", primer_apellido: "", segundo_apellido: "", first_name: "", last_name: "", email: "", birth_date: "", relation_type: "father" as RelationType, is_deceased: false, parent_member_id: "" };
 
 export default function TreePage() {
   const router = useRouter();
@@ -834,6 +834,7 @@ export default function TreePage() {
       relation_type: form.relation_type,
       relation_kind: kind,
       is_deceased: form.is_deceased,
+      parent_member_id: form.parent_member_id || null,
     }).select("id").single();
     setSaving(false);
     if (error) { toast.error("Error al guardar"); return; }
@@ -874,6 +875,7 @@ export default function TreePage() {
       birth_date: (member as any).birth_date || "",
       relation_type: member.relation_type as RelationType,
       is_deceased: !!(member as any).is_deceased,
+      parent_member_id: (member as any).parent_member_id || "",
     });
     setShowModal(true);
   };
@@ -892,6 +894,7 @@ export default function TreePage() {
       relation_type: form.relation_type,
       relation_kind: kind,
       is_deceased: form.is_deceased,
+      parent_member_id: form.parent_member_id || null,
     }).eq("id", editingMember.id);
     setSaving(false);
     if (error) { toast.error("Error al guardar"); return; }
@@ -1573,6 +1576,30 @@ export default function TreePage() {
                   ))}
                 </select>
               </div>
+
+              {/* Parent selector — solo para sobrinos/sobrinas */}
+              {(form.relation_type === "nephew" || form.relation_type === "niece") && (
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    ¿Hijo/a de cuál hermano/a? <span className="text-gray-400 font-normal">(opcional)</span>
+                  </label>
+                  <select
+                    className="input-field text-sm"
+                    value={form.parent_member_id}
+                    onChange={e => setForm(f => ({ ...f, parent_member_id: e.target.value }))}
+                  >
+                    <option value="">— No especificar —</option>
+                    {members
+                      .filter(m => ["brother","sister","half_brother","half_sister"].includes(m.relation_type))
+                      .map(s => (
+                        <option key={s.id} value={s.id}>
+                          {s.first_name} {s.last_name || ""}
+                        </option>
+                      ))
+                    }
+                  </select>
+                </div>
+              )}
             </div>
             <div className="flex gap-3 mt-6">
               {editingMember ? (

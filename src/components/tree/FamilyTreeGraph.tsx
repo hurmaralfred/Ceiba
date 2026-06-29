@@ -279,8 +279,12 @@ function buildLayout(
       else if (["father_in_law","mother_in_law"].includes(m.relation_type)) addVertEdge(m.id, "root", "peer");
     } else if (gen > 0) {
       if (NEPHEW_NIECE.has(m.relation_type)) {
-        const sib = members.find(s => SIBLING_TYPES.has(s.relation_type));
+        const parentId = (m as any).parent_member_id;
+        const sib = parentId
+          ? members.find(s => s.id === parentId)
+          : undefined;
         if (sib) addVertEdge(sib.id, m.id, m.relation_kind as "blood" | "affinity");
+        else addVertEdge("root", m.id, m.relation_kind as "blood" | "affinity");
       } else if (GRANDCHILD_TYPES.has(m.relation_type)) {
         const child = members.find(s => ["son","daughter"].includes(s.relation_type));
         addVertEdge(child?.id ?? "root", m.id, m.relation_kind as "blood" | "affinity");
