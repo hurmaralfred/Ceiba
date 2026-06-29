@@ -115,6 +115,8 @@ export default function LiveMap({ members, myPos, myName, myAvatar }: Props) {
       height: "100%",
       borderRadius: "50%",
       overflow: "hidden",
+      maskImage: "radial-gradient(circle 50% at 50% 50%, black 99%, transparent 100%)",
+      WebkitMaskImage: "radial-gradient(circle 50% at 50% 50%, black 99%, transparent 100%)",
     }} />
   );
 }

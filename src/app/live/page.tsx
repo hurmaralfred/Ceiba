@@ -253,13 +253,13 @@ export default function LivePage() {
             <div className="absolute inset-0 rounded-full animate-ping"
               style={{ background: "transparent", boxShadow: "0 0 0 4px rgba(74,222,128,0.25)", animationDuration: "2.4s" }} />
 
-            {/* Mapa recortado en círculo — clip-path fuerza recorte incluso en capas GPU de Leaflet */}
+            {/* Mapa recortado en círculo — mask-image opera al nivel del compositor y corta capas GPU de Leaflet */}
             <div className="absolute inset-0"
               style={{
                 borderRadius: "50%",
                 overflow: "hidden",
-                clipPath: "circle(50% at 50% 50%)",
-                WebkitClipPath: "circle(50% at 50% 50%)",
+                maskImage: "radial-gradient(circle 116px at 50% 50%, black 99%, transparent 100%)",
+                WebkitMaskImage: "radial-gradient(circle 116px at 50% 50%, black 99%, transparent 100%)",
                 boxShadow: "0 0 0 3px #4ade80, 0 0 28px 6px rgba(74,222,128,0.35)",
               }}>
               <LiveMap
