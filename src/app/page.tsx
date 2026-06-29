@@ -2,86 +2,96 @@
 import Link from "next/link";
 import { ChevronRight, TreePine } from "lucide-react";
 
-// ── Líneas de conexión SVG superpuestas sobre la foto ──────────
+// ── Overlay de conexiones sobre la foto ────────────────────────
+// Nodos posicionados para coincidir con personas en la foto
+// (abuelos arriba, padres al medio, niños abajo)
 function ConnectionOverlay() {
-  // Puntos que "conectan" personas en la foto (ajustados visualmente)
   const nodes = [
-    { x: 22,  y: 28, label: "Abuela"  },
-    { x: 68,  y: 18, label: "Abuelo"  },
-    { x: 15,  y: 58, label: "Mamá"    },
-    { x: 50,  y: 45, label: "Papá"    },
-    { x: 80,  y: 55, label: "Tío"     },
-    { x: 35,  y: 78, label: "Tú"      },
-    { x: 72,  y: 80, label: "Hermana" },
+    { x: 18, y: 12, label: "Abuela"  },   // arriba izquierda — abuelos
+    { x: 78, y: 10, label: "Abuelo"  },   // arriba derecha
+    { x: 28, y: 48, label: "Mamá"    },   // medio izquierda — padres
+    { x: 62, y: 44, label: "Papá"    },   // medio derecha
+    { x: 45, y: 80, label: "Tú"      },   // centro abajo — tú
   ];
-  const edges = [[0,2],[0,3],[1,3],[1,4],[2,5],[3,5],[3,6],[4,6]];
+  const edges = [[0,2],[1,3],[2,4],[3,4],[0,3],[1,2]];
 
   return (
     <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMid slice">
       <defs>
-        <linearGradient id="conn-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%"   stopColor="#4ade80" />
-          <stop offset="100%" stopColor="#fbbf24" />
+        <linearGradient id="line-warm" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%"   stopColor="#fbbf24" stopOpacity="0.9" />
+          <stop offset="100%" stopColor="#4ade80" stopOpacity="0.9" />
         </linearGradient>
-        <filter id="glow-line">
-          <feGaussianBlur stdDeviation="0.6" result="blur"/>
+        <filter id="soft-glow" x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="0.7" result="blur"/>
           <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
         </filter>
         <style>{`
-          @keyframes dash-flow {
-            from { stroke-dashoffset: 20; }
+          @keyframes flow {
+            from { stroke-dashoffset: 18; }
             to   { stroke-dashoffset: 0; }
           }
-          @keyframes node-pulse {
-            0%,100% { r: 1.4; opacity: 0.9; }
-            50%      { r: 2.0; opacity: 1;   }
+          @keyframes pop {
+            0%,100% { transform: scale(1);   opacity: 0.9; }
+            50%      { transform: scale(1.3); opacity: 1;   }
           }
-          @keyframes ring-expand {
-            0%   { r: 2.2; opacity: 0.6; }
-            100% { r: 4.5; opacity: 0;   }
+          @keyframes ring {
+            0%   { r: 2.5; opacity: 0.5; }
+            100% { r: 5.5; opacity: 0;   }
           }
-          .conn-line { animation: dash-flow 2.5s linear infinite; }
-          .conn-line-2 { animation: dash-flow 2.5s linear infinite 0.5s; }
-          .conn-line-3 { animation: dash-flow 2.5s linear infinite 1s; }
-          .conn-line-4 { animation: dash-flow 2.5s linear infinite 1.5s; }
-          .node-dot { animation: node-pulse 2.5s ease-in-out infinite; }
-          .node-ring { animation: ring-expand 2.5s ease-out infinite; }
+          .line-anim { animation: flow 2.8s linear infinite; }
+          .line-anim-2 { animation: flow 2.8s linear infinite 0.7s; }
+          .line-anim-3 { animation: flow 2.8s linear infinite 1.4s; }
+          .dot-pop { animation: pop 3s ease-in-out infinite; }
+          .dot-ring { animation: ring 3s ease-out infinite; }
         `}</style>
       </defs>
 
+      {/* Líneas de conexión */}
       {edges.map(([a, b], i) => {
         const na = nodes[a], nb = nodes[b];
-        const cls = ["conn-line","conn-line-2","conn-line-3","conn-line-4"][i % 4];
+        const cls = i < 2 ? "line-anim" : i < 4 ? "line-anim-2" : "line-anim-3";
         return (
           <line key={i}
             x1={na.x} y1={na.y} x2={nb.x} y2={nb.y}
-            stroke="url(#conn-grad)"
-            strokeWidth="0.45"
-            strokeDasharray="3,2"
-            opacity="0.75"
-            filter="url(#glow-line)"
+            stroke="url(#line-warm)"
+            strokeWidth="0.5"
+            strokeDasharray="4,3"
+            filter="url(#soft-glow)"
             className={cls}
           />
         );
       })}
 
+      {/* Nodos */}
       {nodes.map((n, i) => (
-        <g key={i}>
-          <circle cx={n.x} cy={n.y} r={2.2} fill="none"
-            stroke="#4ade80" strokeWidth="0.3" opacity="0.5"
-            className="node-ring"
-            style={{ animationDelay: `${i * 0.35}s` }}
+        <g key={i} style={{ transformOrigin: `${n.x}px ${n.y}px` }}>
+          {/* Anillo exterior pulsante */}
+          <circle cx={n.x} cy={n.y} r={2.5}
+            fill="none" stroke="#fbbf24" strokeWidth="0.3"
+            opacity="0.5" className="dot-ring"
+            style={{ animationDelay: `${i * 0.5}s` }}
           />
-          <circle cx={n.x} cy={n.y} r={1.4}
-            fill="#4ade80"
-            filter="url(#glow-line)"
-            className="node-dot"
-            style={{ animationDelay: `${i * 0.35}s` }}
+          {/* Punto central */}
+          <circle cx={n.x} cy={n.y} r={1.6}
+            fill="#fbbf24"
+            filter="url(#soft-glow)"
+            className="dot-pop"
+            style={{ animationDelay: `${i * 0.5}s` }}
           />
-          <text x={n.x} y={n.y - 2.8}
-            textAnchor="middle" fontSize="2.4" fill="white"
-            fontFamily="system-ui" fontWeight="600"
-            style={{ textShadow: "0 0 4px rgba(0,0,0,0.8)" }}
+          {/* Etiqueta con fondo */}
+          <rect
+            x={n.x - 6} y={n.y - 6.5}
+            width={12} height={4.5} rx={1.2}
+            fill="rgba(0,0,0,0.55)"
+          />
+          <text
+            x={n.x} y={n.y - 3.8}
+            textAnchor="middle"
+            fontSize="2.6"
+            fontWeight="700"
+            fill="white"
+            fontFamily="system-ui"
           >
             {n.label}
           </text>
@@ -93,176 +103,193 @@ function ConnectionOverlay() {
 
 export default function LandingPage() {
   return (
-    <main className="min-h-screen bg-[#060d14] text-white overflow-x-hidden">
+    <main className="min-h-screen bg-[#06090f] text-white overflow-x-hidden">
 
-      {/* Ambient background glows */}
+      {/* Glows de fondo */}
       <div className="fixed inset-0 pointer-events-none" aria-hidden>
-        <div className="absolute top-0 left-1/3 w-[600px] h-[400px] rounded-full bg-ceiba-950/60 blur-[120px]" />
-        <div className="absolute bottom-1/3 right-0 w-[400px] h-[400px] rounded-full bg-amber-950/20 blur-[100px]" />
+        <div className="absolute top-0 left-1/4 w-[700px] h-[500px] rounded-full bg-ceiba-950/50 blur-[140px]" />
+        <div className="absolute top-1/3 right-0 w-[400px] h-[400px] rounded-full bg-amber-950/20 blur-[100px]" />
       </div>
 
       {/* Nav */}
       <nav className="relative flex items-center justify-between px-6 py-5 max-w-6xl mx-auto">
-        <div className="flex items-center gap-2 font-display text-xl font-bold">
+        <div className="flex items-center gap-2 font-display text-xl font-bold tracking-tight">
           <TreePine size={22} className="text-ceiba-400" /> Ceiba
         </div>
         <div className="flex items-center gap-3">
-          <Link href="/auth/login" className="text-gray-400 hover:text-white text-sm font-medium transition-colors">
+          <Link href="/auth/login" className="text-gray-500 hover:text-white text-sm font-medium transition-colors">
             Iniciar sesión
           </Link>
-          <Link href="/auth/register" className="bg-ceiba-600 hover:bg-ceiba-500 text-white font-bold text-sm px-4 py-2 rounded-xl transition-colors shadow-lg shadow-ceiba-950/50">
+          <Link href="/auth/register"
+            className="bg-ceiba-600 hover:bg-ceiba-500 text-white font-bold text-sm px-5 py-2.5 rounded-xl transition-colors shadow-lg shadow-ceiba-950/60">
             Empezar gratis
           </Link>
         </div>
       </nav>
 
       {/* ── HERO ── */}
-      <section className="relative max-w-6xl mx-auto px-6 pt-10 pb-16 grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+      <section className="relative max-w-6xl mx-auto px-6 pt-8 pb-16 grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
 
-        {/* LEFT: copy */}
-        <div className="relative z-10">
-          <div className="inline-flex items-center gap-2 bg-ceiba-950/80 border border-ceiba-800/60 rounded-full px-3 py-1 text-xs text-ceiba-300 mb-7">
-            <span className="w-1.5 h-1.5 rounded-full bg-ceiba-400 animate-pulse" />
+        {/* Texto */}
+        <div className="relative z-10 order-2 lg:order-1">
+          <div className="inline-flex items-center gap-2 bg-white/[0.05] border border-white/10 rounded-full px-3 py-1 text-xs text-gray-400 mb-7">
+            <span className="w-1.5 h-1.5 rounded-full bg-ceiba-400 animate-pulse inline-block" />
             Gratis · Sin publicidad · Solo tu familia
           </div>
 
-          <h1 className="font-display font-black leading-[1.05] mb-5" style={{ fontSize: "clamp(2.4rem, 5vw, 3.8rem)" }}>
-            ¡Conectados!<br />
-            <span className="bg-gradient-to-r from-ceiba-300 via-emerald-300 to-amber-300 bg-clip-text text-transparent">
-              Un solo mensaje,
-            </span><br />
-            <span className="text-white">toda la familia, unida.</span>
+          <h1 className="font-display font-black leading-[1.0] mb-6 tracking-tight"
+            style={{ fontSize: "clamp(2.8rem, 5.5vw, 4.2rem)" }}>
+            ¡Conectados!
+            <br />
+            <span className="text-ceiba-400">Tu familia,</span>
+            <br />
+            toda unida.
           </h1>
 
-          <p className="text-gray-400 text-lg leading-relaxed mb-8 max-w-lg">
-            Agrega a tus familiares una vez. Cuando ellos se registran,
-            <strong className="text-white"> Ceiba conecta automáticamente</strong> toda su red —
-            sus hijos son tus sobrinos, sus padres tus abuelos.
+          <p className="text-gray-400 text-lg leading-relaxed mb-8 max-w-md">
+            Agrega a tus familiares una vez. Cuando ellos entran,
+            <strong className="text-white"> Ceiba conecta automáticamente</strong> toda
+            su red — sus hijos son tus sobrinos, sus padres tus abuelos.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3 mb-10">
             <Link href="/auth/register"
-              className="inline-flex items-center justify-center gap-2 bg-ceiba-600 hover:bg-ceiba-500 text-white font-bold text-base px-7 py-3.5 rounded-2xl transition-all shadow-xl shadow-ceiba-950/60">
-              Construir mi árbol gratis <ChevronRight size={18} />
+              className="inline-flex items-center justify-center gap-2 bg-ceiba-600 hover:bg-ceiba-500 text-white font-bold text-base px-7 py-3.5 rounded-2xl transition-all shadow-xl shadow-ceiba-950/50 group">
+              Construir mi árbol gratis
+              <ChevronRight size={17} className="group-hover:translate-x-0.5 transition-transform" />
             </Link>
             <Link href="/auth/login"
-              className="inline-flex items-center justify-center border border-white/10 hover:border-white/25 text-gray-300 hover:text-white font-medium text-base px-7 py-3.5 rounded-2xl transition-colors">
+              className="inline-flex items-center justify-center border border-white/10 hover:border-white/20 text-gray-400 hover:text-white font-medium text-base px-7 py-3.5 rounded-2xl transition-colors">
               Ya tengo cuenta
             </Link>
           </div>
 
-          <div className="flex items-center gap-6 text-sm text-gray-500">
-            <div><span className="text-white font-bold text-base">100%</span> gratis</div>
-            <div className="w-px h-4 bg-gray-800" />
-            <div><span className="text-white font-bold text-base">0</span> anuncios</div>
-            <div className="w-px h-4 bg-gray-800" />
-            <div><span className="text-white font-bold text-base">∞</span> familiares</div>
+          {/* Social proof minimalista */}
+          <div className="flex items-center gap-5 text-sm">
+            {[["100%","gratis"],["0","anuncios"],["∞","familiares"]].map(([n, l], i) => (
+              <span key={i} className="flex items-baseline gap-1.5">
+                <span className="text-white font-bold text-base">{n}</span>
+                <span className="text-gray-600">{l}</span>
+              </span>
+            ))}
           </div>
         </div>
 
-        {/* RIGHT: foto familiar con conexiones animadas */}
-        <div className="relative rounded-3xl overflow-hidden shadow-2xl shadow-black/60" style={{ aspectRatio: "4/3" }}>
-          {/* Foto de familia cálida */}
-          <img
-            src="https://images.unsplash.com/photo-1609220136736-443140cffec6?w=900&q=85&fit=crop&crop=faces"
-            alt="Familia conectada"
-            className="w-full h-full object-cover"
-          />
-          {/* Overlay oscuro en bordes para que las líneas resalten */}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#060d14]/70 via-transparent to-[#060d14]/20" />
-          <div className="absolute inset-0 bg-gradient-to-l from-transparent to-[#060d14]/30" />
+        {/* Foto con conexiones */}
+        <div className="relative order-1 lg:order-2">
+          <div className="relative rounded-3xl overflow-hidden shadow-2xl shadow-black/70"
+            style={{ aspectRatio: "4/3" }}>
 
-          {/* Líneas de conexión animadas */}
-          <ConnectionOverlay />
+            {/* Foto de familia — 3 generaciones */}
+            <img
+              src="https://images.pexels.com/photos/1128318/pexels-photo-1128318.jpeg?auto=compress&cs=tinysrgb&w=900"
+              alt="Familia de tres generaciones conectada"
+              className="w-full h-full object-cover"
+              style={{ objectPosition: "center 30%" }}
+            />
 
-          {/* Badge ¡Conectados! */}
-          <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between">
-            <div className="bg-black/60 backdrop-blur-md border border-white/10 rounded-2xl px-4 py-2">
-              <p className="text-white font-bold text-sm">🌳 Familia conectada</p>
-              <p className="text-ceiba-300 text-xs">Red de 3 generaciones</p>
-            </div>
-            <div className="bg-ceiba-600/80 backdrop-blur-md border border-ceiba-500/40 rounded-2xl px-4 py-2 text-right">
-              <p className="text-white font-bold text-sm">7 familiares</p>
-              <p className="text-ceiba-200 text-xs">en Ceiba</p>
+            {/* Gradientes sobre la foto para legibilidad */}
+            <div className="absolute inset-0 bg-gradient-to-r from-[#06090f]/40 via-transparent to-[#06090f]/20" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#06090f]/60 via-transparent to-[#06090f]/10" />
+
+            {/* Líneas de conexión animadas */}
+            <ConnectionOverlay />
+
+            {/* Badge único — limpio y discreto */}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
+              <div className="flex items-center gap-2 bg-black/60 backdrop-blur-md border border-white/10 rounded-full px-4 py-2 whitespace-nowrap">
+                <span className="w-2 h-2 rounded-full bg-ceiba-400 animate-pulse" />
+                <span className="text-white text-xs font-semibold">Red de 3 generaciones conectada</span>
+              </div>
             </div>
           </div>
+
+          {/* Decoración exterior — brillo sutil */}
+          <div className="absolute -inset-px rounded-3xl bg-gradient-to-br from-ceiba-600/20 via-transparent to-amber-600/10 pointer-events-none" />
         </div>
       </section>
 
-      {/* ── 3 FEATURES CLAVE ── */}
+      {/* ── FEATURES CLAVE ── */}
       <section className="max-w-5xl mx-auto px-6 pb-20">
-        <p className="text-center text-gray-600 text-xs uppercase tracking-widest mb-8">Lo que hace Ceiba único</p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+        <p className="text-center text-gray-600 text-xs uppercase tracking-[0.2em] mb-8">Lo que hace Ceiba único</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
             {
               emoji: "🌳",
               title: "El árbol que se construye solo",
-              desc: "Agrega a tu hermano — cuando él se une, sus hijos aparecen como tus sobrinos automáticamente. Sin hacer nada más.",
-              accent: "from-ceiba-900/40 to-transparent border-ceiba-800/50",
+              desc: "Agrega a tu hermano. Cuando él se une, sus hijos son tus sobrinos y sus padres tus abuelos — sin hacer nada más.",
+              border: "border-ceiba-900/60",
+              glow: "rgba(74,222,128,0.06)",
             },
             {
               emoji: "📢",
               title: "Un mensaje. Todos enterados.",
-              desc: "Reunión familiar, sorpresa, novedad — un solo toque y cada familiar recibe la notificación al mismo tiempo.",
-              accent: "from-amber-900/30 to-transparent border-amber-800/40",
+              desc: "Reunión, sorpresa, novedad — un toque y cada familiar recibe la notificación al mismo tiempo.",
+              border: "border-amber-900/50",
+              glow: "rgba(251,191,36,0.06)",
             },
             {
               emoji: "🚨",
               title: "Botón de pánico familiar",
-              desc: "En una emergencia activa el SOS. Toda tu familia recibe una alerta inmediata con tu ubicación.",
-              accent: "from-red-900/30 to-transparent border-red-800/40",
+              desc: "En emergencia activa el SOS. Toda tu familia recibe una alerta inmediata con tu ubicación.",
+              border: "border-red-900/50",
+              glow: "rgba(239,68,68,0.06)",
             },
           ].map((f, i) => (
-            <div key={i} className={`bg-gradient-to-b ${f.accent} border rounded-2xl p-6 hover:-translate-y-1 transition-transform`}>
+            <div key={i}
+              className={`border ${f.border} rounded-2xl p-6 hover:-translate-y-1 transition-transform duration-200`}
+              style={{ background: `radial-gradient(ellipse at top left, ${f.glow}, transparent 60%), rgba(255,255,255,0.02)` }}
+            >
               <div className="text-3xl mb-4">{f.emoji}</div>
-              <h3 className="font-bold text-white text-base mb-2">{f.title}</h3>
-              <p className="text-gray-400 text-sm leading-relaxed">{f.desc}</p>
+              <h3 className="font-bold text-white text-base mb-2 leading-snug">{f.title}</h3>
+              <p className="text-gray-500 text-sm leading-relaxed">{f.desc}</p>
             </div>
           ))}
         </div>
       </section>
 
       {/* ── CÓMO FUNCIONA ── */}
-      <section className="max-w-2xl mx-auto px-6 pb-20">
-        <h2 className="text-center font-display text-2xl font-bold mb-2">Tres pasos. Menos de 2 minutos.</h2>
-        <p className="text-center text-gray-500 text-sm mb-10">Sin tarjeta de crédito. Sin nada complicado.</p>
+      <section className="max-w-xl mx-auto px-6 pb-20">
+        <h2 className="text-center font-display text-2xl font-bold mb-1">Tres pasos. Menos de 2 minutos.</h2>
+        <p className="text-center text-gray-600 text-sm mb-10">Sin tarjeta de crédito. Sin complicaciones.</p>
         <div className="relative space-y-8">
-          <div className="absolute left-5 top-2 bottom-2 w-px bg-gradient-to-b from-ceiba-600 via-ceiba-800/50 to-transparent" />
+          <div className="absolute left-[18px] top-3 bottom-3 w-px bg-gradient-to-b from-ceiba-700 via-ceiba-900/50 to-transparent" />
           {[
-            { n: "1", title: "Crea tu perfil", desc: "Nombre, foto y ciudad. Listo en 30 segundos." },
-            { n: "2", title: "Agrega tu familia", desc: "Mamá, hermanos, pareja, hijos — Ceiba detecta si ya están registrados." },
-            { n: "3", title: "Comparte el link", desc: "Cada familiar que entra trae su red. El árbol crece solo." },
-          ].map((s, i) => (
-            <div key={i} className="relative flex gap-5">
-              <div className="relative z-10 w-10 h-10 rounded-full bg-ceiba-950 border border-ceiba-700 flex items-center justify-center text-ceiba-300 font-bold text-sm flex-shrink-0 shadow-lg shadow-ceiba-950">
+            { n:"1", t:"Crea tu perfil",      d:"Nombre, foto y ciudad. 30 segundos." },
+            { n:"2", t:"Agrega tu familia",   d:"Mamá, hermanos, pareja, hijos — Ceiba detecta si ya están en la app." },
+            { n:"3", t:"Comparte el link",    d:"Cada familiar que entra trae su red. El árbol crece solo." },
+          ].map((s,i) => (
+            <div key={i} className="flex gap-5">
+              <div className="relative z-10 w-9 h-9 rounded-full bg-[#06090f] border border-ceiba-700 flex items-center justify-center text-ceiba-300 font-bold text-sm flex-shrink-0">
                 {s.n}
               </div>
-              <div className="pt-2">
-                <h3 className="font-semibold text-white mb-0.5">{s.title}</h3>
-                <p className="text-gray-400 text-sm leading-relaxed">{s.desc}</p>
+              <div className="pt-1.5">
+                <p className="font-semibold text-white text-sm mb-0.5">{s.t}</p>
+                <p className="text-gray-500 text-sm leading-relaxed">{s.d}</p>
               </div>
             </div>
           ))}
         </div>
       </section>
 
-      {/* ── FEATURES SECUNDARIAS ── */}
+      {/* ── GRID DE FEATURES ── */}
       <section className="max-w-4xl mx-auto px-6 pb-20">
-        <h2 className="text-center text-gray-400 text-sm font-medium mb-6 uppercase tracking-widest">Y mucho más, incluido gratis</h2>
+        <p className="text-center text-gray-600 text-xs uppercase tracking-[0.2em] mb-6">Todo incluido, gratis</p>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {[
-            { e: "🗺️", t: "Mapa familiar",  d: "Dónde vive cada quien" },
-            { e: "🎂", t: "Cumpleaños",      d: "Alertas automáticas" },
-            { e: "📸", t: "Galería",          d: "Fotos compartidas" },
-            { e: "📅", t: "Historia",         d: "Eventos de la familia" },
-            { e: "💬", t: "Chat familiar",    d: "Por grupos de relación" },
-            { e: "🔒", t: "Privacidad",       d: "Solo tu familia lo ve" },
+            { e:"🗺️", t:"Mapa familiar",   d:"Dónde vive cada quien"      },
+            { e:"🎂", t:"Cumpleaños",       d:"Alertas automáticas"         },
+            { e:"📸", t:"Galería",          d:"Fotos compartidas"           },
+            { e:"📅", t:"Historia",         d:"Eventos de la familia"       },
+            { e:"💬", t:"Chat familiar",    d:"Por grupos de relación"      },
+            { e:"🔒", t:"Privacidad",       d:"Solo tu familia lo ve"       },
           ].map((f, i) => (
-            <div key={i} className="bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.05] rounded-xl p-4 flex items-start gap-3 transition-colors">
+            <div key={i}
+              className="group bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.05] hover:border-white/10 rounded-xl p-4 flex items-start gap-3 transition-all">
               <span className="text-xl">{f.e}</span>
               <div>
-                <div className="text-white text-sm font-medium">{f.t}</div>
-                <div className="text-gray-600 text-xs mt-0.5">{f.d}</div>
+                <p className="text-white text-sm font-medium">{f.t}</p>
+                <p className="text-gray-600 text-xs mt-0.5">{f.d}</p>
               </div>
             </div>
           ))}
@@ -270,26 +297,28 @@ export default function LandingPage() {
       </section>
 
       {/* ── CTA FINAL ── */}
-      <section className="max-w-2xl mx-auto px-6 pb-24 text-center">
-        <div className="relative rounded-3xl overflow-hidden border border-ceiba-800/50 p-10"
-          style={{ background: "radial-gradient(ellipse at 50% 0%, rgba(20,83,45,0.55), rgba(6,13,20,0.95))" }}>
-          <div className="absolute inset-0 opacity-10"
-            style={{ backgroundImage: "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.15) 1px, transparent 0)", backgroundSize: "20px 20px" }} />
+      <section className="max-w-xl mx-auto px-6 pb-24 text-center">
+        <div className="relative rounded-3xl overflow-hidden border border-ceiba-900/60 p-10"
+          style={{ background: "radial-gradient(ellipse at 50% 0%, rgba(20,83,45,0.5) 0%, rgba(6,9,15,0.95) 70%)" }}>
+          {/* Textura de puntos sutil */}
+          <div className="absolute inset-0 opacity-[0.07]"
+            style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
           <div className="relative">
-            <div className="text-4xl mb-4">🌳</div>
-            <h2 className="font-display text-3xl font-black mb-3 leading-tight">
+            <div className="text-5xl mb-5">🌳</div>
+            <h2 className="font-display text-2xl sm:text-3xl font-black mb-3 leading-tight">
               ¿Cuándo fue la última vez<br />que toda tu familia<br />supo de ti al mismo tiempo?
             </h2>
-            <p className="text-gray-400 mb-8">Empieza hoy. Es gratis para siempre.</p>
+            <p className="text-gray-500 text-sm mb-8">Empieza hoy. Gratis para siempre.</p>
             <Link href="/auth/register"
-              className="inline-flex items-center gap-2 bg-ceiba-600 hover:bg-ceiba-500 text-white font-bold text-lg px-8 py-4 rounded-2xl transition-all shadow-xl shadow-ceiba-950/60">
-              Crear mi árbol familiar gratis <ChevronRight size={20} />
+              className="inline-flex items-center gap-2 bg-ceiba-600 hover:bg-ceiba-500 text-white font-bold text-base px-8 py-4 rounded-2xl transition-all shadow-xl shadow-ceiba-950/50 group">
+              Crear mi árbol familiar gratis
+              <ChevronRight size={18} className="group-hover:translate-x-0.5 transition-transform" />
             </Link>
           </div>
         </div>
       </section>
 
-      <footer className="text-center text-gray-700 pb-8 text-sm">
+      <footer className="text-center text-gray-700 pb-8 text-xs">
         © 2025 Ceiba · Hecho con amor por familias, para familias
       </footer>
     </main>
