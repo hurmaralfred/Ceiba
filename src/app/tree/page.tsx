@@ -345,7 +345,7 @@ export default function TreePage() {
     if (profileIds.length > 0) {
       const { data: profilesData } = await supabase
         .from("profiles")
-        .select("id, avatar_url, social_link, latitude, longitude, city, country")
+        .select("id, avatar_url, social_link, latitude, longitude, city, country, last_seen_at")
         .in("id", profileIds);
       if (profilesData) {
         const profileMap = Object.fromEntries(profilesData.map(p => [p.id, p]));
