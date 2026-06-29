@@ -333,14 +333,23 @@ export default function FamilyTreeGraph({
   const svgRef = useRef<SVGSVGElement>(null);
   const gRef   = useRef<SVGGElement>(null);
 
-  // Which direct members have their extended branch expanded
+  // Expanded state — starts with ALL parent IDs so the full tree is visible by default
   const [expandedParents, setExpandedParents] = useState<Set<string>>(new Set());
+  const autoExpandedRef = useRef(false);
 
   // Count extended members per parent (for badge)
   const extCountByParent = useMemo(() => {
     const m = new Map<string, number>();
     extendedMembers.forEach(e => m.set(e.parentMemberId, (m.get(e.parentMemberId) ?? 0) + 1));
     return m;
+  }, [extendedMembers]);
+
+  // Auto-expand all branches on first data load so connections are always visible
+  useEffect(() => {
+    if (!autoExpandedRef.current && extendedMembers.length > 0) {
+      autoExpandedRef.current = true;
+      setExpandedParents(new Set(extendedMembers.map(e => e.parentMemberId)));
+    }
   }, [extendedMembers]);
 
   const visibleExtended = useMemo(
@@ -368,7 +377,7 @@ export default function FamilyTreeGraph({
   const handleNodeClick = useCallback((node: LayoutNode) => {
     const extCount = node.memberId ? (extCountByParent.get(node.memberId) ?? 0) : 0;
     if (extCount > 0 && node.memberId) {
-      // Toggle expansion
+      // Toggle expansion of this node's extended branch
       setExpandedParents(prev => {
         const next = new Set(prev);
         if (next.has(node.memberId!)) next.delete(node.memberId!);
@@ -376,8 +385,10 @@ export default function FamilyTreeGraph({
         return next;
       });
     } else if (node.memberId && !node.isExtended) {
+      // Direct member without extended children → open profile
       onNodeClick?.(node.memberId);
     }
+    // Extended members with no children: no-op (no profile to open)
   }, [extCountByParent, onNodeClick]);
 
   const EDGE_COLORS = { blood: "#86efac", affinity: "#fcd34d", peer: "#94a3b8" };
@@ -525,8 +536,10 @@ export default function FamilyTreeGraph({
 
             const extCount   = n.memberId ? (extCountByParent.get(n.memberId) ?? 0) : 0;
             const isExpanded = n.memberId ? expandedParents.has(n.memberId) : false;
-            const hasBadge   = extCount > 0 && !n.isExtended;
-            const clickable  = !isRoot && (!n.isExtended || false);
+            // Badge visible on ALL nodes (direct and extended) that have hidden children
+            const hasBadge   = extCount > 0;
+            // Extended nodes are clickable IF they have extended children; direct always clickable
+            const clickable  = !isRoot && !!n.memberId && (extCount > 0 || !n.isExtended);
 
             // Unique gradient / clip IDs per node
             const gradId  = `sg-${n.id}`;
