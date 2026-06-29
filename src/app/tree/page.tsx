@@ -552,6 +552,83 @@ export default function TreePage() {
           }
         }
 
+        // ── Tercer salto: familia de primos/cuñados que ya están en Ceiba ──
+        // Ejemplo: hijos de Ramiro (primo) → aparecen como primos segundos/sobrinos
+        const joinedExtended = extended.filter(e => !!(e.member as any).profile_id);
+        const extProfileIds = [...new Set(
+          joinedExtended.map(e => (e.member as any).profile_id as string).filter(Boolean)
+        )];
+
+        if (extProfileIds.length > 0) {
+          const { data: ext2Data } = await supabase
+            .from("family_members")
+            .select("*")
+            .in("added_by", extProfileIds);
+
+          if (ext2Data && ext2Data.length > 0) {
+            const allExtendedProfileIds = new Set(
+              extended.map(e => (e.member as any).profile_id).filter(Boolean)
+            );
+
+            for (const em of ext2Data) {
+              if (em.profile_id === user.id) continue;
+              if (myMemberIds.has(em.profile_id)) continue;
+              if (em.profile_id && allExtendedProfileIds.has(em.profile_id)) continue;
+
+              const parentExt = joinedExtended.find(
+                e => (e.member as any).profile_id === em.added_by
+              );
+              if (!parentExt || !parentExt.inferredRelation) continue;
+
+              const level3Relation = inferRelation(
+                parentExt.inferredRelation as RelationType,
+                em.relation_type
+              );
+              if (!level3Relation) continue;
+
+              // Dedup by name + relation
+              const fn3 = norm(em.first_name).split(" ")[0];
+              const ln3 = norm(em.last_name || "").split(" ")[0];
+              const key3 = `${fn3}|${ln3}|${level3Relation}`;
+              if (extended.some(x => {
+                const xfn = norm(x.member.first_name).split(" ")[0];
+                const xln = norm(x.member.last_name || "").split(" ")[0];
+                return `${xfn}|${xln}|${x.inferredRelation}` === key3;
+              })) continue;
+
+              if (em.profile_id) allExtendedProfileIds.add(em.profile_id);
+              extended.push({
+                member: em as FamilyMember,
+                parentMemberId: parentExt.member.id,
+                inferredRelation: level3Relation,
+              });
+            }
+          }
+        }
+
+        // ── Peer links entre miembros extendidos que comparten el mismo padre ──
+        // Ejemplo: Karina y Ramiro son ambos hijos del mismo tío → línea punteada entre ellos
+        const parentGroupMap = new Map<string, ExtendedEntry[]>();
+        for (const e of extended) {
+          if (!parentGroupMap.has(e.parentMemberId)) parentGroupMap.set(e.parentMemberId, []);
+          parentGroupMap.get(e.parentMemberId)!.push(e);
+        }
+        for (const siblings of parentGroupMap.values()) {
+          if (siblings.length < 2) continue;
+          for (let i = 0; i < siblings.length; i++) {
+            for (let j = i + 1; j < siblings.length; j++) {
+              const a = siblings[i], b = siblings[j];
+              const alreadyLinked = crossLinks.some(
+                l => (l.fromMemberId === a.member.id && l.toMemberId === b.member.id) ||
+                     (l.fromMemberId === b.member.id && l.toMemberId === a.member.id)
+              );
+              if (!alreadyLinked) {
+                crossLinks.push({ fromMemberId: a.member.id, toMemberId: b.member.id, relation: "sibling" });
+              }
+            }
+          }
+        }
+
         setExtendedMembers(extended);
         setMemberLinks(crossLinks);
       }
