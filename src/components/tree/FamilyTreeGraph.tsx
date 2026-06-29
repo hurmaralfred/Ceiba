@@ -411,18 +411,37 @@ export default function FamilyTreeGraph({
       >
         <defs>
           <style>{`
-            @keyframes live-ring {
-              0%, 100% { opacity: 0.35; }
-              50%       { opacity: 0.95; }
+            @keyframes live-ring  { 0%,100%{opacity:0.35} 50%{opacity:0.95} }
+            @keyframes root-ring  { 0%,100%{opacity:0.5}  50%{opacity:1}    }
+            @keyframes edge-flow  { from{stroke-dashoffset:20} to{stroke-dashoffset:0} }
+
+            /* ── Float variants — 8 amplitudes & speeds ── */
+            @keyframes fl0 { 0%,100%{transform:translateY(0)}  50%{transform:translateY(-4px)}   }
+            @keyframes fl1 { 0%,100%{transform:translateY(0)}  50%{transform:translateY(-6px)}   }
+            @keyframes fl2 { 0%,100%{transform:translateY(0)}  50%{transform:translateY(-3px)}   }
+            @keyframes fl3 { 0%,100%{transform:translateY(0)}  50%{transform:translateY(-5.5px)} }
+            @keyframes fl4 { 0%,100%{transform:translateY(0)}  50%{transform:translateY(-7px)}   }
+            @keyframes fl5 { 0%,100%{transform:translateY(0)}  50%{transform:translateY(-4.5px)} }
+            @keyframes fl6 { 0%,100%{transform:translateY(0)}  50%{transform:translateY(-5px)}   }
+            @keyframes fl7 { 0%,100%{transform:translateY(0)}  50%{transform:translateY(-3.5px)} }
+
+            .f0 { transform-box:fill-box; transform-origin:center; animation:fl0 3.0s ease-in-out infinite 0.0s; }
+            .f1 { transform-box:fill-box; transform-origin:center; animation:fl1 3.6s ease-in-out infinite 0.7s; }
+            .f2 { transform-box:fill-box; transform-origin:center; animation:fl2 2.8s ease-in-out infinite 1.3s; }
+            .f3 { transform-box:fill-box; transform-origin:center; animation:fl3 3.9s ease-in-out infinite 0.4s; }
+            .f4 { transform-box:fill-box; transform-origin:center; animation:fl4 3.2s ease-in-out infinite 1.9s; }
+            .f5 { transform-box:fill-box; transform-origin:center; animation:fl5 4.1s ease-in-out infinite 0.9s; }
+            .f6 { transform-box:fill-box; transform-origin:center; animation:fl6 3.4s ease-in-out infinite 2.5s; }
+            .f7 { transform-box:fill-box; transform-origin:center; animation:fl7 2.9s ease-in-out infinite 1.6s; }
+
+            /* ── Shimmer — gleam that sweeps across the sphere ── */
+            @keyframes shimmer {
+              0%, 55%, 100% { opacity: 0; transform: translateX(-18px) scaleX(0.4); }
+              68%            { opacity: 0.55; transform: translateX(0px)  scaleX(1);   }
+              80%            { opacity: 0;   transform: translateX(18px)  scaleX(0.4); }
             }
-            @keyframes root-ring {
-              0%, 100% { opacity: 0.5; }
-              50%       { opacity: 1; }
-            }
-            @keyframes edge-flow {
-              from { stroke-dashoffset: 20; }
-              to   { stroke-dashoffset: 0; }
-            }
+            .shimmer-el { transform-box:fill-box; transform-origin:center; }
+
             .live-pulse { animation: live-ring 2.4s ease-in-out infinite; }
             .root-pulse { animation: root-ring 2.8s ease-in-out infinite; }
             .edge-anim  { animation: edge-flow  1.6s linear infinite; }
@@ -457,6 +476,11 @@ export default function FamilyTreeGraph({
           <filter id="shadow-soft" x="-30%" y="-30%" width="160%" height="160%">
             <feDropShadow dx="0" dy="2" stdDeviation="4" floodColor="#000" floodOpacity="0.5" />
           </filter>
+          {/* Soft blur for shimmer gleam */}
+          <filter id="blur-sm" x="-80%" y="-80%" width="260%" height="260%">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="3.5" />
+          </filter>
+
           {/* Inner shadow to darken bottom of sphere */}
           <filter id="inner-shadow" x="-50%" y="-50%" width="200%" height="200%" color-interpolation-filters="sRGB">
             <feFlood floodColor="black" floodOpacity="0.4" result="flood" />
@@ -490,7 +514,7 @@ export default function FamilyTreeGraph({
           })}
 
           {/* ── Nodes ── */}
-          {nodes.map(n => {
+          {nodes.map((n, idx) => {
             const isRoot    = n.id === "root";
             const isJoined  = n.isJoined && !isRoot;
             const isActive  = n.isActive && !isRoot;
@@ -504,11 +528,12 @@ export default function FamilyTreeGraph({
             const hasBadge   = extCount > 0 && !n.isExtended;
             const clickable  = !isRoot && (!n.isExtended || false);
 
-            // Unique gradient IDs per node
-            const gradId    = `sg-${n.id}`;
-            const clipId    = `cp-${n.id}`;
+            // Unique gradient / clip IDs per node
+            const gradId  = `sg-${n.id}`;
+            const clipId  = `cp-${n.id}`;
+            const floatCl = `f${idx % 8}`;
 
-            // 3D sphere colors — extended nodes use muted gray sphere
+            // 3D sphere colors — extended nodes use muted gray
             const hi     = n.isExtended ? "#9ca3af" : colors.hi;
             const mid    = n.isExtended ? "#4b5563" : colors.mid;
             const shadow = n.isExtended ? "#111827" : colors.shadow;
@@ -520,24 +545,30 @@ export default function FamilyTreeGraph({
             else if (GENERATION[n.relationType] === 1) glowFilter = "url(#glow-cyan)";
             else if (GENERATION[n.relationType] === 0) glowFilter = "url(#glow-purple)";
 
+            // Shimmer timing per node (staggered)
+            const shimmerDur = `${5 + (idx % 5)}s`;
+            const shimmerDel = `${(idx * 0.8) % 4.5}s`;
+
+            // Orbit timing
+            const orbitDur  = `${2.4 + (idx % 4) * 0.4}s`;
+
             return (
               <g
                 key={n.id}
                 onClick={clickable ? () => handleNodeClick(n) : undefined}
                 style={{ cursor: clickable ? "pointer" : "default" }}
+                className={floatCl}
               >
-                {/* Per-node 3D sphere gradient */}
+                {/* Per-node 3D sphere gradient + clip */}
                 <defs>
                   <radialGradient id={gradId} cx="33%" cy="28%" r="72%" gradientUnits="objectBoundingBox">
                     <stop offset="0%"   stopColor={hi}     />
                     <stop offset="45%"  stopColor={mid}    />
                     <stop offset="100%" stopColor={shadow} />
                   </radialGradient>
-                  {hasPhoto && (
-                    <clipPath id={clipId}>
-                      <circle cx={n.cx} cy={n.cy} r={r - 1} />
-                    </clipPath>
-                  )}
+                  <clipPath id={clipId}>
+                    <circle cx={n.cx} cy={n.cy} r={r - 0.5} />
+                  </clipPath>
                 </defs>
 
                 {/* Pulsing live ring */}
@@ -594,6 +625,54 @@ export default function FamilyTreeGraph({
                   fill="url(#specular)"
                   style={{ pointerEvents: "none" }}
                 />
+
+                {/* ── Shimmer gleam — sweeps across sphere periodically ── */}
+                <ellipse
+                  cx={n.cx - r * 0.1}
+                  cy={n.cy - r * 0.25}
+                  rx={r * 0.52}
+                  ry={r * 0.18}
+                  fill="white"
+                  filter="url(#blur-sm)"
+                  clipPath={`url(#${clipId})`}
+                  className="shimmer-el"
+                  style={{
+                    animation: `shimmer ${shimmerDur} ease-in-out infinite ${shimmerDel}`,
+                    pointerEvents: "none",
+                  }}
+                />
+
+                {/* ── Orbit dot — for members in Ceiba ── */}
+                {(isJoined || isActive) && (
+                  <g>
+                    <circle cx={n.cx + r + 5} cy={n.cy} r={2.5}
+                      fill={isActive ? "#4ade80" : "#86efac"}
+                      opacity={0.9}
+                    >
+                      <animateTransform
+                        attributeName="transform"
+                        type="rotate"
+                        from={`0 ${n.cx} ${n.cy}`}
+                        to={`360 ${n.cx} ${n.cy}`}
+                        dur={orbitDur}
+                        repeatCount="indefinite"
+                      />
+                    </circle>
+                    <circle cx={n.cx + r + 5} cy={n.cy} r={5}
+                      fill={isActive ? "#4ade80" : "#86efac"}
+                      opacity={0.25}
+                    >
+                      <animateTransform
+                        attributeName="transform"
+                        type="rotate"
+                        from={`0 ${n.cx} ${n.cy}`}
+                        to={`360 ${n.cx} ${n.cy}`}
+                        dur={orbitDur}
+                        repeatCount="indefinite"
+                      />
+                    </circle>
+                  </g>
+                )}
 
                 {/* Initial letter if no photo */}
                 {!hasPhoto && (
