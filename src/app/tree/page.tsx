@@ -272,9 +272,9 @@ export default function TreePage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { router.push("/auth/login"); return; }
 
-    // Global auto-link: link this user's profile to any family_member records
-    // added by others (runs fast if nothing to link; fire-and-forget is fine).
+    // Global auto-link + update last_seen (fire-and-forget)
     fetch("/api/auth/post-register", { method: "POST" }).catch(() => {});
+    fetch("/api/presence", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) }).catch(() => {});
 
     const [{ data: profileData }, { data: membersData }] = await Promise.all([
       supabase.from("profiles").select("*").eq("id", user.id).single(),
