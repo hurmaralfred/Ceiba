@@ -397,7 +397,7 @@ export default function FamilyTreeGraph({
   const EDGE_COLORS = { blood: "#86efac", affinity: "#fcd34d", peer: "#94a3b8" };
 
   return (
-    <div className="w-full rounded-2xl overflow-hidden border border-green-950 bg-[#020604]">
+    <div className="w-full rounded-2xl overflow-hidden border border-green-900 bg-[#071a0c]">
 
       {/* Hint bar */}
       <div className="flex items-center gap-4 px-4 py-2 border-b border-white/5 bg-white/[0.03] text-[10px] text-gray-500 flex-wrap">
@@ -467,9 +467,9 @@ export default function FamilyTreeGraph({
 
           {/* Radial bg — dark forest green, center brighter, edges near-black */}
           <radialGradient id="bg-grad" cx="50%" cy="44%" r="68%">
-            <stop offset="0%"   stopColor="#071a08" />
-            <stop offset="55%"  stopColor="#040d05" />
-            <stop offset="100%" stopColor="#020604" />
+            <stop offset="0%"   stopColor="#0d3318" />
+            <stop offset="50%"  stopColor="#071a0c" />
+            <stop offset="100%" stopColor="#020a04" />
           </radialGradient>
 
           {/* Specular highlight overlay — white glow top-left */}
@@ -527,23 +527,23 @@ export default function FamilyTreeGraph({
           const W = svgWidth;
           const H = Math.max(380, totalHeight);
           return (
-            <g stroke="#1a3a0a" fill="none" strokeLinecap="round">
+            <g stroke="#2d6a1e" fill="none" strokeLinecap="round">
               {/* Bottom-left roots */}
-              <path d={`M 0 ${H} Q 32 ${H-28} 62 ${H-44}`}         strokeWidth="1.8" opacity="0.55"/>
-              <path d={`M 0 ${H} Q 52 ${H-38} 92 ${H-56}`}         strokeWidth="1.2" opacity="0.38"/>
-              <path d={`M 18 ${H} Q 58 ${H-32} 98 ${H-48}`}        strokeWidth="1.0" opacity="0.30"/>
-              <path d={`M 0 ${H-15} Q 38 ${H-42} 72 ${H-58}`}      strokeWidth="0.8" opacity="0.28"/>
+              <path d={`M 0 ${H} Q 32 ${H-28} 62 ${H-44}`}         strokeWidth="2.0" opacity="0.70"/>
+              <path d={`M 0 ${H} Q 52 ${H-38} 92 ${H-56}`}         strokeWidth="1.4" opacity="0.55"/>
+              <path d={`M 18 ${H} Q 58 ${H-32} 98 ${H-48}`}        strokeWidth="1.1" opacity="0.45"/>
+              <path d={`M 0 ${H-15} Q 38 ${H-42} 72 ${H-58}`}      strokeWidth="0.9" opacity="0.40"/>
               {/* Bottom-right roots */}
-              <path d={`M ${W} ${H} Q ${W-32} ${H-28} ${W-62} ${H-44}`}  strokeWidth="1.8" opacity="0.55"/>
-              <path d={`M ${W} ${H} Q ${W-52} ${H-38} ${W-92} ${H-56}`}  strokeWidth="1.2" opacity="0.38"/>
-              <path d={`M ${W-18} ${H} Q ${W-58} ${H-32} ${W-98} ${H-48}`} strokeWidth="1.0" opacity="0.30"/>
-              <path d={`M ${W} ${H-15} Q ${W-38} ${H-42} ${W-72} ${H-58}`} strokeWidth="0.8" opacity="0.28"/>
+              <path d={`M ${W} ${H} Q ${W-32} ${H-28} ${W-62} ${H-44}`}  strokeWidth="2.0" opacity="0.70"/>
+              <path d={`M ${W} ${H} Q ${W-52} ${H-38} ${W-92} ${H-56}`}  strokeWidth="1.4" opacity="0.55"/>
+              <path d={`M ${W-18} ${H} Q ${W-58} ${H-32} ${W-98} ${H-48}`} strokeWidth="1.1" opacity="0.45"/>
+              <path d={`M ${W} ${H-15} Q ${W-38} ${H-42} ${W-72} ${H-58}`} strokeWidth="0.9" opacity="0.40"/>
               {/* Top-left branch hints */}
-              <path d={`M 72 0 Q 92 22 108 36`}  strokeWidth="1.2" opacity="0.32"/>
-              <path d={`M 45 0 Q 80 32 108 50`}  strokeWidth="0.8" opacity="0.22"/>
+              <path d={`M 72 0 Q 92 22 108 36`}  strokeWidth="1.4" opacity="0.50"/>
+              <path d={`M 45 0 Q 80 32 108 50`}  strokeWidth="1.0" opacity="0.38"/>
               {/* Top-right branch hints */}
-              <path d={`M ${W-72} 0 Q ${W-92} 22 ${W-108} 36`} strokeWidth="1.2" opacity="0.32"/>
-              <path d={`M ${W-45} 0 Q ${W-80} 32 ${W-108} 50`} strokeWidth="0.8" opacity="0.22"/>
+              <path d={`M ${W-72} 0 Q ${W-92} 22 ${W-108} 36`} strokeWidth="1.4" opacity="0.50"/>
+              <path d={`M ${W-45} 0 Q ${W-80} 32 ${W-108} 50`} strokeWidth="1.0" opacity="0.38"/>
             </g>
           );
         })()}
