@@ -397,7 +397,7 @@ export default function FamilyTreeGraph({
   const EDGE_COLORS = { blood: "#86efac", affinity: "#fcd34d", peer: "#94a3b8" };
 
   return (
-    <div className="w-full rounded-2xl overflow-hidden border border-green-900 bg-[#071a0c]">
+    <div className="w-full rounded-2xl overflow-hidden border border-green-800 bg-[#0d3318]">
 
       {/* Hint bar */}
       <div className="flex items-center gap-4 px-4 py-2 border-b border-white/5 bg-white/[0.03] text-[10px] text-gray-500 flex-wrap">
@@ -466,10 +466,10 @@ export default function FamilyTreeGraph({
           `}</style>
 
           {/* Radial bg — dark forest green, center brighter, edges near-black */}
-          <radialGradient id="bg-grad" cx="50%" cy="44%" r="68%">
-            <stop offset="0%"   stopColor="#0d3318" />
-            <stop offset="50%"  stopColor="#071a0c" />
-            <stop offset="100%" stopColor="#020a04" />
+          <radialGradient id="bg-grad" cx="50%" cy="44%" r="65%">
+            <stop offset="0%"   stopColor="#1a5c2a" />
+            <stop offset="40%"  stopColor="#0d3318" />
+            <stop offset="100%" stopColor="#030e05" />
           </radialGradient>
 
           {/* Specular highlight overlay — white glow top-left */}
@@ -527,7 +527,7 @@ export default function FamilyTreeGraph({
           const W = svgWidth;
           const H = Math.max(380, totalHeight);
           return (
-            <g stroke="#2d6a1e" fill="none" strokeLinecap="round">
+            <g stroke="#4a9e30" fill="none" strokeLinecap="round">
               {/* Bottom-left roots */}
               <path d={`M 0 ${H} Q 32 ${H-28} 62 ${H-44}`}         strokeWidth="2.0" opacity="0.70"/>
               <path d={`M 0 ${H} Q 52 ${H-38} 92 ${H-56}`}         strokeWidth="1.4" opacity="0.55"/>
