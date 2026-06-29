@@ -62,23 +62,34 @@ const POS_HINT: Record<string, number> = {
   granddaughter: -1, grandson: 1,
 };
 
-// ── Color per relation ─────────────────────────────────────────
-function getNodeColor(relationType: string, kind: string): { ring: string; bg: string } {
-  if (relationType === "root")  return { ring: "#4ade80", bg: "#052e16" };
+// ── 3D sphere color palettes ──────────────────────────────────
+// Each palette: { ring, hi (highlight), mid, shadow }
+// Radial gradient cx=33% cy=28% creates the 3D lit-from-top-left look
+interface SphereColor { ring: string; hi: string; mid: string; shadow: string }
+
+function getNodeColor(relationType: string, kind: string): SphereColor {
+  if (relationType === "root")
+    return { ring: "#4ade80", hi: "#bbf7d0", mid: "#22c55e", shadow: "#052e16" };
   const gen = GENERATION[relationType] ?? 0;
-  if (gen <= -2) return { ring: "#93c5fd", bg: "#1e3a8a" }; // abuelos — blue
+  if (gen <= -2)
+    return { ring: "#93c5fd", hi: "#dbeafe", mid: "#3b82f6", shadow: "#1e3a8a" }; // abuelos
   if (gen === -1) {
-    if (["father_in_law","mother_in_law"].includes(relationType)) return { ring: "#fcd34d", bg: "#78350f" };
-    if (["stepfather","stepmother"].includes(relationType))        return { ring: "#fbbf24", bg: "#451a03" };
-    return { ring: "#bfdbfe", bg: "#1e40af" }; // padres — blue
+    if (["father_in_law","mother_in_law"].includes(relationType))
+      return { ring: "#fcd34d", hi: "#fef9c3", mid: "#f59e0b", shadow: "#78350f" };
+    if (["stepfather","stepmother"].includes(relationType))
+      return { ring: "#fbbf24", hi: "#fef3c7", mid: "#d97706", shadow: "#451a03" };
+    return { ring: "#bfdbfe", hi: "#eff6ff", mid: "#60a5fa", shadow: "#1e40af" }; // padres
   }
   if (gen === 0) {
-    if (["spouse","partner"].includes(relationType))               return { ring: "#fca5a5", bg: "#7f1d1d" };
-    if (["brother_in_law","sister_in_law"].includes(relationType)) return { ring: "#fcd34d", bg: "#78350f" };
-    return { ring: "#c4b5fd", bg: "#4c1d95" }; // siblings/cousins — purple
+    if (["spouse","partner"].includes(relationType))
+      return { ring: "#fca5a5", hi: "#fee2e2", mid: "#f87171", shadow: "#7f1d1d" };
+    if (["brother_in_law","sister_in_law"].includes(relationType))
+      return { ring: "#fcd34d", hi: "#fef9c3", mid: "#f59e0b", shadow: "#78350f" };
+    return { ring: "#c4b5fd", hi: "#ede9fe", mid: "#a78bfa", shadow: "#4c1d95" }; // hermanos/primos
   }
-  if (gen === 1) return { ring: "#67e8f9", bg: "#0c4a6e" }; // children — cyan
-  return { ring: "#5eead4", bg: "#134e4a" }; // grandchildren — teal
+  if (gen === 1)
+    return { ring: "#67e8f9", hi: "#cffafe", mid: "#22d3ee", shadow: "#0c4a6e" }; // hijos
+  return { ring: "#5eead4", hi: "#ccfbf1", mid: "#2dd4bf", shadow: "#134e4a" }; // nietos
 }
 
 // Consistent color from name hash for avatar placeholder
@@ -423,21 +434,35 @@ export default function FamilyTreeGraph({
             <stop offset="100%" stopColor="#04080f" />
           </radialGradient>
 
+          {/* Specular highlight overlay — white glow top-left */}
+          <radialGradient id="specular" cx="33%" cy="28%" r="55%">
+            <stop offset="0%"   stopColor="white" stopOpacity="0.55" />
+            <stop offset="45%"  stopColor="white" stopOpacity="0.10" />
+            <stop offset="100%" stopColor="white" stopOpacity="0" />
+          </radialGradient>
+
           {/* Glow filters */}
-          <filter id="glow-green" x="-40%" y="-40%" width="180%" height="180%">
-            <feDropShadow dx="0" dy="0" stdDeviation="6" floodColor="#4ade80" floodOpacity="0.7" />
+          <filter id="glow-green"  x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx="0" dy="0" stdDeviation="7" floodColor="#4ade80" floodOpacity="0.7" />
           </filter>
-          <filter id="glow-blue" x="-40%" y="-40%" width="180%" height="180%">
-            <feDropShadow dx="0" dy="0" stdDeviation="5" floodColor="#93c5fd" floodOpacity="0.5" />
+          <filter id="glow-blue"   x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx="0" dy="0" stdDeviation="6" floodColor="#93c5fd" floodOpacity="0.55" />
           </filter>
-          <filter id="glow-purple" x="-40%" y="-40%" width="180%" height="180%">
-            <feDropShadow dx="0" dy="0" stdDeviation="5" floodColor="#c4b5fd" floodOpacity="0.5" />
+          <filter id="glow-purple" x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx="0" dy="0" stdDeviation="6" floodColor="#c4b5fd" floodOpacity="0.55" />
           </filter>
-          <filter id="glow-cyan" x="-40%" y="-40%" width="180%" height="180%">
-            <feDropShadow dx="0" dy="0" stdDeviation="5" floodColor="#67e8f9" floodOpacity="0.5" />
+          <filter id="glow-cyan"   x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx="0" dy="0" stdDeviation="6" floodColor="#67e8f9" floodOpacity="0.55" />
           </filter>
-          <filter id="shadow-soft" x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#000" floodOpacity="0.4" />
+          <filter id="shadow-soft" x="-30%" y="-30%" width="160%" height="160%">
+            <feDropShadow dx="0" dy="2" stdDeviation="4" floodColor="#000" floodOpacity="0.5" />
+          </filter>
+          {/* Inner shadow to darken bottom of sphere */}
+          <filter id="inner-shadow" x="-50%" y="-50%" width="200%" height="200%" color-interpolation-filters="sRGB">
+            <feFlood floodColor="black" floodOpacity="0.4" result="flood" />
+            <feComposite in="flood" in2="SourceGraphic" operator="in" result="shadow" />
+            <feOffset dx="0" dy="3" result="offset" />
+            <feComposite in="SourceGraphic" in2="offset" operator="over" />
           </filter>
         </defs>
 
@@ -470,20 +495,29 @@ export default function FamilyTreeGraph({
             const isJoined  = n.isJoined && !isRoot;
             const isActive  = n.isActive && !isRoot;
             const r         = n.r;
-            const { ring, bg } = getNodeColor(n.relationType, n.kind);
+            const colors    = getNodeColor(n.relationType, n.kind);
             const hasPhoto  = !!(n.avatarUrl);
             const hue       = nameToHue(n.name);
-            const avatarBg  = hasPhoto ? bg : `hsl(${hue}, 45%, 30%)`;
 
             const extCount   = n.memberId ? (extCountByParent.get(n.memberId) ?? 0) : 0;
             const isExpanded = n.memberId ? expandedParents.has(n.memberId) : false;
             const hasBadge   = extCount > 0 && !n.isExtended;
             const clickable  = !isRoot && (!n.isExtended || false);
 
-            // Glow filter selection
+            // Unique gradient IDs per node
+            const gradId    = `sg-${n.id}`;
+            const clipId    = `cp-${n.id}`;
+
+            // 3D sphere colors — extended nodes use muted gray sphere
+            const hi     = n.isExtended ? "#9ca3af" : colors.hi;
+            const mid    = n.isExtended ? "#4b5563" : colors.mid;
+            const shadow = n.isExtended ? "#111827" : colors.shadow;
+            const ring   = n.isExtended ? "#374151" : colors.ring;
+
+            // Glow filter
             let glowFilter = "url(#glow-blue)";
             if (isRoot) glowFilter = "url(#glow-green)";
-            else if (["son","daughter","stepchild","nephew","niece"].includes(n.relationType)) glowFilter = "url(#glow-cyan)";
+            else if (GENERATION[n.relationType] === 1) glowFilter = "url(#glow-cyan)";
             else if (GENERATION[n.relationType] === 0) glowFilter = "url(#glow-purple)";
 
             return (
@@ -492,64 +526,74 @@ export default function FamilyTreeGraph({
                 onClick={clickable ? () => handleNodeClick(n) : undefined}
                 style={{ cursor: clickable ? "pointer" : "default" }}
               >
-                {/* Pulsing live ring (active members) */}
+                {/* Per-node 3D sphere gradient */}
+                <defs>
+                  <radialGradient id={gradId} cx="33%" cy="28%" r="72%" gradientUnits="objectBoundingBox">
+                    <stop offset="0%"   stopColor={hi}     />
+                    <stop offset="45%"  stopColor={mid}    />
+                    <stop offset="100%" stopColor={shadow} />
+                  </radialGradient>
+                  {hasPhoto && (
+                    <clipPath id={clipId}>
+                      <circle cx={n.cx} cy={n.cy} r={r - 1} />
+                    </clipPath>
+                  )}
+                </defs>
+
+                {/* Pulsing live ring */}
                 {isRoot && (
-                  <circle
-                    cx={n.cx} cy={n.cy} r={ROOT_R + 6}
-                    fill="none"
-                    stroke="#4ade80"
-                    strokeWidth="2"
-                    className="root-pulse"
-                  />
+                  <circle cx={n.cx} cy={n.cy} r={ROOT_R + 7}
+                    fill="none" stroke="#4ade80" strokeWidth="2.5" className="root-pulse" />
                 )}
                 {isActive && (
-                  <circle
-                    cx={n.cx} cy={n.cy} r={R + 5}
-                    fill="none"
-                    stroke="#4ade80"
-                    strokeWidth="2"
-                    className="live-pulse"
-                  />
+                  <circle cx={n.cx} cy={n.cy} r={R + 6}
+                    fill="none" stroke="#4ade80" strokeWidth="2" className="live-pulse" />
                 )}
 
-                {/* Glow backdrop for primary nodes */}
+                {/* Glow backdrop */}
                 {!n.isExtended && (
-                  <circle
-                    cx={n.cx} cy={n.cy} r={r}
-                    fill={bg}
+                  <circle cx={n.cx} cy={n.cy} r={r}
+                    fill={`url(#${gradId})`}
                     stroke={ring}
                     strokeWidth={isRoot ? 2.5 : 2}
                     filter={glowFilter}
-                    opacity={isRoot ? 0.9 : 0.5}
+                    opacity={isRoot ? 0.85 : 0.45}
                   />
                 )}
 
-                {/* Main circle */}
-                <circle
-                  cx={n.cx} cy={n.cy} r={r}
-                  fill={avatarBg}
-                  stroke={isJoined ? "#4ade80" : isActive ? "#4ade80" : n.isExtended ? "#374151" : ring}
-                  strokeWidth={isRoot ? 2.5 : isJoined ? 2 : 1.5}
+                {/* ── 3D Sphere base ── */}
+                <circle cx={n.cx} cy={n.cy} r={r}
+                  fill={`url(#${gradId})`}
+                  stroke={isJoined || isActive ? "#4ade80" : ring}
+                  strokeWidth={isRoot ? 2.5 : isJoined ? 2.5 : 1.8}
                   filter={n.isExtended ? "url(#shadow-soft)" : undefined}
                 />
 
-                {/* Photo clip */}
+                {/* Photo over sphere */}
                 {hasPhoto && (
                   <>
-                    <clipPath id={`cp-${n.id}`}>
-                      <circle cx={n.cx} cy={n.cy} r={r - 1} />
-                    </clipPath>
                     <image
                       href={n.avatarUrl!}
                       x={n.cx - r} y={n.cy - r}
                       width={r * 2} height={r * 2}
-                      clipPath={`url(#cp-${n.id})`}
+                      clipPath={`url(#${clipId})`}
                       preserveAspectRatio="xMidYMid slice"
+                      opacity={0.82}
                     />
-                    {/* Dark overlay so text is readable */}
-                    <circle cx={n.cx} cy={n.cy} r={r - 1} fill="rgba(0,0,0,0.3)" clipPath={`url(#cp-${n.id})`} />
+                    {/* Darken bottom of photo for sphere depth */}
+                    <circle cx={n.cx} cy={n.cy} r={r - 1}
+                      fill="rgba(0,0,0,0.18)"
+                      clipPath={`url(#${clipId})`}
+                      style={{ pointerEvents: "none" }}
+                    />
                   </>
                 )}
+
+                {/* Specular highlight — creates glassy 3D look */}
+                <circle cx={n.cx} cy={n.cy} r={r}
+                  fill="url(#specular)"
+                  style={{ pointerEvents: "none" }}
+                />
 
                 {/* Initial letter if no photo */}
                 {!hasPhoto && (
@@ -557,8 +601,8 @@ export default function FamilyTreeGraph({
                     x={n.cx} y={n.cy + 1}
                     textAnchor="middle"
                     dominantBaseline="middle"
-                    fill="white"
-                    fontSize={r * 0.75}
+                    fill="rgba(255,255,255,0.92)"
+                    fontSize={r * 0.78}
                     fontWeight="700"
                     fontFamily="system-ui, -apple-system, sans-serif"
                     style={{ pointerEvents: "none", userSelect: "none" }}
@@ -567,25 +611,14 @@ export default function FamilyTreeGraph({
                   </text>
                 )}
 
-                {/* Green dot for joined (not active — active already has ring) */}
+                {/* Green dot for joined (not active) */}
                 {isJoined && !isActive && (
-                  <circle
-                    cx={n.cx + r * 0.68}
-                    cy={n.cy - r * 0.68}
-                    r={5}
-                    fill="#15803d"
-                    stroke="#060b14"
-                    strokeWidth={1.5}
-                  />
-                )}
-                {isJoined && !isActive && (
-                  <circle
-                    cx={n.cx + r * 0.68}
-                    cy={n.cy - r * 0.68}
-                    r={3}
-                    fill="#4ade80"
-                    style={{ pointerEvents: "none" }}
-                  />
+                  <>
+                    <circle cx={n.cx + r * 0.68} cy={n.cy - r * 0.68} r={5.5}
+                      fill="#15803d" stroke="#060b14" strokeWidth={1.5} />
+                    <circle cx={n.cx + r * 0.68} cy={n.cy - r * 0.68} r={3}
+                      fill="#4ade80" style={{ pointerEvents: "none" }} />
+                  </>
                 )}
 
                 {/* +N expansion badge */}
