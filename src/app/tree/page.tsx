@@ -606,10 +606,16 @@ export default function TreePage() {
           }
         }
 
-        // ── Peer links entre miembros extendidos que comparten el mismo padre ──
-        // Ejemplo: Karina y Ramiro son ambos hijos del mismo tío → línea punteada entre ellos
+        // ── Peer links entre primos que son hermanos entre sí ─────
+        // Solo conecta miembros extendidos que comparten el mismo tío/tía (parentMemberId)
+        // Y cuya relación al conector sea hijo/hija (son/daughter/stepchild) —
+        // esto evita conectar bisabuelos-pareja, tíos-hermanos, etc.
+        const CHILD_TYPES = new Set(["son", "daughter", "stepchild"]);
         const parentGroupMap = new Map<string, ExtendedEntry[]>();
         for (const e of extended) {
+          // Solo incluir cuando el member es hijo del conector Y la relación inferida es primo
+          if (!CHILD_TYPES.has(e.member.relation_type)) continue;
+          if (e.inferredRelation !== "cousin") continue;
           if (!parentGroupMap.has(e.parentMemberId)) parentGroupMap.set(e.parentMemberId, []);
           parentGroupMap.get(e.parentMemberId)!.push(e);
         }
