@@ -8,6 +8,45 @@ import { createClient } from "@/lib/supabase/client";
 import { Profile, FamilyMember, RelationType, RELATION_LABELS } from "@/lib/types";
 import type { ExtendedEntry, MemberLink } from "@/components/tree/FamilyTreeGraph";
 
+// ── Reverse relation ──────────────────────────────────────────
+// If person P added member M with relation_type R (P says "M is my R"),
+// then from M's perspective, P is M's reverseRelation(R).
+// Used for reverse lookup: when P is in the tree because P added one of
+// the user's direct family members to P's own tree.
+function reverseRelation(rel: string): string {
+  switch (rel) {
+    case "father":                   return "son";
+    case "mother":                   return "son";
+    case "son":                      return "father";
+    case "daughter":                 return "father";
+    case "brother":                  return "brother";
+    case "sister":                   return "brother";
+    case "half_brother":             return "brother";
+    case "half_sister":              return "brother";
+    case "spouse":                   return "spouse";
+    case "partner":                  return "partner";
+    case "uncle":                    return "nephew";
+    case "aunt":                     return "nephew";
+    case "nephew":                   return "uncle";
+    case "niece":                    return "uncle";
+    case "cousin":                   return "cousin";
+    case "grandfather_paternal":     return "grandson";
+    case "grandmother_paternal":     return "grandson";
+    case "grandfather_maternal":     return "grandson";
+    case "grandmother_maternal":     return "grandson";
+    case "grandson":                 return "grandfather_paternal";
+    case "granddaughter":            return "grandfather_paternal";
+    case "father_in_law":            return "son";   // they see me as child-in-law ≈ son/daughter
+    case "mother_in_law":            return "son";
+    case "brother_in_law":           return "brother";
+    case "sister_in_law":            return "brother";
+    case "stepfather":               return "stepchild";
+    case "stepmother":               return "stepchild";
+    case "stepchild":                return "stepfather";
+    default:                         return rel;
+  }
+}
+
 // Infer my relation to an extended member based on the connector's relation to me.
 // parentRelation = how the connector is related to ME
 // childRelation  = how the extended member is related to the CONNECTOR
@@ -111,6 +150,26 @@ function inferRelation(parentRelation: RelationType, childRelation: string): str
       // Grandparent's parents = my great-grandparents (show as grandparent, closest label we have)
       if (childRelation === "father") return "grandfather_paternal";
       if (childRelation === "mother") return "grandmother_paternal";
+      break;
+
+    // ── My nephews / nieces ───────────────────────────────────
+    case "nephew": case "niece":
+      if (childRelation === "son")        return "nephew";
+      if (childRelation === "daughter")   return "niece";
+      if (["spouse","partner"].includes(childRelation)) return "nephew";
+      break;
+
+    // ── My spouse's extended family (not covered above) ───────
+    case "spouse": case "partner":
+      if (childRelation === "grandfather_paternal") return "grandfather_paternal";
+      if (childRelation === "grandfather_maternal") return "grandfather_paternal";
+      if (childRelation === "grandmother_paternal") return "grandmother_paternal";
+      if (childRelation === "grandmother_maternal") return "grandmother_paternal";
+      if (childRelation === "uncle")     return "uncle";
+      if (childRelation === "aunt")      return "aunt";
+      if (childRelation === "cousin")    return "cousin";
+      if (childRelation === "nephew")    return "nephew";
+      if (childRelation === "niece")     return "niece";
       break;
   }
   return null;
@@ -406,6 +465,93 @@ export default function TreePage() {
             }
             return acc;
           }, []);
+        // ── Reverse lookup ─────────────────────────────────────
+        // Find people who have added one of MY joined direct members to THEIR tree.
+        // Example: cuñado added esposa as "sister" → cuñado is my brother_in_law.
+        //          primo added tío as "uncle" → primo is my cousin.
+        // This catches connections that the forward lookup misses.
+        const { data: revData } = await supabase
+          .from("family_members")
+          .select("id, added_by, profile_id, relation_type, relation_kind, first_name, last_name")
+          .in("profile_id", joinedProfileIds);
+
+        if (revData && revData.length > 0) {
+          // Collect connector profile IDs (people who added my family members)
+          const connectorIds = [...new Set(
+            revData
+              .map(r => r.added_by as string)
+              .filter(id => id && id !== user.id && !myMemberIds.has(id))
+          )];
+
+          // Fetch their profiles so we can display them as nodes
+          const { data: connectorProfiles } = connectorIds.length > 0
+            ? await supabase.from("profiles").select("id, first_name, last_name, avatar_url").in("id", connectorIds)
+            : { data: [] };
+
+          const connectorProfileMap = Object.fromEntries(
+            (connectorProfiles || []).map(p => [p.id, p])
+          );
+
+          // Build a set of profile_ids already in the extended array (avoid duplicates)
+          const alreadyExtendedProfileIds = new Set(
+            extended.map(e => (e.member as any).profile_id).filter(Boolean)
+          );
+
+          for (const rev of revData) {
+            const connectorProfileId = rev.added_by as string;
+            if (!connectorProfileId) continue;
+            if (connectorProfileId === user.id) continue;
+            if (myMemberIds.has(connectorProfileId)) continue;  // already a direct member
+            if (alreadyExtendedProfileIds.has(connectorProfileId)) continue; // already found via forward
+
+            const connProfile = connectorProfileMap[connectorProfileId];
+            if (!connProfile) continue; // connector is not a Ceiba user
+
+            // Which direct member did the connector add?
+            const directMember = joinedMembers.find(m => m.profile_id === rev.profile_id);
+            if (!directMember) continue;
+
+            // Rev says "direct member is my {rel}" → from direct member's POV, connector is their {reverse}
+            const connRelToDirectMember = reverseRelation(rev.relation_type);
+            // From user's POV: user's relation to connector
+            const userRelToConnector = inferRelation(directMember.relation_type as RelationType, connRelToDirectMember);
+            if (!userRelToConnector) continue;
+
+            // Name-dedup: skip if connector's name already exists in extended
+            const cfn = norm(connProfile.first_name || "").split(" ")[0];
+            const cln = norm(connProfile.last_name || "").split(" ")[0];
+            const nameKey = `${cfn}|${cln}|${userRelToConnector}`;
+            if (extended.some(e => {
+              const efn = norm(e.member.first_name).split(" ")[0];
+              const eln = norm(e.member.last_name || "").split(" ")[0];
+              return `${efn}|${eln}|${e.inferredRelation}` === nameKey;
+            })) continue;
+
+            // Also skip if connector name matches a direct member
+            if (myNameKeys.has(`${cfn}|${cln}`) || myNameKeys.has(`${cfn}|`)) continue;
+
+            alreadyExtendedProfileIds.add(connectorProfileId);
+
+            // Create a synthetic FamilyMember-like object for the connector
+            const syntheticMember = {
+              id: connectorProfileId,          // use profile_id as stable node id
+              first_name: connProfile.first_name || rev.first_name,
+              last_name: connProfile.last_name || rev.last_name,
+              relation_type: connRelToDirectMember,
+              relation_kind: rev.relation_kind ?? "blood",
+              profile_id: connectorProfileId,
+              added_by: connectorProfileId,
+              profile: { avatar_url: connProfile.avatar_url },
+            } as unknown as FamilyMember;
+
+            extended.push({
+              member: syntheticMember,
+              parentMemberId: directMember.id,
+              inferredRelation: userRelToConnector,
+            });
+          }
+        }
+
         setExtendedMembers(extended);
         setMemberLinks(crossLinks);
       }
