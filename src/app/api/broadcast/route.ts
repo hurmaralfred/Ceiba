@@ -67,6 +67,19 @@ export async function POST(req: NextRequest) {
     .select("*")
     .in("user_id", recipientIds);
 
+  // Teléfonos para fallback por WhatsApp (solo en emergencias)
+  let phones: string[] = [];
+  if (type === "emergency") {
+    const { data: recipientProfiles } = await service
+      .from("profiles")
+      .select("phone")
+      .in("id", recipientIds)
+      .not("phone", "is", null);
+    phones = (recipientProfiles || [])
+      .map(p => p.phone as string)
+      .filter(Boolean);
+  }
+
   const isEmergency = type === "emergency";
   const locationText = location ? ` · Ver ubicación en el feed` : "";
   const payload = JSON.stringify({
@@ -89,5 +102,5 @@ export async function POST(req: NextRequest) {
   );
 
   const sent = results.filter(r => r.status === "fulfilled").length;
-  return NextResponse.json({ ok: true, sent, recipients: recipientIds.length });
+  return NextResponse.json({ ok: true, sent, recipients: recipientIds.length, phones });
 }
