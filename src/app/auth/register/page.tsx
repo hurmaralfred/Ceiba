@@ -1,6 +1,6 @@
 "use client";
-import { useState, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useRef, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { TreePine, Eye, EyeOff, Camera, Link as LinkIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -17,8 +17,10 @@ function GoogleIcon() {
   );
 }
 
-export default function RegisterPage() {
+function RegisterFormInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const paraToken = searchParams.get("para");
   const supabase = createClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
@@ -34,6 +36,26 @@ export default function RegisterPage() {
     password: "",
     social_link: "",
   });
+
+  // Pre-fill name if coming from a personalized invite
+  useEffect(() => {
+    if (!paraToken) return;
+    fetch(`/api/para/${paraToken}`)
+      .then(r => r.json())
+      .then(data => {
+        if (!data.member) return;
+        const first = (data.member.first_name ?? "").split(" ");
+        const last = (data.member.last_name ?? "").split(" ");
+        setForm(f => ({
+          ...f,
+          primer_nombre: first[0] ?? "",
+          segundo_nombre: first.slice(1).join(" "),
+          primer_apellido: last[0] ?? "",
+          segundo_apellido: last.slice(1).join(" "),
+        }));
+      })
+      .catch(() => {});
+  }, [paraToken]);
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -105,9 +127,14 @@ export default function RegisterPage() {
       } catch {}
 
       toast.success("¡Cuenta creada!");
-      // If user came from a general invite link (/join?ref=...), connect them first
+      // Priority: personalized invite → general join ref → onboarding
+      const storedPara = typeof window !== "undefined" ? sessionStorage.getItem("para_token") : null;
       const joinRef = typeof window !== "undefined" ? sessionStorage.getItem("join_ref") : null;
-      if (joinRef) {
+      if (paraToken || storedPara) {
+        const t = paraToken || storedPara;
+        if (storedPara) sessionStorage.removeItem("para_token");
+        router.push(`/para/${t}`);
+      } else if (joinRef) {
         router.push(`/join/connect?ref=${joinRef}`);
       } else {
         router.push("/onboarding");
@@ -279,5 +306,17 @@ export default function RegisterPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-b from-ceiba-950 to-ceiba-800 flex items-center justify-center">
+        <TreePine size={40} className="text-ceiba-300 animate-pulse" />
+      </div>
+    }>
+      <RegisterFormInner />
+    </Suspense>
   );
 }

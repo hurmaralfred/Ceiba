@@ -4,7 +4,7 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft, TreePine, MapPin, Cake, Link as LinkIcon,
-  MessageCircle, UserCheck, Calendar, Users,
+  MessageCircle, UserCheck, Calendar, Users, Share2,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import BottomNav from "@/components/BottomNav";
@@ -14,11 +14,13 @@ interface MemberDetail {
   first_name: string;
   last_name: string;
   relation: string;
+  relation_type: string;
   birth_date: string | null;
   email: string | null;
   phone: string | null;
   added_at: string;
   profile_id: string | null;
+  invite_token: string | null;
   profile?: {
     id: string;
     first_name: string;
@@ -196,7 +198,21 @@ export default function MemberDetailPage() {
                 <UserCheck size={16} /> En Ceiba
               </div>
             ) : (
-              <div className="text-xs text-gray-400">Aún no se ha unido a Ceiba</div>
+              <div className="flex flex-col items-center gap-2">
+                <div className="text-xs text-gray-400">Aún no se ha unido a Ceiba</div>
+                {member.invite_token && (
+                  <a
+                    href={`https://wa.me/?text=${encodeURIComponent(
+                      `${member.first_name}, te guardé un lugar en el árbol familiar de Ceiba. Entra aquí 🌳: https://ceiba.app/para/${member.invite_token}`
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 bg-[#25D366] hover:bg-[#1ebe5d] text-white font-semibold px-5 py-2.5 rounded-xl transition-colors text-sm"
+                  >
+                    <Share2 size={15} /> Invitar por WhatsApp
+                  </a>
+                )}
+              </div>
             )}
 
             {/* Action buttons */}
