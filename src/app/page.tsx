@@ -132,24 +132,28 @@ export default function LandingPage() {
 
         {/* Texto */}
         <div className="relative z-10 order-2 lg:order-1">
+          {/* Comparación directa con WhatsApp */}
           <div className="inline-flex items-center gap-2 bg-white/[0.05] border border-white/10 rounded-full px-3 py-1 text-xs text-gray-400 mb-7">
             <span className="w-1.5 h-1.5 rounded-full bg-ceiba-400 animate-pulse inline-block" />
-            Gratis · Sin publicidad · Solo tu familia
+            No es un grupo de WhatsApp. Es otra cosa.
           </div>
 
-          <h1 className="font-display font-black leading-[1.0] mb-6 tracking-tight"
-            style={{ fontSize: "clamp(2.8rem, 5.5vw, 4.2rem)" }}>
-            ¡Conectados!
+          <h1 className="font-display font-black leading-[1.05] mb-6 tracking-tight"
+            style={{ fontSize: "clamp(2.4rem, 5vw, 3.8rem)" }}>
+            Agrega a tu hermano.
             <br />
-            <span className="text-ceiba-400">Tu familia,</span>
+            <span className="text-ceiba-400">El árbol detecta</span>
             <br />
-            toda unida.
+            el resto solo.
           </h1>
 
-          <p className="text-gray-400 text-lg leading-relaxed mb-8 max-w-md">
-            Agrega a tus familiares una vez. Cuando ellos entran,
-            <strong className="text-white"> Ceiba conecta automáticamente</strong> toda
-            su red — sus hijos son tus sobrinos, sus padres tus abuelos.
+          {/* El diferenciador explicado en 2 líneas */}
+          <p className="text-gray-300 text-lg leading-relaxed mb-4 max-w-md">
+            Su esposa es tu <strong className="text-white">cuñada</strong>. Sus hijos, tus <strong className="text-white">sobrinos</strong>. Sus padres, tus <strong className="text-white">suegros</strong>.
+            Ceiba lo sabe — sin que tú hagas nada más.
+          </p>
+          <p className="text-gray-500 text-sm leading-relaxed mb-8 max-w-md">
+            Un grupo de WhatsApp no sabe quién es quién. Ceiba sí.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3 mb-10">
@@ -216,22 +220,22 @@ export default function LandingPage() {
           {[
             {
               emoji: "🌳",
-              title: "El árbol que se construye solo",
-              desc: "Agrega a tu hermano. Cuando él se une, sus hijos son tus sobrinos y sus padres tus abuelos — sin hacer nada más.",
+              title: "WhatsApp no sabe que eres su tío",
+              desc: "En un grupo de WhatsApp, Juan es solo un contacto. En Ceiba, Juan es tu cuñado, su hijo es tu sobrino, y su mamá es tu suegra — el árbol lo deduce solo.",
               border: "border-ceiba-900/60",
               glow: "rgba(74,222,128,0.06)",
             },
             {
               emoji: "📢",
-              title: "Un mensaje. Todos enterados.",
-              desc: "Reunión, sorpresa, novedad — un toque y cada familiar recibe la notificación al mismo tiempo.",
+              title: "Un mensaje llega a todos",
+              desc: "Reunión, sorpresa, emergencia — un toque y cada familiar recibe la notificación al mismo tiempo. Sin reenviar, sin copiar.",
               border: "border-amber-900/50",
               glow: "rgba(251,191,36,0.06)",
             },
             {
               emoji: "🚨",
               title: "Botón de pánico familiar",
-              desc: "En emergencia activa el SOS. Toda tu familia recibe una alerta inmediata con tu ubicación.",
+              desc: "En emergencia activa el SOS. Toda tu red familiar recibe una alerta inmediata con tu ubicación — no solo los que tienes en un grupo.",
               border: "border-red-900/50",
               glow: "rgba(239,68,68,0.06)",
             },
@@ -306,9 +310,10 @@ export default function LandingPage() {
           <div className="relative">
             <div className="text-5xl mb-5">🌳</div>
             <h2 className="font-display text-2xl sm:text-3xl font-black mb-3 leading-tight">
-              ¿Cuándo fue la última vez<br />que toda tu familia<br />supo de ti al mismo tiempo?
+              Tu familia ya existe.<br />Solo falta<br />conectarla.
             </h2>
-            <p className="text-gray-500 text-sm mb-8">Empieza hoy. Gratis para siempre.</p>
+            <p className="text-gray-500 text-sm mb-2">No es un grupo de WhatsApp. Es un árbol que sabe quién es quién.</p>
+            <p className="text-gray-600 text-xs mb-8">Gratis para siempre · Sin anuncios · Sin complicaciones</p>
             <Link href="/auth/register"
               className="inline-flex items-center gap-2 bg-ceiba-600 hover:bg-ceiba-500 text-white font-bold text-base px-8 py-4 rounded-2xl transition-all shadow-xl shadow-ceiba-950/50 group">
               Crear mi árbol familiar gratis
