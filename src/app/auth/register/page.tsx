@@ -97,6 +97,13 @@ export default function RegisterPage() {
         }).eq("id", userId);
       }
 
+      // 4. Global auto-link: find all family_member records across all users
+      //    that match this new user by email or name, and set their profile_id.
+      //    This makes the new user appear immediately in trees that already had them.
+      try {
+        await fetch("/api/auth/post-register", { method: "POST" });
+      } catch {}
+
       toast.success("¡Cuenta creada!");
       // If user came from a general invite link (/join?ref=...), connect them first
       const joinRef = typeof window !== "undefined" ? sessionStorage.getItem("join_ref") : null;

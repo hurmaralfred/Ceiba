@@ -64,6 +64,19 @@ function inferRelation(parentRelation: RelationType, childRelation: string): str
       if (childRelation === "daughter")  return "sister_in_law";
       break;
 
+    // ── My cousins ────────────────────────────────────────────
+    case "cousin":
+      // Cousin's children = second cousins (show as cousins — closest label)
+      if (childRelation === "son" || childRelation === "daughter") return "cousin";
+      // Cousin's siblings = also my cousins
+      if (["brother","half_brother","sister","half_sister"].includes(childRelation)) return "cousin";
+      // Cousin's spouse = cousin-in-law (show as cousin — no exact label)
+      if (["spouse","partner"].includes(childRelation)) return "cousin";
+      // Cousin's parents = my uncle/aunt
+      if (childRelation === "father") return "uncle";
+      if (childRelation === "mother") return "aunt";
+      break;
+
     // ── My children ───────────────────────────────────────────
     case "son": case "daughter": case "stepchild":
       if (childRelation === "son")       return "grandson";
@@ -199,6 +212,10 @@ export default function TreePage() {
     try {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { router.push("/auth/login"); return; }
+
+    // Global auto-link: link this user's profile to any family_member records
+    // added by others (runs fast if nothing to link; fire-and-forget is fine).
+    fetch("/api/auth/post-register", { method: "POST" }).catch(() => {});
 
     const [{ data: profileData }, { data: membersData }] = await Promise.all([
       supabase.from("profiles").select("*").eq("id", user.id).single(),
