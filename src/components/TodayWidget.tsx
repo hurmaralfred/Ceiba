@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Cake, UserPlus, Sparkles } from "lucide-react";
+import { Cake, UserPlus, Sparkles, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { RELATION_LABELS, RelationType } from "@/lib/types";
 
@@ -9,6 +9,7 @@ interface TodayItem {
   type: "birthday" | "joined" | "none";
   text: string;
   subtext?: string;
+  dismissKey?: string;
 }
 
 function getDaysUntil(birthDate: string): number {
@@ -22,6 +23,13 @@ function getDaysUntil(birthDate: string): number {
 export default function TodayWidget({ userId }: { userId: string }) {
   const supabase = createClient();
   const [item, setItem] = useState<TodayItem | null>(null);
+
+  const dismiss = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (item?.dismissKey) localStorage.setItem(item.dismissKey, "1");
+    setItem(null);
+  };
 
   useEffect(() => {
     if (!userId) return;
@@ -75,11 +83,16 @@ export default function TodayWidget({ userId }: { userId: string }) {
     });
 
     if (recentJoin) {
+      const profile = Array.isArray((recentJoin as any).profiles) ? (recentJoin as any).profiles[0] : (recentJoin as any).profiles;
+      const joinedAt = profile?.created_at ?? "";
+      const dismissKey = `tw_join_${(recentJoin as any).first_name}_${joinedAt}`;
+      if (typeof window !== "undefined" && localStorage.getItem(dismissKey)) return; // dismissed
       const rel = RELATION_LABELS[(recentJoin as any).relation_type as RelationType] || (recentJoin as any).relation_type;
       setItem({
         type: "joined",
         text: `${(recentJoin as any).first_name} se unió al árbol`,
         subtext: `Tu ${rel.toLowerCase()}`,
+        dismissKey,
       });
       return;
     }
@@ -109,14 +122,24 @@ export default function TodayWidget({ userId }: { userId: string }) {
   return (
     <Link href="/feed">
       <div className={`rounded-2xl border ${colors} px-4 py-3 flex items-center gap-3 mb-3 active:scale-[0.98] transition-transform`}>
-        <div className={`w-9 h-9 rounded-full bg-white flex items-center justify-center shadow-sm`}>
+        <div className={`w-9 h-9 rounded-full bg-white flex items-center justify-center shadow-sm flex-shrink-0`}>
           <Icon size={18} className={iconColor} />
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-gray-900 leading-tight">{item.text}</p>
           {item.subtext && <p className="text-xs text-gray-500 mt-0.5">{item.subtext}</p>}
         </div>
-        <Sparkles size={14} className="text-gray-300 shrink-0" />
+        {item.dismissKey ? (
+          <button
+            onClick={dismiss}
+            className="p-1 rounded-full hover:bg-black/10 transition-colors shrink-0"
+            aria-label="Cerrar"
+          >
+            <X size={14} className="text-gray-400" />
+          </button>
+        ) : (
+          <Sparkles size={14} className="text-gray-300 shrink-0" />
+        )}
       </div>
     </Link>
   );

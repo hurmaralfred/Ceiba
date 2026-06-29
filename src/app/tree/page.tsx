@@ -1142,12 +1142,6 @@ export default function TreePage() {
               </div>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
-              <button
-                onClick={() => setShowModal(true)}
-                className="flex items-center gap-1.5 bg-ceiba-100 text-ceiba-800 hover:bg-ceiba-200 font-semibold text-sm px-3 py-2 rounded-xl transition-colors"
-              >
-                <Plus size={16} /> Agregar
-              </button>
               <button onClick={shareTree} className="btn-primary text-sm flex items-center gap-2">
                 <Share2 size={16} /> Compartir árbol
               </button>
