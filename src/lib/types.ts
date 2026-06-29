@@ -48,6 +48,7 @@ export interface FamilyMember {
   invitation_sent: boolean
   invitation_token?: string
   invitation_sent_at?: string
+  is_deceased?: boolean
   created_at: string
   profile?: Profile
 }

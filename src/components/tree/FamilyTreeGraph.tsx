@@ -119,6 +119,7 @@ interface LayoutNode {
   avatarUrl?: string | null;
   isJoined?: boolean;
   isActive?: boolean;
+  isDeceased?: boolean;
   cx: number; // circle center x
   cy: number; // circle center y
   r: number;  // radius
@@ -167,6 +168,7 @@ function buildLayout(
       avatarUrl: (m as any).profile?.avatar_url ?? null,
       isJoined: !!m.profile_id,
       isActive: isRecentlyActive((m as any).profile?.last_seen_at),
+      isDeceased: !!(m as any).is_deceased,
     })),
     ...visibleExtended.map(({ member: m, parentMemberId, inferredRelation }) => {
       const parentGen = memberGenMap.get(parentMemberId) ?? 0;
@@ -196,6 +198,7 @@ function buildLayout(
         avatarUrl: null,
         isJoined: !!m.profile_id,
         isActive: false,
+        isDeceased: !!(m as any).is_deceased,
       };
     }),
   ];
@@ -410,6 +413,10 @@ export default function FamilyTreeGraph({
           <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-amber-500 text-white font-bold" style={{fontSize: 8}}>+N</span>
           Toca para expandir
         </span>
+        <span className="flex items-center gap-1.5">
+          <span className="inline-flex items-center justify-center w-4 h-4 rounded-full border border-gray-600 bg-[#1c1c1c] text-gray-400" style={{fontSize: 9, fontFamily: "Georgia, serif"}}>†</span>
+          Fallecido
+        </span>
         <span className="ml-auto">Arrastra · Pellizca para zoom</span>
       </div>
 
@@ -492,6 +499,16 @@ export default function FamilyTreeGraph({
             <feGaussianBlur in="SourceGraphic" stdDeviation="3.5" />
           </filter>
 
+          {/* Desaturate + darken filter for deceased nodes */}
+          <filter id="deceased" x="-10%" y="-10%" width="120%" height="120%">
+            <feColorMatrix type="saturate" values="0.08" />
+            <feComponentTransfer>
+              <feFuncR type="linear" slope="0.65" />
+              <feFuncG type="linear" slope="0.65" />
+              <feFuncB type="linear" slope="0.65" />
+            </feComponentTransfer>
+          </filter>
+
           {/* Inner shadow to darken bottom of sphere */}
           <filter id="inner-shadow" x="-50%" y="-50%" width="200%" height="200%" color-interpolation-filters="sRGB">
             <feFlood floodColor="black" floodOpacity="0.4" result="flood" />
@@ -526,13 +543,14 @@ export default function FamilyTreeGraph({
 
           {/* ── Nodes ── */}
           {nodes.map((n, idx) => {
-            const isRoot    = n.id === "root";
-            const isJoined  = n.isJoined && !isRoot;
-            const isActive  = n.isActive && !isRoot;
-            const r         = n.r;
-            const colors    = getNodeColor(n.relationType, n.kind);
-            const hasPhoto  = !!(n.avatarUrl);
-            const hue       = nameToHue(n.name);
+            const isRoot     = n.id === "root";
+            const isJoined   = n.isJoined && !isRoot;
+            const isActive   = n.isActive && !isRoot;
+            const isDeceased = !!n.isDeceased;
+            const r          = n.r;
+            const colors     = getNodeColor(n.relationType, n.kind);
+            const hasPhoto   = !!(n.avatarUrl);
+            const hue        = nameToHue(n.name);
 
             const extCount   = n.memberId ? (extCountByParent.get(n.memberId) ?? 0) : 0;
             const isExpanded = n.memberId ? expandedParents.has(n.memberId) : false;
@@ -544,13 +562,16 @@ export default function FamilyTreeGraph({
             // Unique gradient / clip IDs per node
             const gradId  = `sg-${n.id}`;
             const clipId  = `cp-${n.id}`;
-            const floatCl = `f${idx % 8}`;
+            // Deceased nodes don't float — they're at rest
+            const floatCl = isDeceased ? undefined : `f${idx % 8}`;
 
             // 3D sphere colors — extended nodes use muted gray
-            const hi     = n.isExtended ? "#9ca3af" : colors.hi;
-            const mid    = n.isExtended ? "#4b5563" : colors.mid;
-            const shadow = n.isExtended ? "#111827" : colors.shadow;
-            const ring   = n.isExtended ? "#374151" : colors.ring;
+            // Deceased override: muted silver tones (filter will desaturate further)
+            const hi     = isDeceased ? "#c0c0c0" : n.isExtended ? "#9ca3af" : colors.hi;
+            const mid    = isDeceased ? "#5a5a5a" : n.isExtended ? "#4b5563" : colors.mid;
+            const shadow = isDeceased ? "#1a1a1a" : n.isExtended ? "#111827" : colors.shadow;
+            const ring   = isDeceased ? "#6b7280" : n.isExtended ? "#374151" : colors.ring;
+            const nodeFilter = isDeceased ? "url(#deceased)" : undefined;
 
             // Glow filter
             let glowFilter = "url(#glow-blue)";
@@ -595,7 +616,7 @@ export default function FamilyTreeGraph({
                 )}
 
                 {/* Glow backdrop */}
-                {!n.isExtended && (
+                {!n.isExtended && !isDeceased && (
                   <circle cx={n.cx} cy={n.cy} r={r}
                     fill={`url(#${gradId})`}
                     stroke={ring}
@@ -608,9 +629,10 @@ export default function FamilyTreeGraph({
                 {/* ── 3D Sphere base ── */}
                 <circle cx={n.cx} cy={n.cy} r={r}
                   fill={`url(#${gradId})`}
-                  stroke={isJoined || isActive ? "#4ade80" : ring}
-                  strokeWidth={isRoot ? 2.5 : isJoined ? 2.5 : 1.8}
-                  filter={n.isExtended ? "url(#shadow-soft)" : undefined}
+                  stroke={isDeceased ? "#4b5563" : isJoined || isActive ? "#4ade80" : ring}
+                  strokeWidth={isRoot ? 2.5 : isJoined && !isDeceased ? 2.5 : 1.8}
+                  filter={isDeceased ? nodeFilter : n.isExtended ? "url(#shadow-soft)" : undefined}
+                  strokeDasharray={isDeceased ? "4,3" : undefined}
                 />
 
                 {/* Photo over sphere */}
@@ -622,7 +644,8 @@ export default function FamilyTreeGraph({
                       width={r * 2} height={r * 2}
                       clipPath={`url(#${clipId})`}
                       preserveAspectRatio="xMidYMid slice"
-                      opacity={0.82}
+                      opacity={isDeceased ? 0.5 : 0.82}
+                      filter={isDeceased ? nodeFilter : undefined}
                     />
                     {/* Darken bottom of photo for sphere depth */}
                     <circle cx={n.cx} cy={n.cy} r={r - 1}
@@ -640,23 +663,25 @@ export default function FamilyTreeGraph({
                 />
 
                 {/* ── Shimmer gleam — sweeps across sphere periodically ── */}
-                <ellipse
-                  cx={n.cx - r * 0.1}
-                  cy={n.cy - r * 0.25}
-                  rx={r * 0.52}
-                  ry={r * 0.18}
-                  fill="white"
-                  filter="url(#blur-sm)"
-                  clipPath={`url(#${clipId})`}
-                  className="shimmer-el"
-                  style={{
-                    animation: `shimmer ${shimmerDur} ease-in-out infinite ${shimmerDel}`,
-                    pointerEvents: "none",
-                  }}
-                />
+                {!isDeceased && (
+                  <ellipse
+                    cx={n.cx - r * 0.1}
+                    cy={n.cy - r * 0.25}
+                    rx={r * 0.52}
+                    ry={r * 0.18}
+                    fill="white"
+                    filter="url(#blur-sm)"
+                    clipPath={`url(#${clipId})`}
+                    className="shimmer-el"
+                    style={{
+                      animation: `shimmer ${shimmerDur} ease-in-out infinite ${shimmerDel}`,
+                      pointerEvents: "none",
+                    }}
+                  />
+                )}
 
-                {/* ── Orbit dot — for members in Ceiba ── */}
-                {(isJoined || isActive) && (
+                {/* ── Orbit dot — for living members in Ceiba ── */}
+                {(isJoined || isActive) && !isDeceased && (
                   <g>
                     <circle cx={n.cx + r + 5} cy={n.cy} r={2.5}
                       fill={isActive ? "#4ade80" : "#86efac"}
@@ -703,14 +728,42 @@ export default function FamilyTreeGraph({
                   </text>
                 )}
 
-                {/* Green dot for joined (not active) */}
-                {isJoined && !isActive && (
+                {/* Green dot for joined (not active) — hidden for deceased */}
+                {isJoined && !isActive && !isDeceased && (
                   <>
                     <circle cx={n.cx + r * 0.68} cy={n.cy - r * 0.68} r={5.5}
                       fill="#15803d" stroke="#060b14" strokeWidth={1.5} />
                     <circle cx={n.cx + r * 0.68} cy={n.cy - r * 0.68} r={3}
                       fill="#4ade80" style={{ pointerEvents: "none" }} />
                   </>
+                )}
+
+                {/* † Cross badge for deceased members */}
+                {isDeceased && (
+                  <g style={{ pointerEvents: "none" }}>
+                    {/* Background circle */}
+                    <circle
+                      cx={n.cx + r * 0.68}
+                      cy={n.cy + r * 0.68}
+                      r={8}
+                      fill="#1c1c1c"
+                      stroke="#6b7280"
+                      strokeWidth={1}
+                    />
+                    {/* Dagger symbol */}
+                    <text
+                      x={n.cx + r * 0.68}
+                      y={n.cy + r * 0.68 + 1}
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                      fill="#9ca3af"
+                      fontSize={10}
+                      fontWeight="500"
+                      fontFamily="Georgia, serif"
+                    >
+                      †
+                    </text>
+                  </g>
                 )}
 
                 {/* +N expansion badge */}

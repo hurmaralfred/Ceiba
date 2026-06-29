@@ -207,7 +207,7 @@ const RELATION_GROUPS = [
   },
 ];
 
-const EMPTY_FORM = { primer_nombre: "", segundo_nombre: "", primer_apellido: "", segundo_apellido: "", first_name: "", last_name: "", email: "", birth_date: "", relation_type: "father" as RelationType };
+const EMPTY_FORM = { primer_nombre: "", segundo_nombre: "", primer_apellido: "", segundo_apellido: "", first_name: "", last_name: "", email: "", birth_date: "", relation_type: "father" as RelationType, is_deceased: false };
 
 export default function TreePage() {
   const router = useRouter();
@@ -776,6 +776,7 @@ export default function TreePage() {
         birth_date: form.birth_date || null,
         relation_type: form.relation_type,
         relation_kind: kind,
+        is_deceased: form.is_deceased,
         profile_id: linkedProfileId || null,
       });
       if (error) { toast.error("Error al guardar"); setSaving(false); return; }
@@ -823,6 +824,7 @@ export default function TreePage() {
       birth_date: form.birth_date || null,
       relation_type: form.relation_type,
       relation_kind: kind,
+      is_deceased: form.is_deceased,
     }).select("id").single();
     setSaving(false);
     if (error) { toast.error("Error al guardar"); return; }
@@ -862,6 +864,7 @@ export default function TreePage() {
       email: member.email || "",
       birth_date: (member as any).birth_date || "",
       relation_type: member.relation_type as RelationType,
+      is_deceased: !!(member as any).is_deceased,
     });
     setShowModal(true);
   };
@@ -879,6 +882,7 @@ export default function TreePage() {
       birth_date: form.birth_date || null,
       relation_type: form.relation_type,
       relation_kind: kind,
+      is_deceased: form.is_deceased,
     }).eq("id", editingMember.id);
     setSaving(false);
     if (error) { toast.error("Error al guardar"); return; }
@@ -1444,6 +1448,24 @@ export default function TreePage() {
                   />
                 </div>
               </div>
+              {/* Deceased toggle */}
+              <label className="flex items-center gap-3 cursor-pointer select-none">
+                <div className="relative">
+                  <input
+                    type="checkbox"
+                    className="sr-only"
+                    checked={form.is_deceased}
+                    onChange={e => setForm(f => ({ ...f, is_deceased: e.target.checked }))}
+                  />
+                  <div className={`w-10 h-5 rounded-full transition-colors ${form.is_deceased ? "bg-gray-500" : "bg-gray-200"}`} />
+                  <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${form.is_deceased ? "translate-x-5" : ""}`} />
+                </div>
+                <span className="text-sm text-gray-700">
+                  Fallecido(a){" "}
+                  <span className="text-gray-400 font-normal">— aparecerá con † en el árbol</span>
+                </span>
+              </label>
+
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Parentesco *</label>
                 <select
