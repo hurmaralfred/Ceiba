@@ -245,15 +245,37 @@ export default function LivePage() {
         </p>
       </header>
 
-      {/* Map */}
+      {/* Map — esfera 3D circular */}
       {!loading && (withLocation.length > 0 || myPos) && (
-        <div className="mx-4 mb-4 rounded-2xl overflow-hidden" style={{ height: 220 }}>
-          <LiveMap
-            members={withLocation}
-            myPos={myPos}
-            myName={myProfile?.first_name ?? "Tú"}
-            myAvatar={myProfile?.avatar_url}
-          />
+        <div className="flex justify-center mb-5 mt-1">
+          <div className="relative" style={{ width: 232, height: 232 }}>
+            {/* Pulse ring exterior */}
+            <div className="absolute inset-0 rounded-full animate-ping"
+              style={{ background: "transparent", boxShadow: "0 0 0 4px rgba(74,222,128,0.25)", animationDuration: "2.4s" }} />
+
+            {/* Mapa recortado en círculo */}
+            <div className="absolute inset-0 rounded-full overflow-hidden"
+              style={{
+                boxShadow: "0 0 0 3px #4ade80, 0 0 28px 6px rgba(74,222,128,0.35), inset 0 0 50px rgba(0,0,0,0.45)"
+              }}>
+              <LiveMap
+                members={withLocation}
+                myPos={myPos}
+                myName={myProfile?.first_name ?? "Tú"}
+                myAvatar={myProfile?.avatar_url}
+              />
+            </div>
+
+            {/* Reflejo especular — luz arriba-izquierda */}
+            <div className="absolute inset-0 rounded-full pointer-events-none"
+              style={{
+                background: "radial-gradient(ellipse at 32% 26%, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.07) 38%, transparent 62%)"
+              }} />
+
+            {/* Sombra interior abajo para dar profundidad */}
+            <div className="absolute inset-0 rounded-full pointer-events-none"
+              style={{ boxShadow: "inset 0 -24px 48px rgba(0,0,0,0.55)" }} />
+          </div>
         </div>
       )}
 
