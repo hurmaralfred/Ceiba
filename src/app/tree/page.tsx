@@ -606,14 +606,26 @@ export default function TreePage() {
           }
         }
 
-        // ── Peer links entre primos que son hermanos entre sí ─────
-        // Solo conecta miembros extendidos que comparten el mismo tío/tía (parentMemberId)
-        // Y cuya relación al conector sea hijo/hija (son/daughter/stepchild) —
-        // esto evita conectar bisabuelos-pareja, tíos-hermanos, etc.
+        // ── Peer links entre primos hermanos ───────────────────────
+        // Tres casos posibles:
+        // A) Dos extended cousins comparten el mismo tío/tía (parentMemberId igual)
+        // B) Un extended cousin tiene como padre al primo DIRECTO (primo agregó a su hermana)
+        // C) Un extended cousin y un primo directo comparten el mismo tío via dedup crossLink
+
         const CHILD_TYPES = new Set(["son", "daughter", "stepchild"]);
+        const addPeerLink = (idA: string, idB: string) => {
+          if (idA === idB) return;
+          if (!crossLinks.some(l =>
+            (l.fromMemberId === idA && l.toMemberId === idB) ||
+            (l.fromMemberId === idB && l.toMemberId === idA)
+          )) {
+            crossLinks.push({ fromMemberId: idA, toMemberId: idB, relation: "sibling" });
+          }
+        };
+
+        // Caso A: extended ↔ extended con mismo tío padre y relación hijo/primo
         const parentGroupMap = new Map<string, ExtendedEntry[]>();
         for (const e of extended) {
-          // Solo incluir cuando el member es hijo del conector Y la relación inferida es primo
           if (!CHILD_TYPES.has(e.member.relation_type)) continue;
           if (e.inferredRelation !== "cousin") continue;
           if (!parentGroupMap.has(e.parentMemberId)) parentGroupMap.set(e.parentMemberId, []);
@@ -621,18 +633,40 @@ export default function TreePage() {
         }
         for (const siblings of parentGroupMap.values()) {
           if (siblings.length < 2) continue;
-          for (let i = 0; i < siblings.length; i++) {
-            for (let j = i + 1; j < siblings.length; j++) {
-              const a = siblings[i], b = siblings[j];
-              const alreadyLinked = crossLinks.some(
-                l => (l.fromMemberId === a.member.id && l.toMemberId === b.member.id) ||
-                     (l.fromMemberId === b.member.id && l.toMemberId === a.member.id)
-              );
-              if (!alreadyLinked) {
-                crossLinks.push({ fromMemberId: a.member.id, toMemberId: b.member.id, relation: "sibling" });
-              }
-            }
-          }
+          for (let i = 0; i < siblings.length; i++)
+            for (let j = i + 1; j < siblings.length; j++)
+              addPeerLink(siblings[i].member.id, siblings[j].member.id);
+        }
+
+        // Caso B: primo directo → extended cousin cuyo parentMemberId = el primo directo
+        // (el primo directo está unido y agregó a su hermana a su propio árbol)
+        const directCousins = myMembers.filter(m => m.relation_type === "cousin");
+        for (const e of extended) {
+          if (e.inferredRelation !== "cousin") continue;
+          const parentDirect = directCousins.find(m => m.id === e.parentMemberId);
+          if (parentDirect) addPeerLink(parentDirect.id, e.member.id);
+        }
+
+        // Caso C: primo directo que salió del dedup (tío lo tenía en su árbol)
+        // → conectar con los otros extended cousins del mismo tío
+        // El dedup generó: crossLink { fromMemberId: tíoId, toMemberId: primoDirectoId }
+        // Karina tiene parentMemberId = tíoId → unirla con primoDirectoId
+        const snapshotLinks = crossLinks.filter(l => l.relation !== "sibling");
+        const tioToDirectCousin = new Map<string, string[]>();
+        for (const link of snapshotLinks) {
+          // Solo nos interesan links donde el "from" es tío/tía y el "to" es primo directo
+          const parentM = myMembers.find(m => m.id === link.fromMemberId);
+          const childM  = myMembers.find(m => m.id === link.toMemberId);
+          if (!parentM || !childM) continue;
+          if (!["uncle","aunt"].includes(parentM.relation_type)) continue;
+          if (childM.relation_type !== "cousin") continue;
+          if (!tioToDirectCousin.has(link.fromMemberId)) tioToDirectCousin.set(link.fromMemberId, []);
+          tioToDirectCousin.get(link.fromMemberId)!.push(link.toMemberId);
+        }
+        for (const e of extended) {
+          if (e.inferredRelation !== "cousin") continue;
+          const directSiblings = tioToDirectCousin.get(e.parentMemberId) || [];
+          for (const sibId of directSiblings) addPeerLink(sibId, e.member.id);
         }
 
         setExtendedMembers(extended);
