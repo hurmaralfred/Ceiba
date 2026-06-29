@@ -109,5 +109,12 @@ export default function LiveMap({ members, myPos, myName, myAvatar }: Props) {
     }
   }, [members, myPos, myName, myAvatar]);
 
-  return <div ref={containerRef} style={{ width: "100%", height: "100%" }} />;
+  return (
+    <div ref={containerRef} style={{
+      width: "100%",
+      height: "100%",
+      borderRadius: "50%",
+      overflow: "hidden",
+    }} />
+  );
 }
