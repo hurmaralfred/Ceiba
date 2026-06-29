@@ -396,8 +396,54 @@ export default function FamilyTreeGraph({
 
   const EDGE_COLORS = { blood: "#86efac", affinity: "#fcd34d", peer: "#94a3b8" };
 
+  // ── Forest background helpers ──────────────────────────────────
+  const pineShape = (cx: number, base: number, h: number, w: number): string => {
+    const hw = w / 2;
+    const tw = Math.max(3, w * 0.07);
+    const pts: [number, number][] = [
+      [cx - tw, base],
+      [cx - tw, base - h * 0.26],
+      [cx - hw * 0.82, base - h * 0.26],
+      [cx - hw * 0.44, base - h * 0.47],
+      [cx - hw * 0.88, base - h * 0.47],
+      [cx - hw * 0.48, base - h * 0.65],
+      [cx - hw * 0.76, base - h * 0.65],
+      [cx - hw * 0.36, base - h * 0.82],
+      [cx - hw * 0.52, base - h * 0.82],
+      [cx, base - h],
+      [cx + hw * 0.52, base - h * 0.82],
+      [cx + hw * 0.36, base - h * 0.82],
+      [cx + hw * 0.76, base - h * 0.65],
+      [cx + hw * 0.48, base - h * 0.65],
+      [cx + hw * 0.88, base - h * 0.47],
+      [cx + hw * 0.44, base - h * 0.47],
+      [cx + hw * 0.82, base - h * 0.26],
+      [cx + tw, base - h * 0.26],
+      [cx + tw, base],
+    ];
+    return pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
+  };
+
+  const tropicalPath = (cx: number, base: number, h: number, w: number): string => {
+    const hw = w / 2;
+    const tw = Math.max(6, w * 0.08);
+    const th = h * 0.36;
+    return (
+      `M ${cx - tw} ${base} L ${cx - tw} ${base - th} ` +
+      `Q ${cx - hw * 0.65} ${base - h * 0.52} ${cx - hw * 1.38} ${base - h * 0.46} ` +
+      `Q ${cx - hw * 1.05} ${base - h * 0.63} ${cx - hw * 0.72} ${base - h * 0.59} ` +
+      `Q ${cx - hw * 0.40} ${base - h * 0.74} ${cx - hw * 0.22} ${base - h * 0.70} ` +
+      `Q ${cx - hw * 0.08} ${base - h * 0.90} ${cx} ${base - h} ` +
+      `Q ${cx + hw * 0.08} ${base - h * 0.90} ${cx + hw * 0.22} ${base - h * 0.70} ` +
+      `Q ${cx + hw * 0.40} ${base - h * 0.74} ${cx + hw * 0.72} ${base - h * 0.59} ` +
+      `Q ${cx + hw * 1.05} ${base - h * 0.63} ${cx + hw * 1.38} ${base - h * 0.46} ` +
+      `Q ${cx + hw * 0.65} ${base - h * 0.52} ${cx + tw} ${base - th} ` +
+      `L ${cx + tw} ${base} Z`
+    );
+  };
+
   return (
-    <div className="w-full rounded-2xl overflow-hidden border border-green-800 bg-[#0d3318]">
+    <div className="w-full rounded-2xl overflow-hidden border border-green-900 bg-[#020804]">
 
       {/* Hint bar */}
       <div className="flex items-center gap-4 px-4 py-2 border-b border-white/5 bg-white/[0.03] text-[10px] text-gray-500 flex-wrap">
@@ -465,11 +511,22 @@ export default function FamilyTreeGraph({
             .edge-anim  { animation: edge-flow  1.6s linear infinite; }
           `}</style>
 
-          {/* Radial bg — dark forest green, center brighter, edges near-black */}
-          <radialGradient id="bg-grad" cx="50%" cy="44%" r="65%">
-            <stop offset="0%"   stopColor="#1a5c2a" />
-            <stop offset="40%"  stopColor="#0d3318" />
-            <stop offset="100%" stopColor="#030e05" />
+          {/* Sky-to-forest radial gradient — clearing in center */}
+          <radialGradient id="bg-grad" cx="50%" cy="42%" r="60%">
+            <stop offset="0%"   stopColor="#163d1e" />
+            <stop offset="45%"  stopColor="#0b2410" />
+            <stop offset="100%" stopColor="#020804" />
+          </radialGradient>
+          {/* Ground mist — fades in from bottom */}
+          <linearGradient id="mist-grad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"  stopColor="#a7f3a0" stopOpacity="0" />
+            <stop offset="100%" stopColor="#a7f3a0" stopOpacity="0.07" />
+          </linearGradient>
+          {/* Light rays from top-center */}
+          <radialGradient id="ray-grad" cx="50%" cy="0%" r="75%" gradientUnits="userSpaceOnUse"
+            x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"  stopColor="#4ade80" stopOpacity="0.10" />
+            <stop offset="100%" stopColor="#4ade80" stopOpacity="0" />
           </radialGradient>
 
           {/* Specular highlight overlay — white glow top-left */}
@@ -522,28 +579,95 @@ export default function FamilyTreeGraph({
         {/* Background */}
         <rect width={svgWidth} height={Math.max(380, totalHeight)} fill="url(#bg-grad)" />
 
-        {/* ── Root traces — static organic lines in corners, don't move with zoom ── */}
+        {/* ── Forest scene — static, doesn't move with zoom ── */}
         {(() => {
           const W = svgWidth;
           const H = Math.max(380, totalHeight);
+          // Far-background pine trees (very dim — depth illusion)
+          const farPines = [0.08, 0.19, 0.30, 0.70, 0.81, 0.92].map((xf, i) => ({
+            cx: W * xf, base: H * 0.88, h: H * (0.14 + (i % 3) * 0.05), w: W * 0.055,
+          }));
+          // Mid-ground tropical trees — sides
+          const midLeft  = [
+            { cx: W * 0.06, base: H, h: H * 0.52, w: W * 0.20 },
+            { cx: W * 0.17, base: H, h: H * 0.40, w: W * 0.16 },
+          ];
+          const midRight = [
+            { cx: W * 0.94, base: H, h: H * 0.52, w: W * 0.20 },
+            { cx: W * 0.83, base: H, h: H * 0.40, w: W * 0.16 },
+          ];
+          // Foreground large trees — extreme edges
+          const fgLeft  = { cx: -W * 0.02, base: H, h: H * 0.78, w: W * 0.28 };
+          const fgRight = { cx:  W * 1.02, base: H, h: H * 0.78, w: W * 0.28 };
+          // Fireflies in the clearing
+          const fireflies = [
+            [0.20, 0.28], [0.78, 0.22], [0.50, 0.62], [0.68, 0.38],
+            [0.33, 0.50], [0.62, 0.18], [0.42, 0.72], [0.85, 0.55],
+            [0.14, 0.60], [0.55, 0.80],
+          ] as [number, number][];
+
           return (
-            <g stroke="#4a9e30" fill="none" strokeLinecap="round">
-              {/* Bottom-left roots */}
-              <path d={`M 0 ${H} Q 32 ${H-28} 62 ${H-44}`}         strokeWidth="2.0" opacity="0.70"/>
-              <path d={`M 0 ${H} Q 52 ${H-38} 92 ${H-56}`}         strokeWidth="1.4" opacity="0.55"/>
-              <path d={`M 18 ${H} Q 58 ${H-32} 98 ${H-48}`}        strokeWidth="1.1" opacity="0.45"/>
-              <path d={`M 0 ${H-15} Q 38 ${H-42} 72 ${H-58}`}      strokeWidth="0.9" opacity="0.40"/>
-              {/* Bottom-right roots */}
-              <path d={`M ${W} ${H} Q ${W-32} ${H-28} ${W-62} ${H-44}`}  strokeWidth="2.0" opacity="0.70"/>
-              <path d={`M ${W} ${H} Q ${W-52} ${H-38} ${W-92} ${H-56}`}  strokeWidth="1.4" opacity="0.55"/>
-              <path d={`M ${W-18} ${H} Q ${W-58} ${H-32} ${W-98} ${H-48}`} strokeWidth="1.1" opacity="0.45"/>
-              <path d={`M ${W} ${H-15} Q ${W-38} ${H-42} ${W-72} ${H-58}`} strokeWidth="0.9" opacity="0.40"/>
-              {/* Top-left branch hints */}
-              <path d={`M 72 0 Q 92 22 108 36`}  strokeWidth="1.4" opacity="0.50"/>
-              <path d={`M 45 0 Q 80 32 108 50`}  strokeWidth="1.0" opacity="0.38"/>
-              {/* Top-right branch hints */}
-              <path d={`M ${W-72} 0 Q ${W-92} 22 ${W-108} 36`} strokeWidth="1.4" opacity="0.50"/>
-              <path d={`M ${W-45} 0 Q ${W-80} 32 ${W-108} 50`} strokeWidth="1.0" opacity="0.38"/>
+            <g style={{ pointerEvents: "none" }}>
+              {/* God rays from top-center */}
+              {[-28, -16, -6, 6, 16, 28].map((deg, i) => {
+                const rad = (deg * Math.PI) / 180;
+                return (
+                  <line key={`ray-${i}`}
+                    x1={W / 2} y1={0}
+                    x2={W / 2 + Math.sin(rad) * H * 1.6}
+                    y2={H * 1.4}
+                    stroke="#4ade80"
+                    strokeWidth={Math.max(18, 50 - Math.abs(deg) * 0.8)}
+                    opacity={0.025 - Math.abs(deg) * 0.0004}
+                    strokeLinecap="butt"
+                  />
+                );
+              })}
+
+              {/* Far background pines */}
+              {farPines.map((t, i) => (
+                <polygon key={`fp-${i}`}
+                  points={pineShape(t.cx, t.base, t.h, t.w)}
+                  fill="#071808" opacity="0.60"
+                />
+              ))}
+
+              {/* Mid-ground left tropical trees */}
+              {midLeft.map((t, i) => (
+                <path key={`ml-${i}`}
+                  d={tropicalPath(t.cx, t.base, t.h, t.w)}
+                  fill={i === 0 ? "#050f06" : "#071309"}
+                  opacity={i === 0 ? 0.82 : 0.65}
+                />
+              ))}
+              {/* Mid-ground right tropical trees */}
+              {midRight.map((t, i) => (
+                <path key={`mr-${i}`}
+                  d={tropicalPath(t.cx, t.base, t.h, t.w)}
+                  fill={i === 0 ? "#050f06" : "#071309"}
+                  opacity={i === 0 ? 0.82 : 0.65}
+                />
+              ))}
+
+              {/* Foreground large trees — dramatic dark silhouettes */}
+              <path d={tropicalPath(fgLeft.cx, fgLeft.base, fgLeft.h, fgLeft.w)}
+                fill="#020603" opacity="0.95" />
+              <path d={tropicalPath(fgRight.cx, fgRight.base, fgRight.h, fgRight.w)}
+                fill="#020603" opacity="0.95" />
+
+              {/* Ground mist */}
+              <rect x={0} y={H * 0.80} width={W} height={H * 0.20}
+                fill="url(#mist-grad)" />
+
+              {/* Fireflies — glowing dots in the clearing */}
+              {fireflies.map(([fx, fy], i) => (
+                <circle key={`ff-${i}`}
+                  cx={W * fx} cy={H * fy} r={1.8}
+                  fill="#86efac"
+                  opacity={0.35 + (i % 4) * 0.12}
+                  filter="url(#glow-green)"
+                />
+              ))}
             </g>
           );
         })()}
