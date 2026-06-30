@@ -4,7 +4,7 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft, TreePine, MapPin, Cake, Link as LinkIcon,
-  MessageCircle, UserCheck, Calendar, Users, Share2,
+  UserCheck, Calendar, Users, Share2,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import BottomNav from "@/components/BottomNav";
@@ -105,34 +105,10 @@ export default function MemberDetailPage() {
     setLoading(false);
   };
 
-  const startDM = async () => {
-    if (!member?.profile_id || !myUserId) return;
-
-    const { data: myRooms } = await supabase
-      .from("chat_room_members").select("room_id").eq("user_id", myUserId);
-    const myRoomIds = (myRooms || []).map(r => r.room_id);
-
-    if (myRoomIds.length > 0) {
-      const { data: otherRooms } = await supabase
-        .from("chat_room_members").select("room_id")
-        .eq("user_id", member.profile_id).in("room_id", myRoomIds);
-      const shared = (otherRooms || []).map(r => r.room_id);
-
-      if (shared.length > 0) {
-        const { data: rooms } = await supabase
-          .from("chat_rooms").select("id").in("id", shared).eq("type", "direct");
-        if (rooms && rooms.length > 0) { router.push(`/chat/${rooms[0].id}`); return; }
-      }
-    }
-
-    const { data: room } = await supabase
-      .from("chat_rooms").insert({ type: "direct", created_by: myUserId }).select("id").single();
-    if (!room) return;
-    await supabase.from("chat_room_members").insert([
-      { room_id: room.id, user_id: myUserId },
-      { room_id: room.id, user_id: member.profile_id },
-    ]);
-    router.push(`/chat/${room.id}`);
+  const whatsappUrl = (phone: string | null | undefined, name: string) => {
+    const clean = phone?.replace(/\D/g, "");
+    const text = encodeURIComponent(`Hola ${name}, te escribo desde Ceiba 🌳`);
+    return clean ? `https://wa.me/${clean}?text=${text}` : `https://wa.me/?text=${text}`;
   };
 
   if (loading) return (
@@ -217,12 +193,14 @@ export default function MemberDetailPage() {
 
             {/* Action buttons */}
             {isOnCeiba && member.profile_id !== myUserId && (
-              <button
-                onClick={startDM}
-                className="flex items-center gap-2 bg-ceiba-700 hover:bg-ceiba-800 text-white font-semibold px-5 py-2.5 rounded-xl transition-colors text-sm mt-1"
+              <a
+                href={whatsappUrl(member.phone, member.profile?.first_name || member.first_name)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 bg-[#25D366] hover:bg-[#1ebe5d] text-white font-semibold px-5 py-2.5 rounded-xl transition-colors text-sm mt-1"
               >
-                <MessageCircle size={16} /> Enviar mensaje
-              </button>
+                <Share2 size={15} /> Escribir por WhatsApp
+              </a>
             )}
           </div>
         </div>
