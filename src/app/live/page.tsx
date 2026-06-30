@@ -258,8 +258,8 @@ export default function LivePage() {
               style={{
                 borderRadius: "50%",
                 overflow: "hidden",
-                maskImage: "radial-gradient(circle 116px at 50% 50%, black 99%, transparent 100%)",
-                WebkitMaskImage: "radial-gradient(circle 116px at 50% 50%, black 99%, transparent 100%)",
+                maskImage: "radial-gradient(circle, black 49%, transparent 50%)",
+                WebkitMaskImage: "radial-gradient(circle, black 49%, transparent 50%)",
                 boxShadow: "0 0 0 3px #4ade80, 0 0 28px 6px rgba(74,222,128,0.35)",
               }}>
               <LiveMap
