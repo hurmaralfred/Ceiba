@@ -248,17 +248,24 @@ export default function LivePage() {
       {/* Map — esfera 3D circular */}
       {!loading && (withLocation.length > 0 || myPos) && (
         <div className="flex justify-center mb-5 mt-1">
-          <div className="relative" style={{ width: 240, height: 240 }}>
-            {/* Pulse ring */}
-            <div className="absolute inset-0 rounded-full animate-ping pointer-events-none"
-              style={{ boxShadow: "0 0 0 4px rgba(74,222,128,0.2)", animationDuration: "2.4s" }} />
-
-            {/* Green border glow */}
+          {/* Outer glow ring */}
+          <div className="relative" style={{ width: 248, height: 248 }}>
             <div className="absolute inset-0 rounded-full pointer-events-none"
-              style={{ boxShadow: "0 0 0 3px #4ade80, 0 0 32px 8px rgba(74,222,128,0.3)", zIndex: 10 }} />
+              style={{ boxShadow: "0 0 0 3px #4ade80, 0 0 36px 10px rgba(74,222,128,0.35)", zIndex: 30 }} />
+            <div className="absolute inset-0 rounded-full animate-ping pointer-events-none"
+              style={{ boxShadow: "0 0 0 3px rgba(74,222,128,0.3)", animationDuration: "2.4s", zIndex: 29 }} />
 
-            {/* Map fills the square */}
-            <div className="absolute inset-0" style={{ zIndex: 1 }}>
+            {/* Clip container — isolation:isolate forces a single compositing layer
+                so overflow:hidden clips even Leaflet's GPU tile layers */}
+            <div style={{
+              position: "absolute", inset: 0,
+              borderRadius: "50%",
+              overflow: "hidden",
+              isolation: "isolate",
+              transform: "translateZ(0)",
+              WebkitTransform: "translateZ(0)",
+              zIndex: 1,
+            }}>
               <LiveMap
                 members={withLocation}
                 myPos={myPos}
@@ -267,42 +274,24 @@ export default function LivePage() {
               />
             </div>
 
-            {/* SVG overlay: pinta las esquinas con el fondo de la página, dejando solo el círculo */}
-            <svg
-              className="absolute inset-0 pointer-events-none"
-              style={{ zIndex: 20 }}
-              viewBox="0 0 240 240"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <defs>
-                <mask id="circleHole">
-                  <rect width="240" height="240" fill="white" />
-                  <circle cx="120" cy="120" r="119" fill="black" />
-                </mask>
-              </defs>
-              {/* Cubre las esquinas con el color de fondo */}
-              <rect width="240" height="240" fill="#030712" mask="url(#circleHole)" />
-              {/* Efecto 3D: sombra interior inferior */}
-              <circle cx="120" cy="120" r="119"
-                fill="none"
-                stroke="url(#shadowGrad)"
-                strokeWidth="28"
-              />
-              {/* Brillo especular superior-izquierda */}
-              <ellipse cx="88" cy="76" rx="44" ry="30"
-                fill="url(#specGrad)"
-              />
-              <defs>
-                <radialGradient id="shadowGrad" cx="50%" cy="80%" r="50%">
-                  <stop offset="0%" stopColor="rgba(0,0,0,0.6)" />
-                  <stop offset="100%" stopColor="rgba(0,0,0,0)" />
-                </radialGradient>
-                <radialGradient id="specGrad" cx="50%" cy="50%" r="50%">
-                  <stop offset="0%" stopColor="rgba(255,255,255,0.18)" />
-                  <stop offset="100%" stopColor="rgba(255,255,255,0)" />
-                </radialGradient>
-              </defs>
-            </svg>
+            {/* 3D specular highlight */}
+            <div className="absolute inset-0 rounded-full pointer-events-none" style={{ zIndex: 20 }}
+              dangerouslySetInnerHTML={{ __html: `
+                <svg width="100%" height="100%" viewBox="0 0 248 248" xmlns="http://www.w3.org/2000/svg">
+                  <defs>
+                    <radialGradient id="spec3d" cx="35%" cy="28%" r="42%">
+                      <stop offset="0%" stop-color="rgba(255,255,255,0.22)"/>
+                      <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+                    </radialGradient>
+                    <radialGradient id="shadow3d" cx="50%" cy="85%" r="45%">
+                      <stop offset="0%" stop-color="rgba(0,0,0,0.55)"/>
+                      <stop offset="100%" stop-color="rgba(0,0,0,0)"/>
+                    </radialGradient>
+                  </defs>
+                  <circle cx="124" cy="124" r="123" fill="url(#spec3d)"/>
+                  <circle cx="124" cy="124" r="123" fill="url(#shadow3d)"/>
+                </svg>
+              `}} />
           </div>
         </div>
       )}
