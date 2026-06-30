@@ -69,9 +69,21 @@ function inferRelation(parentRelation: RelationType, childRelation: string): str
     // ── My siblings ───────────────────────────────────────────
     case "brother": case "sister":
     case "half_brother": case "half_sister":
-      if (childRelation === "son")       return "nephew";
-      if (childRelation === "daughter")  return "niece";
+      if (childRelation === "son")              return "nephew";
+      if (childRelation === "daughter")         return "niece";
+      if (childRelation === "stepchild")        return "nephew";
+      if (childRelation === "nephew")           return "nephew";
+      if (childRelation === "niece")            return "niece";
+      if (childRelation === "grandson")         return "nephew";
+      if (childRelation === "granddaughter")    return "niece";
       if (["spouse","partner"].includes(childRelation)) return "brother_in_law";
+      if (["father","stepfather"].includes(childRelation)) return "father";
+      if (["mother","stepmother"].includes(childRelation)) return "mother";
+      if (["brother","half_brother"].includes(childRelation)) return "brother";
+      if (["sister","half_sister"].includes(childRelation))   return "sister";
+      if (["uncle","father_in_law"].includes(childRelation)) return "uncle";
+      if (["aunt","mother_in_law"].includes(childRelation))  return "aunt";
+      if (childRelation === "cousin") return "cousin";
       break;
 
     // ── My in-law siblings ────────────────────────────────────
@@ -83,16 +95,29 @@ function inferRelation(parentRelation: RelationType, childRelation: string): str
     // ── My parents & step-parents ─────────────────────────────
     case "father": case "mother":
     case "stepfather": case "stepmother":
-      if (childRelation === "son")       return "brother";
-      if (childRelation === "daughter")  return "sister";
+      if (childRelation === "son")            return "brother";
+      if (childRelation === "daughter")       return "sister";
+      if (childRelation === "stepchild")      return "brother";
       // Father/mother's siblings = my uncles/aunts
       if (["brother","half_brother"].includes(childRelation)) return "uncle";
       if (["sister","half_sister"].includes(childRelation))   return "aunt";
       // Father/mother's parents = my grandparents
-      if (childRelation === "father")    return "grandfather_paternal";
-      if (childRelation === "mother")    return "grandmother_paternal";
+      if (childRelation === "father")         return "grandfather_paternal";
+      if (childRelation === "mother")         return "grandmother_paternal";
+      if (["grandfather_paternal","grandfather_maternal"].includes(childRelation)) return "grandfather_paternal";
+      if (["grandmother_paternal","grandmother_maternal"].includes(childRelation)) return "grandmother_paternal";
       // Father/mother's spouse (other than me) = step-parent
       if (["spouse","partner"].includes(childRelation)) return parentRelation === "father" ? "stepmother" : "stepfather";
+      // Parent's nephew/niece = my cousin; parent's cousin = also cousin
+      if (childRelation === "nephew")         return "cousin";
+      if (childRelation === "niece")          return "cousin";
+      if (childRelation === "cousin")         return "cousin";
+      // Parent's uncle/aunt = my great-uncle/aunt (labeled as uncle/aunt)
+      if (childRelation === "uncle")          return "uncle";
+      if (childRelation === "aunt")           return "aunt";
+      // Parent's grandchildren (siblings' kids) = my nephews/nieces
+      if (childRelation === "grandson")       return "nephew";
+      if (childRelation === "granddaughter")  return "niece";
       break;
 
     // ── My in-law parents ─────────────────────────────────────
@@ -118,14 +143,28 @@ function inferRelation(parentRelation: RelationType, childRelation: string): str
 
     // ── My children ───────────────────────────────────────────
     case "son": case "daughter": case "stepchild":
-      if (childRelation === "son")       return "grandson";
-      if (childRelation === "daughter")  return "granddaughter";
-      if (["spouse","partner"].includes(childRelation)) return "son"; // son/daughter-in-law → simplified
+      if (childRelation === "son")            return "grandson";
+      if (childRelation === "daughter")       return "granddaughter";
+      if (childRelation === "stepchild")      return "grandson";
+      if (childRelation === "grandson")       return "grandson";
+      if (childRelation === "granddaughter")  return "granddaughter";
+      if (["spouse","partner"].includes(childRelation)) return "son"; // hijo/a político/a
+      break;
+
+    // ── My grandchildren ──────────────────────────────────────
+    case "grandson": case "granddaughter":
+      if (childRelation === "son")            return "grandson";
+      if (childRelation === "daughter")       return "granddaughter";
+      if (["spouse","partner"].includes(childRelation)) return "grandson";
       break;
 
     // ── My uncles / aunts ─────────────────────────────────────
     case "uncle": case "aunt":
       if (childRelation === "son" || childRelation === "daughter") return "cousin";
+      if (childRelation === "stepchild")    return "cousin";
+      if (childRelation === "grandson" || childRelation === "granddaughter") return "cousin";
+      if (childRelation === "nephew" || childRelation === "niece") return "cousin";
+      if (childRelation === "cousin")       return "cousin";
       // Uncle's siblings = also my uncles/aunts
       if (["brother","half_brother"].includes(childRelation)) return "uncle";
       if (["sister","half_sister"].includes(childRelation))   return "aunt";
@@ -142,21 +181,35 @@ function inferRelation(parentRelation: RelationType, childRelation: string): str
     // ── My grandparents ───────────────────────────────────────
     case "grandfather_paternal": case "grandfather_maternal":
     case "grandmother_paternal": case "grandmother_maternal":
-      if (childRelation === "son")       return "uncle";
-      if (childRelation === "daughter")  return "aunt";
+      if (childRelation === "son")          return "uncle";
+      if (childRelation === "daughter")     return "aunt";
+      if (childRelation === "stepchild")    return "uncle";
+      // Grandparent's grandchildren (not me) = uncles/aunts
+      if (childRelation === "grandson")     return "uncle";
+      if (childRelation === "granddaughter") return "aunt";
+      if (childRelation === "nephew" || childRelation === "niece") return "cousin";
+      if (childRelation === "cousin")       return "uncle";
       // Grandparent's siblings = also my great-uncles/aunts (show as uncle/aunt, closest label)
       if (["brother","half_brother"].includes(childRelation)) return "uncle";
       if (["sister","half_sister"].includes(childRelation))   return "aunt";
       // Grandparent's parents = my great-grandparents (show as grandparent, closest label we have)
       if (childRelation === "father") return "grandfather_paternal";
       if (childRelation === "mother") return "grandmother_paternal";
+      if (["grandfather_paternal","grandfather_maternal"].includes(childRelation)) return "grandfather_paternal";
+      if (["grandmother_paternal","grandmother_maternal"].includes(childRelation)) return "grandmother_paternal";
       break;
 
     // ── My nephews / nieces ───────────────────────────────────
     case "nephew": case "niece":
-      if (childRelation === "son")        return "nephew";
-      if (childRelation === "daughter")   return "niece";
+      if (childRelation === "son")            return "nephew";
+      if (childRelation === "daughter")       return "niece";
+      if (childRelation === "stepchild")      return "nephew";
+      if (childRelation === "grandson")       return "nephew";
+      if (childRelation === "granddaughter")  return "niece";
       if (["spouse","partner"].includes(childRelation)) return "nephew";
+      // Nephew/niece's parents = my siblings
+      if (["father","stepfather"].includes(childRelation)) return "brother";
+      if (["mother","stepmother"].includes(childRelation)) return "sister";
       break;
 
     // ── My spouse's extended family (not covered above) ───────
@@ -319,12 +372,16 @@ export default function TreePage() {
           const mFn = normName(member.first_name);
           const mLn = normName(member.last_name || "");
 
-          // Match by email (exact) OR by first word of first_name + first word of last_name
+          // Match by email (exact) OR by name (first+last when available, first-only when no last)
           const match = allProfiles.find(p => {
             if (member.email && p.email && member.email.toLowerCase() === p.email.toLowerCase()) return true;
             const pFn = normName(p.first_name || "");
             const pLn = normName(p.last_name || "");
-            return mFn && mLn && pFn === mFn && pLn === mLn;
+            if (!mFn || pFn !== mFn) return false;
+            // Both have last name: require last name match too
+            if (mLn && pLn) return pLn === mLn;
+            // At least one side has no last name: first name match is enough
+            return true;
           });
 
           if (match) {
@@ -344,6 +401,53 @@ export default function TreePage() {
             if (!seen2.has(key) || (!seen2.get(key).profile_id && m.profile_id)) seen2.set(key, m);
           }
           myMembers = Array.from(seen2.values());
+        }
+      }
+    }
+
+    // ── Auto-link via confirmed relationships table ────────────
+    // If a family member confirmed a bidirectional relationship via invitation
+    // but profile_id wasn't saved, use the relationships table to link them.
+    {
+      const stillUnlinked = myMembers.filter(m => !m.profile_id);
+      if (stillUnlinked.length > 0) {
+        const { data: confirmedRels } = await supabase
+          .from("relationships")
+          .select("profile_a, profile_b, relation_from_a, relation_from_b")
+          .or(`profile_a.eq.${user.id},profile_b.eq.${user.id}`)
+          .eq("confirmed", true);
+
+        if (confirmedRels && confirmedRels.length > 0) {
+          const theirIds = confirmedRels.map(r => r.profile_a === user.id ? r.profile_b : r.profile_a);
+          const { data: relProfiles } = await supabase
+            .from("profiles")
+            .select("id, first_name, last_name")
+            .in("id", theirIds);
+          const relProfileMap = Object.fromEntries((relProfiles || []).map(p => [p.id, p]));
+
+          const relUpdates: Promise<any>[] = [];
+          for (const rel of confirmedRels) {
+            const theirId  = rel.profile_a === user.id ? rel.profile_b : rel.profile_a;
+            const myRelType = rel.profile_a === user.id ? rel.relation_from_a : rel.relation_from_b;
+            if (myMembers.some(m => m.profile_id === theirId)) continue; // already linked
+            const theirProfile = relProfileMap[theirId];
+            if (!theirProfile) continue;
+            const tFn = normName(theirProfile.first_name || "");
+            const tLn = normName(theirProfile.last_name || "");
+            // Find unlinked member with matching relation + name
+            const candidates = stillUnlinked.filter(m => m.relation_type === myRelType && !m.profile_id);
+            const match = candidates.find(m => {
+              const mFn = normName(m.first_name); const mLn = normName(m.last_name || "");
+              if (mFn !== tFn) return false;
+              if (mLn && tLn) return mLn === tLn;
+              return true;
+            }) ?? (candidates.length === 1 ? candidates[0] : null);
+            if (match && !match.profile_id) {
+              match.profile_id = theirId;
+              relUpdates.push(supabase.from("family_members").update({ profile_id: theirId }).eq("id", match.id));
+            }
+          }
+          if (relUpdates.length > 0) await Promise.all(relUpdates);
         }
       }
     }
@@ -390,9 +494,10 @@ export default function TreePage() {
         myMembers.forEach(m => {
           const fn = norm(m.first_name);
           const ln = norm(m.last_name || "");
-          myNameKeys.add(`${fn}|${ln}`);                        // full: "jose humberto|hurtado cifuentes"
-          myNameKeys.add(`${fn.split(" ")[0]}|${ln.split(" ")[0]}`); // first words: "jose|hurtado"
-          myNameKeys.add(`${fn.split(" ")[0]}|`);               // only first name word
+          myNameKeys.add(`${fn}|${ln}`);                                    // full: "jose humberto|hurtado cifuentes"
+          const fn0 = fn.split(" ")[0]; const ln0 = ln.split(" ")[0];
+          if (fn0 && ln0) myNameKeys.add(`${fn0}|${ln0}`);                 // first words: "jose|hurtado"
+          // NOTE: no fn0-only key — that was causing false positives filtering out real nephews/nieces
         });
 
         // For peer link detection: build a map from norm-name key → direct member
@@ -416,9 +521,11 @@ export default function TreePage() {
             if (fn.length >= 3) {
               const fn0 = fn.split(" ")[0];
               const ln0 = ln.split(" ")[0];
+              // Only mark as duplicate when both first+last name match
+              // Avoid false positives by never matching on first name alone
               const isDuplicate =
                 myNameKeys.has(`${fn}|${ln}`) ||
-                myNameKeys.has(`${fn0}|${ln0}`);
+                (ln0.length > 0 && myNameKeys.has(`${fn0}|${ln0}`));
               if (isDuplicate) {
                 // This extended member IS a direct member — create a peer link
                 const directMember = myMemberByName.get(`${fn0}|${ln0}`) || myMemberByName.get(`${fn0}|`);
@@ -454,9 +561,9 @@ export default function TreePage() {
           })
           .filter((e): e is ExtendedEntry => {
             if (e === null) return false;
-            // Discard members whose relation couldn't be inferred — showing them
-            // with their raw connector-relative label would be wrong.
-            if (e.inferredRelation === null) return false;
+            // If relation couldn't be inferred, use "other" as fallback
+            // so legitimate family members are never silently dropped.
+            if (e.inferredRelation === null) e.inferredRelation = "other";
             return true;
           })
           // Deduplicate within the extended set by normalized name
@@ -523,8 +630,7 @@ export default function TreePage() {
             // Rev says "direct member is my {rel}" → from direct member's POV, connector is their {reverse}
             const connRelToDirectMember = reverseRelation(rev.relation_type);
             // From user's POV: user's relation to connector
-            const userRelToConnector = inferRelation(directMember.relation_type as RelationType, connRelToDirectMember);
-            if (!userRelToConnector) continue;
+            const userRelToConnector = inferRelation(directMember.relation_type as RelationType, connRelToDirectMember) ?? "other";
 
             // Name-dedup: skip if connector's name already exists in extended
             const cfn = norm(connProfile.first_name || "").split(" ")[0];
@@ -536,8 +642,8 @@ export default function TreePage() {
               return `${efn}|${eln}|${e.inferredRelation}` === nameKey;
             })) continue;
 
-            // Also skip if connector name matches a direct member
-            if (myNameKeys.has(`${cfn}|${cln}`) || myNameKeys.has(`${cfn}|`)) continue;
+            // Skip if connector is already a direct member (by name — require last name match too)
+            if (myNameKeys.has(`${cfn}|${cln}`)) continue;
 
             alreadyExtendedProfileIds.add(connectorProfileId);
 
@@ -592,8 +698,7 @@ export default function TreePage() {
               const level3Relation = inferRelation(
                 parentExt.inferredRelation as RelationType,
                 em.relation_type
-              );
-              if (!level3Relation) continue;
+              ) ?? "other";
 
               // Dedup by name + relation
               const fn3 = norm(em.first_name).split(" ")[0];

@@ -286,8 +286,8 @@ function buildLayout(
         if (sib) addVertEdge(sib.id, m.id, m.relation_kind as "blood" | "affinity");
         else addVertEdge("root", m.id, m.relation_kind as "blood" | "affinity");
       } else if (GRANDCHILD_TYPES.has(m.relation_type)) {
-        const child = members.find(s => ["son","daughter"].includes(s.relation_type));
-        addVertEdge(child?.id ?? "root", m.id, m.relation_kind as "blood" | "affinity");
+        // Connect grandchildren to root — we don't know which child is the parent
+        addVertEdge("root", m.id, m.relation_kind as "blood" | "affinity");
       } else {
         addVertEdge("root", m.id, m.relation_kind as "blood" | "affinity");
       }
