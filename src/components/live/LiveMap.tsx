@@ -110,13 +110,6 @@ export default function LiveMap({ members, myPos, myName, myAvatar }: Props) {
   }, [members, myPos, myName, myAvatar]);
 
   return (
-    <div ref={containerRef} style={{
-      width: "100%",
-      height: "100%",
-      borderRadius: "50%",
-      overflow: "hidden",
-      maskImage: "radial-gradient(circle, black 49%, transparent 50%)",
-      WebkitMaskImage: "radial-gradient(circle, black 49%, transparent 50%)",
-    }} />
+    <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
   );
 }

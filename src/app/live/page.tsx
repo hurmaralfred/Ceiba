@@ -248,20 +248,17 @@ export default function LivePage() {
       {/* Map — esfera 3D circular */}
       {!loading && (withLocation.length > 0 || myPos) && (
         <div className="flex justify-center mb-5 mt-1">
-          <div className="relative" style={{ width: 232, height: 232 }}>
-            {/* Pulse ring exterior */}
-            <div className="absolute inset-0 rounded-full animate-ping"
-              style={{ background: "transparent", boxShadow: "0 0 0 4px rgba(74,222,128,0.25)", animationDuration: "2.4s" }} />
+          <div className="relative" style={{ width: 240, height: 240 }}>
+            {/* Pulse ring */}
+            <div className="absolute inset-0 rounded-full animate-ping pointer-events-none"
+              style={{ boxShadow: "0 0 0 4px rgba(74,222,128,0.2)", animationDuration: "2.4s" }} />
 
-            {/* Mapa recortado en círculo — mask-image opera al nivel del compositor y corta capas GPU de Leaflet */}
-            <div className="absolute inset-0"
-              style={{
-                borderRadius: "50%",
-                overflow: "hidden",
-                maskImage: "radial-gradient(circle, black 49%, transparent 50%)",
-                WebkitMaskImage: "radial-gradient(circle, black 49%, transparent 50%)",
-                boxShadow: "0 0 0 3px #4ade80, 0 0 28px 6px rgba(74,222,128,0.35)",
-              }}>
+            {/* Green border glow */}
+            <div className="absolute inset-0 rounded-full pointer-events-none"
+              style={{ boxShadow: "0 0 0 3px #4ade80, 0 0 32px 8px rgba(74,222,128,0.3)", zIndex: 10 }} />
+
+            {/* Map fills the square */}
+            <div className="absolute inset-0" style={{ zIndex: 1 }}>
               <LiveMap
                 members={withLocation}
                 myPos={myPos}
@@ -270,15 +267,42 @@ export default function LivePage() {
               />
             </div>
 
-            {/* Reflejo especular — luz arriba-izquierda */}
-            <div className="absolute inset-0 rounded-full pointer-events-none"
-              style={{
-                background: "radial-gradient(ellipse at 32% 26%, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.07) 38%, transparent 62%)"
-              }} />
-
-            {/* Sombra interior abajo para dar profundidad */}
-            <div className="absolute inset-0 rounded-full pointer-events-none"
-              style={{ boxShadow: "inset 0 -24px 48px rgba(0,0,0,0.55)" }} />
+            {/* SVG overlay: pinta las esquinas con el fondo de la página, dejando solo el círculo */}
+            <svg
+              className="absolute inset-0 pointer-events-none"
+              style={{ zIndex: 20 }}
+              viewBox="0 0 240 240"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <defs>
+                <mask id="circleHole">
+                  <rect width="240" height="240" fill="white" />
+                  <circle cx="120" cy="120" r="119" fill="black" />
+                </mask>
+              </defs>
+              {/* Cubre las esquinas con el color de fondo */}
+              <rect width="240" height="240" fill="#030712" mask="url(#circleHole)" />
+              {/* Efecto 3D: sombra interior inferior */}
+              <circle cx="120" cy="120" r="119"
+                fill="none"
+                stroke="url(#shadowGrad)"
+                strokeWidth="28"
+              />
+              {/* Brillo especular superior-izquierda */}
+              <ellipse cx="88" cy="76" rx="44" ry="30"
+                fill="url(#specGrad)"
+              />
+              <defs>
+                <radialGradient id="shadowGrad" cx="50%" cy="80%" r="50%">
+                  <stop offset="0%" stopColor="rgba(0,0,0,0.6)" />
+                  <stop offset="100%" stopColor="rgba(0,0,0,0)" />
+                </radialGradient>
+                <radialGradient id="specGrad" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stopColor="rgba(255,255,255,0.18)" />
+                  <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+                </radialGradient>
+              </defs>
+            </svg>
           </div>
         </div>
       )}
