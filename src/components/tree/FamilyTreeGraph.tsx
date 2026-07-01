@@ -165,7 +165,7 @@ function buildLayout(
       kind: m.relation_kind as "blood" | "affinity",
       isExtended: false,
       memberId: m.id,
-      avatarUrl: (m as any).profile?.avatar_url ?? null,
+      avatarUrl: (m as any).profile?.avatar_url ?? (m as any).photo_url ?? null,
       isJoined: !!m.profile_id,
       isActive: isRecentlyActive((m as any).profile?.last_seen_at),
       isDeceased: !!(m as any).is_deceased,
@@ -449,25 +449,39 @@ export default function FamilyTreeGraph({
   return (
     <div className="w-full rounded-2xl overflow-hidden border border-green-900 bg-[#020804]">
 
-      {/* Hint bar */}
-      <div className="flex items-center gap-4 px-4 py-2 border-b border-white/5 bg-white/[0.03] text-[10px] text-gray-500 flex-wrap">
-        <span className="flex items-center gap-1.5">
-          <span className="inline-block w-3 h-3 rounded-full border-2 border-green-400" />
+      {/* Legend — generaciones + estado */}
+      <div className="flex items-center gap-x-4 gap-y-1 px-3 py-2 border-b border-white/5 bg-white/[0.03] text-[10px] text-gray-500 flex-wrap">
+        {/* Generaciones (color del nodo) */}
+        <span className="text-gray-600 font-semibold">Color:</span>
+        <span className="flex items-center gap-1">
+          <span className="inline-block w-2.5 h-2.5 rounded-full" style={{background:"#3b82f6"}} />
+          Abuelos
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="inline-block w-2.5 h-2.5 rounded-full" style={{background:"#60a5fa"}} />
+          Padres
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="inline-block w-2.5 h-2.5 rounded-full" style={{background:"#22c55e"}} />
+          Tú
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="inline-block w-2.5 h-2.5 rounded-full" style={{background:"#a78bfa"}} />
+          Hermanos
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="inline-block w-2.5 h-2.5 rounded-full" style={{background:"#22d3ee"}} />
+          Hijos
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="inline-block w-2.5 h-2.5 rounded-full border-2 border-green-400 bg-transparent" />
           Activo hoy
         </span>
-        <span className="flex items-center gap-1.5">
-          <span className="inline-block w-3 h-3 rounded-full bg-green-600" />
-          En Ceiba
+        <span className="flex items-center gap-1">
+          <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-amber-500 text-white font-bold leading-none" style={{fontSize:7}}>+N</span>
+          Expandir
         </span>
-        <span className="flex items-center gap-1.5">
-          <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-amber-500 text-white font-bold" style={{fontSize: 8}}>+N</span>
-          Toca para expandir
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="inline-flex items-center justify-center w-4 h-4 rounded-full border border-gray-600 bg-[#1c1c1c] text-gray-400" style={{fontSize: 9, fontFamily: "Georgia, serif"}}>†</span>
-          Fallecido
-        </span>
-        <span className="ml-auto">Arrastra · Pellizca para zoom</span>
+        <span className="ml-auto text-gray-700">Arrastra · Pellizca zoom</span>
       </div>
 
       <svg

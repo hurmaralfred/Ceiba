@@ -1,9 +1,9 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { TreePine, MapPin, Users, Share2, LogOut, User, Send, List, GitFork, Plus, X, Pencil, Map as MapIcon, Image, Calendar, MessageCircle, Megaphone } from "lucide-react";
+import { TreePine, MapPin, Users, Share2, LogOut, User, Send, List, GitFork, Plus, X, Pencil, Map as MapIcon, Image, Calendar, MessageCircle, Megaphone, Camera } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Profile, FamilyMember, RelationType, RELATION_LABELS } from "@/lib/types";
 import type { ExtendedEntry, MemberLink } from "@/components/tree/FamilyTreeGraph";
@@ -289,6 +289,9 @@ export default function TreePage() {
     matchedProfileId: string | null;
     matchedFamilyMemberId: string | null;
   } | null>(null);
+  const modalPhotoRef = useRef<HTMLInputElement>(null);
+  const [modalPhotoFile, setModalPhotoFile] = useState<File | null>(null);
+  const [modalPhotoPreview, setModalPhotoPreview] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -940,6 +943,21 @@ export default function TreePage() {
     setSaving(false);
     if (error) { toast.error("Error al guardar"); return; }
 
+    // Upload photo if user provided one for this member
+    if (modalPhotoFile && inserted?.id) {
+      const ext = modalPhotoFile.name.split(".").pop() ?? "jpg";
+      const path = `member-photos/${user.id}/${inserted.id}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("avatars").upload(path, modalPhotoFile, { upsert: true });
+      if (!upErr) {
+        const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
+        await supabase.from("family_members")
+          .update({ photo_url: urlData.publicUrl }).eq("id", inserted.id);
+      }
+      setModalPhotoFile(null);
+      setModalPhotoPreview(null);
+    }
+
     // Generate suggestions for connected family members
     if (inserted) {
       fetch("/api/suggestions", {
@@ -1159,8 +1177,8 @@ export default function TreePage() {
           <span className="text-base">🔔</span>
           <span className="flex-1">
             {notifPermission === "denied"
-              ? "Notificaciones bloqueadas — el SOS no te llegará. Actívalas en los ajustes de tu navegador."
-              : "Activa las notificaciones para recibir alertas de emergencia de tu familia."}
+              ? "Notificaciones bloqueadas — no recibirás anuncios ni alertas familiares. Actívalas en ajustes."
+              : "Activa las notificaciones para no perderte anuncios, cumpleaños y avisos de tu familia."}
           </span>
           {notifPermission !== "denied" && (
             <button
@@ -1180,66 +1198,28 @@ export default function TreePage() {
         </div>
       )}
 
-      <div className="max-w-4xl mx-auto px-4 py-8 pb-24">
-        {/* Profile header */}
+      <div className="max-w-4xl mx-auto px-3 py-3 pb-24">
+        {/* SLIM profile strip */}
         {profile && (
-          <div className="card mb-6 flex items-center gap-5">
-            <div className="w-16 h-16 rounded-2xl bg-ceiba-700 flex-shrink-0 overflow-hidden">
-              {profile.avatar_url ? (
-                <img src={profile.avatar_url} alt={profile.first_name} className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-white text-2xl font-bold">
-                  {profile.first_name[0]}{profile.last_name[0]}
-                </div>
-              )}
+          <div className="flex items-center gap-2.5 mb-3">
+            <div className="w-9 h-9 rounded-xl bg-ceiba-700 flex-shrink-0 overflow-hidden flex items-center justify-center text-white font-bold text-sm">
+              {profile.avatar_url
+                ? <img src={profile.avatar_url} className="w-full h-full object-cover" alt="" />
+                : `${profile.first_name[0]}${profile.last_name?.[0] || ""}`}
             </div>
-            <div className="flex-1 min-w-0">
-              <h1 className="text-xl font-bold text-gray-900">{profile.first_name} {profile.last_name}</h1>
-              {profile.city && <p className="text-gray-500 text-sm">{profile.city}{profile.country ? `, ${profile.country}` : ""}</p>}
-              {profile.social_link && (
-                <a href={profile.social_link} target="_blank" rel="noopener noreferrer"
-                  className="text-xs text-blue-500 hover:underline truncate block">
-                  🔗 {profile.social_link.replace(/^https?:\/\/(www\.)?/, "").split("/")[0]}
-                </a>
-              )}
-              <div className="flex gap-3 mt-2 text-sm">
-                <span className="text-ceiba-700 font-semibold">{members.length} familiares</span>
-                <span className="text-gray-400">·</span>
-                <span className="text-gray-600">{joinedMembers.length} en Ceiba</span>
-                <span className="text-gray-400">·</span>
-                <span className="text-gray-600">{pendingMembers.length} por unirse</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <button onClick={shareTree} className="btn-primary text-sm flex items-center gap-2">
-                <Share2 size={16} /> Compartir árbol
-              </button>
-            </div>
+            <span className="font-semibold text-gray-800 flex-1 truncate">{profile.first_name} {profile.last_name}</span>
+            <span className="text-xs text-gray-400 flex-shrink-0">{members.length} familiares · {joinedMembers.length} en Ceiba</span>
+            <button onClick={shareTree} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors flex-shrink-0" title="Compartir árbol">
+              <Share2 size={16} />
+            </button>
           </div>
         )}
 
-        {/* Red familiar progress */}
+        {/* Red familiar progress — stays compact */}
         <NetworkBanner
           totalMembers={members.length}
           joinedMembers={members.filter(m => m.profile_id).length}
         />
-
-        {/* Hoy en tu familia */}
-        {profile && <TodayWidget userId={profile.id} />}
-
-        {/* Birthdays */}
-        {profile && <BirthdayWidget userId={profile.id} />}
-
-        {/* Suggestions */}
-        <NameMatchCards onAccepted={loadData} />
-        <SuggestionCards onAccepted={loadData} />
-
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <StatCard label="Familiares directos" value={bloodMembers.length} color="ceiba" />
-          <StatCard label="Familia política" value={affinityMembers.length} color="earth" />
-          <StatCard label="En Ceiba" value={joinedMembers.length} color="blue" />
-        </div>
 
         {/* Family list / graph */}
         {members.length === 0 ? (
@@ -1257,49 +1237,43 @@ export default function TreePage() {
             <p className="text-xs text-gray-400">💡 Empieza por quien más conoces de tu familia</p>
           </div>
         ) : (
-          <div className="space-y-4">
-            {/* View toggle + add button */}
+          <div className="space-y-3">
+            {/* Action bar — 1 CTA dominante */}
             <div className="flex items-center gap-2">
+              {/* PRIMARY: Agregar familiar */}
               <button
                 onClick={() => setShowModal(true)}
-                className="flex items-center gap-1.5 bg-ceiba-700 text-white hover:bg-ceiba-800 font-semibold text-sm px-3 py-1.5 rounded-lg transition-colors"
+                className="flex items-center gap-1.5 bg-ceiba-600 hover:bg-ceiba-700 text-white font-bold text-sm px-4 py-2 rounded-xl shadow-sm transition-colors flex-1"
               >
-                <Plus size={15} /> Agregar familiar
+                <Plus size={16} /> Agregar familiar
               </button>
+              {/* SECONDARY: Anunciar — icono only */}
               {joinedMembers.length > 0 && (
                 <button
                   onClick={() => setShowBroadcast(true)}
-                  className="flex items-center gap-1.5 bg-amber-500 text-white hover:bg-amber-600 font-semibold text-sm px-3 py-1.5 rounded-lg transition-colors"
-                  title="Enviar mensaje a toda la familia"
+                  className="p-2 rounded-xl border border-amber-200 text-amber-500 hover:bg-amber-50 transition-colors flex-shrink-0"
+                  title="Anunciar a la familia"
                 >
-                  <Megaphone size={15} /> Anunciar
+                  <Megaphone size={18} />
                 </button>
               )}
-              <div className="ml-auto flex items-center gap-2">
+              {/* View toggles — segmented control */}
+              <div className="flex items-center bg-gray-100 rounded-xl p-0.5 gap-0.5 flex-shrink-0">
                 <button
                   onClick={() => setView("graph")}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                    view === "graph" ? "bg-ceiba-700 text-white" : "text-gray-500 hover:bg-gray-100"
-                  }`}
-                >
-                  <GitFork size={15} /> Árbol
-                </button>
+                  className={`p-1.5 rounded-lg transition-colors ${view === "graph" ? "bg-white shadow text-ceiba-700" : "text-gray-400 hover:text-gray-600"}`}
+                  title="Árbol"
+                ><GitFork size={15} /></button>
                 <button
                   onClick={() => setView("list")}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                    view === "list" ? "bg-ceiba-700 text-white" : "text-gray-500 hover:bg-gray-100"
-                  }`}
-                >
-                  <List size={15} /> Lista
-                </button>
+                  className={`p-1.5 rounded-lg transition-colors ${view === "list" ? "bg-white shadow text-ceiba-700" : "text-gray-400 hover:text-gray-600"}`}
+                  title="Lista"
+                ><List size={15} /></button>
                 <button
                   onClick={activateMap}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                    view === "map" ? "bg-ceiba-700 text-white" : "text-gray-500 hover:bg-gray-100"
-                  }`}
-                >
-                  <MapIcon size={15} /> Mapa
-                </button>
+                  className={`p-1.5 rounded-lg transition-colors ${view === "map" ? "bg-white shadow text-ceiba-700" : "text-gray-400 hover:text-gray-600"}`}
+                  title="Mapa"
+                ><MapIcon size={15} /></button>
               </div>
             </div>
 
@@ -1374,6 +1348,14 @@ export default function TreePage() {
               );
             })()}
           </div>
+
+          {/* Engagement widgets — BELOW the tree so el árbol es el héroe */}
+          <div className="space-y-3 mt-4">
+            {profile && <TodayWidget userId={profile.id} />}
+            {profile && <BirthdayWidget userId={profile.id} />}
+            <NameMatchCards onAccepted={loadData} />
+            <SuggestionCards onAccepted={loadData} />
+          </div>
         )}
       </div>
 
@@ -1428,16 +1410,45 @@ export default function TreePage() {
       {/* Add / Edit Member Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
-            <div className="flex items-center justify-between mb-5">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold text-gray-900">
                 {editingMember ? "Editar familiar" : "Agregar familiar"}
               </h2>
-              <button onClick={() => { setShowModal(false); setEditingMember(null); setForm(EMPTY_FORM); setDuplicateWarning(null); }} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => { setShowModal(false); setEditingMember(null); setForm(EMPTY_FORM); setDuplicateWarning(null); setModalPhotoFile(null); setModalPhotoPreview(null); }} className="text-gray-400 hover:text-gray-600">
                 <X size={20} />
               </button>
             </div>
             <div className="space-y-3">
+              {/* Foto del familiar */}
+              {!editingMember && (
+                <div className="flex items-center gap-3 pb-1">
+                  <div
+                    onClick={() => modalPhotoRef.current?.click()}
+                    className="w-14 h-14 rounded-full flex-shrink-0 flex items-center justify-center cursor-pointer overflow-hidden border-2 border-dashed border-ceiba-200 hover:border-ceiba-400 bg-ceiba-50 transition-colors"
+                  >
+                    {modalPhotoPreview
+                      ? <img src={modalPhotoPreview} className="w-full h-full object-cover" alt="" />
+                      : <Camera size={20} className="text-ceiba-400" />}
+                  </div>
+                  <div>
+                    <button type="button" onClick={() => modalPhotoRef.current?.click()}
+                      className="text-sm font-medium text-ceiba-700 hover:text-ceiba-800 transition-colors">
+                      {modalPhotoPreview ? "Cambiar foto" : "Añadir foto"}
+                    </button>
+                    <p className="text-xs text-gray-400">Aparecerá en el árbol hasta que se registre</p>
+                  </div>
+                  <input ref={modalPhotoRef} type="file" accept="image/*" className="hidden"
+                    onChange={e => {
+                      const f = e.target.files?.[0];
+                      if (!f) return;
+                      if (f.size > 5 * 1024 * 1024) { toast.error("Foto menor a 5MB"); return; }
+                      setModalPhotoFile(f);
+                      setModalPhotoPreview(URL.createObjectURL(f));
+                    }}
+                  />
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Primer nombre <span className="text-red-500">*</span></label>
