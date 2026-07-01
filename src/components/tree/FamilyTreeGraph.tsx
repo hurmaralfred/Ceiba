@@ -131,6 +131,12 @@ interface LayoutEdge {
   kind: "blood" | "affinity" | "peer";
 }
 
+function normStr(s: string) {
+  return (s || "").toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ").trim();
+}
+
 function buildLayout(
   profile: Profile,
   members: FamilyMember[],
@@ -139,6 +145,32 @@ function buildLayout(
 ) {
   const memberGenMap = new Map<string, number>();
   members.forEach(m => memberGenMap.set(m.id, GENERATION[m.relation_type] ?? 0));
+
+  // Safety-net dedup: build direct member name keys to filter any duplicates
+  // that escaped the page-level filter (different name spellings, missing last names, etc.)
+  const directNameKeys = new Set<string>();
+  const directFirstWords = new Set<string>();
+  members.forEach(m => {
+    const fn = normStr(m.first_name); const ln = normStr(m.last_name || "");
+    const fn0 = fn.split(" ")[0]; const ln0 = ln.split(" ")[0];
+    directNameKeys.add(`${fn}|${ln}`);
+    if (fn0 && ln0) directNameKeys.add(`${fn0}|${ln0}`);
+    if (fn0.length >= 4) directFirstWords.add(fn0);
+  });
+
+  // Filter extended members before combining with direct members
+  const safeExtended = visibleExtended.filter(({ member: m }) => {
+    // If same profile_id as any direct member — definitely a duplicate
+    if (m.profile_id && members.some(dm => dm.profile_id === m.profile_id)) return false;
+    const fn = normStr(m.first_name); const ln = normStr(m.last_name || "");
+    const fn0 = fn.split(" ")[0]; const ln0 = ln.split(" ")[0];
+    // Full name or first-word match
+    if (directNameKeys.has(`${fn}|${ln}`)) return false;
+    if (fn0 && ln0 && directNameKeys.has(`${fn0}|${ln0}`)) return false;
+    // Extended has no last name: first-name match against any direct member
+    if (!ln && fn0.length >= 4 && directFirstWords.has(fn0)) return false;
+    return true;
+  });
 
   // Build raw node list
   const raw: Omit<LayoutNode, "cx" | "cy" | "r">[] = [
@@ -170,7 +202,7 @@ function buildLayout(
       isActive: isRecentlyActive((m as any).profile?.last_seen_at),
       isDeceased: !!(m as any).is_deceased,
     })),
-    ...visibleExtended.map(({ member: m, parentMemberId, inferredRelation }) => {
+    ...safeExtended.map(({ member: m, parentMemberId, inferredRelation }) => {
       const parentGen = memberGenMap.get(parentMemberId) ?? 0;
       const parentMember = members.find(pm => pm.id === parentMemberId);
       const parentHint = POS_HINT[parentMember?.relation_type ?? ""] ?? 0;

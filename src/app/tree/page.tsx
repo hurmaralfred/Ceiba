@@ -490,6 +490,8 @@ export default function TreePage() {
         // Build multiple name keys per member for fuzzy matching:
         // full name, first+firstlast, firstword-only when member has NO last name
         const myNameKeys = new Set<string>();
+        // Set of first-name first-words (≥4 chars) for no-last-name fuzzy check
+        const myFirstWords = new Set<string>();
         myMembers.forEach(m => {
           const fn = norm(m.first_name);
           const ln = norm(m.last_name || "");
@@ -499,6 +501,8 @@ export default function TreePage() {
           // When this member has NO last name, add first-name-only key
           // so extended members with same first name but added last name are still deduped
           if (!ln && fn0.length >= 4) myNameKeys.add(`${fn0}|__nolast__`);
+          // Always track first words so we can catch extended members stored WITHOUT last name
+          if (fn0.length >= 4) myFirstWords.add(fn0);
         });
 
         // For peer link detection: build a map from norm-name key → direct member
@@ -528,7 +532,10 @@ export default function TreePage() {
                 myNameKeys.has(`${fn}|${ln}`) ||
                 (ln0.length > 0 && myNameKeys.has(`${fn0}|${ln0}`)) ||
                 // Extended has last name but direct was stored without one:
-                (fn0.length >= 4 && myNameKeys.has(`${fn0}|__nolast__`));
+                (fn0.length >= 4 && myNameKeys.has(`${fn0}|__nolast__`)) ||
+                // Extended has NO last name but direct member has same first name:
+                // e.g. extended "Rosa" matches direct "Rosa Cifuentes"
+                (ln === "" && fn0.length >= 4 && myFirstWords.has(fn0));
               if (isDuplicate) {
                 // This extended member IS a direct member — create a peer link
                 const directMember = myMemberByName.get(`${fn0}|${ln0}`) || myMemberByName.get(`${fn0}|`);
