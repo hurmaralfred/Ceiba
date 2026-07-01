@@ -503,6 +503,9 @@ export default function TreePage() {
 
       if (extData && extData.length > 0) {
         const myMemberIds = new Set(myMembers.map(m => m.profile_id).filter(Boolean));
+        // Person-IDs: shared UUID that identifies the same real-world person across trees.
+        // More reliable than name matching — works even when names are stored differently.
+        const myPersonIds = new Set<string>(myMembers.map(m => (m as any).person_id).filter(Boolean));
 
         // Normalize: remove accents, lowercase, collapse spaces
         const norm = (s: string) =>
@@ -543,6 +546,8 @@ export default function TreePage() {
           .filter(em => {
             if (em.profile_id === user.id) return false;
             if (em.profile_id && myMemberIds.has(em.profile_id)) return false;
+            // person_id is the canonical "same real-world person" key (reliable, no name matching)
+            if ((em as any).person_id && myPersonIds.has((em as any).person_id)) return false;
             const fn = norm(em.first_name);
             const ln = norm(em.last_name || "");
             // Check multiple key formats
@@ -823,6 +828,7 @@ export default function TreePage() {
         // deceased/unregistered members (profile_id = null).
         const finalExtended = extended.filter(e => {
           if (e.member.profile_id && myMemberIds.has(e.member.profile_id)) return false;
+          if ((e.member as any).person_id && myPersonIds.has((e.member as any).person_id)) return false;
           const fn = norm(e.member.first_name);
           const ln = norm(e.member.last_name || "");
           if (fn.length >= 3) {
@@ -969,7 +975,7 @@ export default function TreePage() {
     if (duplicateWarning.matchedFamilyMemberId) {
       const { data: orig } = await supabase
         .from("family_members")
-        .select("first_name, last_name, profile_id")
+        .select("first_name, last_name, profile_id, person_id")
         .eq("id", duplicateWarning.matchedFamilyMemberId)
         .maybeSingle();
       if (orig) {
@@ -1006,6 +1012,8 @@ export default function TreePage() {
         relation_kind: kind,
         is_deceased: form.is_deceased,
         profile_id: linkedProfileId || null,
+        // Share the same person_id so this entry deduplicates in all connected trees
+        person_id: (orig as any)?.person_id || duplicateWarning.matchedFamilyMemberId || undefined,
       });
       if (error) { toast.error("Error al guardar"); setSaving(false); return; }
       toast.success("Familiar vinculado correctamente");
@@ -1054,6 +1062,9 @@ export default function TreePage() {
       relation_kind: kind,
       is_deceased: form.is_deceased,
       parent_member_id: form.parent_member_id || null,
+      // Every new member gets their own UUID as canonical identity.
+      // This gets shared with other trees when duplicate is confirmed via admin page.
+      person_id: crypto.randomUUID(),
     }).select("id").single();
     setSaving(false);
     if (error) { toast.error("Error al guardar"); return; }

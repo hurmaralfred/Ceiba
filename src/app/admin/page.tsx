@@ -29,6 +29,13 @@ interface Member {
   profile_id: string | null;
   parent_member_id: string | null;
   is_deceased: boolean | null;
+  person_id: string | null;
+}
+
+interface SamePersonCandidate {
+  direct: Member;
+  ext: { id: string; first_name: string; last_name: string | null; relation_type: string; added_by: string; person_id: string | null };
+  connectorName: string;
 }
 
 interface ProfileCandidate {
@@ -54,10 +61,11 @@ export default function AdminPage() {
   const supabase = createClient();
 
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"unlinked" | "orphans" | "dupes">("unlinked");
+  const [tab, setTab] = useState<"unlinked" | "orphans" | "dupes" | "same_person">("unlinked");
   const [unlinked, setUnlinked] = useState<ProfileCandidate[]>([]);
   const [orphans, setOrphans] = useState<OrphanEntry[]>([]);
   const [dupes, setDupes] = useState<DupEntry[]>([]);
+  const [samePerson, setSamePerson] = useState<SamePersonCandidate[]>([]);
   const [working, setWorking] = useState<string | null>(null);
   const [myMembers, setMyMembers] = useState<Member[]>([]);
 
@@ -72,7 +80,7 @@ export default function AdminPage() {
     // All user's direct members
     const { data: members } = await supabase
       .from("family_members")
-      .select("id, first_name, last_name, relation_type, profile_id, parent_member_id, is_deceased")
+      .select("id, first_name, last_name, relation_type, profile_id, parent_member_id, is_deceased, person_id")
       .eq("added_by", user.id);
 
     if (!members) { setLoading(false); return; }
@@ -130,6 +138,51 @@ export default function AdminPage() {
     }
     setDupes(dupeList);
 
+    // ── 4. Misma persona: direct member vs. extended member with same name ──
+    // Cross-tree duplicates: someone appears in my direct tree AND in a connected tree.
+    const joinedProfileIds = members.filter(m => m.profile_id).map(m => m.profile_id!);
+    if (joinedProfileIds.length > 0) {
+      const { data: extMembers } = await supabase
+        .from("family_members")
+        .select("id, first_name, last_name, relation_type, added_by, person_id")
+        .in("added_by", joinedProfileIds);
+
+      const candidates: SamePersonCandidate[] = [];
+      const seen = new Set<string>(); // avoid showing same pair twice
+
+      for (const direct of members) {
+        const dfn = normW(direct.first_name);
+        const dln = normW(direct.last_name || "");
+        if (dfn.length < 3) continue;
+
+        for (const ext of extMembers || []) {
+          // Already linked to same person — not a candidate
+          if (direct.person_id && ext.person_id && direct.person_id === ext.person_id) continue;
+          const efn = normW(ext.first_name);
+          const eln = normW(ext.last_name || "");
+          // Name match: first word of first name must match; last name must match if both present
+          if (dfn !== efn) continue;
+          if (dln.length >= 3 && eln.length >= 3 && dln !== eln) continue;
+
+          const pairKey = [direct.id, ext.id].sort().join("|");
+          if (seen.has(pairKey)) continue;
+          seen.add(pairKey);
+
+          const connector = members.find(m => m.profile_id === ext.added_by);
+          candidates.push({
+            direct,
+            ext,
+            connectorName: connector
+              ? `${connector.first_name}${connector.last_name ? " " + connector.last_name : ""}`
+              : "un familiar",
+          });
+        }
+      }
+      setSamePerson(candidates);
+    } else {
+      setSamePerson([]);
+    }
+
     setLoading(false);
   };
 
@@ -156,6 +209,19 @@ export default function AdminPage() {
     setWorking(null);
   };
 
+  const linkPersons = async (directId: string, extId: string) => {
+    const key = directId + extId;
+    setWorking(key);
+    const { error } = await supabase.rpc("link_persons", { member_id_a: directId, member_id_b: extId });
+    if (error) { toast.error("Error: " + error.message); }
+    else { toast.success("Vinculados como la misma persona ✓"); await loadAll(); }
+    setWorking(null);
+  };
+
+  const dismissSamePerson = (directId: string, extId: string) => {
+    setSamePerson(prev => prev.filter(c => !(c.direct.id === directId && c.ext.id === extId)));
+  };
+
   const deleteMember = async (memberId: string) => {
     if (!confirm("¿Eliminar este familiar de tu árbol?")) return;
     setWorking(memberId);
@@ -176,9 +242,10 @@ export default function AdminPage() {
   );
 
   const tabs = [
-    { id: "unlinked", label: "Sin vincular", count: unlinked.length },
-    { id: "orphans",  label: "Sin padre",    count: orphans.length },
-    { id: "dupes",    label: "Duplicados",   count: dupes.length },
+    { id: "unlinked",    label: "Sin vincular",   count: unlinked.length },
+    { id: "orphans",     label: "Sin padre",      count: orphans.length },
+    { id: "dupes",       label: "Duplicados",     count: dupes.length },
+    { id: "same_person", label: "Misma persona",  count: samePerson.length },
   ] as const;
 
   return (
@@ -368,6 +435,65 @@ export default function AdminPage() {
                     </p>
                   </div>
                 ))}
+              </>
+            )}
+          </>
+        )}
+
+        {/* ── TAB 4: Misma persona ────────────────────────────── */}
+        {tab === "same_person" && (
+          <>
+            {samePerson.length === 0 ? (
+              <EmptyState
+                icon={<Link2 size={32} className="text-ceiba-500" />}
+                title="Sin duplicados cruzados"
+                desc="No se detectaron personas que aparezcan tanto en tu árbol como en el árbol de tus familiares."
+              />
+            ) : (
+              <>
+                <p className="text-xs text-gray-500 px-1">
+                  Estas personas aparecen en <strong>tu árbol directo</strong> y también en el árbol de un familiar.
+                  Si son la misma persona real, vincúlalas — así solo aparecen una vez en el árbol.
+                </p>
+                {samePerson.map(({ direct: d, ext: e, connectorName }) => {
+                  const key = d.id + e.id;
+                  return (
+                    <div key={key} className="bg-white rounded-2xl p-4 shadow-sm border border-ceiba-100 space-y-3">
+                      <div className="text-xs font-semibold text-ceiba-700 mb-1">🔗 Posible persona duplicada</div>
+
+                      {/* Direct member */}
+                      <div className="bg-ceiba-50 rounded-xl px-3 py-2.5">
+                        <div className="text-[10px] font-bold text-ceiba-600 uppercase tracking-wide mb-1">En tu árbol</div>
+                        <div className="font-semibold text-gray-900 text-sm">{d.first_name} {d.last_name}</div>
+                        <div className="text-xs text-gray-500">{label(d.relation_type)}</div>
+                      </div>
+
+                      {/* Extended member */}
+                      <div className="bg-gray-50 rounded-xl px-3 py-2.5">
+                        <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">En el árbol de {connectorName}</div>
+                        <div className="font-semibold text-gray-900 text-sm">{e.first_name} {e.last_name}</div>
+                        <div className="text-xs text-gray-500">{label(e.relation_type)}</div>
+                      </div>
+
+                      <div className="flex gap-2 pt-1">
+                        <button
+                          onClick={() => linkPersons(d.id, e.id)}
+                          disabled={working === key}
+                          className="flex-1 flex items-center justify-center gap-1.5 bg-ceiba-600 text-white text-xs font-bold px-3 py-2 rounded-xl hover:bg-ceiba-700 disabled:opacity-50 transition-colors"
+                        >
+                          <Link2 size={13} />
+                          {working === key ? "Vinculando..." : "Son la misma persona"}
+                        </button>
+                        <button
+                          onClick={() => dismissSamePerson(d.id, e.id)}
+                          className="px-3 py-2 rounded-xl border border-gray-200 text-xs text-gray-500 hover:bg-gray-50 transition-colors"
+                        >
+                          No, son distintas
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </>
             )}
           </>
