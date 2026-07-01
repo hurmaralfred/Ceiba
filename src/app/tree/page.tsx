@@ -254,6 +254,7 @@ import InstallBanner from "@/components/InstallBanner";
 import TreeErrorBoundary from "@/components/TreeErrorBoundary";
 import SuggestionCards from "@/components/SuggestionCards";
 import NameMatchCards from "@/components/NameMatchCards";
+import FamilyDiscoveryWizard from "@/components/FamilyDiscoveryWizard";
 import BirthdayWidget from "@/components/BirthdayWidget";
 import TodayWidget from "@/components/TodayWidget";
 import NetworkBanner from "@/components/NetworkBanner";
@@ -295,6 +296,8 @@ export default function TreePage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [view, setView] = useState<"graph" | "list" | "map">("graph");
+  const [showDiscovery, setShowDiscovery] = useState(false);
+  const [pendingMatchCount, setPendingMatchCount] = useState(0);
   const [myLocation, setMyLocation] = useState<[number, number] | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [showBroadcast, setShowBroadcast] = useState(false);
@@ -364,6 +367,15 @@ export default function TreePage() {
       supabase.from("profiles").select("*").eq("id", user.id).single(),
       supabase.from("family_members").select("*").eq("added_by", user.id),
     ]);
+
+    // Check for pending family discovery matches (fire-and-forget for UI badge)
+    if (profileData?.first_name) {
+      supabase.rpc("find_name_matches", {
+        p_first_name: profileData.first_name,
+        p_last_name:  profileData.last_name || "",
+        p_user_id:    user.id,
+      }).then(({ data }) => setPendingMatchCount((data || []).length));
+    }
 
     // Deduplicate my own members by first name (keep the one with profile_id, or the first)
     const normName = (s: string) =>
@@ -1454,7 +1466,28 @@ export default function TreePage() {
           <div className="space-y-3 mt-4">
             {profile && <TodayWidget userId={profile.id} />}
             {profile && <BirthdayWidget userId={profile.id} />}
-            <NameMatchCards onAccepted={loadData} />
+            {/* Discovery banner: shown when someone already added this user */}
+            {pendingMatchCount > 0 && !showDiscovery && (
+              <button
+                onClick={() => setShowDiscovery(true)}
+                className="w-full flex items-center gap-3 bg-gradient-to-r from-ceiba-800 to-ceiba-700 text-white rounded-2xl px-4 py-3.5 shadow-md hover:from-ceiba-700 hover:to-ceiba-600 transition-all"
+              >
+                <div className="w-9 h-9 bg-ceiba-600/60 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <span className="text-lg">🌳</span>
+                </div>
+                <div className="flex-1 text-left">
+                  <p className="font-bold text-sm leading-tight">
+                    {pendingMatchCount === 1
+                      ? "Alguien ya te agregó a su árbol"
+                      : `${pendingMatchCount} personas ya te agregaron`}
+                  </p>
+                  <p className="text-ceiba-300 text-xs mt-0.5">
+                    Confirma y tu árbol se construye solo
+                  </p>
+                </div>
+                <span className="text-ceiba-400 text-lg">›</span>
+              </button>
+            )}
             <SuggestionCards onAccepted={loadData} />
           </div>
         )}
@@ -1724,6 +1757,23 @@ export default function TreePage() {
         </div>
       )}
       <BottomNav />
+
+      {/* Family Discovery Wizard — full-screen overlay */}
+      {showDiscovery && profile && (
+        <FamilyDiscoveryWizard
+          userId={profile.id}
+          myFirstName={profile.first_name}
+          myLastName={profile.last_name}
+          onDone={(count) => {
+            setShowDiscovery(false);
+            setPendingMatchCount(0);
+            if (count > 0) loadData();
+          }}
+          onSkip={() => {
+            setShowDiscovery(false);
+          }}
+        />
+      )}
     </div>
   );
 }

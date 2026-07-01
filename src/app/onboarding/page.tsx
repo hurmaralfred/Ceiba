@@ -1,9 +1,10 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { TreePine, Plus, Trash2, ChevronRight, ChevronLeft, Check, Users, Network } from "lucide-react";
+import { TreePine, Plus, Trash2, ChevronRight, ChevronLeft, Check, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { RelationType, RELATION_LABELS, INVERSE_RELATION } from "@/lib/types";
+import { RelationType, RELATION_LABELS } from "@/lib/types";
+import FamilyDiscoveryWizard from "@/components/FamilyDiscoveryWizard";
 import toast from "react-hot-toast";
 
 type FamilyEntry = {
@@ -63,9 +64,7 @@ export default function OnboardingPage() {
     { first_name: "", last_name: "", email: "", birth_date: "", relation_type: "father", is_deceased: false, parent_member_id: "" },
   ]);
 
-  const [nameMatches, setNameMatches] = useState<NameMatch[]>([]);
-  const [respondingMatch, setRespondingMatch] = useState<string | null>(null);
-  const [confirmedMatches, setConfirmedMatches] = useState<NameMatch[]>([]); // confirmed in this session
+  const [confirmedMatches, setConfirmedMatches] = useState<NameMatch[]>([]); // set by wizard on done
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
@@ -95,59 +94,12 @@ export default function OnboardingPage() {
         country: profile.country,
       }).eq("id", userId);
 
-      if (userFirstName) {
-        const { data: matches } = await supabase.rpc("find_name_matches", {
-          p_first_name: userFirstName,
-          p_last_name: userLastName || "",
-          p_user_id: userId,
-        });
-        if (matches && matches.length > 0) {
-          setNameMatches(matches);
-          setStep(1);
-        } else {
-          setStep(2); // no matches → manual add family
-        }
-      } else {
-        setStep(2);
-      }
+      // Always go to step 1 (wizard) — it handles both match-found and no-match cases
+      setStep(1);
     } catch (err: any) {
       toast.error(err.message);
     } finally {
       setLoading(false);
-    }
-  };
-
-  // ── Confirm a match ────────────────────────────────────────────────────────
-  const confirmMatch = async (match: NameMatch) => {
-    if (!userId) return;
-    setRespondingMatch(match.family_member_id);
-    try {
-      const { error } = await supabase.rpc("confirm_name_match", {
-        p_family_member_id: match.family_member_id,
-        p_user_id: userId,
-      });
-      if (error) throw error;
-      setNameMatches(prev => prev.filter(m => m.family_member_id !== match.family_member_id));
-      setConfirmedMatches(prev => [...prev, match]);
-      toast.success(`¡Conectado con ${match.adder_first_name}!`);
-    } catch (err: any) {
-      toast.error(err.message);
-    } finally {
-      setRespondingMatch(null);
-    }
-  };
-
-  const rejectMatch = (id: string) => {
-    setNameMatches(prev => prev.filter(m => m.family_member_id !== id));
-  };
-
-  // ── After reviewing all matches ────────────────────────────────────────────
-  // If user confirmed ≥1 match → tree is already partially built → skip "add family"
-  const continueAfterMatches = () => {
-    if (confirmedMatches.length > 0) {
-      setStep(3); // skip manual add → Done
-    } else {
-      setStep(2); // no matches confirmed → ask to add family manually
     }
   };
 
@@ -207,7 +159,7 @@ export default function OnboardingPage() {
       <div className="flex items-center gap-2 mb-8">
         {[0, 1, 2].map(i => {
           // Compactar: si no hay matches ni se mostró paso 1, skip dot de matches
-          const dots = nameMatches.length > 0 || step === 1 || confirmedMatches.length > 0
+          const dots = step === 1 || confirmedMatches.length > 0
             ? ["Perfil", "Conexiones", "Listo"]
             : ["Perfil", "Tu familia", "Listo"];
           const currentDot = step === 0 ? 0 : step === 1 ? 1 : step === 2 ? 1 : 2;
@@ -274,125 +226,19 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* ── STEP 1: Name Matches ─────────────────────────────────────────── */}
-        {step === 1 && (
-          <div>
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-12 h-12 bg-ceiba-100 rounded-2xl flex items-center justify-center shrink-0">
-                <Network size={22} className="text-ceiba-700" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-gray-800">¡Tu familia ya te conoce!</h2>
-                <p className="text-gray-500 text-sm">
-                  {nameMatches.length > 0
-                    ? `${nameMatches.length + confirmedMatches.length} familiar${nameMatches.length + confirmedMatches.length > 1 ? "es te añadieron" : " te añadió"} antes de que llegaras.`
-                    : confirmedMatches.length > 0
-                    ? `Confirmaste ${confirmedMatches.length} conexión${confirmedMatches.length > 1 ? "es" : ""}. ¡Tu árbol ya está tomando forma!`
-                    : ""}
-                </p>
-              </div>
-            </div>
-
-            {/* Confirmed this session */}
-            {confirmedMatches.length > 0 && (
-              <div className="mb-4 bg-green-50 border border-green-100 rounded-2xl p-3 space-y-1">
-                {confirmedMatches.map(m => (
-                  <div key={m.family_member_id} className="flex items-center gap-2 text-sm text-green-800">
-                    <Check size={14} className="text-green-600 shrink-0" />
-                    <span>
-                      Conectado con <strong>{m.adder_first_name} {m.adder_last_name}</strong> como su{" "}
-                      <strong>{RELATION_LABELS[m.relation_type as RelationType] || m.relation_type}</strong>
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Pending matches */}
-            {nameMatches.length > 0 ? (
-              <div className="space-y-3 mb-6">
-                {nameMatches.map(match => {
-                  const inverseRelation = INVERSE_RELATION[match.relation_type as RelationType] || "other";
-                  const relationLabel = RELATION_LABELS[match.relation_type as RelationType] || match.relation_type;
-                  const myLabel = RELATION_LABELS[inverseRelation as RelationType] || inverseRelation;
-                  return (
-                    <div key={match.family_member_id} className="border border-ceiba-100 rounded-2xl p-4 bg-ceiba-50">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="w-9 h-9 bg-ceiba-700 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0">
-                          {match.adder_first_name[0]}{match.adder_last_name?.[0] || ""}
-                        </div>
-                        <div>
-                          <p className="font-semibold text-gray-900 text-sm">
-                            {match.adder_first_name} {match.adder_last_name}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            te añadió como su <span className="font-medium text-ceiba-700">{relationLabel}</span>
-                            {" "}→ él/ella sería tu <span className="font-medium text-ceiba-700">{myLabel}</span>
-                          </p>
-                        </div>
-                      </div>
-                      <p className="text-xs text-gray-400 mb-3">
-                        Si confirmas, su árbol familiar se conecta al tuyo automáticamente.
-                      </p>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => confirmMatch(match)}
-                          disabled={respondingMatch === match.family_member_id}
-                          className="flex-1 flex items-center justify-center gap-1 bg-ceiba-700 text-white text-sm font-bold py-2 rounded-xl hover:bg-ceiba-800 transition-colors disabled:opacity-50"
-                        >
-                          <Check size={15} /> Sí, soy yo
-                        </button>
-                        <button
-                          onClick={() => rejectMatch(match.family_member_id)}
-                          disabled={respondingMatch === match.family_member_id}
-                          className="flex-1 flex items-center justify-center gap-1 bg-gray-100 text-gray-600 text-sm font-bold py-2 rounded-xl hover:bg-gray-200 transition-colors"
-                        >
-                          No soy yo
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              // All matches reviewed
-              <div className={`rounded-2xl p-4 mb-6 text-center ${
-                confirmedMatches.length > 0
-                  ? "bg-green-50 border border-green-100"
-                  : "bg-gray-50 border border-gray-100"
-              }`}>
-                {confirmedMatches.length > 0 ? (
-                  <>
-                    <p className="font-semibold text-green-800 mb-1">¡Tu árbol ya tiene conexiones!</p>
-                    <p className="text-sm text-green-700">
-                      Confirmaste {confirmedMatches.length} vínculo{confirmedMatches.length > 1 ? "s" : ""} familiar{confirmedMatches.length > 1 ? "es" : ""}.
-                      Tu familia en Ceiba puede ver que ya llegaste.
-                    </p>
-                  </>
-                ) : (
-                  <p className="text-gray-500 text-sm">Ninguna conexión confirmada. Puedes agregar tu familia manualmente.</p>
-                )}
-              </div>
-            )}
-
-            <div className="flex justify-between">
-              <button onClick={() => setStep(0)} className="btn-secondary flex items-center gap-2">
-                <ChevronLeft size={18} /> Atrás
-              </button>
-              <button
-                onClick={continueAfterMatches}
-                disabled={nameMatches.length > 0 && confirmedMatches.length === 0}
-                className="btn-primary flex items-center gap-2 disabled:opacity-40"
-              >
-                {nameMatches.length > 0
-                  ? "Revisar primero las sugerencias"
-                  : confirmedMatches.length > 0
-                  ? "Ver mi árbol →"
-                  : "Agregar familia manualmente"}
-                {nameMatches.length === 0 && <ChevronRight size={18} />}
-              </button>
-            </div>
-          </div>
+        {/* ── STEP 1: Family Discovery Wizard ──────────────────────────── */}
+        {step === 1 && userId && (
+          <FamilyDiscoveryWizard
+            userId={userId}
+            myFirstName={userFirstName}
+            myLastName={userLastName || null}
+            onDone={(count) => {
+              setConfirmedMatches(count > 0 ? [{ family_member_id: "wizard" } as any] : []);
+              if (count > 0) setStep(3);
+              else setStep(2);
+            }}
+            onSkip={() => setStep(2)}
+          />
         )}
 
         {/* ── STEP 2: Manual add family (only shown when no matches confirmed) ── */}
