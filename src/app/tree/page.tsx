@@ -375,7 +375,23 @@ export default function TreePage() {
         seenNames.set(key, m);
       }
     }
-    let myMembers = Array.from(seenNames.values());
+    // Dedup pass 2: same profile_id → keep only one (catches cases where
+    // the same person was added manually AND via invite with different name formats)
+    const seenProfileId = new Map<string, any>();
+    for (const m of seenNames.values()) {
+      if (!m.profile_id) continue;
+      if (!seenProfileId.has(m.profile_id)) {
+        seenProfileId.set(m.profile_id, m);
+      }
+      // Prefer the one that has a last_name (more complete record)
+      else if (!seenProfileId.get(m.profile_id).last_name && m.last_name) {
+        seenProfileId.set(m.profile_id, m);
+      }
+    }
+    let myMembers = Array.from(seenNames.values()).filter(m => {
+      if (!m.profile_id) return true;
+      return seenProfileId.get(m.profile_id) === m;
+    });
     setProfile(profileData);
 
     // Auto-link members who registered independently (match by email OR name+apellido)

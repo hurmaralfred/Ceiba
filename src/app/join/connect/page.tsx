@@ -84,22 +84,57 @@ function ConnectContent() {
         .single();
 
       // 1. Add referrer to MY tree
+      // Check by profile_id first, then by name (in case they were added manually without profile_id)
+      const normFirst = (s: string) => (s || "").toLowerCase()
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().split(" ")[0];
+
       const { data: existingRef } = await supabase
         .from("family_members")
-        .select("id")
+        .select("id, profile_id")
         .eq("added_by", user.id)
         .eq("profile_id", referrer.id)
         .maybeSingle();
 
       if (!existingRef) {
-        await supabase.from("family_members").insert({
-          added_by: user.id,
-          profile_id: referrer.id,
-          first_name: referrer.first_name,
-          last_name: referrer.last_name || null,
-          relation_type: myRelationToRef,
-          relation_kind: kind,
+        // Also check by name — referrer may have been added manually without profile_id
+        const { data: allMyMembers } = await supabase
+          .from("family_members")
+          .select("id, first_name, last_name, profile_id")
+          .eq("added_by", user.id)
+          .is("profile_id", null);
+
+        const refFn = normFirst(referrer.first_name);
+        const refLn = normFirst(referrer.last_name || "");
+
+        const existingByName = (allMyMembers || []).find(m => {
+          const mFn = normFirst(m.first_name);
+          const mLn = normFirst(m.last_name || "");
+          if (mFn !== refFn) return false;
+          if (refLn && mLn) return mLn === refLn;
+          return true; // one side has no last name → first name match is enough
         });
+
+        if (existingByName) {
+          // Update the existing manual row with the real profile_id
+          await supabase.from("family_members")
+            .update({
+              profile_id: referrer.id,
+              first_name: referrer.first_name,
+              last_name: referrer.last_name || null,
+              relation_type: myRelationToRef,
+              relation_kind: kind,
+            })
+            .eq("id", existingByName.id);
+        } else {
+          await supabase.from("family_members").insert({
+            added_by: user.id,
+            profile_id: referrer.id,
+            first_name: referrer.first_name,
+            last_name: referrer.last_name || null,
+            relation_type: myRelationToRef,
+            relation_kind: kind,
+          });
+        }
       }
 
       // 2. Add ME to referrer's tree
