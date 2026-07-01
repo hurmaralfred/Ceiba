@@ -723,8 +723,19 @@ export default function TreePage() {
       }
 
       // ── PASO 3: Tercer salto ──────────────────────────────────────────────────
-      // Familia de los extended members que también están en Ceiba.
-      const joinedExtended = extended.filter(e => !!(e.member as any).profile_id);
+      // Familia de los extended members CERCANOS que también están en Ceiba.
+      // Limitamos a relaciones de primer grado (tíos, hermanos políticos, etc.)
+      // para evitar que la red explote con primos de primos de primos.
+      const CLOSE_RELATIONS = new Set([
+        "uncle","aunt","brother_in_law","sister_in_law",
+        "father_in_law","mother_in_law","nephew","niece",
+        "grandfather_paternal","grandfather_maternal",
+        "grandmother_paternal","grandmother_maternal",
+      ]);
+      const joinedExtended = extended.filter(e =>
+        !!(e.member as any).profile_id &&
+        CLOSE_RELATIONS.has(e.inferredRelation ?? "")
+      );
       const extProfileIds = [...new Set(
         joinedExtended.map(e => (e.member as any).profile_id as string).filter(Boolean)
       )];

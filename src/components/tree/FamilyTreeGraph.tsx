@@ -208,11 +208,17 @@ function buildLayout(
       isDeceased: !!(m as any).is_deceased,
     })),
     ...safeExtended.map(({ member: m, parentMemberId, inferredRelation }) => {
-      const parentGen = memberGenMap.get(parentMemberId) ?? 0;
-      const parentMember = members.find(pm => pm.id === parentMemberId);
-      const parentHint = POS_HINT[parentMember?.relation_type ?? ""] ?? 0;
-      const extGen = parentGen + (GENERATION[m.relation_type] ?? 0);
-      const extHint = parentHint + (POS_HINT[m.relation_type] ?? 0) * 0.5;
+      // Use inferredRelation's generation directly — it already tells us where this person
+      // sits RELATIVE TO ME, regardless of how deep in the network they came from.
+      // Fallback to parentGen+childRelation only when inferredRelation is unknown.
+      const infRel = (inferredRelation && inferredRelation !== "other") ? inferredRelation : null;
+      const extGen = infRel
+        ? (GENERATION[infRel] ?? 0)
+        : (memberGenMap.get(parentMemberId) ?? 0) + (GENERATION[m.relation_type] ?? 0);
+      const extHint = infRel
+        ? (POS_HINT[infRel] ?? 0)
+        : ((POS_HINT[members.find(pm => pm.id === parentMemberId)?.relation_type ?? ""] ?? 0)
+            + (POS_HINT[m.relation_type] ?? 0) * 0.5);
 
       const isGreatGrandparent = extGen <= -3 && !!inferredRelation &&
         (inferredRelation.includes("grandfather") || inferredRelation.includes("grandmother"));
