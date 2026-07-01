@@ -10,7 +10,10 @@ type FamilyEntry = {
   first_name: string;
   last_name: string;
   email: string;
+  birth_date: string;
   relation_type: RelationType;
+  is_deceased: boolean;
+  parent_member_id: string; // for nephew/niece
 };
 
 type NameMatch = {
@@ -29,7 +32,7 @@ const RELATION_GROUPS = [
   {
     label: "Familia directa (sangre)",
     kind: "blood" as const,
-    options: ["father","mother","brother","sister","half_brother","half_sister","son","daughter","grandfather_paternal","grandmother_paternal","grandfather_maternal","grandmother_maternal","grandson","granddaughter","uncle","aunt","cousin"] as RelationType[],
+    options: ["father","mother","brother","sister","half_brother","half_sister","son","daughter","nephew","niece","grandfather_paternal","grandmother_paternal","grandfather_maternal","grandmother_maternal","grandson","granddaughter","uncle","aunt","cousin"] as RelationType[],
   },
   {
     label: "Familia política (afinidad)",
@@ -49,7 +52,7 @@ export default function OnboardingPage() {
 
   const [profile, setProfile] = useState({ bio: "", birth_year: "", city: "", country: "" });
   const [members, setMembers] = useState<FamilyEntry[]>([
-    { first_name: "", last_name: "", email: "", relation_type: "father" },
+    { first_name: "", last_name: "", email: "", birth_date: "", relation_type: "father", is_deceased: false, parent_member_id: "" },
   ]);
 
   // Name match step
@@ -74,14 +77,14 @@ export default function OnboardingPage() {
   }, []);
 
   const addMember = () => {
-    setMembers(m => [...m, { first_name: "", last_name: "", email: "", relation_type: "mother" }]);
+    setMembers(m => [...m, { first_name: "", last_name: "", email: "", birth_date: "", relation_type: "mother", is_deceased: false, parent_member_id: "" }]);
   };
 
   const removeMember = (i: number) => {
     setMembers(m => m.filter((_, idx) => idx !== i));
   };
 
-  const updateMember = (i: number, field: keyof FamilyEntry, value: string) => {
+  const updateMember = (i: number, field: keyof FamilyEntry, value: string | boolean) => {
     setMembers(m => m.map((mem, idx) => idx === i ? { ...mem, [field]: value } : mem));
   };
 
@@ -156,8 +159,11 @@ export default function OnboardingPage() {
         first_name: m.first_name.trim(),
         last_name: m.last_name.trim() || null,
         email: m.email.trim() || null,
+        birth_date: m.birth_date || null,
         relation_type: m.relation_type,
         relation_kind: RELATION_GROUPS[0].options.includes(m.relation_type) ? "blood" : "affinity",
+        is_deceased: m.is_deceased,
+        parent_member_id: m.parent_member_id || null,
       }));
       const { error } = await supabase.from("family_members").insert(rows);
       if (error) throw error;
@@ -331,7 +337,7 @@ export default function OnboardingPage() {
             <p className="text-gray-500 text-sm mb-5">
               Empieza con los que conoces. Después podrás invitarlos para que se unan y el árbol crezca solo.
             </p>
-            <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-1">
+            <div className="space-y-4 max-h-[55vh] overflow-y-auto pr-1">
               {members.map((member, i) => (
                 <div key={i} className="border border-gray-200 rounded-xl p-4 bg-gray-50 space-y-3">
                   <div className="flex justify-between items-center">
@@ -342,20 +348,20 @@ export default function OnboardingPage() {
                       </button>
                     )}
                   </div>
+
+                  {/* Nombre + Apellido */}
                   <div className="grid grid-cols-2 gap-3">
-                    <input type="text" className="input-field text-sm" placeholder="Nombre *"
+                    <input type="text" className="input-field text-sm" placeholder="Nombre(s) *"
                       value={member.first_name}
                       onChange={e => updateMember(i, "first_name", e.target.value)}
                     />
-                    <input type="text" className="input-field text-sm" placeholder="Apellido"
+                    <input type="text" className="input-field text-sm" placeholder="Apellido(s)"
                       value={member.last_name}
                       onChange={e => updateMember(i, "last_name", e.target.value)}
                     />
                   </div>
-                  <input type="email" className="input-field text-sm" placeholder="Correo (para invitarlo)"
-                    value={member.email}
-                    onChange={e => updateMember(i, "email", e.target.value)}
-                  />
+
+                  {/* Parentesco */}
                   <select
                     className="input-field text-sm"
                     value={member.relation_type}
@@ -369,6 +375,63 @@ export default function OnboardingPage() {
                       </optgroup>
                     ))}
                   </select>
+
+                  {/* Parent selector — solo sobrinos/sobrinas */}
+                  {(member.relation_type === "nephew" || member.relation_type === "niece") && (
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">
+                        ¿Hijo/a de cuál hermano/a? <span className="text-gray-400 font-normal">(opcional)</span>
+                      </label>
+                      <select
+                        className="input-field text-sm"
+                        value={member.parent_member_id}
+                        onChange={e => updateMember(i, "parent_member_id", e.target.value)}
+                      >
+                        <option value="">— No especificar —</option>
+                        {members
+                          .filter((m, idx) => idx !== i && ["brother","sister","half_brother","half_sister"].includes(m.relation_type) && m.first_name.trim())
+                          .map((s, si) => (
+                            <option key={si} value={`__onb_${si}`}>
+                              {s.first_name} {s.last_name || ""}
+                            </option>
+                          ))
+                        }
+                      </select>
+                    </div>
+                  )}
+
+                  {/* Fecha de nacimiento + correo */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Fecha de nac.</label>
+                      <input type="date" className="input-field text-sm"
+                        value={member.birth_date}
+                        onChange={e => updateMember(i, "birth_date", e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Correo (para invitar)</label>
+                      <input type="email" className="input-field text-sm" placeholder="correo@ejemplo.com"
+                        value={member.email}
+                        onChange={e => updateMember(i, "email", e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Fallecido toggle */}
+                  <label className="flex items-center gap-3 cursor-pointer select-none">
+                    <div className="relative">
+                      <input type="checkbox" className="sr-only"
+                        checked={member.is_deceased}
+                        onChange={e => updateMember(i, "is_deceased", e.target.checked)}
+                      />
+                      <div className={`w-9 h-5 rounded-full transition-colors ${member.is_deceased ? "bg-gray-500" : "bg-gray-200"}`} />
+                      <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${member.is_deceased ? "translate-x-4" : ""}`} />
+                    </div>
+                    <span className="text-xs text-gray-600">
+                      Fallecido(a) <span className="text-gray-400">— aparece con † en el árbol</span>
+                    </span>
+                  </label>
                 </div>
               ))}
             </div>

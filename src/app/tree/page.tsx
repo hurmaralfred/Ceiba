@@ -488,7 +488,7 @@ export default function TreePage() {
             .replace(/\s+/g, " ").trim();
 
         // Build multiple name keys per member for fuzzy matching:
-        // full name, first+firstlast, firstword only
+        // full name, first+firstlast, firstword-only when member has NO last name
         const myNameKeys = new Set<string>();
         myMembers.forEach(m => {
           const fn = norm(m.first_name);
@@ -496,7 +496,9 @@ export default function TreePage() {
           myNameKeys.add(`${fn}|${ln}`);                                    // full: "jose humberto|hurtado cifuentes"
           const fn0 = fn.split(" ")[0]; const ln0 = ln.split(" ")[0];
           if (fn0 && ln0) myNameKeys.add(`${fn0}|${ln0}`);                 // first words: "jose|hurtado"
-          // NOTE: no fn0-only key — that was causing false positives filtering out real nephews/nieces
+          // When this member has NO last name, add first-name-only key
+          // so extended members with same first name but added last name are still deduped
+          if (!ln && fn0.length >= 4) myNameKeys.add(`${fn0}|__nolast__`);
         });
 
         // For peer link detection: build a map from norm-name key → direct member
@@ -524,7 +526,9 @@ export default function TreePage() {
               // Avoid false positives by never matching on first name alone
               const isDuplicate =
                 myNameKeys.has(`${fn}|${ln}`) ||
-                (ln0.length > 0 && myNameKeys.has(`${fn0}|${ln0}`));
+                (ln0.length > 0 && myNameKeys.has(`${fn0}|${ln0}`)) ||
+                // Extended has last name but direct was stored without one:
+                (fn0.length >= 4 && myNameKeys.has(`${fn0}|__nolast__`));
               if (isDuplicate) {
                 // This extended member IS a direct member — create a peer link
                 const directMember = myMemberByName.get(`${fn0}|${ln0}`) || myMemberByName.get(`${fn0}|`);
