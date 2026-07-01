@@ -90,6 +90,14 @@ function inferRelation(parentRelation: RelationType, childRelation: string): str
     case "brother_in_law": case "sister_in_law":
       if (childRelation === "son")       return "nephew";
       if (childRelation === "daughter")  return "niece";
+      if (childRelation === "stepchild") return "nephew";
+      if (["brother","half_brother"].includes(childRelation)) return "brother_in_law";
+      if (["sister","half_sister"].includes(childRelation))   return "sister_in_law";
+      if (["spouse","partner"].includes(childRelation))       return "brother_in_law";
+      if (childRelation === "father") return "father_in_law";
+      if (childRelation === "mother") return "mother_in_law";
+      if (childRelation === "nephew") return "nephew";
+      if (childRelation === "niece")  return "niece";
       break;
 
     // ── My parents & step-parents ─────────────────────────────
@@ -132,6 +140,8 @@ function inferRelation(parentRelation: RelationType, childRelation: string): str
     case "cousin":
       // Cousin's children = second cousins (show as cousins — closest label)
       if (childRelation === "son" || childRelation === "daughter") return "cousin";
+      if (childRelation === "stepchild")  return "cousin";
+      if (childRelation === "grandson" || childRelation === "granddaughter") return "cousin";
       // Cousin's siblings = also my cousins
       if (["brother","half_brother","sister","half_sister"].includes(childRelation)) return "cousin";
       // Cousin's spouse = cousin-in-law (show as cousin — no exact label)
@@ -139,6 +149,11 @@ function inferRelation(parentRelation: RelationType, childRelation: string): str
       // Cousin's parents = my uncle/aunt
       if (childRelation === "father") return "uncle";
       if (childRelation === "mother") return "aunt";
+      // Cousin's uncle/aunt = also my uncle/aunt (shared grandparents)
+      if (childRelation === "uncle") return "uncle";
+      if (childRelation === "aunt")  return "aunt";
+      // Cousin's nephew/niece = second cousin
+      if (childRelation === "nephew" || childRelation === "niece") return "cousin";
       break;
 
     // ── My children ───────────────────────────────────────────
@@ -210,6 +225,14 @@ function inferRelation(parentRelation: RelationType, childRelation: string): str
       // Nephew/niece's parents = my siblings
       if (["father","stepfather"].includes(childRelation)) return "brother";
       if (["mother","stepmother"].includes(childRelation)) return "sister";
+      // Nephew/niece's uncle/aunt = my sibling (same generation as me)
+      if (childRelation === "uncle")          return "brother";
+      if (childRelation === "aunt")           return "sister";
+      // Nephew/niece's siblings = also my nephews/nieces
+      if (["brother","half_brother"].includes(childRelation)) return "nephew";
+      if (["sister","half_sister"].includes(childRelation))   return "niece";
+      // Nephew/niece's cousin = my cousin (or second nephew — use cousin as closest label)
+      if (childRelation === "cousin")         return "cousin";
       break;
 
     // ── My spouse's extended family (not covered above) ───────
@@ -806,35 +829,35 @@ export default function TreePage() {
     }
   };
 
-  // Check if the name being added already exists in a connected family member's tree
+  // Check if the name being added already exists in a connected family member's tree.
+  // Two-pass: (1) connected trees via profile_id, (2) broader Ceiba profile name search.
   const checkExtendedDuplicate = async (first_name: string, last_name: string, userId: string) => {
-    // Get my connected Ceiba members (who are on Ceiba)
+    const normW = (s: string) =>
+      (s || "").toLowerCase()
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .trim().split(" ")[0];
+
+    const fn = normW(first_name);
+    const ln = normW(last_name);
+    if (fn.length < 3) return null;
+
+    // \u2500\u2500 Pass 1: scan trees of directly linked Ceiba members \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
     const { data: myMembers } = await supabase
       .from("family_members")
       .select("profile_id, first_name, last_name, relation_type")
       .eq("added_by", userId)
       .not("profile_id", "is", null);
 
-    if (!myMembers || myMembers.length === 0) return null;
-
-    const normStr = (s: string) =>
-      (s || "").toLowerCase()
-        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-        .trim().split(" ")[0];
-
-    const fn = normStr(first_name);
-    const ln = normStr(last_name);
-
-    for (const member of myMembers) {
+    for (const member of (myMembers || [])) {
       const { data: theirMembers } = await supabase
         .from("family_members")
         .select("id, first_name, last_name, relation_type, profile_id")
         .eq("added_by", member.profile_id);
 
       const match = (theirMembers || []).find(m => {
-        const mfn = normStr(m.first_name || "");
-        const mln = normStr(m.last_name || "");
-        return fn.length >= 3 && mfn === fn && (ln.length < 2 || mln === ln || mln.length < 2);
+        const mfn = normW(m.first_name || "");
+        const mln = normW(m.last_name || "");
+        return mfn === fn && (ln.length < 2 || mln === ln || mln.length < 2);
       });
 
       if (match) {
@@ -847,6 +870,68 @@ export default function TreePage() {
         };
       }
     }
+
+    // ── Pass 2: buscar por nombre en perfiles de Ceiba ───────────────────
+    // Catches cases where the person IS on Ceiba but their family entry
+    // wasn't linked (profile_id null in the connector's tree).
+    const { data: profileMatches } = await supabase
+      .from("profiles")
+      .select("id, first_name, last_name")
+      .ilike("first_name", `${first_name.split(" ")[0]}%`)
+      .neq("id", userId)
+      .limit(15);
+
+    for (const profile of (profileMatches || [])) {
+      const pfn = normW(profile.first_name || "");
+      const pln = normW(profile.last_name || "");
+      if (pfn !== fn) continue;
+      if (ln.length >= 2 && pln.length >= 2 && pln !== ln) continue;
+
+      // This Ceiba user matches the name — check if they're in my family network
+      // Option A: they're already in MY tree
+      const { data: myEntry } = await supabase
+        .from("family_members")
+        .select("id, first_name, last_name, relation_type")
+        .eq("added_by", userId)
+        .eq("profile_id", profile.id)
+        .maybeSingle();
+      if (myEntry) {
+        return {
+          connectedMember: myEntry,
+          matchedName: `${profile.first_name} ${profile.last_name || ""}`.trim(),
+          matchedRelation: myEntry.relation_type,
+          matchedProfileId: profile.id,
+          matchedFamilyMemberId: myEntry.id,
+        };
+      }
+
+      // Option B: a connected family member added them to their own tree
+      const { data: networkEntries } = await supabase
+        .from("family_members")
+        .select("id, first_name, last_name, relation_type, added_by")
+        .eq("profile_id", profile.id)
+        .neq("added_by", userId)
+        .limit(10);
+
+      for (const entry of (networkEntries || [])) {
+        const { data: connector } = await supabase
+          .from("family_members")
+          .select("first_name, last_name, relation_type")
+          .eq("added_by", userId)
+          .eq("profile_id", entry.added_by)
+          .maybeSingle();
+        if (connector) {
+          return {
+            connectedMember: connector,
+            matchedName: `${profile.first_name} ${profile.last_name || ""}`.trim(),
+            matchedRelation: entry.relation_type,
+            matchedProfileId: profile.id,
+            matchedFamilyMemberId: entry.id,
+          };
+        }
+      }
+    }
+
     return null;
   };
 
