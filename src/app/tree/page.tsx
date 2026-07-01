@@ -492,358 +492,303 @@ export default function TreePage() {
     }
     setMembers(enrichedMembers);
 
-    // Load extended network: family members of family who've joined Ceiba
+    // ─── Red extendida (reescritura completa) ───────────────────────────────────
+    // Principios:
+    //   1. person_id es la clave canónica: dos filas con el mismo person_id son
+    //      la MISMA persona real, sin importar cómo se llame.
+    //   2. Name-based dedup como fallback para datos anteriores a person_id.
+    //   3. Una sola función isAlreadyShown/markShown usada en los tres pasos
+    //      (forward → reverse → tercer salto), así ninguna persona puede
+    //      filtrarse por caminos distintos.
+
     const joinedMembers = myMembers.filter(m => m.profile_id);
     if (joinedMembers.length > 0) {
       const joinedProfileIds = joinedMembers.map(m => m.profile_id!);
+
+      // ── Normalización ─────────────────────────────────────────────────────────
+      const norm = (s: string) =>
+        (s || "").toLowerCase()
+          .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+          .replace(/\s+/g, " ").trim();
+
+      // ── Identidad de mis miembros directos ───────────────────────────────────
+      const myPersonIds = new Set<string>(
+        myMembers.map(m => (m as any).person_id as string).filter(Boolean)
+      );
+      const myMemberProfileIds = new Set<string>(
+        myMembers.map(m => m.profile_id as string).filter(Boolean)
+      );
+
+      // Name keys para fallback: full, first-words, y sentinel __nolast__
+      const myNameKeys = new Set<string>();
+      const myFirstWords = new Set<string>();
+      myMembers.forEach(m => {
+        const fn = norm(m.first_name);
+        const ln = norm(m.last_name || "");
+        const fn0 = fn.split(" ")[0];
+        const ln0 = ln.split(" ")[0];
+        myNameKeys.add(`${fn}|${ln}`);
+        if (fn0 && ln0) myNameKeys.add(`${fn0}|${ln0}`);
+        if (!ln && fn0.length >= 4) myNameKeys.add(`${fn0}|__nolast__`);
+        if (fn0.length >= 4) myFirstWords.add(fn0);
+      });
+
+      // Mapas para lookup rápido de miembro directo (para crear cross-links)
+      const directByPersonId = new Map<string, FamilyMember>(
+        myMembers.filter(m => (m as any).person_id)
+          .map(m => [(m as any).person_id as string, m])
+      );
+      const directByProfileId = new Map<string, FamilyMember>(
+        myMembers.filter(m => m.profile_id).map(m => [m.profile_id!, m])
+      );
+      const directByNameKey = new Map<string, FamilyMember>();
+      myMembers.forEach(m => {
+        const fn0 = norm(m.first_name).split(" ")[0];
+        const ln0 = norm(m.last_name || "").split(" ")[0];
+        directByNameKey.set(`${fn0}|${ln0}`, m);
+        directByNameKey.set(`${fn0}|`, m);  // fallback sin apellido
+      });
+
+      // findMyDirect: si em es uno de mis miembros directos, devuelve cuál.
+      const findMyDirect = (em: any): FamilyMember | undefined => {
+        if (em.profile_id === user.id) return undefined;
+        if (em.person_id) {
+          const d = directByPersonId.get(em.person_id as string);
+          if (d) return d;
+        }
+        if (em.profile_id) {
+          const d = directByProfileId.get(em.profile_id as string);
+          if (d) return d;
+        }
+        const fn = norm(em.first_name || "");
+        const ln = norm(em.last_name || "");
+        const fn0 = fn.split(" ")[0];
+        const ln0 = ln.split(" ")[0];
+        if (fn.length < 3) return undefined;
+        if (myNameKeys.has(`${fn}|${ln}`))
+          return directByNameKey.get(`${fn0}|${ln0}`) ?? directByNameKey.get(`${fn0}|`);
+        if (ln0.length >= 3 && myNameKeys.has(`${fn0}|${ln0}`))
+          return directByNameKey.get(`${fn0}|${ln0}`);
+        if (fn0.length >= 4 && myNameKeys.has(`${fn0}|__nolast__`))
+          return directByNameKey.get(`${fn0}|`);
+        if (ln === "" && fn0.length >= 4 && myFirstWords.has(fn0))
+          return directByNameKey.get(`${fn0}|`);
+        return undefined;
+      };
+
+      // ── Registro de lo que ya se muestra (evita duplicados entre los 3 pasos) ─
+      const shownPersonIds   = new Set<string>(myPersonIds);
+      const shownProfileIds  = new Set<string>(myMemberProfileIds);
+      const shownNameKeys    = new Set<string>(); // fn0|ln0 ya en extended
+
+      const isAlreadyShown = (em: any): boolean => {
+        if (em.profile_id === user.id) return true;
+        if (em.person_id  && shownPersonIds.has(em.person_id as string))  return true;
+        if (em.profile_id && shownProfileIds.has(em.profile_id as string)) return true;
+        const fn0 = norm(em.first_name || "").split(" ")[0];
+        const ln0 = norm(em.last_name  || "").split(" ")[0];
+        if (fn0.length >= 4 || ln0.length >= 3) return shownNameKeys.has(`${fn0}|${ln0}`);
+        return false;
+      };
+
+      const markShown = (em: any) => {
+        if (em.person_id)  shownPersonIds.add(em.person_id as string);
+        if (em.profile_id) shownProfileIds.add(em.profile_id as string);
+        const fn0 = norm(em.first_name || "").split(" ")[0];
+        const ln0 = norm(em.last_name  || "").split(" ")[0];
+        if (fn0.length >= 4 || ln0.length >= 3) shownNameKeys.add(`${fn0}|${ln0}`);
+      };
+
+      // ── Estructuras de salida ─────────────────────────────────────────────────
+      const extended: ExtendedEntry[] = [];
+      const crossLinks: MemberLink[] = [];
+      const crossLinkKeys = new Set<string>();
+
+      const addCrossLink = (fromId: string, toId: string, relation: string) => {
+        if (fromId === toId) return;
+        const key = [fromId, toId].sort().join("|");
+        if (!crossLinkKeys.has(key)) {
+          crossLinkKeys.add(key);
+          crossLinks.push({ fromMemberId: fromId, toMemberId: toId, relation });
+        }
+      };
+
+      // ── PASO 1: Forward lookup ────────────────────────────────────────────────
+      // Familia de mis familiares que se unieron a Ceiba.
       const { data: extData } = await supabase
         .from("family_members")
         .select("*")
         .in("added_by", joinedProfileIds);
 
-      if (extData && extData.length > 0) {
-        const myMemberIds = new Set(myMembers.map(m => m.profile_id).filter(Boolean));
-        // Person-IDs: shared UUID that identifies the same real-world person across trees.
-        // More reliable than name matching — works even when names are stored differently.
-        const myPersonIds = new Set<string>(myMembers.map(m => (m as any).person_id).filter(Boolean));
+      for (const em of extData || []) {
+        const connector = joinedMembers.find(m => m.profile_id === em.added_by);
+        if (!connector) continue;
 
-        // Normalize: remove accents, lowercase, collapse spaces
-        const norm = (s: string) =>
-          (s || "").toLowerCase()
-            .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-            .replace(/\s+/g, " ").trim();
-
-        // Build multiple name keys per member for fuzzy matching:
-        // full name, first+firstlast, firstword-only when member has NO last name
-        const myNameKeys = new Set<string>();
-        // Set of first-name first-words (≥4 chars) for no-last-name fuzzy check
-        const myFirstWords = new Set<string>();
-        myMembers.forEach(m => {
-          const fn = norm(m.first_name);
-          const ln = norm(m.last_name || "");
-          myNameKeys.add(`${fn}|${ln}`);                                    // full: "jose humberto|hurtado cifuentes"
-          const fn0 = fn.split(" ")[0]; const ln0 = ln.split(" ")[0];
-          if (fn0 && ln0) myNameKeys.add(`${fn0}|${ln0}`);                 // first words: "jose|hurtado"
-          // When this member has NO last name, add first-name-only key
-          // so extended members with same first name but added last name are still deduped
-          if (!ln && fn0.length >= 4) myNameKeys.add(`${fn0}|__nolast__`);
-          // Always track first words so we can catch extended members stored WITHOUT last name
-          if (fn0.length >= 4) myFirstWords.add(fn0);
-        });
-
-        // For peer link detection: build a map from norm-name key → direct member
-        const myMemberByName = new Map<string, any>();
-        myMembers.forEach(m => {
-          const fn = norm(m.first_name).split(" ")[0];
-          const ln = norm(m.last_name || "").split(" ")[0];
-          myMemberByName.set(`${fn}|${ln}`, m);
-          myMemberByName.set(`${fn}|`, m);
-        });
-
-        const crossLinks: MemberLink[] = [];
-
-        const extended: ExtendedEntry[] = extData
-          .filter(em => {
-            if (em.profile_id === user.id) return false;
-            if (em.profile_id && myMemberIds.has(em.profile_id)) return false;
-            // person_id is the canonical "same real-world person" key (reliable, no name matching)
-            if ((em as any).person_id && myPersonIds.has((em as any).person_id)) return false;
-            const fn = norm(em.first_name);
-            const ln = norm(em.last_name || "");
-            // Check multiple key formats
-            if (fn.length >= 3) {
-              const fn0 = fn.split(" ")[0];
-              const ln0 = ln.split(" ")[0];
-              // Only mark as duplicate when both first+last name match
-              // Avoid false positives by never matching on first name alone
-              const isDuplicate =
-                myNameKeys.has(`${fn}|${ln}`) ||
-                (ln0.length > 0 && myNameKeys.has(`${fn0}|${ln0}`)) ||
-                // Extended has last name but direct was stored without one:
-                (fn0.length >= 4 && myNameKeys.has(`${fn0}|__nolast__`)) ||
-                // Extended has NO last name but direct member has same first name:
-                // e.g. extended "Rosa" matches direct "Rosa Cifuentes"
-                (ln === "" && fn0.length >= 4 && myFirstWords.has(fn0));
-              if (isDuplicate) {
-                // This extended member IS a direct member — create a peer link
-                const directMember = myMemberByName.get(`${fn0}|${ln0}`) || myMemberByName.get(`${fn0}|`);
-                const parentMember = joinedMembers.find(m => m.profile_id === em.added_by);
-                if (directMember && parentMember && directMember.id !== parentMember.id) {
-                  // Avoid duplicate links
-                  const alreadyExists = crossLinks.some(
-                    l => (l.fromMemberId === parentMember.id && l.toMemberId === directMember.id) ||
-                         (l.fromMemberId === directMember.id && l.toMemberId === parentMember.id)
-                  );
-                  if (!alreadyExists) {
-                    crossLinks.push({
-                      fromMemberId: parentMember.id,
-                      toMemberId: directMember.id,
-                      relation: em.relation_type,
-                    });
-                  }
-                }
-                return false; // still filter from extended nodes
-              }
-            }
-            return true;
-          })
-          .map(em => {
-            const parentMember = joinedMembers.find(m => m.profile_id === em.added_by);
-            if (!parentMember) return null; // skip orphaned entries
-            const inferredRelation = inferRelation(parentMember.relation_type as RelationType, em.relation_type);
-            return {
-              member: em as FamilyMember,
-              parentMemberId: parentMember.id,
-              inferredRelation,
-            };
-          })
-          .filter((e): e is ExtendedEntry => {
-            if (e === null) return false;
-            // If relation couldn't be inferred, use "other" as fallback
-            // so legitimate family members are never silently dropped.
-            if (e.inferredRelation === null) e.inferredRelation = "other";
-            return true;
-          })
-          // Deduplicate within the extended set by normalized name
-          // (handles cases where the same person was added and deleted multiple times)
-          .reduce<ExtendedEntry[]>((acc, e) => {
-            const fn = norm(e.member.first_name).split(" ")[0];
-            const ln = norm(e.member.last_name || "").split(" ")[0];
-            const key = `${fn}|${ln}|${e.inferredRelation}`;
-            if (!acc.some(x => {
-              const xfn = norm(x.member.first_name).split(" ")[0];
-              const xln = norm(x.member.last_name || "").split(" ")[0];
-              return `${xfn}|${xln}|${x.inferredRelation}` === key;
-            })) {
-              acc.push(e);
-            }
-            return acc;
-          }, []);
-        // ── Reverse lookup ─────────────────────────────────────
-        // Find people who have added one of MY joined direct members to THEIR tree.
-        // Example: cuñado added esposa as "sister" → cuñado is my brother_in_law.
-        //          primo added tío as "uncle" → primo is my cousin.
-        // This catches connections that the forward lookup misses.
-        const { data: revData } = await supabase
-          .from("family_members")
-          .select("id, added_by, profile_id, relation_type, relation_kind, first_name, last_name")
-          .in("profile_id", joinedProfileIds);
-
-        if (revData && revData.length > 0) {
-          // Collect connector profile IDs (people who added my family members)
-          const connectorIds = [...new Set(
-            revData
-              .map(r => r.added_by as string)
-              .filter(id => id && id !== user.id && !myMemberIds.has(id))
-          )];
-
-          // Fetch their profiles so we can display them as nodes
-          const { data: connectorProfiles } = connectorIds.length > 0
-            ? await supabase.from("profiles").select("id, first_name, last_name, avatar_url").in("id", connectorIds)
-            : { data: [] };
-
-          const connectorProfileMap = Object.fromEntries(
-            (connectorProfiles || []).map(p => [p.id, p])
-          );
-
-          // Build a set of profile_ids already in the extended array (avoid duplicates)
-          const alreadyExtendedProfileIds = new Set(
-            extended.map(e => (e.member as any).profile_id).filter(Boolean)
-          );
-
-          for (const rev of revData) {
-            const connectorProfileId = rev.added_by as string;
-            if (!connectorProfileId) continue;
-            if (connectorProfileId === user.id) continue;
-            if (myMemberIds.has(connectorProfileId)) continue;  // already a direct member
-            if (alreadyExtendedProfileIds.has(connectorProfileId)) continue; // already found via forward
-
-            const connProfile = connectorProfileMap[connectorProfileId];
-            if (!connProfile) continue; // connector is not a Ceiba user
-
-            // Which direct member did the connector add?
-            const directMember = joinedMembers.find(m => m.profile_id === rev.profile_id);
-            if (!directMember) continue;
-
-            // Rev says "direct member is my {rel}" → from direct member's POV, connector is their {reverse}
-            const connRelToDirectMember = reverseRelation(rev.relation_type);
-            // From user's POV: user's relation to connector
-            const userRelToConnector = inferRelation(directMember.relation_type as RelationType, connRelToDirectMember) ?? "other";
-
-            // Name-dedup: skip if connector's name already exists in extended
-            const cfn = norm(connProfile.first_name || "").split(" ")[0];
-            const cln = norm(connProfile.last_name || "").split(" ")[0];
-            const nameKey = `${cfn}|${cln}|${userRelToConnector}`;
-            if (extended.some(e => {
-              const efn = norm(e.member.first_name).split(" ")[0];
-              const eln = norm(e.member.last_name || "").split(" ")[0];
-              return `${efn}|${eln}|${e.inferredRelation}` === nameKey;
-            })) continue;
-
-            // Skip if connector is already a direct member (by name — require last name match too)
-            if (myNameKeys.has(`${cfn}|${cln}`)) continue;
-
-            alreadyExtendedProfileIds.add(connectorProfileId);
-
-            // Create a synthetic FamilyMember-like object for the connector
-            const syntheticMember = {
-              id: connectorProfileId,          // use profile_id as stable node id
-              first_name: connProfile.first_name || rev.first_name,
-              last_name: connProfile.last_name || rev.last_name,
-              relation_type: connRelToDirectMember,
-              relation_kind: rev.relation_kind ?? "blood",
-              profile_id: connectorProfileId,
-              added_by: connectorProfileId,
-              profile: { avatar_url: connProfile.avatar_url },
-            } as unknown as FamilyMember;
-
-            extended.push({
-              member: syntheticMember,
-              parentMemberId: directMember.id,
-              inferredRelation: userRelToConnector,
-            });
-          }
+        // ¿Este extended member ES uno de mis miembros directos?
+        const directMatch = findMyDirect(em);
+        if (directMatch) {
+          // Crear cross-link: el conector también conoce a este miembro directo
+          addCrossLink(connector.id, directMatch.id, em.relation_type);
+          continue;
         }
 
-        // ── Tercer salto: familia de primos/cuñados que ya están en Ceiba ──
-        // Ejemplo: hijos de Ramiro (primo) → aparecen como primos segundos/sobrinos
-        const joinedExtended = extended.filter(e => !!(e.member as any).profile_id);
-        const extProfileIds = [...new Set(
-          joinedExtended.map(e => (e.member as any).profile_id as string).filter(Boolean)
-        )];
+        if (isAlreadyShown(em)) continue;
+        markShown(em);
 
-        if (extProfileIds.length > 0) {
-          const { data: ext2Data } = await supabase
-            .from("family_members")
-            .select("*")
-            .in("added_by", extProfileIds);
+        const inferred = inferRelation(connector.relation_type as RelationType, em.relation_type);
+        extended.push({
+          member: em as FamilyMember,
+          parentMemberId: connector.id,
+          inferredRelation: inferred ?? "other",
+        });
+      }
 
-          if (ext2Data && ext2Data.length > 0) {
-            const allExtendedProfileIds = new Set(
-              extended.map(e => (e.member as any).profile_id).filter(Boolean)
-            );
+      // ── PASO 2: Reverse lookup ────────────────────────────────────────────────
+      // Personas que agregaron a uno de MIS familiares a SU árbol.
+      // Ejemplo: cuñado tiene a mi hermana como "sister" → cuñado es mi extended.
+      const { data: revData } = await supabase
+        .from("family_members")
+        .select("id, added_by, profile_id, relation_type, relation_kind, first_name, last_name")
+        .in("profile_id", joinedProfileIds);
 
-            for (const em of ext2Data) {
-              if (em.profile_id === user.id) continue;
-              if (myMemberIds.has(em.profile_id)) continue;
-              if (em.profile_id && allExtendedProfileIds.has(em.profile_id)) continue;
+      const connectorIds = [...new Set(
+        (revData || [])
+          .map(r => r.added_by as string)
+          .filter(id => id && id !== user.id && !myMemberProfileIds.has(id))
+      )];
 
-              const parentExt = joinedExtended.find(
-                e => (e.member as any).profile_id === em.added_by
-              );
-              if (!parentExt || !parentExt.inferredRelation) continue;
+      const { data: connectorProfiles } = connectorIds.length > 0
+        ? await supabase
+            .from("profiles")
+            .select("id, first_name, last_name, avatar_url")
+            .in("id", connectorIds)
+        : { data: [] };
 
-              const level3Relation = inferRelation(
-                parentExt.inferredRelation as RelationType,
-                em.relation_type
-              ) ?? "other";
+      const connectorProfileMap = new Map(
+        (connectorProfiles || []).map(p => [p.id, p])
+      );
 
-              // Dedup by name + relation
-              const fn3 = norm(em.first_name).split(" ")[0];
-              const ln3 = norm(em.last_name || "").split(" ")[0];
-              const key3 = `${fn3}|${ln3}|${level3Relation}`;
-              if (extended.some(x => {
-                const xfn = norm(x.member.first_name).split(" ")[0];
-                const xln = norm(x.member.last_name || "").split(" ")[0];
-                return `${xfn}|${xln}|${x.inferredRelation}` === key3;
-              })) continue;
+      for (const rev of revData || []) {
+        const connId = rev.added_by as string;
+        if (!connId || connId === user.id || myMemberProfileIds.has(connId)) continue;
 
-              if (em.profile_id) allExtendedProfileIds.add(em.profile_id);
-              extended.push({
-                member: em as FamilyMember,
-                parentMemberId: parentExt.member.id,
-                inferredRelation: level3Relation,
-              });
-            }
-          }
-        }
+        const connProfile = connectorProfileMap.get(connId);
+        if (!connProfile) continue;
 
-        // ── Peer links entre primos hermanos ───────────────────────
-        // Tres casos posibles:
-        // A) Dos extended cousins comparten el mismo tío/tía (parentMemberId igual)
-        // B) Un extended cousin tiene como padre al primo DIRECTO (primo agregó a su hermana)
-        // C) Un extended cousin y un primo directo comparten el mismo tío via dedup crossLink
+        const directMember = joinedMembers.find(m => m.profile_id === rev.profile_id);
+        if (!directMember) continue;
 
-        const CHILD_TYPES = new Set(["son", "daughter", "stepchild"]);
-        const addPeerLink = (idA: string, idB: string) => {
-          if (idA === idB) return;
-          if (!crossLinks.some(l =>
-            (l.fromMemberId === idA && l.toMemberId === idB) ||
-            (l.fromMemberId === idB && l.toMemberId === idA)
-          )) {
-            crossLinks.push({ fromMemberId: idA, toMemberId: idB, relation: "sibling" });
-          }
+        const syntheticEm = {
+          id: connId,
+          first_name: connProfile.first_name || rev.first_name,
+          last_name: connProfile.last_name || rev.last_name,
+          profile_id: connId,
+          person_id: null as any,
+          relation_type: reverseRelation(rev.relation_type),
+          relation_kind: rev.relation_kind ?? "blood",
+          added_by: connId,
+          profile: { avatar_url: connProfile.avatar_url },
         };
 
-        // Caso A: extended ↔ extended con mismo tío padre y relación hijo/primo
-        const parentGroupMap = new Map<string, ExtendedEntry[]>();
-        for (const e of extended) {
-          if (!CHILD_TYPES.has(e.member.relation_type)) continue;
-          if (e.inferredRelation !== "cousin") continue;
-          if (!parentGroupMap.has(e.parentMemberId)) parentGroupMap.set(e.parentMemberId, []);
-          parentGroupMap.get(e.parentMemberId)!.push(e);
-        }
-        for (const siblings of parentGroupMap.values()) {
-          if (siblings.length < 2) continue;
-          for (let i = 0; i < siblings.length; i++)
-            for (let j = i + 1; j < siblings.length; j++)
-              addPeerLink(siblings[i].member.id, siblings[j].member.id);
-        }
+        if (isAlreadyShown(syntheticEm)) continue;
+        markShown(syntheticEm);
 
-        // Caso B: primo directo → extended cousin cuyo parentMemberId = el primo directo
-        // (el primo directo está unido y agregó a su hermana a su propio árbol)
-        const directCousins = myMembers.filter(m => m.relation_type === "cousin");
-        for (const e of extended) {
-          if (e.inferredRelation !== "cousin") continue;
-          const parentDirect = directCousins.find(m => m.id === e.parentMemberId);
-          if (parentDirect) addPeerLink(parentDirect.id, e.member.id);
-        }
+        const connRelToDirectMember = reverseRelation(rev.relation_type);
+        const inferred = inferRelation(
+          directMember.relation_type as RelationType,
+          connRelToDirectMember
+        ) ?? "other";
 
-        // Caso C: primo directo que salió del dedup (tío lo tenía en su árbol)
-        // → conectar con los otros extended cousins del mismo tío
-        // El dedup generó: crossLink { fromMemberId: tíoId, toMemberId: primoDirectoId }
-        // Karina tiene parentMemberId = tíoId → unirla con primoDirectoId
-        const snapshotLinks = crossLinks.filter(l => l.relation !== "sibling");
-        const tioToDirectCousin = new Map<string, string[]>();
-        for (const link of snapshotLinks) {
-          // Solo nos interesan links donde el "from" es tío/tía y el "to" es primo directo
-          const parentM = myMembers.find(m => m.id === link.fromMemberId);
-          const childM  = myMembers.find(m => m.id === link.toMemberId);
-          if (!parentM || !childM) continue;
-          if (!["uncle","aunt"].includes(parentM.relation_type)) continue;
-          if (childM.relation_type !== "cousin") continue;
-          if (!tioToDirectCousin.has(link.fromMemberId)) tioToDirectCousin.set(link.fromMemberId, []);
-          tioToDirectCousin.get(link.fromMemberId)!.push(link.toMemberId);
-        }
-        for (const e of extended) {
-          if (e.inferredRelation !== "cousin") continue;
-          const directSiblings = tioToDirectCousin.get(e.parentMemberId) || [];
-          for (const sibId of directSiblings) addPeerLink(sibId, e.member.id);
-        }
-
-        // ── Final safety dedup ─────────────────────────────────
-        // Strips any extended entry that is actually a direct member.
-        // Catches duplicates from reverse lookup and tercer salto which only
-        // do profile_id-based dedup — missing the name-based check for
-        // deceased/unregistered members (profile_id = null).
-        const finalExtended = extended.filter(e => {
-          if (e.member.profile_id && myMemberIds.has(e.member.profile_id)) return false;
-          if ((e.member as any).person_id && myPersonIds.has((e.member as any).person_id)) return false;
-          const fn = norm(e.member.first_name);
-          const ln = norm(e.member.last_name || "");
-          if (fn.length >= 3) {
-            const fn0 = fn.split(" ")[0];
-            const ln0 = ln.split(" ")[0];
-            if (myNameKeys.has(`${fn}|${ln}`)) return false;
-            if (ln0.length > 0 && myNameKeys.has(`${fn0}|${ln0}`)) return false;
-            if (fn0.length >= 4 && myNameKeys.has(`${fn0}|__nolast__`)) return false;
-            if (ln === "" && fn0.length >= 4 && myFirstWords.has(fn0)) return false;
-          }
-          return true;
+        extended.push({
+          member: syntheticEm as unknown as FamilyMember,
+          parentMemberId: directMember.id,
+          inferredRelation: inferred,
         });
-        setExtendedMembers(finalExtended);
-        setMemberLinks(crossLinks);
       }
+
+      // ── PASO 3: Tercer salto ──────────────────────────────────────────────────
+      // Familia de los extended members que también están en Ceiba.
+      const joinedExtended = extended.filter(e => !!(e.member as any).profile_id);
+      const extProfileIds = [...new Set(
+        joinedExtended.map(e => (e.member as any).profile_id as string).filter(Boolean)
+      )];
+
+      if (extProfileIds.length > 0) {
+        const { data: ext2Data } = await supabase
+          .from("family_members")
+          .select("*")
+          .in("added_by", extProfileIds);
+
+        for (const em of ext2Data || []) {
+          if (em.profile_id === user.id) continue;
+          if (findMyDirect(em)) continue;
+          if (isAlreadyShown(em)) continue;
+
+          const parentExt = joinedExtended.find(
+            e => (e.member as any).profile_id === em.added_by
+          );
+          if (!parentExt || !parentExt.inferredRelation || parentExt.inferredRelation === "other") continue;
+
+          const level3Relation = inferRelation(
+            parentExt.inferredRelation as RelationType,
+            em.relation_type
+          ) ?? "other";
+
+          markShown(em);
+          extended.push({
+            member: em as FamilyMember,
+            parentMemberId: parentExt.member.id,
+            inferredRelation: level3Relation,
+          });
+        }
+      }
+
+      // ── PASO 4: Peer links (primos hermanos) ──────────────────────────────────
+      const CHILD_TYPES = new Set(["son", "daughter", "stepchild"]);
+      const addPeerLink = (idA: string, idB: string) => addCrossLink(idA, idB, "sibling");
+
+      // Caso A: dos extended cousins comparten el mismo tío/tía como parent
+      const parentGroupMap = new Map<string, ExtendedEntry[]>();
+      for (const e of extended) {
+        if (!CHILD_TYPES.has(e.member.relation_type)) continue;
+        if (e.inferredRelation !== "cousin") continue;
+        if (!parentGroupMap.has(e.parentMemberId)) parentGroupMap.set(e.parentMemberId, []);
+        parentGroupMap.get(e.parentMemberId)!.push(e);
+      }
+      for (const siblings of parentGroupMap.values()) {
+        if (siblings.length < 2) continue;
+        for (let i = 0; i < siblings.length; i++)
+          for (let j = i + 1; j < siblings.length; j++)
+            addPeerLink(siblings[i].member.id, siblings[j].member.id);
+      }
+
+      // Caso B: primo directo → extended cousin cuyo parent es ese primo
+      const directCousins = myMembers.filter(m => m.relation_type === "cousin");
+      for (const e of extended) {
+        if (e.inferredRelation !== "cousin") continue;
+        const parentDirect = directCousins.find(m => m.id === e.parentMemberId);
+        if (parentDirect) addPeerLink(parentDirect.id, e.member.id);
+      }
+
+      // Caso C: primo directo identificado via cross-link → conectar con extended cousins del mismo tío
+      const tioToDirectCousin = new Map<string, string[]>();
+      for (const link of crossLinks.filter(l => l.relation !== "sibling")) {
+        const parentM = myMembers.find(m => m.id === link.fromMemberId);
+        const childM  = myMembers.find(m => m.id === link.toMemberId);
+        if (!parentM || !childM) continue;
+        if (!["uncle","aunt"].includes(parentM.relation_type)) continue;
+        if (childM.relation_type !== "cousin") continue;
+        if (!tioToDirectCousin.has(link.fromMemberId)) tioToDirectCousin.set(link.fromMemberId, []);
+        tioToDirectCousin.get(link.fromMemberId)!.push(link.toMemberId);
+      }
+      for (const e of extended) {
+        if (e.inferredRelation !== "cousin") continue;
+        for (const sibId of tioToDirectCousin.get(e.parentMemberId) || [])
+          addPeerLink(sibId, e.member.id);
+      }
+
+      setExtendedMembers(extended);
+      setMemberLinks(crossLinks);
     }
 
     } catch (err: any) {
