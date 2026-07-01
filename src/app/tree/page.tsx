@@ -816,7 +816,26 @@ export default function TreePage() {
           for (const sibId of directSiblings) addPeerLink(sibId, e.member.id);
         }
 
-        setExtendedMembers(extended);
+        // ── Final safety dedup ─────────────────────────────────
+        // Strips any extended entry that is actually a direct member.
+        // Catches duplicates from reverse lookup and tercer salto which only
+        // do profile_id-based dedup — missing the name-based check for
+        // deceased/unregistered members (profile_id = null).
+        const finalExtended = extended.filter(e => {
+          if (e.member.profile_id && myMemberIds.has(e.member.profile_id)) return false;
+          const fn = norm(e.member.first_name);
+          const ln = norm(e.member.last_name || "");
+          if (fn.length >= 3) {
+            const fn0 = fn.split(" ")[0];
+            const ln0 = ln.split(" ")[0];
+            if (myNameKeys.has(`${fn}|${ln}`)) return false;
+            if (ln0.length > 0 && myNameKeys.has(`${fn0}|${ln0}`)) return false;
+            if (fn0.length >= 4 && myNameKeys.has(`${fn0}|__nolast__`)) return false;
+            if (ln === "" && fn0.length >= 4 && myFirstWords.has(fn0)) return false;
+          }
+          return true;
+        });
+        setExtendedMembers(finalExtended);
         setMemberLinks(crossLinks);
       }
     }

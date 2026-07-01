@@ -155,6 +155,9 @@ function buildLayout(
     const fn0 = fn.split(" ")[0]; const ln0 = ln.split(" ")[0];
     directNameKeys.add(`${fn}|${ln}`);
     if (fn0 && ln0) directNameKeys.add(`${fn0}|${ln0}`);
+    // When direct member has no last name, store sentinel so we can match
+    // extended members who have that same first name WITH a last name added.
+    if (!ln && fn0.length >= 4) directNameKeys.add(`${fn0}|__nolast__`);
     if (fn0.length >= 4) directFirstWords.add(fn0);
   });
 
@@ -167,6 +170,8 @@ function buildLayout(
     // Full name or first-word match
     if (directNameKeys.has(`${fn}|${ln}`)) return false;
     if (fn0 && ln0 && directNameKeys.has(`${fn0}|${ln0}`)) return false;
+    // Extended has last name but direct stored with no last name (or vice-versa)
+    if (fn0.length >= 4 && directNameKeys.has(`${fn0}|__nolast__`)) return false;
     // Extended has no last name: first-name match against any direct member
     if (!ln && fn0.length >= 4 && directFirstWords.has(fn0)) return false;
     return true;
@@ -211,7 +216,10 @@ function buildLayout(
 
       const isGreatGrandparent = extGen <= -3 && !!inferredRelation &&
         (inferredRelation.includes("grandfather") || inferredRelation.includes("grandmother"));
-      const finalRelType = isGreatGrandparent ? "bisabuelo" : (inferredRelation || m.relation_type);
+      // When inferredRelation is "other" (null fallback), show the raw relation_type
+      // the person entered (e.g. "uncle" → "Tío") rather than showing "Otro familiar".
+      const finalRelType = isGreatGrandparent ? "bisabuelo" :
+        (inferredRelation && inferredRelation !== "other" ? inferredRelation : m.relation_type);
       const relLabel = isGreatGrandparent
         ? (["father","grandfather_paternal","grandfather_maternal"].includes(m.relation_type) ? "Bisabuelo" : "Bisabuela")
         : (RELATION_LABELS[finalRelType as keyof typeof RELATION_LABELS] ?? finalRelType);
