@@ -181,14 +181,25 @@ const DEEP_TRAVERSE = new Set([
   "brother_in_law","sister_in_law","father_in_law","mother_in_law",
 ]);
 
-// Alternate relation options for ambiguous cases (e.g., father's new wife)
+// Alternate relation options for ambiguous cases
+// Covers: gender ambiguity (hijo/hija), step vs bio, half-siblings
 const ALT_RELATIONS: Partial<Record<string, { label: string; relation: RelationType }[]>> = {
-  stepmother: [{ label: "Madrastra", relation: "stepmother" }, { label: "Madre", relation: "mother" }],
-  stepfather: [{ label: "Padrastro", relation: "stepfather" }, { label: "Padre", relation: "father" }],
-  father:     [{ label: "Padre", relation: "father" }, { label: "Padrastro", relation: "stepfather" }],
-  mother:     [{ label: "Madre", relation: "mother" }, { label: "Madrastra", relation: "stepmother" }],
-  brother:    [{ label: "Hermano", relation: "brother" }, { label: "Medio hermano", relation: "half_brother" }],
-  sister:     [{ label: "Hermana", relation: "sister" }, { label: "Media hermana", relation: "half_sister" }],
+  // Género ambiguo — no sabemos si el usuario es hombre o mujer
+  father:       [{ label: "Padre", relation: "father" },       { label: "Madre", relation: "mother" }],
+  mother:       [{ label: "Madre", relation: "mother" },       { label: "Padre", relation: "father" }],
+  son:          [{ label: "Hijo", relation: "son" },           { label: "Hija", relation: "daughter" }],
+  daughter:     [{ label: "Hija", relation: "daughter" },      { label: "Hijo", relation: "son" }],
+  grandson:     [{ label: "Nieto", relation: "grandson" },     { label: "Nieta", relation: "granddaughter" }],
+  granddaughter:[{ label: "Nieta", relation: "granddaughter"}, { label: "Nieto", relation: "grandson" }],
+  nephew:       [{ label: "Sobrino", relation: "nephew" },     { label: "Sobrina", relation: "niece" }],
+  niece:        [{ label: "Sobrina", relation: "niece" },      { label: "Sobrino", relation: "nephew" }],
+  uncle:        [{ label: "Tío", relation: "uncle" },          { label: "Tía", relation: "aunt" }],
+  aunt:         [{ label: "Tía", relation: "aunt" },           { label: "Tío", relation: "uncle" }],
+  brother:      [{ label: "Hermano", relation: "brother" },    { label: "Hermana", relation: "sister" }, { label: "Medio hermano", relation: "half_brother" }],
+  sister:       [{ label: "Hermana", relation: "sister" },     { label: "Hermano", relation: "brother" }, { label: "Media hermana", relation: "half_sister" }],
+  // Padrastro/madrastra vs padre/madre biológico
+  stepmother:   [{ label: "Madrastra", relation: "stepmother" }, { label: "Madre", relation: "mother" }],
+  stepfather:   [{ label: "Padrastro", relation: "stepfather" }, { label: "Padre", relation: "father" }],
 };
 
 // ── Types ─────────────────────────────────────────────────────────────────────
