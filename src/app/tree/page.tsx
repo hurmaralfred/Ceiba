@@ -100,30 +100,46 @@ function inferRelation(parentRelation: RelationType, childRelation: string): str
       if (childRelation === "niece")  return "niece";
       break;
 
-    // ── My parents & step-parents ─────────────────────────────
-    case "father": case "mother":
-    case "stepfather": case "stepmother":
+    // ── My father / stepfather ────────────────────────────────
+    case "father": case "stepfather":
       if (childRelation === "son")            return "brother";
       if (childRelation === "daughter")       return "sister";
       if (childRelation === "stepchild")      return "brother";
-      // Father/mother's siblings = my uncles/aunts
       if (["brother","half_brother"].includes(childRelation)) return "uncle";
       if (["sister","half_sister"].includes(childRelation))   return "aunt";
-      // Father/mother's parents = my grandparents
+      // Father's parents = my PATERNAL grandparents
       if (childRelation === "father")         return "grandfather_paternal";
       if (childRelation === "mother")         return "grandmother_paternal";
       if (["grandfather_paternal","grandfather_maternal"].includes(childRelation)) return "grandfather_paternal";
       if (["grandmother_paternal","grandmother_maternal"].includes(childRelation)) return "grandmother_paternal";
-      // Father/mother's spouse (other than me) = step-parent
-      if (["spouse","partner"].includes(childRelation)) return parentRelation === "father" ? "stepmother" : "stepfather";
-      // Parent's nephew/niece = my cousin; parent's cousin = also cousin
+      if (["spouse","partner"].includes(childRelation))       return "stepmother";
       if (childRelation === "nephew")         return "cousin";
       if (childRelation === "niece")          return "cousin";
       if (childRelation === "cousin")         return "cousin";
-      // Parent's uncle/aunt = my great-uncle/aunt (labeled as uncle/aunt)
       if (childRelation === "uncle")          return "uncle";
       if (childRelation === "aunt")           return "aunt";
-      // Parent's grandchildren (siblings' kids) = my nephews/nieces
+      if (childRelation === "grandson")       return "nephew";
+      if (childRelation === "granddaughter")  return "niece";
+      break;
+
+    // ── My mother / stepmother ────────────────────────────────
+    case "mother": case "stepmother":
+      if (childRelation === "son")            return "brother";
+      if (childRelation === "daughter")       return "sister";
+      if (childRelation === "stepchild")      return "brother";
+      if (["brother","half_brother"].includes(childRelation)) return "uncle";
+      if (["sister","half_sister"].includes(childRelation))   return "aunt";
+      // Mother's parents = my MATERNAL grandparents
+      if (childRelation === "father")         return "grandfather_maternal";
+      if (childRelation === "mother")         return "grandmother_maternal";
+      if (["grandfather_paternal","grandfather_maternal"].includes(childRelation)) return "grandfather_maternal";
+      if (["grandmother_paternal","grandmother_maternal"].includes(childRelation)) return "grandmother_maternal";
+      if (["spouse","partner"].includes(childRelation))       return "stepfather";
+      if (childRelation === "nephew")         return "cousin";
+      if (childRelation === "niece")          return "cousin";
+      if (childRelation === "cousin")         return "cousin";
+      if (childRelation === "uncle")          return "uncle";
+      if (childRelation === "aunt")           return "aunt";
       if (childRelation === "grandson")       return "nephew";
       if (childRelation === "granddaughter")  return "niece";
       break;

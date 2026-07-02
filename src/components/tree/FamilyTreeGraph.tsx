@@ -46,19 +46,28 @@ const GENERATION: Record<string, number> = {
 };
 
 const POS_HINT: Record<string, number> = {
+  // ── Gen -2: abuelos maternos izq, paternos der ────────────
   grandfather_maternal: -3, grandmother_maternal: -2,
   grandfather_paternal: 2,  grandmother_paternal: 3,
-  mother: -1, father: 1,
-  mother_in_law: -4, father_in_law: 4,
-  stepmother: -2, stepfather: 2,
-  aunt: -5, uncle: 5,
-  half_sister: -2, sister: -1,
+
+  // ── Gen -1: suegros extremos, tíos laterales, padres centro ─
+  mother_in_law: -6, father_in_law: 6,
+  aunt: -5,          uncle: 5,
+  stepmother: -1.5,  stepfather: 1.5,
+  mother: -1,        father: 1,
+
+  // ── Gen 0: primos extremo izq, hermanos juntos izq, ROOT,
+  //           esposa/pareja der inmediata, cuñados der ────────
+  cousin: -7,
+  half_sister: -4, sister: -3, half_brother: -2, brother: -1,
+  // ROOT implícito en 0
   spouse: 1, partner: 1,
-  half_brother: 2, brother: 3,
-  sister_in_law: -3, brother_in_law: 3,
-  cousin: 4,
-  daughter: -1, son: 1, stepchild: 0,
-  niece: -3, nephew: 3,
+  sister_in_law: 3, brother_in_law: 4,
+
+  // ── Gen 1: hijos centro, sobrinos lados ───────────────────
+  daughter: -2, son: -1, stepchild: 0, niece: 1, nephew: 2,
+
+  // ── Gen 2: nietos ─────────────────────────────────────────
   granddaughter: -1, grandson: 1,
 };
 

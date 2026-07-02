@@ -75,17 +75,36 @@ function inferRel(parentRel: string, childRel: string): string | null {
       if (childRel === "father")    return "father_in_law";
       if (childRel === "mother")    return "mother_in_law";
       break;
-    case "father": case "mother": case "stepfather": case "stepmother":
+    case "father": case "stepfather":
       if (childRel === "son")       return "brother";
       if (childRel === "daughter")  return "sister";
       if (childRel === "stepchild") return "brother";
       if (["brother","half_brother"].includes(childRel)) return "uncle";
       if (["sister","half_sister"].includes(childRel))   return "aunt";
+      // Father's parents = PATERNAL grandparents
       if (childRel === "father")    return "grandfather_paternal";
       if (childRel === "mother")    return "grandmother_paternal";
       if (["grandfather_paternal","grandfather_maternal"].includes(childRel)) return "grandfather_paternal";
       if (["grandmother_paternal","grandmother_maternal"].includes(childRel)) return "grandmother_paternal";
-      if (["spouse","partner"].includes(childRel)) return parentRel === "father" ? "stepmother" : "stepfather";
+      if (["spouse","partner"].includes(childRel)) return "stepmother";
+      if (childRel === "nephew")    return "cousin";
+      if (childRel === "niece")     return "cousin";
+      if (childRel === "cousin")    return "cousin";
+      if (childRel === "uncle")     return "uncle";
+      if (childRel === "aunt")      return "aunt";
+      break;
+    case "mother": case "stepmother":
+      if (childRel === "son")       return "brother";
+      if (childRel === "daughter")  return "sister";
+      if (childRel === "stepchild") return "brother";
+      if (["brother","half_brother"].includes(childRel)) return "uncle";
+      if (["sister","half_sister"].includes(childRel))   return "aunt";
+      // Mother's parents = MATERNAL grandparents
+      if (childRel === "father")    return "grandfather_maternal";
+      if (childRel === "mother")    return "grandmother_maternal";
+      if (["grandfather_paternal","grandfather_maternal"].includes(childRel)) return "grandfather_maternal";
+      if (["grandmother_paternal","grandmother_maternal"].includes(childRel)) return "grandmother_maternal";
+      if (["spouse","partner"].includes(childRel)) return "stepfather";
       if (childRel === "nephew")    return "cousin";
       if (childRel === "niece")     return "cousin";
       if (childRel === "cousin")    return "cousin";
