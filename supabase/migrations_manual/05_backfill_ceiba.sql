@@ -67,7 +67,8 @@ INSERT INTO public.persons (
   is_living,
   created_by_user_id,
   status,
-  verification_level
+  verification_level,
+  gender
 )
 SELECT DISTINCT ON (fm.person_id)
   fm.person_id                     AS id,
@@ -77,7 +78,16 @@ SELECT DISTINCT ON (fm.person_id)
   TRUE,
   fm.added_by,
   'unverified'::person_status,
-  'unverified'::verification_level
+  'unverified'::verification_level,
+  CASE
+    WHEN fm.relation_type IN ('father','brother','half_brother','son','uncle',
+      'grandfather_paternal','grandfather_maternal','nephew','grandson',
+      'stepfather','father_in_law','brother_in_law') THEN 'M'::gender_enum
+    WHEN fm.relation_type IN ('mother','sister','half_sister','daughter','aunt',
+      'grandmother_paternal','grandmother_maternal','niece','granddaughter',
+      'stepmother','mother_in_law','sister_in_law') THEN 'F'::gender_enum
+    ELSE 'unknown'::gender_enum
+  END AS gender
 FROM public.family_members fm
 WHERE fm.profile_id IS NULL
   AND fm.person_id IS NOT NULL
@@ -85,7 +95,7 @@ WHERE fm.profile_id IS NULL
     SELECT 1 FROM public.persons pp WHERE pp.id = fm.person_id
   )
 ORDER BY fm.person_id,
-         (fm.last_name IS NOT NULL AND fm.last_name <> '') DESC,  -- preferir con apellido
+         (fm.last_name IS NOT NULL AND fm.last_name <> '') DESC,
          fm.created_at DESC NULLS LAST;
 
 -- Verificar

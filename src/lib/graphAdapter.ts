@@ -60,30 +60,31 @@ export function edgeToRelationType(
   viewerPersonId: string,
   otherGender: string | null | undefined
 ): RelationType {
-  const iAmA = edge.person_a_id === viewerPersonId;
-  const g = otherGender ?? "unknown";
+  const iAmA    = edge.person_a_id === viewerPersonId;
+  const isFemale = otherGender === "F";
+  const isMale   = otherGender === "M";
 
   switch (edge.relationship_type) {
     case "parent_of":
-      if (!iAmA) return g === "F" ? "mother" : "father";
-      return g === "F" ? "daughter" : "son";
+      if (!iAmA) return isFemale ? "mother" : "father";
+      return isFemale ? "daughter" : "son";
 
     case "partner_of":
-      return "spouse";
+      return isFemale ? "partner" : "spouse";
 
     case "sibling_of":
-      return g === "F" ? "sister" : "brother";
+      return isFemale ? "sister" : "brother";
 
     case "half_sibling_of":
-      return g === "F" ? "half_sister" : "half_brother";
+      return isFemale ? "half_sister" : "half_brother";
 
     case "guardian_of":
-      if (!iAmA) return g === "F" ? "stepmother" : "stepfather";
+      if (!iAmA) return isFemale ? "stepmother" : "stepfather";
       return "stepchild";
 
     case "adoptive_parent_of":
-      if (!iAmA) return g === "F" ? "mother" : "father";
-      return g === "F" ? "daughter" : "son";
+      if (!iAmA) return isFemale ? "mother" : "father";
+      return isFemale ? "daughter" : "son";
 
     default:
       return "other";
