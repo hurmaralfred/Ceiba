@@ -59,6 +59,12 @@ begin
   end if;
 end$$;
 
+-- Wrapper IMMUTABLE para unaccent (requerido para generated columns)
+create or replace function public.immutable_unaccent(text)
+returns text
+language sql immutable parallel safe strict
+as $$ select unaccent($1) $$;
+
 -- Verificar
 select typname from pg_type
 where typname in ('person_status','relationship_type','sos_status','gender_enum')

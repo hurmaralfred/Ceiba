@@ -78,7 +78,24 @@ create trigger trg_normalize_sym before insert on public.relationships
 for each row execute function public.normalize_symmetric_relationship();
 
 
--- 5) Registrar creación/modificación en audit_logs
+-- 5) Calcular pair_key (debe correr después de trg_normalize_sym — "s" > "n")
+create or replace function public.set_pair_key()
+returns trigger language plpgsql as $$
+begin
+  new.pair_key :=
+    case when new.person_a_id::text < new.person_b_id::text
+      then new.person_a_id::text || '__' || new.person_b_id::text
+      else new.person_b_id::text || '__' || new.person_a_id::text
+    end || '::' || new.relationship_type::text;
+  return new;
+end $$;
+
+drop trigger if exists trg_set_pair_key on public.relationships;
+create trigger trg_set_pair_key before insert or update on public.relationships
+for each row execute function public.set_pair_key();
+
+
+-- 7) Registrar creación/modificación en audit_logs
 create or replace function public.audit_relationship_change()
 returns trigger language plpgsql as $$
 begin
@@ -98,7 +115,7 @@ create trigger trg_audit_rel after insert or update or delete on public.relation
 for each row execute function public.audit_relationship_change();
 
 
--- 6) Registrar cambio de is_living o death_date en persons
+-- 8) Registrar cambio de is_living o death_date en persons
 create or replace function public.audit_person_status()
 returns trigger language plpgsql as $$
 begin

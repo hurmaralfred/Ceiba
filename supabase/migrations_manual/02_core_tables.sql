@@ -9,7 +9,7 @@ create table if not exists public.persons (
   first_names         text not null,
   last_names          text not null,
   normalized_name     text generated always as (
-                        lower(unaccent(first_names || ' ' || last_names))
+                        lower(public.immutable_unaccent(first_names || ' ' || last_names))
                       ) stored,
   email               citext,
   birth_date          date,
@@ -50,12 +50,7 @@ create table if not exists public.relationships (
   person_a_id           uuid not null references public.persons(id) on delete cascade,
   person_b_id           uuid not null references public.persons(id) on delete cascade,
   relationship_type     relationship_type not null,
-  pair_key              text generated always as (
-                          least(person_a_id::text, person_b_id::text)
-                          || '__' ||
-                          greatest(person_a_id::text, person_b_id::text)
-                          || '::' || relationship_type::text
-                        ) stored unique,
+  pair_key              text unique,  -- calculado por trigger trg_set_pair_key
   source                text default 'declared',
   declared_by_user_id   uuid references auth.users(id) on delete set null,
   confidence_score      int  default 100,
