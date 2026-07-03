@@ -6,13 +6,8 @@ import dynamic from "next/dynamic";
 import { TreePine, MapPin, Users, Share2, LogOut, User, Send, List, GitFork, Plus, X, Pencil, Map as MapIcon, Image, Calendar, MessageCircle, Megaphone, Camera } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Profile, FamilyMember, RelationType, RELATION_LABELS } from "@/lib/types";
+import { reverseRelation, inferRelation } from "@/lib/relations";
 import type { ExtendedEntry, MemberLink } from "@/components/tree/FamilyTreeGraph";
-
-// ── Reverse relation ──────────────────────────────────────────
-// If person P added member M with relation_type R (P says "M is my R"),
-// then from M's perspective, P is M's reverseRelation(R).
-// Used for reverse lookup: when P is in the tree because P added one of
-// the user's direct family members to P's own tree.
 function reverseRelation(rel: string): string {
   switch (rel) {
     case "father":                   return "son";
@@ -395,7 +390,7 @@ export default function TreePage() {
 
     // Deduplicate my own members by first name (keep the one with profile_id, or the first)
     const normName = (s: string) =>
-      (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().split(" ")[0];
+      (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
     const seenNames = new Map<string, any>();
     for (const m of membersData || []) {
       const key = `${normName(m.first_name)}|${normName(m.last_name || "")}`;
