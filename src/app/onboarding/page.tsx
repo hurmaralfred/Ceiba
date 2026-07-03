@@ -94,6 +94,12 @@ export default function OnboardingPage() {
         country: profile.country,
       }).eq("id", userId);
 
+      // Sincronizar bio + ciudad en persons (nuevo esquema)
+      await supabase.from("persons").update({
+        bio: profile.bio || null,
+        birth_city: profile.city || null,
+      }).eq("linked_user_id", userId);
+
       // Always go to step 1 (wizard) — it handles both match-found and no-match cases
       setStep(1);
     } catch (err: any) {

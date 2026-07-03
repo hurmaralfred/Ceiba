@@ -159,6 +159,8 @@ function RegisterFormInner() {
 
       if (avatar_url) {
         await supabase.from("profiles").update({ avatar_url }).eq("id", userId);
+        // Sincronizar foto en persons (nuevo esquema)
+        await supabase.from("persons").update({ profile_photo_url: avatar_url }).eq("linked_user_id", userId);
       }
 
       try { await fetch("/api/auth/post-register", { method: "POST" }); } catch {}

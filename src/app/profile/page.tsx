@@ -91,8 +91,20 @@ export default function ProfilePage() {
       ...(avatar_url ? { avatar_url } : {}),
     }).eq("id", user.id);
 
+    if (error) { setSaving(false); toast.error("Error al guardar"); return; }
+
+    // Sincronizar campos solapados en persons (nuevo esquema)
+    await supabase.from("persons").update({
+      first_names: form.first_name.trim(),
+      last_names: form.last_name.trim() || null,
+      bio: form.bio.trim() || null,
+      birth_date: form.birth_date || null,
+      birth_city: form.city.trim() || null,
+      ...(avatar_url ? { profile_photo_url: avatar_url } : {}),
+    }).eq("linked_user_id", user.id);
+    // (si no existe fila en persons aún, el update no falla — simplemente afecta 0 filas)
+
     setSaving(false);
-    if (error) { toast.error("Error al guardar"); return; }
     toast.success("¡Perfil actualizado!");
     router.push("/tree");
   };
