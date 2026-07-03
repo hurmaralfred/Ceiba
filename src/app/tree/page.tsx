@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 import { TreePine, MapPin, Users, Share2, LogOut, User, Send, List, GitFork, Plus, X, Pencil, Map as MapIcon, Image, Calendar, MessageCircle, Megaphone, Camera } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Profile, FamilyMember, RelationType, RELATION_LABELS } from "@/lib/types";
-import { reverseRelation, inferRelation } from "@/lib/relations";
+import { adaptGraph, relationTypeToGraphType, type FamilyGraph } from "@/lib/graphAdapter";
 import type { ExtendedEntry, MemberLink } from "@/components/tree/FamilyTreeGraph";
 import InstallBanner from "@/components/InstallBanner";
 import TreeErrorBoundary from "@/components/TreeErrorBoundary";
@@ -67,11 +67,9 @@ export default function TreePage() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [duplicateWarning, setDuplicateWarning] = useState<{
-    connectedMember: { first_name: string; last_name: string; relation_type: string };
-    matchedName: string;
-    matchedRelation: string;
-    matchedProfileId: string | null;
-    matchedFamilyMemberId: string | null;
+    candidate_id: string;
+    matchedName: string;       // nombre de la persona ya existente
+    score: number;
   } | null>(null);
   const modalPhotoRef = useRef<HTMLInputElement>(null);
   const [modalPhotoFile, setModalPhotoFile] = useState<File | null>(null);
@@ -117,476 +115,38 @@ export default function TreePage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { router.push("/auth/login"); return; }
 
-    // Global auto-link + update last_seen (fire-and-forget)
+    // Fire-and-forget: presencia + auto-link si nuevo usuario
     fetch("/api/auth/post-register", { method: "POST" }).catch(() => {});
     fetch("/api/presence", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) }).catch(() => {});
 
-    const [{ data: profileData }, { data: membersData }] = await Promise.all([
-      supabase.from("profiles").select("*").eq("id", user.id).single(),
-      supabase.from("family_members").select("*").eq("added_by", user.id),
-    ]);
+    // ── Nuevo grafo familiar ────────────────────────────────────────────────
+    const { data: graphData, error: graphError } = await supabase.rpc("get_my_family_graph", { depth: 4 });
+    if (graphError) throw graphError;
 
-    // Check for pending family discovery matches (fire-and-forget for UI badge)
-    if (profileData?.first_name) {
-      supabase.rpc("find_name_matches", {
-        p_first_name: profileData.first_name,
-        p_last_name:  profileData.last_name || "",
-        p_user_id:    user.id,
-      }).then(({ data }) => setPendingMatchCount((data || []).length));
+    const graph = graphData as FamilyGraph | null;
+    if (!graph || !graph.me) {
+      // Usuario nuevo sin nodo en persons todavía — mostrar árbol vacío
+      setLoading(false);
+      return;
     }
 
-    // Deduplicate my own members by first name (keep the one with profile_id, or the first)
-    const normName = (s: string) =>
-      (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-    const seenNames = new Map<string, any>();
-    for (const m of membersData || []) {
-      const key = `${normName(m.first_name)}|${normName(m.last_name || "")}`;
-      if (!seenNames.has(key) || (!seenNames.get(key).profile_id && m.profile_id)) {
-        seenNames.set(key, m);
-      }
-    }
-    // Dedup pass 2: same profile_id → keep only one (catches cases where
-    // the same person was added manually AND via invite with different name formats)
-    const seenProfileId = new Map<string, any>();
-    for (const m of seenNames.values()) {
-      if (!m.profile_id) continue;
-      if (!seenProfileId.has(m.profile_id)) {
-        seenProfileId.set(m.profile_id, m);
-      }
-      // Prefer the one that has a last_name (more complete record)
-      else if (!seenProfileId.get(m.profile_id).last_name && m.last_name) {
-        seenProfileId.set(m.profile_id, m);
-      }
-    }
-    let myMembers = Array.from(seenNames.values()).filter(m => {
-      if (!m.profile_id) return true;
-      return seenProfileId.get(m.profile_id) === m;
-    });
-    setProfile(profileData);
+    const { profile, members, extendedMembers, memberLinks } = adaptGraph(graph, user.id);
+    setProfile(profile);
+    setMembers(members);
+    setExtendedMembers(extendedMembers);
+    setMemberLinks(memberLinks);
 
-    // Auto-link members who registered independently (match by email OR name+apellido)
-    const unlinked = myMembers.filter(m => !m.profile_id);
-    if (unlinked.length > 0) {
-      // Load all registered profiles to match against
-      const { data: allProfiles } = await supabase
-        .from("profiles")
-        .select("id, email, first_name, last_name")
-        .neq("id", user.id);
+    // Pendientes de confirmación de coincidencias
+    const { data: matchData } = await supabase
+      .from("match_candidates")
+      .select("id")
+      .eq("proposed_by_user_id", user.id)
+      .eq("status", "pending");
+    setPendingMatchCount((matchData || []).length);
 
-      if (allProfiles && allProfiles.length > 0) {
-        const updates: Promise<any>[] = [];
-
-        for (const member of unlinked) {
-          const mFn = normName(member.first_name);
-          const mLn = normName(member.last_name || "");
-
-          // Match by email (exact) OR by name (first+last when available, first-only when no last)
-          const match = allProfiles.find(p => {
-            if (member.email && p.email && member.email.toLowerCase() === p.email.toLowerCase()) return true;
-            const pFn = normName(p.first_name || "");
-            const pLn = normName(p.last_name || "");
-            if (!mFn || pFn !== mFn) return false;
-            // Both have last name: require last name match too
-            if (mLn && pLn) return pLn === mLn;
-            // At least one side has no last name: first name match is enough
-            return true;
-          });
-
-          if (match) {
-            updates.push(
-              supabase.from("family_members").update({ profile_id: match.id }).eq("id", member.id)
-            );
-          }
-        }
-
-        if (updates.length > 0) {
-          await Promise.all(updates);
-          // Refresh members after linking
-          const { data: refreshed } = await supabase.from("family_members").select("*").eq("added_by", user.id);
-          const seen2 = new Map<string, any>();
-          for (const m of refreshed || []) {
-            const key = `${normName(m.first_name)}|${normName(m.last_name || "")}`;
-            if (!seen2.has(key) || (!seen2.get(key).profile_id && m.profile_id)) seen2.set(key, m);
-          }
-          myMembers = Array.from(seen2.values());
-        }
-      }
-    }
-
-    // ── Auto-link via confirmed relationships table ────────────
-    // If a family member confirmed a bidirectional relationship via invitation
-    // but profile_id wasn't saved, use the relationships table to link them.
-    {
-      const stillUnlinked = myMembers.filter(m => !m.profile_id);
-      if (stillUnlinked.length > 0) {
-        const { data: confirmedRels } = await supabase
-          .from("relationships")
-          .select("profile_a, profile_b, relation_from_a, relation_from_b")
-          .or(`profile_a.eq.${user.id},profile_b.eq.${user.id}`)
-          .eq("confirmed", true);
-
-        if (confirmedRels && confirmedRels.length > 0) {
-          const theirIds = confirmedRels.map(r => r.profile_a === user.id ? r.profile_b : r.profile_a);
-          const { data: relProfiles } = await supabase
-            .from("profiles")
-            .select("id, first_name, last_name")
-            .in("id", theirIds);
-          const relProfileMap = Object.fromEntries((relProfiles || []).map(p => [p.id, p]));
-
-          const relUpdates: Promise<any>[] = [];
-          for (const rel of confirmedRels) {
-            const theirId  = rel.profile_a === user.id ? rel.profile_b : rel.profile_a;
-            const myRelType = rel.profile_a === user.id ? rel.relation_from_a : rel.relation_from_b;
-            if (myMembers.some(m => m.profile_id === theirId)) continue; // already linked
-            const theirProfile = relProfileMap[theirId];
-            if (!theirProfile) continue;
-            const tFn = normName(theirProfile.first_name || "");
-            const tLn = normName(theirProfile.last_name || "");
-            // Find unlinked member with matching relation + name
-            const candidates = stillUnlinked.filter(m => m.relation_type === myRelType && !m.profile_id);
-            const match = candidates.find(m => {
-              const mFn = normName(m.first_name); const mLn = normName(m.last_name || "");
-              if (mFn !== tFn) return false;
-              if (mLn && tLn) return mLn === tLn;
-              return true;
-            }) ?? (candidates.length === 1 ? candidates[0] : null);
-            if (match && !match.profile_id) {
-              match.profile_id = theirId;
-              relUpdates.push(supabase.from("family_members").update({ profile_id: theirId }).eq("id", match.id));
-            }
-          }
-          if (relUpdates.length > 0) await Promise.all(relUpdates);
-        }
-      }
-    }
-
-    // Enrich members with profile data (avatar, social_link) for those who've joined
-    const profileIds = myMembers.map(m => m.profile_id).filter(Boolean) as string[];
-    let enrichedMembers = myMembers;
-    if (profileIds.length > 0) {
-      const { data: profilesData } = await supabase
-        .from("profiles")
-        .select("id, avatar_url, social_link, latitude, longitude, city, country, last_seen_at")
-        .in("id", profileIds);
-      if (profilesData) {
-        const profileMap = Object.fromEntries(profilesData.map(p => [p.id, p]));
-        enrichedMembers = myMembers.map(m => ({
-          ...m,
-          profile: m.profile_id ? profileMap[m.profile_id] : undefined,
-        }));
-      }
-    }
-    setMembers(enrichedMembers);
-
-    // ─── Red extendida (reescritura completa) ───────────────────────────────────
-    // Principios:
-    //   1. person_id es la clave canónica: dos filas con el mismo person_id son
-    //      la MISMA persona real, sin importar cómo se llame.
-    //   2. Name-based dedup como fallback para datos anteriores a person_id.
-    //   3. Una sola función isAlreadyShown/markShown usada en los tres pasos
-    //      (forward → reverse → tercer salto), así ninguna persona puede
-    //      filtrarse por caminos distintos.
-
-    const joinedMembers = myMembers.filter(m => m.profile_id);
-    if (joinedMembers.length > 0) {
-      const joinedProfileIds = joinedMembers.map(m => m.profile_id!);
-
-      // ── Normalización ─────────────────────────────────────────────────────────
-      const norm = (s: string) =>
-        (s || "").toLowerCase()
-          .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-          .replace(/\s+/g, " ").trim();
-
-      // ── Identidad de mis miembros directos ───────────────────────────────────
-      const myPersonIds = new Set<string>(
-        myMembers.map(m => (m as any).person_id as string).filter(Boolean)
-      );
-      const myMemberProfileIds = new Set<string>(
-        myMembers.map(m => m.profile_id as string).filter(Boolean)
-      );
-
-      // Name keys para fallback: full, first-words, y sentinel __nolast__
-      const myNameKeys = new Set<string>();
-      const myFirstWords = new Set<string>();
-      myMembers.forEach(m => {
-        const fn = norm(m.first_name);
-        const ln = norm(m.last_name || "");
-        const fn0 = fn.split(" ")[0];
-        const ln0 = ln.split(" ")[0];
-        myNameKeys.add(`${fn}|${ln}`);
-        if (fn0 && ln0) myNameKeys.add(`${fn0}|${ln0}`);
-        if (!ln && fn0.length >= 4) myNameKeys.add(`${fn0}|__nolast__`);
-        if (fn0.length >= 4) myFirstWords.add(fn0);
-      });
-
-      // Mapas para lookup rápido de miembro directo (para crear cross-links)
-      const directByPersonId = new Map<string, FamilyMember>(
-        myMembers.filter(m => (m as any).person_id)
-          .map(m => [(m as any).person_id as string, m])
-      );
-      const directByProfileId = new Map<string, FamilyMember>(
-        myMembers.filter(m => m.profile_id).map(m => [m.profile_id!, m])
-      );
-      const directByNameKey = new Map<string, FamilyMember>();
-      myMembers.forEach(m => {
-        const fn0 = norm(m.first_name).split(" ")[0];
-        const ln0 = norm(m.last_name || "").split(" ")[0];
-        directByNameKey.set(`${fn0}|${ln0}`, m);
-        directByNameKey.set(`${fn0}|`, m);  // fallback sin apellido
-      });
-
-      // findMyDirect: si em es uno de mis miembros directos, devuelve cuál.
-      const findMyDirect = (em: any): FamilyMember | undefined => {
-        if (em.profile_id === user.id) return undefined;
-        if (em.person_id) {
-          const d = directByPersonId.get(em.person_id as string);
-          if (d) return d;
-        }
-        if (em.profile_id) {
-          const d = directByProfileId.get(em.profile_id as string);
-          if (d) return d;
-        }
-        const fn = norm(em.first_name || "");
-        const ln = norm(em.last_name || "");
-        const fn0 = fn.split(" ")[0];
-        const ln0 = ln.split(" ")[0];
-        if (fn.length < 3) return undefined;
-        if (myNameKeys.has(`${fn}|${ln}`))
-          return directByNameKey.get(`${fn0}|${ln0}`) ?? directByNameKey.get(`${fn0}|`);
-        if (ln0.length >= 3 && myNameKeys.has(`${fn0}|${ln0}`))
-          return directByNameKey.get(`${fn0}|${ln0}`);
-        if (fn0.length >= 4 && myNameKeys.has(`${fn0}|__nolast__`))
-          return directByNameKey.get(`${fn0}|`);
-        if (ln === "" && fn0.length >= 4 && myFirstWords.has(fn0))
-          return directByNameKey.get(`${fn0}|`);
-        return undefined;
-      };
-
-      // ── Registro de lo que ya se muestra (evita duplicados entre los 3 pasos) ─
-      const shownPersonIds   = new Set<string>(myPersonIds);
-      const shownProfileIds  = new Set<string>(myMemberProfileIds);
-      const shownNameKeys    = new Set<string>(); // fn0|ln0 ya en extended
-
-      const isAlreadyShown = (em: any): boolean => {
-        if (em.profile_id === user.id) return true;
-        if (em.person_id  && shownPersonIds.has(em.person_id as string))  return true;
-        if (em.profile_id && shownProfileIds.has(em.profile_id as string)) return true;
-        const fn0 = norm(em.first_name || "").split(" ")[0];
-        const ln0 = norm(em.last_name  || "").split(" ")[0];
-        if (fn0.length >= 4 || ln0.length >= 3) return shownNameKeys.has(`${fn0}|${ln0}`);
-        return false;
-      };
-
-      const markShown = (em: any) => {
-        if (em.person_id)  shownPersonIds.add(em.person_id as string);
-        if (em.profile_id) shownProfileIds.add(em.profile_id as string);
-        const fn0 = norm(em.first_name || "").split(" ")[0];
-        const ln0 = norm(em.last_name  || "").split(" ")[0];
-        if (fn0.length >= 4 || ln0.length >= 3) shownNameKeys.add(`${fn0}|${ln0}`);
-      };
-
-      // ── Estructuras de salida ─────────────────────────────────────────────────
-      const extended: ExtendedEntry[] = [];
-      const crossLinks: MemberLink[] = [];
-      const crossLinkKeys = new Set<string>();
-
-      const addCrossLink = (fromId: string, toId: string, relation: string) => {
-        if (fromId === toId) return;
-        const key = [fromId, toId].sort().join("|");
-        if (!crossLinkKeys.has(key)) {
-          crossLinkKeys.add(key);
-          crossLinks.push({ fromMemberId: fromId, toMemberId: toId, relation });
-        }
-      };
-
-      // ── PASO 1: Forward lookup ────────────────────────────────────────────────
-      // Familia de mis familiares que se unieron a Ceiba.
-      const { data: extData } = await supabase
-        .from("family_members")
-        .select("*")
-        .in("added_by", joinedProfileIds);
-
-      for (const em of extData || []) {
-        const connector = joinedMembers.find(m => m.profile_id === em.added_by);
-        if (!connector) continue;
-
-        // ¿Este extended member ES uno de mis miembros directos?
-        const directMatch = findMyDirect(em);
-        if (directMatch) {
-          // Crear cross-link: el conector también conoce a este miembro directo
-          addCrossLink(connector.id, directMatch.id, em.relation_type);
-          continue;
-        }
-
-        if (isAlreadyShown(em)) continue;
-        markShown(em);
-
-        const inferred = inferRelation(connector.relation_type as RelationType, em.relation_type);
-        extended.push({
-          member: em as FamilyMember,
-          parentMemberId: connector.id,
-          inferredRelation: inferred ?? "other",
-        });
-      }
-
-      // ── PASO 2: Reverse lookup ────────────────────────────────────────────────
-      // Personas que agregaron a uno de MIS familiares a SU árbol.
-      // Ejemplo: cuñado tiene a mi hermana como "sister" → cuñado es mi extended.
-      const { data: revData } = await supabase
-        .from("family_members")
-        .select("id, added_by, profile_id, relation_type, relation_kind, first_name, last_name")
-        .in("profile_id", joinedProfileIds);
-
-      const connectorIds = [...new Set(
-        (revData || [])
-          .map(r => r.added_by as string)
-          .filter(id => id && id !== user.id && !myMemberProfileIds.has(id))
-      )];
-
-      const { data: connectorProfiles } = connectorIds.length > 0
-        ? await supabase
-            .from("profiles")
-            .select("id, first_name, last_name, avatar_url")
-            .in("id", connectorIds)
-        : { data: [] };
-
-      const connectorProfileMap = new Map(
-        (connectorProfiles || []).map(p => [p.id, p])
-      );
-
-      for (const rev of revData || []) {
-        const connId = rev.added_by as string;
-        if (!connId || connId === user.id || myMemberProfileIds.has(connId)) continue;
-
-        const connProfile = connectorProfileMap.get(connId);
-        if (!connProfile) continue;
-
-        const directMember = joinedMembers.find(m => m.profile_id === rev.profile_id);
-        if (!directMember) continue;
-
-        const syntheticEm = {
-          id: connId,
-          first_name: connProfile.first_name || rev.first_name,
-          last_name: connProfile.last_name || rev.last_name,
-          profile_id: connId,
-          person_id: null as any,
-          relation_type: reverseRelation(rev.relation_type),
-          relation_kind: rev.relation_kind ?? "blood",
-          added_by: connId,
-          profile: { avatar_url: connProfile.avatar_url },
-        };
-
-        if (isAlreadyShown(syntheticEm)) continue;
-        markShown(syntheticEm);
-
-        const connRelToDirectMember = reverseRelation(rev.relation_type);
-        const inferred = inferRelation(
-          directMember.relation_type as RelationType,
-          connRelToDirectMember
-        ) ?? "other";
-
-        extended.push({
-          member: syntheticEm as unknown as FamilyMember,
-          parentMemberId: directMember.id,
-          inferredRelation: inferred,
-        });
-      }
-
-      // ── PASO 3: Tercer salto ──────────────────────────────────────────────────
-      // Familia de los extended members CERCANOS que también están en Ceiba.
-      // Limitamos a relaciones de primer grado (tíos, hermanos políticos, etc.)
-      // para evitar que la red explote con primos de primos de primos.
-      const CLOSE_RELATIONS = new Set([
-        "uncle","aunt","brother_in_law","sister_in_law",
-        "father_in_law","mother_in_law","nephew","niece",
-        "grandfather_paternal","grandfather_maternal",
-        "grandmother_paternal","grandmother_maternal",
-      ]);
-      const joinedExtended = extended.filter(e =>
-        !!(e.member as any).profile_id &&
-        CLOSE_RELATIONS.has(e.inferredRelation ?? "")
-      );
-      const extProfileIds = [...new Set(
-        joinedExtended.map(e => (e.member as any).profile_id as string).filter(Boolean)
-      )];
-
-      if (extProfileIds.length > 0) {
-        const { data: ext2Data } = await supabase
-          .from("family_members")
-          .select("*")
-          .in("added_by", extProfileIds);
-
-        for (const em of ext2Data || []) {
-          if (em.profile_id === user.id) continue;
-          if (findMyDirect(em)) continue;
-          if (isAlreadyShown(em)) continue;
-
-          const parentExt = joinedExtended.find(
-            e => (e.member as any).profile_id === em.added_by
-          );
-          if (!parentExt || !parentExt.inferredRelation || parentExt.inferredRelation === "other") continue;
-
-          const level3Relation = inferRelation(
-            parentExt.inferredRelation as RelationType,
-            em.relation_type
-          ) ?? "other";
-
-          markShown(em);
-          extended.push({
-            member: em as FamilyMember,
-            parentMemberId: parentExt.member.id,
-            inferredRelation: level3Relation,
-          });
-        }
-      }
-
-      // ── PASO 4: Peer links (primos hermanos) ──────────────────────────────────
-      const CHILD_TYPES = new Set(["son", "daughter", "stepchild"]);
-      const addPeerLink = (idA: string, idB: string) => addCrossLink(idA, idB, "sibling");
-
-      // Caso A: dos extended cousins comparten el mismo tío/tía como parent
-      const parentGroupMap = new Map<string, ExtendedEntry[]>();
-      for (const e of extended) {
-        if (!CHILD_TYPES.has(e.member.relation_type)) continue;
-        if (e.inferredRelation !== "cousin") continue;
-        if (!parentGroupMap.has(e.parentMemberId)) parentGroupMap.set(e.parentMemberId, []);
-        parentGroupMap.get(e.parentMemberId)!.push(e);
-      }
-      for (const siblings of parentGroupMap.values()) {
-        if (siblings.length < 2) continue;
-        for (let i = 0; i < siblings.length; i++)
-          for (let j = i + 1; j < siblings.length; j++)
-            addPeerLink(siblings[i].member.id, siblings[j].member.id);
-      }
-
-      // Caso B: primo directo → extended cousin cuyo parent es ese primo
-      const directCousins = myMembers.filter(m => m.relation_type === "cousin");
-      for (const e of extended) {
-        if (e.inferredRelation !== "cousin") continue;
-        const parentDirect = directCousins.find(m => m.id === e.parentMemberId);
-        if (parentDirect) addPeerLink(parentDirect.id, e.member.id);
-      }
-
-      // Caso C: primo directo identificado via cross-link → conectar con extended cousins del mismo tío
-      const tioToDirectCousin = new Map<string, string[]>();
-      for (const link of crossLinks.filter(l => l.relation !== "sibling")) {
-        const parentM = myMembers.find(m => m.id === link.fromMemberId);
-        const childM  = myMembers.find(m => m.id === link.toMemberId);
-        if (!parentM || !childM) continue;
-        if (!["uncle","aunt"].includes(parentM.relation_type)) continue;
-        if (childM.relation_type !== "cousin") continue;
-        if (!tioToDirectCousin.has(link.fromMemberId)) tioToDirectCousin.set(link.fromMemberId, []);
-        tioToDirectCousin.get(link.fromMemberId)!.push(link.toMemberId);
-      }
-      for (const e of extended) {
-        if (e.inferredRelation !== "cousin") continue;
-        for (const sibId of tioToDirectCousin.get(e.parentMemberId) || [])
-          addPeerLink(sibId, e.member.id);
-      }
-
-      setExtendedMembers(extended);
-      setMemberLinks(crossLinks);
-    }
+    // Ubicación del usuario (de persons)
+    const myNode = (graph.nodes || []).find((n: any) => n.id === graph.me);
+    // (location está en profiles por ahora, no en persons)
 
     } catch (err: any) {
       console.error("loadData error:", err);
@@ -596,255 +156,95 @@ export default function TreePage() {
     }
   };
 
-  // Check if the name being added already exists in a connected family member's tree.
-  // Two-pass: (1) connected trees via profile_id, (2) broader Ceiba profile name search.
-  const checkExtendedDuplicate = async (first_name: string, last_name: string, userId: string) => {
-    const normW = (s: string) =>
-      (s || "").toLowerCase()
-        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-        .trim().split(" ")[0];
-
-    const fn = normW(first_name);
-    const ln = normW(last_name);
-    if (fn.length < 3) return null;
-
-    // \u2500\u2500 Pass 1: scan trees of directly linked Ceiba members \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
-    const { data: myMembers } = await supabase
-      .from("family_members")
-      .select("profile_id, first_name, last_name, relation_type")
-      .eq("added_by", userId)
-      .not("profile_id", "is", null);
-
-    for (const member of (myMembers || [])) {
-      const { data: theirMembers } = await supabase
-        .from("family_members")
-        .select("id, first_name, last_name, relation_type, profile_id")
-        .eq("added_by", member.profile_id);
-
-      const match = (theirMembers || []).find(m => {
-        const mfn = normW(m.first_name || "");
-        const mln = normW(m.last_name || "");
-        return mfn === fn && (ln.length < 2 || mln === ln || mln.length < 2);
-      });
-
-      if (match) {
-        return {
-          connectedMember: member,
-          matchedName: `${match.first_name} ${match.last_name || ""}`.trim(),
-          matchedRelation: match.relation_type,
-          matchedProfileId: match.profile_id || null,
-          matchedFamilyMemberId: match.id,
-        };
-      }
-    }
-
-    // ── Pass 2: buscar por nombre en perfiles de Ceiba ───────────────────
-    // Catches cases where the person IS on Ceiba but their family entry
-    // wasn't linked (profile_id null in the connector's tree).
-    const { data: profileMatches } = await supabase
-      .from("profiles")
-      .select("id, first_name, last_name")
-      .ilike("first_name", `${first_name.split(" ")[0]}%`)
-      .neq("id", userId)
-      .limit(15);
-
-    for (const profile of (profileMatches || [])) {
-      const pfn = normW(profile.first_name || "");
-      const pln = normW(profile.last_name || "");
-      if (pfn !== fn) continue;
-      if (ln.length >= 2 && pln.length >= 2 && pln !== ln) continue;
-
-      // This Ceiba user matches the name — check if they're in my family network
-      // Option A: they're already in MY tree
-      const { data: myEntry } = await supabase
-        .from("family_members")
-        .select("id, first_name, last_name, relation_type")
-        .eq("added_by", userId)
-        .eq("profile_id", profile.id)
-        .maybeSingle();
-      if (myEntry) {
-        return {
-          connectedMember: myEntry,
-          matchedName: `${profile.first_name} ${profile.last_name || ""}`.trim(),
-          matchedRelation: myEntry.relation_type,
-          matchedProfileId: profile.id,
-          matchedFamilyMemberId: myEntry.id,
-        };
-      }
-
-      // Option B: a connected family member added them to their own tree
-      const { data: networkEntries } = await supabase
-        .from("family_members")
-        .select("id, first_name, last_name, relation_type, added_by")
-        .eq("profile_id", profile.id)
-        .neq("added_by", userId)
-        .limit(10);
-
-      for (const entry of (networkEntries || [])) {
-        const { data: connector } = await supabase
-          .from("family_members")
-          .select("first_name, last_name, relation_type")
-          .eq("added_by", userId)
-          .eq("profile_id", entry.added_by)
-          .maybeSingle();
-        if (connector) {
-          return {
-            connectedMember: connector,
-            matchedName: `${profile.first_name} ${profile.last_name || ""}`.trim(),
-            matchedRelation: entry.relation_type,
-            matchedProfileId: profile.id,
-            matchedFamilyMemberId: entry.id,
-          };
-        }
-      }
-    }
-
-    return null;
-  };
-
-  // Save linking to an existing person in another tree (same real human, no duplicate)
+  // ── LEGACY: funciones que solo usaba el flujo antiguo (family_members) ──
+  // Vincula persona existente detectada como coincidencia (flujo de confirmación)
   const saveLinkedMember = async () => {
     if (!duplicateWarning) return;
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
     setSaving(true);
-
-    // Fetch exact name/profile_id from the original matched record
-    let exactFirstName = [form.primer_nombre.trim(), form.segundo_nombre.trim()].filter(Boolean).join(" ");
-    let exactLastName = [form.primer_apellido.trim(), form.segundo_apellido.trim()].filter(Boolean).join(" ");
-    let linkedProfileId = duplicateWarning.matchedProfileId;
-
-    if (duplicateWarning.matchedFamilyMemberId) {
-      const { data: orig } = await supabase
-        .from("family_members")
-        .select("first_name, last_name, profile_id, person_id")
-        .eq("id", duplicateWarning.matchedFamilyMemberId)
-        .maybeSingle();
-      if (orig) {
-        exactFirstName = orig.first_name;
-        exactLastName = orig.last_name || "";
-        linkedProfileId = orig.profile_id;
+    try {
+      // Si el warning tiene un candidate_id, confirmar vía RPC; si no, solo cerrar
+      if ((duplicateWarning as any).candidate_id) {
+        const { error } = await supabase.rpc("confirm_match", {
+          p_candidate_id: (duplicateWarning as any).candidate_id,
+        });
+        if (error) throw error;
       }
-    }
-
-    // Check if this person already exists in MY tree to avoid creating a 2nd entry
-    const { data: existing } = await supabase
-      .from("family_members")
-      .select("id")
-      .eq("added_by", user.id)
-      .ilike("first_name", exactFirstName)
-      .limit(1);
-
-    if (existing && existing.length > 0) {
-      // Already in my tree — just update relation if needed, don't insert again
-      await supabase
-        .from("family_members")
-        .update({ relation_type: form.relation_type, profile_id: linkedProfileId || null })
-        .eq("id", existing[0].id);
       toast.success("Familiar vinculado correctamente");
-    } else {
-      const kind = RELATION_GROUPS[0].options.includes(form.relation_type) ? "blood" : "affinity";
-      const { error } = await supabase.from("family_members").insert({
-        added_by: user.id,
-        first_name: exactFirstName,
-        last_name: exactLastName || null,
-        email: form.email.trim() || null,
-        birth_date: form.birth_date || null,
-        relation_type: form.relation_type,
-        relation_kind: kind,
-        is_deceased: form.is_deceased,
-        profile_id: linkedProfileId || null,
-        // Share the same person_id so this entry deduplicates in all connected trees
-        person_id: (orig as any)?.person_id || duplicateWarning.matchedFamilyMemberId || undefined,
-      });
-      if (error) { toast.error("Error al guardar"); setSaving(false); return; }
-      toast.success("Familiar vinculado correctamente");
+      setShowModal(false);
+      setForm(EMPTY_FORM);
+      setDuplicateWarning(null);
+      loadData();
+    } catch (err: any) {
+      toast.error(err?.message || "Error al vincular");
+    } finally {
+      setSaving(false);
     }
-
-    setSaving(false);
-    setShowModal(false);
-    setForm(EMPTY_FORM);
-    setDuplicateWarning(null);
-    loadData();
   };
 
-  const saveMember = async (force = false) => {
+  const saveMember = async (_force = false) => {
     if (!form.primer_nombre.trim()) { toast.error("El primer nombre es obligatorio"); return; }
     if (!form.primer_apellido.trim()) { toast.error("El primer apellido es obligatorio"); return; }
-    const first_name = [form.primer_nombre.trim(), form.segundo_nombre.trim()].filter(Boolean).join(" ");
-    const last_name = [form.primer_apellido.trim(), form.segundo_apellido.trim()].filter(Boolean).join(" ");
+    const first_names = [form.primer_nombre.trim(), form.segundo_nombre.trim()].filter(Boolean).join(" ");
+    const last_names = [form.primer_apellido.trim(), form.segundo_apellido.trim()].filter(Boolean).join(" ");
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // Hard limit: prevent runaway trees
-    const MAX_MEMBERS = 150;
-    if (members.length >= MAX_MEMBERS) {
-      toast.error(`Límite de ${MAX_MEMBERS} familiares alcanzado`);
-      return;
-    }
-
-    // Check for duplicates in extended family (only on first attempt)
-    if (!force) {
-      const dup = await checkExtendedDuplicate(first_name, last_name, user.id);
-      if (dup) {
-        setDuplicateWarning(dup);
-        return; // Show warning, don't save yet
-      }
-    }
     setDuplicateWarning(null);
     setSaving(true);
-    const kind = RELATION_GROUPS[0].options.includes(form.relation_type) ? "blood" : "affinity";
-    const { data: inserted, error } = await supabase.from("family_members").insert({
-      added_by: user.id,
-      first_name,
-      last_name: last_name || null,
-      email: form.email.trim() || null,
-      birth_date: form.birth_date || null,
-      relation_type: form.relation_type,
-      relation_kind: kind,
-      is_deceased: form.is_deceased,
-      parent_member_id: form.parent_member_id || null,
-      // Every new member gets their own UUID as canonical identity.
-      // This gets shared with other trees when duplicate is confirmed via admin page.
-      person_id: crypto.randomUUID(),
-    }).select("id").single();
-    setSaving(false);
-    if (error) { toast.error("Error al guardar"); return; }
+    try {
+      // add_relative maneja detección de duplicados + creación atómica + relación
+      const { data: result, error } = await supabase.rpc("add_relative", {
+        p_payload: {
+          first_names,
+          last_names: last_names || null,
+          email: form.email.trim() || null,
+          birth_date: form.birth_date || null,
+          is_living: !form.is_deceased,
+        },
+        p_relationship: relationTypeToGraphType(form.relation_type as RelationType),
+      });
+      if (error) throw error;
 
-    // Upload photo if user provided one for this member
-    if (modalPhotoFile && inserted?.id) {
-      const ext = modalPhotoFile.name.split(".").pop() ?? "jpg";
-      const path = `member-photos/${user.id}/${inserted.id}.${ext}`;
-      const { error: upErr } = await supabase.storage
-        .from("avatars").upload(path, modalPhotoFile, { upsert: true });
-      if (!upErr) {
-        const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
-        await supabase.from("family_members")
-          .update({ photo_url: urlData.publicUrl }).eq("id", inserted.id);
+      // Si el RPC encontró duplicado fuerte → pedir confirmación al usuario
+      if ((result as any)?.needs_confirmation) {
+        const mp = (result as any)?.match?.matched_person;
+        const matchedName = mp
+          ? `${mp.first_names || ""} ${mp.last_names || ""}`.trim()
+          : "Persona desconocida";
+        setDuplicateWarning({
+          candidate_id: (result as any).candidate_id,
+          matchedName,
+          score: (result as any)?.match?.score ?? 0,
+        });
+        setSaving(false);
+        return;
       }
-      setModalPhotoFile(null);
-      setModalPhotoPreview(null);
-    }
 
-    // Generate suggestions for connected family members
-    if (inserted) {
-      fetch("/api/suggestions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "generate",
-          first_name,
-          last_name: last_name || "",
-          relation_type: form.relation_type,
-          family_member_id: inserted.id,
-        }),
-      }).catch(() => {});
-    }
+      // Subir foto si el usuario la eligió (personas se guardan con id = result.person_id)
+      const personId = (result as any)?.person_id;
+      if (modalPhotoFile && personId) {
+        const ext = modalPhotoFile.name.split(".").pop() ?? "jpg";
+        const path = `member-photos/${user.id}/${personId}.${ext}`;
+        const { error: upErr } = await supabase.storage
+          .from("avatars").upload(path, modalPhotoFile, { upsert: true });
+        if (!upErr) {
+          const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
+          await supabase.from("persons")
+            .update({ profile_photo_url: urlData.publicUrl }).eq("id", personId);
+        }
+        setModalPhotoFile(null);
+        setModalPhotoPreview(null);
+      }
 
-    toast.success("Familiar agregado");
-    setShowModal(false);
-    setForm(EMPTY_FORM);
-    loadData();
+      toast.success("Familiar agregado");
+      setShowModal(false);
+      setForm(EMPTY_FORM);
+      loadData();
+    } catch (err: any) {
+      toast.error(err?.message || "Error al guardar");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const openEdit = (member: FamilyMember) => {
@@ -869,52 +269,63 @@ export default function TreePage() {
 
   const updateMember = async () => {
     if (!editingMember || !form.primer_nombre.trim()) return;
-    const first_name = [form.primer_nombre.trim(), form.segundo_nombre.trim()].filter(Boolean).join(" ");
-    const last_name = [form.primer_apellido.trim(), form.segundo_apellido.trim()].filter(Boolean).join(" ");
+    const first_names = [form.primer_nombre.trim(), form.segundo_nombre.trim()].filter(Boolean).join(" ");
+    const last_names = [form.primer_apellido.trim(), form.segundo_apellido.trim()].filter(Boolean).join(" ");
     setSaving(true);
-    const kind = RELATION_GROUPS[0].options.includes(form.relation_type) ? "blood" : "affinity";
-    const { error } = await supabase.from("family_members").update({
-      first_name,
-      last_name: last_name || null,
-      email: form.email.trim() || null,
-      birth_date: form.birth_date || null,
-      relation_type: form.relation_type,
-      relation_kind: kind,
-      is_deceased: form.is_deceased,
-      parent_member_id: form.parent_member_id || null,
-    }).eq("id", editingMember.id);
-    setSaving(false);
-    if (error) { toast.error("Error al guardar"); return; }
-    toast.success("Familiar actualizado");
-    setShowModal(false);
-    setEditingMember(null);
-    setForm(EMPTY_FORM);
-    loadData();
+    try {
+      // Actualizar el nodo persons (editingMember.id es el person.id)
+      const { error } = await supabase.from("persons").update({
+        first_names,
+        last_names: last_names || null,
+        email: form.email.trim() || null,
+        birth_date: form.birth_date || null,
+        is_living: !form.is_deceased,
+      }).eq("id", editingMember.id);
+      if (error) throw error;
+      toast.success("Familiar actualizado");
+      setShowModal(false);
+      setEditingMember(null);
+      setForm(EMPTY_FORM);
+      loadData();
+    } catch (err: any) {
+      toast.error(err?.message || "Error al guardar");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const deleteMember = async () => {
     if (!editingMember) return;
     if (!confirm(`¿Eliminar a ${editingMember.first_name} ${editingMember.last_name || ""}?`)) return;
-    const { error } = await supabase.from("family_members").delete().eq("id", editingMember.id);
-    if (error) { toast.error("Error al eliminar"); return; }
-    toast.success("Familiar eliminado");
-    setShowModal(false);
-    setEditingMember(null);
-    setForm(EMPTY_FORM);
-    loadData();
+    try {
+      // Eliminar todas las relaciones donde aparece esta persona
+      const { error } = await supabase.from("relationships")
+        .delete()
+        .or(`person_a_id.eq.${editingMember.id},person_b_id.eq.${editingMember.id}`);
+      if (error) throw error;
+      // No eliminamos el nodo persons para preservar historia; si el usuario quiere
+      // borrar la persona completa puede hacerlo desde su perfil.
+      toast.success("Familiar eliminado del árbol");
+      setShowModal(false);
+      setEditingMember(null);
+      setForm(EMPTY_FORM);
+      loadData();
+    } catch (err: any) {
+      toast.error(err?.message || "Error al eliminar");
+    }
   };
 
   const sendInvite = async (member: FamilyMember) => {
     if (!member.email) { toast.error("Este familiar no tiene correo registrado"); return; }
     const { data, error } = await supabase
       .from("invitations")
-      .insert({ invited_by: profile!.id, family_member_id: member.id, email: member.email, relation_type: member.relation_type })
+      .insert({ invited_by: profile!.id, email: member.email, relation_type: member.relation_type })
       .select("token").single();
     if (error) { toast.error("Error al generar invitación"); return; }
     const inviteLink = `${window.location.origin}/invite/${data.token}`;
     await navigator.clipboard.writeText(inviteLink);
     toast.success("¡Enlace copiado! Compártelo con tu familiar.");
-    await supabase.from("family_members").update({ invitation_sent: true, invitation_sent_at: new Date().toISOString() }).eq("id", member.id);
+    // invitation_sent ya no se trackea en family_members — se refleja vía invitations table
     loadData();
   };
 
@@ -1478,26 +889,24 @@ export default function TreePage() {
                   {/* Duplicate warning */}
                   {duplicateWarning && (
                     <div className="w-full mb-2 bg-amber-50 border border-amber-200 rounded-xl p-3">
-                      <p className="text-xs font-semibold text-amber-800 mb-1">⚠️ Ya existe en otro árbol</p>
+                      <p className="text-xs font-semibold text-amber-800 mb-1">⚠️ Posible duplicado detectado</p>
                       <p className="text-xs text-amber-700 leading-relaxed mb-3">
-                        <span className="font-bold">{duplicateWarning.matchedName}</span> ya está en el árbol de{" "}
-                        <span className="font-bold">{duplicateWarning.connectedMember.first_name} {duplicateWarning.connectedMember.last_name}</span>{" "}
-                        (tu {RELATION_LABELS[duplicateWarning.connectedMember.relation_type as RelationType] || duplicateWarning.connectedMember.relation_type}){" "}
-                        como <span className="font-bold">{RELATION_LABELS[duplicateWarning.matchedRelation as RelationType] || duplicateWarning.matchedRelation}</span>.
+                        <span className="font-bold">{duplicateWarning.matchedName}</span> ya existe en Ceiba.
+                        {" "}¿Es la misma persona que estás agregando?
                       </p>
                       <div className="flex gap-2">
                         <button
                           onClick={() => { setDuplicateWarning(null); saveMember(true); }}
                           className="flex-1 text-xs font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200 px-3 py-1.5 rounded-lg transition-colors"
                         >
-                          Son personas diferentes
+                          No, son diferentes
                         </button>
                         <button
                           onClick={saveLinkedMember}
                           disabled={saving}
                           className="flex-1 text-xs font-semibold bg-ceiba-700 text-white hover:bg-ceiba-800 px-3 py-1.5 rounded-lg transition-colors"
                         >
-                          {saving ? "Vinculando..." : "Sí, es la misma persona"}
+                          {saving ? "Vinculando..." : "Sí, es la misma"}
                         </button>
                       </div>
                     </div>

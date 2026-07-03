@@ -31,6 +31,19 @@ export async function POST(req: NextRequest) {
 
   if (!profile) return NextResponse.json({ linked: 0 });
 
+  // Asegurar que existe una fila en persons para este usuario
+  await service.from("persons").upsert({
+    id: user.id,
+    first_names: profile.first_name || "Sin nombre",
+    last_names: profile.last_name || "",
+    email: profile.email,
+    is_living: true,
+    linked_user_id: user.id,
+    created_by_user_id: user.id,
+    status: "active",
+    verification_level: "self_verified",
+  }, { onConflict: "id" });
+
   // Normalize: remove accents, lowercase, first word only
   const norm = (s: string) =>
     (s || "")

@@ -49,6 +49,20 @@ export async function GET(req: NextRequest) {
       avatar_url: user.user_metadata?.avatar_url || null,
     });
 
+    // Crear nodo en el nuevo grafo familiar
+    await supabase.from("persons").upsert({
+      id: user.id,
+      first_names: first_name,
+      last_names: last_name,
+      email: user.email,
+      profile_photo_url: user.user_metadata?.avatar_url || null,
+      is_living: true,
+      linked_user_id: user.id,
+      created_by_user_id: user.id,
+      status: "active",
+      verification_level: "self_verified",
+    }, { onConflict: "id" });
+
     // New Google user → go to onboarding
     return NextResponse.redirect(`${origin}/onboarding`);
   }
