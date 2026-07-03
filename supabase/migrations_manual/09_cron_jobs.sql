@@ -3,7 +3,7 @@
 -- ============================================================
 -- ⚠️ ANTES DE EJECUTAR:
 --   1) Reemplaza <tu-project-ref> por tu referencia real
---   2) Reemplaza <tu-service-role-key> por tu Service Role Key
+--   2) Reemplaza eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR4eGR6eGR6ZXRxbGZlY3FoeGtsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MjQ0MjE1OCwiZXhwIjoyMDk4MDE4MTU4fQ.0ymRFVpmkUHdxb0yQHCbSh8Tsa0REYdqOYnQ5ehLF4s por tu Service Role Key
 --      (Supabase Dashboard → Settings → API → service_role)
 --
 -- Encuentras tu project-ref en la URL:
@@ -28,9 +28,9 @@ select cron.schedule(
   '0 8 * * *',
   $$
   select net.http_post(
-    url := 'https://<tu-project-ref>.functions.supabase.co/cron-birthdays-daily',
+    url := 'https://txxdzxdzetqlfecqhxkl.supabase.co/functions/v1/cron-birthdays-daily',
     headers := jsonb_build_object(
-      'Authorization', 'Bearer <tu-service-role-key>',
+      'Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR4eGR6eGR6ZXRxbGZlY3FoeGtsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MjQ0MjE1OCwiZXhwIjoyMDk4MDE4MTU4fQ.0ymRFVpmkUHdxb0yQHCbSh8Tsa0REYdqOYnQ5ehLF4s',
       'Content-Type',  'application/json'
     ),
     body := '{}'::jsonb
@@ -70,9 +70,9 @@ select cron.schedule(
   '5 * * * *',
   $$
   select net.http_post(
-    url := 'https://<tu-project-ref>.functions.supabase.co/chat-room-materializer',
+    url := 'https://txxdzxdzetqlfecqhxkl.supabase.co/functions/v1/chat-room-materializer',
     headers := jsonb_build_object(
-      'Authorization', 'Bearer <tu-service-role-key>',
+      'Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR4eGR6eGR6ZXRxbGZlY3FoeGtsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MjQ0MjE1OCwiZXhwIjoyMDk4MDE4MTU4fQ.0ymRFVpmkUHdxb0yQHCbSh8Tsa0REYdqOYnQ5ehLF4s',
       'Content-Type',  'application/json'
     ),
     body := '{}'::jsonb
