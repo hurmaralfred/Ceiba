@@ -122,8 +122,8 @@ begin
         coalesce((select jsonb_agg(to_jsonb(r.*))
                   from public.relationships r
                   where r.status = 'confirmed'
-                    and (r.person_a_id in (select id from net)
-                      or r.person_b_id in (select id from net))), '[]'::jsonb)
+                    and r.person_a_id in (select id from net)
+                    and r.person_b_id in (select id from net)), '[]'::jsonb)
     )
   );
 end $$;

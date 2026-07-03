@@ -3,7 +3,7 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { TreePine, MapPin, Users, Share2, LogOut, User, Send, List, GitFork, Plus, X, Pencil, Map as MapIcon, Image, Calendar, MessageCircle, Megaphone, Camera } from "lucide-react";
+import { TreePine, MapPin, Users, Share2, LogOut, User, Send, List, GitFork, Plus, X, Pencil, Map as MapIcon, Image, Calendar, MessageCircle, Megaphone, Camera, AlertTriangle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Profile, FamilyMember, RelationType, RELATION_LABELS } from "@/lib/types";
 import { adaptGraph, relationTypeToGraphType, type FamilyGraph } from "@/lib/graphAdapter";
@@ -74,6 +74,8 @@ export default function TreePage() {
   const modalPhotoRef = useRef<HTMLInputElement>(null);
   const [modalPhotoFile, setModalPhotoFile] = useState<File | null>(null);
   const [modalPhotoPreview, setModalPhotoPreview] = useState<string | null>(null);
+  const [sosSending, setSosSending] = useState(false);
+  const [sosActive, setSosActive] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -352,6 +354,39 @@ export default function TreePage() {
     }
   };
 
+  const triggerSOS = async () => {
+    if (sosSending || sosActive) return;
+    setSosSending(true);
+    try {
+      const pos = await new Promise<GeolocationPosition | null>((resolve) => {
+        if (!navigator.geolocation) { resolve(null); return; }
+        navigator.geolocation.getCurrentPosition(resolve, () => resolve(null), { timeout: 5000 });
+      });
+      const { data, error } = await supabase.rpc("trigger_sos", {
+        p_lat: pos?.coords.latitude ?? null,
+        p_lon: pos?.coords.longitude ?? null,
+        p_message: null,
+        p_scope: 2,
+      });
+      if (error) {
+        if (error.message?.includes("cooldown")) {
+          toast.error("SOS en cooldown — ya hay una alerta activa.");
+        } else {
+          toast.error("Error al enviar SOS: " + error.message);
+        }
+        return;
+      }
+      setSosActive(true);
+      toast.success("🚨 SOS enviado a tu red familiar.", { duration: 6000 });
+      // Auto-reset visual after 5 min
+      setTimeout(() => setSosActive(false), 5 * 60 * 1000);
+    } catch (e) {
+      toast.error("No se pudo enviar el SOS.");
+    } finally {
+      setSosSending(false);
+    }
+  };
+
   const shareTree = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
@@ -443,6 +478,19 @@ export default function TreePage() {
           <Link href="/settings" className="flex items-center gap-1 text-ceiba-200 hover:text-white text-sm transition-colors">
             <User size={16} />
           </Link>
+          <button
+            onClick={triggerSOS}
+            disabled={sosSending}
+            className={`flex items-center gap-1 text-sm font-bold px-3 py-1 rounded-lg transition-colors ${
+              sosActive
+                ? "bg-red-700 text-white animate-pulse"
+                : "bg-red-500 hover:bg-red-400 text-white"
+            }`}
+            title="Enviar alerta SOS a tu familia"
+          >
+            <AlertTriangle size={15} />
+            {sosSending ? "..." : sosActive ? "SOS activo" : "SOS"}
+          </button>
         </div>
       </nav>
 
