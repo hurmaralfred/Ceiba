@@ -15,162 +15,8 @@ import { createClient } from "@/lib/supabase/client";
 import {
   RelationType, RELATION_LABELS, INVERSE_RELATION, BLOOD_RELATIONS,
 } from "@/lib/types";
+import { reverseRelation, inferRelation } from "@/lib/relations";
 import toast from "react-hot-toast";
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function reverseRel(rel: string): string {
-  const map: Record<string, string> = {
-    father: "son", mother: "son", son: "father", daughter: "mother",
-    brother: "brother", sister: "sister",
-    half_brother: "half_brother", half_sister: "half_sister",
-    spouse: "spouse", partner: "partner",
-    uncle: "nephew", aunt: "niece",
-    nephew: "uncle", niece: "aunt",
-    cousin: "cousin",
-    grandfather_paternal: "grandson", grandmother_paternal: "grandson",
-    grandfather_maternal: "grandson", grandmother_maternal: "grandson",
-    grandson: "grandfather_paternal", granddaughter: "grandmother_paternal",
-    father_in_law: "son", mother_in_law: "son",
-    brother_in_law: "brother_in_law", sister_in_law: "sister_in_law",
-    stepfather: "stepchild", stepmother: "stepchild", stepchild: "stepfather",
-  };
-  return map[rel] ?? rel;
-}
-
-function inferRel(parentRel: string, childRel: string): string | null {
-  switch (parentRel) {
-    case "spouse": case "partner":
-      if (childRel === "son")       return "son";
-      if (childRel === "daughter")  return "daughter";
-      if (childRel === "stepchild") return "stepchild";
-      if (["brother","half_brother"].includes(childRel)) return "brother_in_law";
-      if (["sister","half_sister"].includes(childRel))   return "sister_in_law";
-      if (childRel === "father")    return "father_in_law";
-      if (childRel === "mother")    return "mother_in_law";
-      if (childRel === "nephew")    return "nephew";
-      if (childRel === "niece")     return "niece";
-      break;
-    case "brother": case "sister": case "half_brother": case "half_sister":
-      if (childRel === "son")       return "nephew";
-      if (childRel === "daughter")  return "niece";
-      if (childRel === "stepchild") return "nephew";
-      if (["father","stepfather"].includes(childRel))   return "father";
-      if (["mother","stepmother"].includes(childRel))   return "mother";
-      if (["brother","half_brother"].includes(childRel)) return "brother";
-      if (["sister","half_sister"].includes(childRel))   return "sister";
-      if (["uncle","father_in_law"].includes(childRel)) return "uncle";
-      if (["aunt","mother_in_law"].includes(childRel))  return "aunt";
-      if (["spouse","partner"].includes(childRel))      return "brother_in_law";
-      if (childRel === "cousin")   return "cousin";
-      if (childRel === "nephew")   return "nephew";
-      if (childRel === "niece")    return "niece";
-      break;
-    case "brother_in_law": case "sister_in_law":
-      if (childRel === "son")       return "nephew";
-      if (childRel === "daughter")  return "niece";
-      if (["brother","half_brother"].includes(childRel)) return "brother_in_law";
-      if (["sister","half_sister"].includes(childRel))   return "sister_in_law";
-      if (["spouse","partner"].includes(childRel))       return "brother_in_law";
-      if (childRel === "father")    return "father_in_law";
-      if (childRel === "mother")    return "mother_in_law";
-      break;
-    case "father": case "stepfather":
-      if (childRel === "son")       return "brother";
-      if (childRel === "daughter")  return "sister";
-      if (childRel === "stepchild") return "brother";
-      if (["brother","half_brother"].includes(childRel)) return "uncle";
-      if (["sister","half_sister"].includes(childRel))   return "aunt";
-      // Father's parents = PATERNAL grandparents
-      if (childRel === "father")    return "grandfather_paternal";
-      if (childRel === "mother")    return "grandmother_paternal";
-      if (["grandfather_paternal","grandfather_maternal"].includes(childRel)) return "grandfather_paternal";
-      if (["grandmother_paternal","grandmother_maternal"].includes(childRel)) return "grandmother_paternal";
-      if (["spouse","partner"].includes(childRel)) return "stepmother";
-      if (childRel === "nephew")    return "cousin";
-      if (childRel === "niece")     return "cousin";
-      if (childRel === "cousin")    return "cousin";
-      if (childRel === "uncle")     return "uncle";
-      if (childRel === "aunt")      return "aunt";
-      break;
-    case "mother": case "stepmother":
-      if (childRel === "son")       return "brother";
-      if (childRel === "daughter")  return "sister";
-      if (childRel === "stepchild") return "brother";
-      if (["brother","half_brother"].includes(childRel)) return "uncle";
-      if (["sister","half_sister"].includes(childRel))   return "aunt";
-      // Mother's parents = MATERNAL grandparents
-      if (childRel === "father")    return "grandfather_maternal";
-      if (childRel === "mother")    return "grandmother_maternal";
-      if (["grandfather_paternal","grandfather_maternal"].includes(childRel)) return "grandfather_maternal";
-      if (["grandmother_paternal","grandmother_maternal"].includes(childRel)) return "grandmother_maternal";
-      if (["spouse","partner"].includes(childRel)) return "stepfather";
-      if (childRel === "nephew")    return "cousin";
-      if (childRel === "niece")     return "cousin";
-      if (childRel === "cousin")    return "cousin";
-      if (childRel === "uncle")     return "uncle";
-      if (childRel === "aunt")      return "aunt";
-      break;
-    case "father_in_law": case "mother_in_law":
-      if (["brother","half_brother"].includes(childRel)) return "brother_in_law";
-      if (["sister","half_sister"].includes(childRel))   return "sister_in_law";
-      if (childRel === "son")       return "brother_in_law";
-      if (childRel === "daughter")  return "sister_in_law";
-      break;
-    case "cousin":
-      if (childRel === "son" || childRel === "daughter") return "cousin";
-      if (childRel === "stepchild") return "cousin";
-      if (["brother","half_brother","sister","half_sister"].includes(childRel)) return "cousin";
-      if (["spouse","partner"].includes(childRel)) return "cousin";
-      if (childRel === "father")   return "uncle";
-      if (childRel === "mother")   return "aunt";
-      if (childRel === "uncle")    return "uncle";
-      if (childRel === "aunt")     return "aunt";
-      break;
-    case "son": case "daughter": case "stepchild":
-      if (childRel === "son")       return "grandson";
-      if (childRel === "daughter")  return "granddaughter";
-      if (["spouse","partner"].includes(childRel)) return "son";
-      break;
-    case "uncle": case "aunt":
-      if (childRel === "son" || childRel === "daughter") return "cousin";
-      if (childRel === "stepchild") return "cousin";
-      if (["brother","half_brother"].includes(childRel)) return "uncle";
-      if (["sister","half_sister"].includes(childRel))   return "aunt";
-      if (["spouse","partner"].includes(childRel)) return parentRel === "uncle" ? "aunt" : "uncle";
-      if (childRel === "father")    return "grandfather_paternal";
-      if (childRel === "mother")    return "grandmother_paternal";
-      break;
-    case "grandfather_paternal": case "grandfather_maternal":
-    case "grandmother_paternal": case "grandmother_maternal":
-      if (childRel === "son")       return "uncle";
-      if (childRel === "daughter")  return "aunt";
-      if (childRel === "stepchild") return "uncle";
-      if (childRel === "grandson")  return "uncle";
-      if (childRel === "granddaughter") return "aunt";
-      if (["brother","half_brother"].includes(childRel)) return "uncle";
-      if (["sister","half_sister"].includes(childRel))   return "aunt";
-      if (childRel === "father")    return "grandfather_paternal";
-      if (childRel === "mother")    return "grandmother_paternal";
-      break;
-    case "nephew": case "niece":
-      if (childRel === "son")       return "nephew";
-      if (childRel === "daughter")  return "niece";
-      if (["father","stepfather"].includes(childRel)) return "brother";
-      if (["mother","stepmother"].includes(childRel)) return "sister";
-      if (childRel === "uncle")     return "brother";
-      if (childRel === "aunt")      return "sister";
-      if (["brother","half_brother"].includes(childRel)) return "nephew";
-      if (["sister","half_sister"].includes(childRel))   return "niece";
-      if (childRel === "cousin")    return "cousin";
-      break;
-    case "grandson": case "granddaughter":
-      if (childRel === "son")       return "grandson";
-      if (childRel === "daughter")  return "granddaughter";
-      break;
-  }
-  return null;
-}
 
 // Relations worth traversing at depth > 0
 const DEEP_TRAVERSE = new Set([
@@ -245,6 +91,7 @@ export default function FamilyDiscoveryWizard({
   const [confirmedCount, setConfirmedCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [responding, setResponding] = useState(false);
+  const [discovering, setDiscovering] = useState(false);
   const [done, setDone] = useState(false);
   const [altRelation, setAltRelation] = useState<string | null>(null);
 
@@ -286,10 +133,10 @@ export default function FamilyDiscoveryWizard({
       personProfileId:   m.adder_id,  // the adder IS the person we're connecting with
       personFirstName:   m.adder_first_name,
       personLastName:    m.adder_last_name,
-      suggestedRelation: inverseRelation(m.relation_type),
+      suggestedRelation: reverseRelation(m.relation_type),
       connectorName:     m.adder_first_name,
       connectorProfileId: m.adder_id,
-      connectorRelationToMe: inverseRelation(m.relation_type),
+      connectorRelationToMe: reverseRelation(m.relation_type),
       depth: 0,
     }));
 
@@ -300,25 +147,8 @@ export default function FamilyDiscoveryWizard({
   function normKey(fn: string, ln: string | null) {
     const norm = (s: string) => (s || "").toLowerCase()
       .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-      .trim().split(" ")[0];
+      .trim();
     return `${norm(fn)}|${norm(ln || "")}`;
-  }
-
-  function inverseRelation(rel: string): string {
-    const inv: Record<string, string> = {
-      father: "son", mother: "son", son: "father", daughter: "mother",
-      brother: "brother", sister: "sister",
-      half_brother: "half_brother", half_sister: "half_sister",
-      nephew: "uncle", niece: "aunt", uncle: "nephew", aunt: "niece",
-      cousin: "cousin", spouse: "spouse", partner: "partner",
-      grandfather_paternal: "grandson", grandmother_paternal: "grandson",
-      grandfather_maternal: "grandson", grandmother_maternal: "grandson",
-      grandson: "grandfather_paternal", granddaughter: "grandmother_paternal",
-      father_in_law: "son", mother_in_law: "son",
-      brother_in_law: "brother_in_law", sister_in_law: "sister_in_law",
-      stepfather: "stepchild", stepmother: "stepchild", stepchild: "stepfather",
-    };
-    return inv[rel] ?? rel;
   }
 
   // ── Discover family of a confirmed person ───────────────────────────────────
@@ -329,6 +159,7 @@ export default function FamilyDiscoveryWizard({
     depth: number,
   ) => {
     if (depth >= 2) return;
+    setDiscovering(true);
 
     const { data: theirFamily } = await supabase
       .from("family_members")
@@ -349,7 +180,7 @@ export default function FamilyDiscoveryWizard({
       if (seenNameKeys.current.has(nameKey)) continue;
 
       // Compute MY relation to this member
-      const inferred = inferRel(myRelationToThem, member.relation_type);
+      const inferred = inferRelation(myRelationToThem, member.relation_type);
       if (!inferred || inferred === "other") continue;
 
       // Mark as seen to avoid proposing twice
@@ -374,6 +205,7 @@ export default function FamilyDiscoveryWizard({
     if (newProposals.length > 0) {
       setProposals(prev => [...prev, ...newProposals]);
     }
+    setDiscovering(false);
   }, [userId, supabase]);
 
   // ── Confirm a proposal ──────────────────────────────────────────────────────
@@ -486,7 +318,7 @@ export default function FamilyDiscoveryWizard({
 
   // Check if wizard is done
   const current = proposals[currentIdx];
-  const isDone = !loading && currentIdx >= proposals.length;
+  const isDone = !loading && !discovering && currentIdx >= proposals.length;
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
