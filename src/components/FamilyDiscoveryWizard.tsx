@@ -12,10 +12,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Check, X, HelpCircle, ChevronRight, Sparkles, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import {
-  RelationType, RELATION_LABELS, INVERSE_RELATION, BLOOD_RELATIONS,
-} from "@/lib/types";
+import { RelationType, RELATION_LABELS } from "@/lib/types";
 import { reverseRelation, inferRelation } from "@/lib/relations";
+import { edgeToRelationType, relationTypeToGraphType, type EdgeNode } from "@/lib/graphAdapter";
 import toast from "react-hot-toast";
 
 // Relations worth traversing at depth > 0
@@ -55,18 +54,14 @@ type ProposalSource = "name_match" | "discovery";
 interface Proposal {
   id: string;
   source: ProposalSource;
-  // For name_match: family_members.id that has this user's name
-  familyMemberId?: string;
-  // The person being proposed
-  personProfileId: string | null;  // null = not in Ceiba yet
+  familyMemberId?: string;       // legacy: family_members.id
+  personId?: string;             // nuevo: persons.id de la persona propuesta
+  personProfileId: string | null; // auth.uid() de la persona (null si no está en Ceiba)
   personFirstName: string;
   personLastName: string | null;
-  // Suggested relation FROM ME to this person
-  suggestedRelation: string;
-  // Context: "Según Hugo Hurtado..."
+  suggestedRelation: string;     // RelationType (e.g. "brother")
   connectorName: string;
   connectorProfileId: string;
-  // How the connector relates to ME (so we can discover further)
   connectorRelationToMe: string;
   depth: number;
 }
@@ -95,8 +90,12 @@ export default function FamilyDiscoveryWizard({
   const [done, setDone] = useState(false);
   const [altRelation, setAltRelation] = useState<string | null>(null);
 
+  // persons.id del usuario actual (cargado en init)
+  const myPersonId = useRef<string | null>(null);
+
   // Track who we've already proposed / traversed to avoid cycles
   const seenProfileIds = useRef(new Set<string>([userId]));
+  const seenPersonIds = useRef(new Set<string>());
   const seenNameKeys = useRef(new Set<string>());
   const myTreeProfileIds = useRef(new Set<string>());
 
@@ -108,37 +107,125 @@ export default function FamilyDiscoveryWizard({
   const init = async () => {
     setLoading(true);
 
-    // Load my existing tree so we don't propose duplicates
+    // Obtener mi persons.id
+    const { data: myPersonRow } = await supabase
+      .from("persons")
+      .select("id")
+      .eq("linked_user_id", userId)
+      .single();
+    myPersonId.current = myPersonRow?.id ?? null;
+
+    // Cargar mis relaciones existentes para no proponer duplicados
+    if (myPersonRow?.id) {
+      const { data: myRels } = await supabase
+        .from("relationships")
+        .select("person_a_id, person_b_id")
+        .or(`person_a_id.eq.${myPersonRow.id},person_b_id.eq.${myPersonRow.id}`)
+        .eq("status", "confirmed");
+
+      // Obtener los persons.id ya conectados y marcarlos como vistos
+      const connectedPersonIds = (myRels || []).map(r =>
+        r.person_a_id === myPersonRow.id ? r.person_b_id : r.person_a_id
+      );
+      if (connectedPersonIds.length > 0) {
+        const { data: connectedPersons } = await supabase
+          .from("persons")
+          .select("id, linked_user_id, first_names, last_names")
+          .in("id", connectedPersonIds);
+        for (const p of connectedPersons || []) {
+          seenPersonIds.current.add(p.id);
+          if (p.linked_user_id) {
+            myTreeProfileIds.current.add(p.linked_user_id);
+            seenProfileIds.current.add(p.linked_user_id);
+          }
+          seenNameKeys.current.add(normKey(p.first_names, p.last_names));
+        }
+      }
+    }
+
+    // Legacy: cargar family_members propios para dedup adicional
     const { data: myTree } = await supabase
       .from("family_members")
       .select("profile_id, first_name, last_name")
       .eq("added_by", userId);
-
     for (const m of myTree || []) {
-      if (m.profile_id) myTreeProfileIds.current.add(m.profile_id);
+      if (m.profile_id) { myTreeProfileIds.current.add(m.profile_id); seenProfileIds.current.add(m.profile_id); }
       seenNameKeys.current.add(normKey(m.first_name, m.last_name));
     }
 
-    // Find name matches
+    const initial: Proposal[] = [];
+
+    // Legacy: find_name_matches (queries family_members — datos migrados)
     const { data: matches } = await supabase.rpc("find_name_matches", {
       p_first_name: myFirstName,
       p_last_name:  myLastName || "",
       p_user_id:    userId,
     });
+    for (const m of matches || []) {
+      if (seenProfileIds.current.has(m.adder_id)) continue;
+      seenProfileIds.current.add(m.adder_id);
+      initial.push({
+        id: crypto.randomUUID(),
+        source: "name_match",
+        familyMemberId:    m.family_member_id,
+        personProfileId:   m.adder_id,
+        personFirstName:   m.adder_first_name,
+        personLastName:    m.adder_last_name,
+        suggestedRelation: reverseRelation(m.relation_type),
+        connectorName:     m.adder_first_name,
+        connectorProfileId: m.adder_id,
+        connectorRelationToMe: reverseRelation(m.relation_type),
+        depth: 0,
+      });
+    }
 
-    const initial: Proposal[] = (matches || []).map((m: any) => ({
-      id: crypto.randomUUID(),
-      source: "name_match" as const,
-      familyMemberId:    m.family_member_id,
-      personProfileId:   m.adder_id,  // the adder IS the person we're connecting with
-      personFirstName:   m.adder_first_name,
-      personLastName:    m.adder_last_name,
-      suggestedRelation: reverseRelation(m.relation_type),
-      connectorName:     m.adder_first_name,
-      connectorProfileId: m.adder_id,
-      connectorRelationToMe: reverseRelation(m.relation_type),
-      depth: 0,
-    }));
+    // Nuevo esquema: match_candidates donde soy la persona detectada como duplicado
+    if (myPersonRow?.id) {
+      const { data: candidates } = await supabase
+        .from("match_candidates")
+        .select("id, proposed_by_user_id, new_person_payload, proposed_relationship, score")
+        .eq("matched_person_id", myPersonRow.id)
+        .eq("status", "pending");
+
+      for (const cand of candidates || []) {
+        const proposerProfileId = cand.proposed_by_user_id as string;
+        if (!proposerProfileId || seenProfileIds.current.has(proposerProfileId)) continue;
+
+        const relTypeRaw = cand.proposed_relationship?.type as string | undefined;
+        if (!relTypeRaw) continue;
+
+        // El proponente declaró: (él) → (yo) con relType
+        // Ej: si relType = "parent_of" y él es person_a → él es mi padre
+        // reverseRelation de una nueva relType requiere mapeo: usamos el payload
+        const payload = cand.new_person_payload || {};
+        const propFirstName = payload.first_names as string ?? "Persona";
+        const propLastName  = payload.last_names  as string ?? null;
+
+        // Convertir new relationship_type → legacy RelationType para mostrar al usuario
+        // parent_of (ellos→yo) → ellos son mi padre/madre (sin saber género, usamos "father")
+        const legacyRelMap: Record<string, RelationType> = {
+          parent_of: "father", partner_of: "spouse",
+          sibling_of: "brother", half_sibling_of: "half_brother",
+          guardian_of: "stepfather", adoptive_parent_of: "father",
+        };
+        const suggestedRel: RelationType = legacyRelMap[relTypeRaw] ?? "other";
+
+        seenProfileIds.current.add(proposerProfileId);
+        initial.push({
+          id: crypto.randomUUID(),
+          source: "name_match",
+          familyMemberId: undefined,
+          personProfileId: proposerProfileId,
+          personFirstName: propFirstName,
+          personLastName:  propLastName,
+          suggestedRelation: suggestedRel,
+          connectorName: propFirstName,
+          connectorProfileId: proposerProfileId,
+          connectorRelationToMe: suggestedRel,
+          depth: 0,
+        });
+      }
+    }
 
     setProposals(initial);
     setLoading(false);
@@ -151,7 +238,7 @@ export default function FamilyDiscoveryWizard({
     return `${norm(fn)}|${norm(ln || "")}`;
   }
 
-  // ── Discover family of a confirmed person ───────────────────────────────────
+  // ── Discover family of a confirmed person (nuevo esquema) ──────────────────
   const discoverFamily = useCallback(async (
     confirmedProfileId: string,
     myRelationToThem: string,
@@ -161,45 +248,112 @@ export default function FamilyDiscoveryWizard({
     if (depth >= 2) return;
     setDiscovering(true);
 
-    const { data: theirFamily } = await supabase
-      .from("family_members")
-      .select("id, profile_id, first_name, last_name, relation_type, relation_kind")
-      .eq("added_by", confirmedProfileId);
+    // Buscar el persons.id del familiar confirmado
+    const { data: personRow } = await supabase
+      .from("persons")
+      .select("id")
+      .eq("linked_user_id", confirmedProfileId)
+      .single();
 
     const newProposals: Proposal[] = [];
 
-    for (const member of theirFamily || []) {
-      // Skip myself
-      if (member.profile_id === userId) continue;
+    if (personRow?.id) {
+      // ── Nuevo esquema: leer relationships + persons ────────────────────────
+      const confirmedPersonId = personRow.id;
 
-      // Skip if already in my tree
-      if (member.profile_id && myTreeProfileIds.current.has(member.profile_id)) continue;
-      if (seenProfileIds.current.has(member.profile_id || "")) continue;
+      const { data: theirRels } = await supabase
+        .from("relationships")
+        .select("person_a_id, person_b_id, relationship_type")
+        .or(`person_a_id.eq.${confirmedPersonId},person_b_id.eq.${confirmedPersonId}`)
+        .eq("status", "confirmed");
 
-      const nameKey = normKey(member.first_name, member.last_name);
-      if (seenNameKeys.current.has(nameKey)) continue;
+      const otherIds = (theirRels || [])
+        .map(r => r.person_a_id === confirmedPersonId ? r.person_b_id : r.person_a_id)
+        .filter(id => id !== (myPersonId.current ?? ""));
 
-      // Compute MY relation to this member
-      const inferred = inferRelation(myRelationToThem, member.relation_type);
-      if (!inferred || inferred === "other") continue;
+      if (otherIds.length > 0) {
+        const { data: otherPersons } = await supabase
+          .from("persons")
+          .select("id, first_names, last_names, linked_user_id, gender")
+          .in("id", otherIds);
 
-      // Mark as seen to avoid proposing twice
-      if (member.profile_id) seenProfileIds.current.add(member.profile_id);
-      seenNameKeys.current.add(nameKey);
+        const personMap = new Map((otherPersons || []).map(p => [p.id, p]));
 
-      newProposals.push({
-        id: crypto.randomUUID(),
-        source: "discovery",
-        familyMemberId: member.id,
-        personProfileId: member.profile_id || null,
-        personFirstName: member.first_name,
-        personLastName:  member.last_name || null,
-        suggestedRelation: inferred,
-        connectorName,
-        connectorProfileId: confirmedProfileId,
-        connectorRelationToMe: myRelationToThem,
-        depth,
-      });
+        for (const rel of theirRels || []) {
+          const isA = rel.person_a_id === confirmedPersonId;
+          const otherId = isA ? rel.person_b_id : rel.person_a_id;
+          const other = personMap.get(otherId);
+          if (!other) continue;
+
+          if (other.linked_user_id === userId) continue;
+          if (other.id && seenPersonIds.current.has(other.id)) continue;
+          if (other.linked_user_id && (myTreeProfileIds.current.has(other.linked_user_id) || seenProfileIds.current.has(other.linked_user_id))) continue;
+
+          const nameKey = normKey(other.first_names, other.last_names);
+          if (seenNameKeys.current.has(nameKey)) continue;
+
+          // Relación del confirmado hacia "other" (desde perspectiva del confirmado)
+          const edgeRel = edgeToRelationType(
+            { person_a_id: rel.person_a_id, person_b_id: rel.person_b_id, relationship_type: rel.relationship_type } as EdgeNode,
+            confirmedPersonId,
+            other.gender,
+          );
+
+          const inferred = inferRelation(myRelationToThem, edgeRel);
+          if (!inferred || inferred === "other") continue;
+
+          seenPersonIds.current.add(other.id);
+          if (other.linked_user_id) seenProfileIds.current.add(other.linked_user_id);
+          seenNameKeys.current.add(nameKey);
+
+          newProposals.push({
+            id: crypto.randomUUID(),
+            source: "discovery",
+            personId: other.id,
+            personProfileId: other.linked_user_id || null,
+            personFirstName: other.first_names,
+            personLastName:  other.last_names || null,
+            suggestedRelation: inferred,
+            connectorName,
+            connectorProfileId: confirmedProfileId,
+            connectorRelationToMe: myRelationToThem,
+            depth,
+          });
+        }
+      }
+    } else {
+      // ── Legacy fallback: family_members (para datos pre-migración) ─────────
+      const { data: theirFamily } = await supabase
+        .from("family_members")
+        .select("id, profile_id, first_name, last_name, relation_type")
+        .eq("added_by", confirmedProfileId);
+
+      for (const member of theirFamily || []) {
+        if (member.profile_id === userId) continue;
+        if (member.profile_id && (myTreeProfileIds.current.has(member.profile_id) || seenProfileIds.current.has(member.profile_id))) continue;
+        const nameKey = normKey(member.first_name, member.last_name);
+        if (seenNameKeys.current.has(nameKey)) continue;
+
+        const inferred = inferRelation(myRelationToThem, member.relation_type);
+        if (!inferred || inferred === "other") continue;
+
+        if (member.profile_id) seenProfileIds.current.add(member.profile_id);
+        seenNameKeys.current.add(nameKey);
+
+        newProposals.push({
+          id: crypto.randomUUID(),
+          source: "discovery",
+          familyMemberId: member.id,
+          personProfileId: member.profile_id || null,
+          personFirstName: member.first_name,
+          personLastName:  member.last_name || null,
+          suggestedRelation: inferred,
+          connectorName,
+          connectorProfileId: confirmedProfileId,
+          connectorRelationToMe: myRelationToThem,
+          depth,
+        });
+      }
     }
 
     if (newProposals.length > 0) {
@@ -212,80 +366,70 @@ export default function FamilyDiscoveryWizard({
   const confirm = useCallback(async (proposal: Proposal, overrideRelation?: string) => {
     setResponding(true);
     const relation = (overrideRelation ?? proposal.suggestedRelation) as RelationType;
-    const kind = BLOOD_RELATIONS.has(relation) ? "blood" : "affinity";
-    const inverse = INVERSE_RELATION[relation] ?? relation;
+    const graphRelType = relationTypeToGraphType(relation);
 
     try {
-      if (proposal.source === "name_match" && proposal.familyMemberId) {
-        // Confirm the name match (links the record + creates reciprocal)
-        await supabase.rpc("confirm_name_match", {
-          p_family_member_id: proposal.familyMemberId,
-          p_user_id: userId,
-        });
-        // Also ensure we have a clean record in MY tree for them
-        const { data: existing } = await supabase
-          .from("family_members")
-          .select("id")
-          .eq("added_by", userId)
-          .eq("profile_id", proposal.personProfileId)
-          .maybeSingle();
+      const myPId = myPersonId.current;
 
-        if (!existing && proposal.personProfileId) {
-          await supabase.from("family_members").insert({
-            added_by: userId,
-            profile_id: proposal.personProfileId,
-            first_name: proposal.personFirstName,
-            last_name: proposal.personLastName || null,
-            relation_type: relation,
-            relation_kind: kind,
-            person_id: proposal.personProfileId,
+      if (proposal.source === "name_match" && proposal.personProfileId && myPId) {
+        // Buscar el persons.id del confirmado
+        const { data: theirPersonRow } = await supabase
+          .from("persons")
+          .select("id")
+          .eq("linked_user_id", proposal.personProfileId)
+          .single();
+
+        if (theirPersonRow?.id) {
+          // Ambos tienen nodo en persons → insertar relación directa
+          await supabase.from("relationships").insert({
+            person_a_id: myPId,
+            person_b_id: theirPersonRow.id,
+            relationship_type: graphRelType,
+            source: "wizard_confirmed",
+            declared_by_user_id: userId,
+            status: "confirmed",
+          });
+        } else {
+          // Solo yo tengo nodo — usar add_relative (crea su nodo + relación)
+          await supabase.rpc("add_relative", {
+            p_payload: {
+              first_names: proposal.personFirstName,
+              last_names: proposal.personLastName || null,
+            },
+            p_relationship: graphRelType,
           });
         }
       } else {
-        // Discovery: add to MY tree
-        const upsertData: any = {
-          added_by: userId,
-          first_name: proposal.personFirstName,
-          last_name: proposal.personLastName || null,
-          relation_type: relation,
-          relation_kind: kind,
-          person_id: proposal.personProfileId ?? crypto.randomUUID(),
-        };
-        if (proposal.personProfileId) upsertData.profile_id = proposal.personProfileId;
-
-        await supabase.from("family_members").insert(upsertData);
-
-        // Add reciprocal if they're in Ceiba
-        if (proposal.personProfileId) {
-          const { data: existingRec } = await supabase
-            .from("family_members")
-            .select("id")
-            .eq("added_by", proposal.personProfileId)
-            .eq("profile_id", userId)
-            .maybeSingle();
-
-          if (!existingRec) {
-            await supabase.from("family_members").insert({
-              added_by: proposal.personProfileId,
-              profile_id: userId,
-              first_name: myFirstName,
-              last_name: myLastName || null,
-              relation_type: inverse,
-              relation_kind: kind,
-              person_id: userId,
-            });
-          }
+        // Discovery: usar add_relative o insertar directamente si tenemos personId
+        if (proposal.personId && myPId) {
+          // Persona ya existe en persons → relación directa
+          await supabase.from("relationships").insert({
+            person_a_id: myPId,
+            person_b_id: proposal.personId,
+            relationship_type: graphRelType,
+            source: "wizard_confirmed",
+            declared_by_user_id: userId,
+            status: "confirmed",
+          });
+        } else {
+          // Persona no estaba en persons todavía → add_relative la crea
+          await supabase.rpc("add_relative", {
+            p_payload: {
+              first_names: proposal.personFirstName,
+              last_names: proposal.personLastName || null,
+            },
+            p_relationship: graphRelType,
+          });
         }
       }
 
-      // Track confirmed person
-      if (proposal.personProfileId) {
-        myTreeProfileIds.current.add(proposal.personProfileId);
-      }
+      // Track confirmed person para evitar re-proponer
+      if (proposal.personProfileId) myTreeProfileIds.current.add(proposal.personProfileId);
+      if (proposal.personId) seenPersonIds.current.add(proposal.personId);
 
       setConfirmedCount(c => c + 1);
 
-      // Discover their family (if they're in Ceiba and relation is worth traversing)
+      // Descubrir familia del familiar confirmado
       if (proposal.personProfileId && DEEP_TRAVERSE.has(relation)) {
         await discoverFamily(
           proposal.personProfileId,
@@ -301,7 +445,7 @@ export default function FamilyDiscoveryWizard({
       setAltRelation(null);
       advance();
     }
-  }, [userId, myFirstName, myLastName, supabase, discoverFamily]);
+  }, [userId, supabase, discoverFamily]);
 
   // ── Skip a proposal ─────────────────────────────────────────────────────────
   const skip = useCallback(() => {
