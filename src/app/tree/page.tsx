@@ -121,7 +121,7 @@ export default function TreePage() {
     fetch("/api/auth/post-register", { method: "POST" }).catch(() => {});
     fetch("/api/presence", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) }).catch(() => {});
 
-    // ── Nuevo grafo familiar ────────────────────────────────────────────────
+    // -- Nuevo grafo familiar ------------------------------------------------
     const { data: graphData, error: graphError } = await supabase.rpc("get_my_family_graph", { depth: 4 });
     if (graphError) throw graphError;
 
@@ -158,7 +158,7 @@ export default function TreePage() {
     }
   };
 
-  // ── LEGACY: funciones que solo usaba el flujo antiguo (family_members) ──
+  // -- LEGACY: funciones que solo usaba el flujo antiguo (family_members) --
   // Vincula persona existente detectada como coincidencia (flujo de confirmación)
   const saveLinkedMember = async () => {
     if (!duplicateWarning) return;
