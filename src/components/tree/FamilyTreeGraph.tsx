@@ -78,27 +78,32 @@ interface SphereColor { ring: string; hi: string; mid: string; shadow: string }
 
 function getNodeColor(relationType: string, kind: string): SphereColor {
   if (relationType === "root")
-    return { ring: "#4ade80", hi: "#bbf7d0", mid: "#22c55e", shadow: "#052e16" };
+    return { ring: "#4ade80", hi: "#bbf7d0", mid: "#22c55e", shadow: "#052e16" }; // tú — verde ceiba
   const gen = GENERATION[relationType] ?? 0;
+  // Ascendentes (abuelos, bisabuelos): azul profundo
   if (gen <= -2)
-    return { ring: "#93c5fd", hi: "#dbeafe", mid: "#3b82f6", shadow: "#1e3a8a" }; // abuelos
+    return { ring: "#93c5fd", hi: "#dbeafe", mid: "#3b82f6", shadow: "#1e3a8a" };
   if (gen === -1) {
-    if (["father_in_law","mother_in_law"].includes(relationType))
-      return { ring: "#fcd34d", hi: "#fef9c3", mid: "#f59e0b", shadow: "#78350f" };
-    if (["stepfather","stepmother"].includes(relationType))
-      return { ring: "#fbbf24", hi: "#fef3c7", mid: "#d97706", shadow: "#451a03" };
-    return { ring: "#bfdbfe", hi: "#eff6ff", mid: "#60a5fa", shadow: "#1e40af" }; // padres
+    // Suegros / padrastros: azul más claro (afín)
+    if (["father_in_law","mother_in_law","stepfather","stepmother"].includes(relationType))
+      return { ring: "#bfdbfe", hi: "#eff6ff", mid: "#60a5fa", shadow: "#1e3a8a" };
+    return { ring: "#93c5fd", hi: "#dbeafe", mid: "#3b82f6", shadow: "#1e3a8a" }; // padres — azul
   }
   if (gen === 0) {
+    // Pareja / cónyuge: morado/violeta
     if (["spouse","partner"].includes(relationType))
-      return { ring: "#fca5a5", hi: "#fee2e2", mid: "#f87171", shadow: "#7f1d1d" };
+      return { ring: "#c084fc", hi: "#f3e8ff", mid: "#a855f7", shadow: "#3b0764" };
+    // Cuñados: morado claro (afín a pareja)
     if (["brother_in_law","sister_in_law"].includes(relationType))
-      return { ring: "#fcd34d", hi: "#fef9c3", mid: "#f59e0b", shadow: "#78350f" };
-    return { ring: "#c4b5fd", hi: "#ede9fe", mid: "#a78bfa", shadow: "#4c1d95" }; // hermanos/primos
+      return { ring: "#d8b4fe", hi: "#faf5ff", mid: "#c084fc", shadow: "#4a044e" };
+    // Hermanos / medios hermanos / primos: naranja
+    return { ring: "#fdba74", hi: "#fff7ed", mid: "#f97316", shadow: "#431407" };
   }
+  // Hijos / hijastros / sobrinos: verde brillante (descendientes)
   if (gen === 1)
-    return { ring: "#67e8f9", hi: "#cffafe", mid: "#22d3ee", shadow: "#0c4a6e" }; // hijos
-  return { ring: "#5eead4", hi: "#ccfbf1", mid: "#2dd4bf", shadow: "#134e4a" }; // nietos
+    return { ring: "#86efac", hi: "#dcfce7", mid: "#34d399", shadow: "#064e3b" };
+  // Nietos: verde más suave
+  return { ring: "#6ee7b7", hi: "#d1fae5", mid: "#10b981", shadow: "#022c22" };
 }
 
 // Consistent color from name hash for avatar placeholder
@@ -453,7 +458,7 @@ export default function FamilyTreeGraph({
     // Extended members with no children: no-op (no profile to open)
   }, [extCountByParent, onNodeClick]);
 
-  const EDGE_COLORS = { blood: "#86efac", affinity: "#fcd34d", peer: "#94a3b8" };
+  const EDGE_COLORS = { blood: "#86efac", affinity: "#fdba74", peer: "#c084fc" };
 
   // ── Forest background helpers ──────────────────────────────────
   const pineShape = (cx: number, base: number, h: number, w: number): string => {
@@ -504,28 +509,26 @@ export default function FamilyTreeGraph({
   return (
     <div className="w-full rounded-2xl overflow-hidden border border-green-900 bg-[#020804]">
 
-      {/* Legend — generaciones + estado */}
+      {/* Legend — colores por parentesco */}
       <div className="flex items-center gap-x-4 gap-y-1 px-3 py-2 border-b border-white/5 bg-white/[0.03] text-[10px] text-gray-500 flex-wrap">
-        {/* Generaciones (color del nodo) */}
-        <span className="text-gray-600 font-semibold">Color:</span>
         <span className="flex items-center gap-1">
           <span className="inline-block w-2.5 h-2.5 rounded-full" style={{background:"#3b82f6"}} />
-          Abuelos
+          Ascendentes
         </span>
         <span className="flex items-center gap-1">
-          <span className="inline-block w-2.5 h-2.5 rounded-full" style={{background:"#60a5fa"}} />
-          Padres
+          <span className="inline-block w-2.5 h-2.5 rounded-full" style={{background:"#f97316"}} />
+          Hermanos
         </span>
         <span className="flex items-center gap-1">
           <span className="inline-block w-2.5 h-2.5 rounded-full" style={{background:"#22c55e"}} />
           Tú
         </span>
         <span className="flex items-center gap-1">
-          <span className="inline-block w-2.5 h-2.5 rounded-full" style={{background:"#a78bfa"}} />
-          Hermanos
+          <span className="inline-block w-2.5 h-2.5 rounded-full" style={{background:"#a855f7"}} />
+          Pareja
         </span>
         <span className="flex items-center gap-1">
-          <span className="inline-block w-2.5 h-2.5 rounded-full" style={{background:"#22d3ee"}} />
+          <span className="inline-block w-2.5 h-2.5 rounded-full" style={{background:"#34d399"}} />
           Hijos
         </span>
         <span className="flex items-center gap-1">
@@ -617,10 +620,13 @@ export default function FamilyTreeGraph({
             <feDropShadow dx="0" dy="0" stdDeviation="6" floodColor="#93c5fd" floodOpacity="0.55" />
           </filter>
           <filter id="glow-purple" x="-50%" y="-50%" width="200%" height="200%">
-            <feDropShadow dx="0" dy="0" stdDeviation="6" floodColor="#c4b5fd" floodOpacity="0.55" />
+            <feDropShadow dx="0" dy="0" stdDeviation="6" floodColor="#c084fc" floodOpacity="0.6" />
           </filter>
-          <filter id="glow-cyan"   x="-50%" y="-50%" width="200%" height="200%">
-            <feDropShadow dx="0" dy="0" stdDeviation="6" floodColor="#67e8f9" floodOpacity="0.55" />
+          <filter id="glow-orange" x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx="0" dy="0" stdDeviation="6" floodColor="#f97316" floodOpacity="0.6" />
+          </filter>
+          <filter id="glow-emerald" x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx="0" dy="0" stdDeviation="6" floodColor="#34d399" floodOpacity="0.6" />
           </filter>
           <filter id="shadow-soft" x="-30%" y="-30%" width="160%" height="160%">
             <feDropShadow dx="0" dy="2" stdDeviation="4" floodColor="#000" floodOpacity="0.5" />
@@ -797,11 +803,17 @@ export default function FamilyTreeGraph({
             const ring   = isDeceased ? "#6b7280" : n.isExtended ? "#374151" : colors.ring;
             const nodeFilter = isDeceased ? "url(#deceased)" : undefined;
 
-            // Glow filter
-            let glowFilter = "url(#glow-blue)";
+            // Glow filter — matches node color family
+            const relGen = GENERATION[n.relationType] ?? 0;
+            let glowFilter = "url(#glow-blue)"; // ascendentes
             if (isRoot) glowFilter = "url(#glow-green)";
-            else if (GENERATION[n.relationType] === 1) glowFilter = "url(#glow-cyan)";
-            else if (GENERATION[n.relationType] === 0) glowFilter = "url(#glow-purple)";
+            else if (relGen >= 1) glowFilter = "url(#glow-emerald)"; // descendientes
+            else if (relGen === 0) {
+              if (["spouse","partner","brother_in_law","sister_in_law"].includes(n.relationType))
+                glowFilter = "url(#glow-purple)"; // pareja
+              else
+                glowFilter = "url(#glow-orange)"; // hermanos
+            }
 
             // Shimmer timing per node (staggered)
             const shimmerDur = `${5 + (idx % 5)}s`;
