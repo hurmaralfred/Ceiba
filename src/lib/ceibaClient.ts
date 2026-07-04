@@ -14,7 +14,7 @@ import type {
   RelationshipType,
   SosAlert,
   UpcomingBirthday,
-} from "./ceiba-types";
+} from "./types";
 
 export interface CeibaClient {
   raw: SupabaseClient;
