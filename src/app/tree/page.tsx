@@ -472,6 +472,9 @@ export default function TreePage() {
           <Link href="/chat" className="flex items-center gap-1 text-ceiba-200 hover:text-white text-sm transition-colors">
             <MessageCircle size={16} /> Chat
           </Link>
+          <Link href="/invitar" className="flex items-center gap-1 bg-ceiba-600 hover:bg-ceiba-500 text-white text-sm font-semibold px-3 py-1 rounded-lg transition-colors">
+            <Send size={15} /> Invitar
+          </Link>
           <button onClick={shareTree} className="flex items-center gap-1 text-ceiba-200 hover:text-white text-sm transition-colors">
             <Share2 size={16} /> Compartir
           </button>

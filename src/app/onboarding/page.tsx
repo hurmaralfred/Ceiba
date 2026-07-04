@@ -1,436 +1,834 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { TreePine, Plus, Trash2, ChevronRight, ChevronLeft, Check, Users } from "lucide-react";
+import {
+  TreePine, ChevronRight, ChevronLeft, Check, Plus, X,
+  Eye, EyeOff, Bell, BellOff, Send, Users, Cake,
+  AlertTriangle, Megaphone
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { RelationType, RELATION_LABELS } from "@/lib/types";
-import FamilyDiscoveryWizard from "@/components/FamilyDiscoveryWizard";
-import toast from "react-hot-toast";
+import { createInviteLink, buildInviteMessage, shareInviteWhatsApp, InviteTemplate } from "@/lib/viral/inviteFlow";
+import { trackEvent } from "@/lib/viral/viralAnalytics";
+import toast, { Toaster } from "react-hot-toast";
 
-type FamilyEntry = {
-  first_name: string;
-  last_name: string;
-  email: string;
-  birth_date: string;
-  relation_type: RelationType;
-  is_deceased: boolean;
-  parent_member_id: string;
+// ============================================================
+// Tipos y constantes
+// ============================================================
+
+type Step =
+  | "profile"       // 3 — Cuéntanos quién eres
+  | "match"         // 4 — Match condicional
+  | "add_family"    // 5 — Agregar 5 familiares
+  | "aha"           // 6 — ¡Aquí está tu ceiba!
+  | "batch_invite"  // 7 — Invitar en batch
+  | "notifications" // 8 — Habilitar notificaciones
+  | "done";         // 9 — ¡Listo!
+
+const TOTAL_STEPS = 7;
+const STEP_INDEX: Record<Step, number> = {
+  profile: 1, match: 2, add_family: 3, aha: 4, batch_invite: 5, notifications: 6, done: 7
 };
 
-type NameMatch = {
-  family_member_id: string;
-  adder_id: string;
-  adder_first_name: string;
-  adder_last_name: string;
+interface SlotDef {
+  id: string;
+  emoji: string;
+  label: string;
   relation_type: string;
-  relation_kind: string;
-};
+  optional?: boolean;
+}
 
-const RELATION_GROUPS = [
-  {
-    label: "Familia directa (sangre)",
-    kind: "blood" as const,
-    options: [
-      "father","mother","brother","sister","half_brother","half_sister",
-      "son","daughter","nephew","niece",
-      "grandfather_paternal","grandmother_paternal",
-      "grandfather_maternal","grandmother_maternal",
-      "grandson","granddaughter","uncle","aunt","cousin",
-    ] as RelationType[],
-  },
-  {
-    label: "Familia política (afinidad)",
-    kind: "affinity" as const,
-    options: [
-      "spouse","partner","father_in_law","mother_in_law",
-      "brother_in_law","sister_in_law","stepfather","stepmother","stepchild",
-    ] as RelationType[],
-  },
+const SUGGESTED_SLOTS: SlotDef[] = [
+  { id: "mom",    emoji: "👩", label: "Tu mamá",     relation_type: "mother" },
+  { id: "dad",    emoji: "👨", label: "Tu papá",     relation_type: "father" },
+  { id: "sib",    emoji: "👫", label: "Un hermano/a", relation_type: "sibling" },
+  { id: "spouse", emoji: "💑", label: "Tu pareja",   relation_type: "spouse",    optional: true },
+  { id: "child",  emoji: "👶", label: "Un hijo/a",   relation_type: "child",     optional: true },
+  { id: "other",  emoji: "➕", label: "Otro familiar", relation_type: "family" },
 ];
 
+interface AddedPerson {
+  id: string;
+  first_names: string;
+  last_names: string;
+  phone?: string;
+  relation_type: string;
+  slot_id: string;
+}
+
+interface MatchCandidate {
+  id: string;
+  first_names: string;
+  last_names: string;
+  birth_date?: string;
+  profile_photo_url?: string;
+  added_by_name?: string;
+}
+
+// ============================================================
+// Helpers
+// ============================================================
+
+function ProgressBar({ step, total }: { step: number; total: number }) {
+  return (
+    <div className="w-full flex gap-1 px-5 pt-4">
+      {Array.from({ length: total }, (_, i) => (
+        <div
+          key={i}
+          className={`h-1 flex-1 rounded-full transition-all duration-500 ${
+            i < step ? "bg-ceiba-500" : "bg-gray-200"
+          }`}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ============================================================
+// Modal: agregar familiar (bottom sheet)
+// ============================================================
+
+function AddRelativeModal({
+  slot,
+  onSave,
+  onClose,
+  loading,
+}: {
+  slot: SlotDef;
+  onSave: (data: {
+    first_names: string;
+    last_names: string;
+    birth_date: string;
+    phone: string;
+    is_living: boolean;
+    relation_type: string;
+  }) => void;
+  onClose: () => void;
+  loading: boolean;
+}) {
+  const [form, setForm] = useState({
+    first_names: "",
+    last_names: "",
+    birth_date: "",
+    phone: "",
+    is_living: true,
+    relation_type: slot.relation_type,
+  });
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative w-full bg-white rounded-t-3xl px-5 pt-5 pb-10 shadow-2xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="font-bold text-lg text-gray-900">
+            {slot.emoji} {slot.label}
+          </h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <X size={22} />
+          </button>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <div className="grid grid-cols-2 gap-3">
+            <input
+              type="text"
+              placeholder="Nombres *"
+              value={form.first_names}
+              onChange={(e) => setForm((f) => ({ ...f, first_names: e.target.value }))}
+              className="col-span-1 rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-ceiba-400"
+              autoFocus
+            />
+            <input
+              type="text"
+              placeholder="Apellidos"
+              value={form.last_names}
+              onChange={(e) => setForm((f) => ({ ...f, last_names: e.target.value }))}
+              className="col-span-1 rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-ceiba-400"
+            />
+          </div>
+
+          <input
+            type="date"
+            placeholder="Fecha de nacimiento (opcional)"
+            value={form.birth_date}
+            onChange={(e) => setForm((f) => ({ ...f, birth_date: e.target.value }))}
+            className="rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-ceiba-400 text-gray-700"
+          />
+
+          <input
+            type="tel"
+            placeholder="WhatsApp (para invitarlo después)"
+            value={form.phone}
+            onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+            className="rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-ceiba-400"
+          />
+
+          {/* Toggle fallecido */}
+          <button
+            type="button"
+            onClick={() => setForm((f) => ({ ...f, is_living: !f.is_living }))}
+            className="flex items-center gap-3 text-sm text-gray-600"
+          >
+            <div className={`w-10 h-6 rounded-full transition-colors flex items-center px-0.5 ${
+              !form.is_living ? "bg-gray-400" : "bg-gray-200"
+            }`}>
+              <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                !form.is_living ? "translate-x-4" : ""
+              }`} />
+            </div>
+            Fallecido/a — aparece con † en el árbol
+          </button>
+
+          <button
+            onClick={() => {
+              if (!form.first_names.trim()) {
+                toast.error("El nombre es obligatorio");
+                return;
+              }
+              onSave(form);
+            }}
+            disabled={loading}
+            className="w-full bg-ceiba-500 hover:bg-ceiba-400 disabled:opacity-50 text-white font-bold py-4 rounded-2xl mt-2 transition-colors"
+          >
+            {loading ? "Guardando..." : "Agregar y seguir"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// Página principal
+// ============================================================
+
 export default function OnboardingPage() {
-  const router = useRouter();
   const supabase = createClient();
+  const router = useRouter();
 
-  // Step: 0=Profile, 1=NameMatches, 2=AddFamily (only if no matches), 3=Done
-  const [step, setStep] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState<Step>("profile");
   const [userId, setUserId] = useState<string | null>(null);
-  const [userFirstName, setUserFirstName] = useState("");
-  const [userLastName, setUserLastName] = useState("");
+  const [myPersonId, setMyPersonId] = useState<string | null>(null);
+  const [myFirstName, setMyFirstName] = useState("");
+  const [myLastName, setMyLastName] = useState("");
 
-  const [profile, setProfile] = useState({ bio: "", birth_year: "", city: "", country: "" });
-  const [members, setMembers] = useState<FamilyEntry[]>([
-    { first_name: "", last_name: "", email: "", birth_date: "", relation_type: "father", is_deceased: false, parent_member_id: "" },
-  ]);
+  // Profile form
+  const [profFirstNames, setProfFirstNames] = useState("");
+  const [profLastNames, setProfLastNames] = useState("");
+  const [profBirthDate, setProfBirthDate] = useState("");
+  const [profCity, setProfCity] = useState("");
+  const [profLoading, setProfLoading] = useState(false);
 
-  const [confirmedMatches, setConfirmedMatches] = useState<NameMatch[]>([]); // set by wizard on done
+  // Match candidate
+  const [match, setMatch] = useState<MatchCandidate | null>(null);
+
+  // Family slots
+  const [filledSlots, setFilledSlots] = useState<Record<string, AddedPerson>>({});
+  const [activeSlot, setActiveSlot] = useState<SlotDef | null>(null);
+  const [addLoading, setAddLoading] = useState(false);
+
+  // Batch invite
+  const [inviteLoading, setInviteLoading] = useState<string | null>(null);
+  const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set());
+  const [template] = useState<InviteTemplate>(() => {
+    const ts: InviteTemplate[] = ["v1_direct", "v2_emotional", "v3_specific"];
+    return ts[Math.floor(Math.random() * ts.length)];
+  });
+
+  // ============================================================
+  // Init
+  // ============================================================
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
       if (!data.user) { router.push("/auth/login"); return; }
       setUserId(data.user.id);
-      const { data: prof } = await supabase
-        .from("profiles")
-        .select("first_name, last_name")
-        .eq("id", data.user.id)
-        .single();
-      if (prof) {
-        setUserFirstName(prof.first_name || "");
-        setUserLastName(prof.last_name || "");
+
+      // Pre-fill from metadata (set during registration)
+      const meta = data.user.user_metadata ?? {};
+      if (meta.first_name) { setProfFirstNames(meta.first_name); setMyFirstName(meta.first_name); }
+      if (meta.last_name)  { setProfLastNames(meta.last_name);  setMyLastName(meta.last_name);  }
+
+      // Get my person record
+      const { data: me } = await supabase
+        .from("persons")
+        .select("id, first_names, last_names")
+        .eq("linked_user_id", data.user.id)
+        .maybeSingle();
+
+      if (me) {
+        setMyPersonId(me.id);
+        if (!meta.first_name) { setProfFirstNames(me.first_names); setMyFirstName(me.first_names); }
+        if (!meta.last_name)  { setProfLastNames(me.last_names ?? ""); setMyLastName(me.last_names ?? ""); }
       }
     });
+    trackEvent("onboarding_started" as any, { type: "organic" });
   }, []);
 
-  // ── Step 0 → 1 ────────────────────────────────────────────────────────────
+  // ============================================================
+  // Step: Profile
+  // ============================================================
+
   const saveProfile = async () => {
-    if (!userId) return;
-    setLoading(true);
+    if (!profFirstNames.trim()) { toast.error("Agrega tu nombre"); return; }
+    setProfLoading(true);
     try {
+      const uid = userId!;
+
+      // Update profiles table
       await supabase.from("profiles").update({
-        bio: profile.bio,
-        birth_year: profile.birth_year ? parseInt(profile.birth_year) : null,
-        city: profile.city,
-        country: profile.country,
-      }).eq("id", userId);
+        first_name: profFirstNames.trim(),
+        last_name: profLastNames.trim(),
+        city: profCity.trim() || null,
+      }).eq("id", uid);
 
-      // Sincronizar bio + ciudad en persons (nuevo esquema)
-      await supabase.from("persons").update({
-        bio: profile.bio || null,
-        birth_city: profile.city || null,
-      }).eq("linked_user_id", userId);
+      // Update persons table
+      let personId = myPersonId;
+      if (personId) {
+        await supabase.from("persons").update({
+          first_names: profFirstNames.trim(),
+          last_names: profLastNames.trim(),
+          birth_date: profBirthDate || null,
+          birth_city: profCity.trim() || null,
+        }).eq("id", personId);
+      } else {
+        const { data: newPerson } = await supabase.from("persons").insert({
+          first_names: profFirstNames.trim(),
+          last_names: profLastNames.trim(),
+          birth_date: profBirthDate || null,
+          birth_city: profCity.trim() || null,
+          is_living: true,
+          linked_user_id: uid,
+          created_by_user_id: uid,
+          status: "active",
+          verification_level: "self_verified",
+        }).select("id").single();
+        if (newPerson) personId = newPerson.id;
+      }
 
-      // Always go to step 1 (wizard) — it handles both match-found and no-match cases
-      setStep(1);
+      setMyPersonId(personId);
+      setMyFirstName(profFirstNames.trim());
+      setMyLastName(profLastNames.trim());
+
+      // Check for match candidates
+      const { data: candidates } = await supabase
+        .from("match_candidates")
+        .select("id, score, person_a_id, person_b_id")
+        .or(`person_a_id.eq.${personId},person_b_id.eq.${personId}`)
+        .gte("score", 0.7)
+        .order("score", { ascending: false })
+        .limit(1);
+
+      if (candidates && candidates.length > 0 && personId) {
+        const c = candidates[0];
+        const otherId = c.person_a_id === personId ? c.person_b_id : c.person_a_id;
+        const { data: other } = await supabase
+          .from("persons")
+          .select("id, first_names, last_names, birth_date, profile_photo_url")
+          .eq("id", otherId)
+          .is("linked_user_id", null)
+          .maybeSingle();
+        if (other) {
+          setMatch(other);
+          setStep("match");
+          return;
+        }
+      }
+
+      setStep("add_family");
     } catch (err: any) {
       toast.error(err.message);
     } finally {
-      setLoading(false);
+      setProfLoading(false);
     }
   };
 
-  // ── Step 2: Manual add family ──────────────────────────────────────────────
-  const addMember = () => {
-    setMembers(m => [...m, { first_name: "", last_name: "", email: "", birth_date: "", relation_type: "mother", is_deceased: false, parent_member_id: "" }]);
-  };
-  const removeMember = (i: number) => setMembers(m => m.filter((_, idx) => idx !== i));
-  const updateMember = (i: number, field: keyof FamilyEntry, value: string | boolean) =>
-    setMembers(m => m.map((mem, idx) => idx === i ? { ...mem, [field]: value } : mem));
+  // ============================================================
+  // Step: Match
+  // ============================================================
 
-  const saveFamily = async () => {
-    if (!userId) return;
-    const valid = members.filter(m => m.first_name.trim());
-    if (valid.length === 0) { toast.error("Agrega al menos un familiar"); return; }
-    setLoading(true);
+  const claimMatch = async () => {
+    if (!match || !userId) return;
+    // Link this person to the user
+    const { error } = await supabase
+      .from("persons")
+      .update({ linked_user_id: userId, status: "active" })
+      .eq("id", match.id)
+      .is("linked_user_id", null);
+
+    if (error) { toast.error(error.message); return; }
+
+    setMyPersonId(match.id);
+    toast.success("¡Te conectamos con tu árbol existente!");
+    setStep("add_family");
+  };
+
+  // ============================================================
+  // Step: Add family
+  // ============================================================
+
+  const handleAddRelative = async (form: {
+    first_names: string; last_names: string; birth_date: string;
+    phone: string; is_living: boolean; relation_type: string;
+  }) => {
+    if (!myPersonId) return;
+    setAddLoading(true);
     try {
-      const rows = valid.map(m => ({
-        added_by: userId,
-        first_name: m.first_name.trim(),
-        last_name: m.last_name.trim() || null,
-        email: m.email.trim() || null,
-        birth_date: m.birth_date || null,
-        relation_type: m.relation_type,
-        relation_kind: RELATION_GROUPS[0].options.includes(m.relation_type) ? "blood" : "affinity",
-        is_deceased: m.is_deceased,
-        parent_member_id: m.parent_member_id || null,
-        person_id: crypto.randomUUID(),
-      }));
-      const { error } = await supabase.from("family_members").insert(rows);
+      const { data, error } = await supabase.rpc("add_relative", {
+        p_first_names: form.first_names.trim(),
+        p_last_names: form.last_names.trim() || null,
+        p_relation: form.relation_type,
+        p_birth_date: form.birth_date || null,
+        p_gender: null,
+        p_is_living: form.is_living,
+      });
       if (error) throw error;
-      setStep(3);
+
+      const newId = data?.person_id ?? data?.id;
+
+      // Save phone if provided
+      if (form.phone && newId) {
+        await supabase.from("persons").update({ phone: form.phone }).eq("id", newId);
+      }
+
+      const newPerson: AddedPerson = {
+        id: newId,
+        first_names: form.first_names.trim(),
+        last_names: form.last_names.trim(),
+        phone: form.phone || undefined,
+        relation_type: form.relation_type,
+        slot_id: activeSlot!.id,
+      };
+
+      setFilledSlots((prev) => ({ ...prev, [activeSlot!.id]: newPerson }));
+      setActiveSlot(null);
+      trackEvent("family_member_added" as any, { relation: form.relation_type, step: "onboarding" });
     } catch (err: any) {
       toast.error(err.message);
     } finally {
-      setLoading(false);
+      setAddLoading(false);
     }
   };
+
+  const filledCount = Object.keys(filledSlots).length;
+  const canContinue = filledCount >= 5;
+
+  // ============================================================
+  // Step: Batch invite
+  // ============================================================
+
+  const handleInvitePerson = async (person: AddedPerson) => {
+    if (invitedIds.has(person.id)) return;
+    setInviteLoading(person.id);
+    try {
+      const result = await createInviteLink(supabase, person.id, template);
+      const ctx = {
+        inviterFirstName: myFirstName,
+        invitedFirstName: person.first_names,
+        invitedRelation: person.relation_type,
+        previewMembers: Object.values(filledSlots)
+          .filter((p) => p.id !== person.id)
+          .slice(0, 3)
+          .map((p) => p.first_names),
+      };
+      const msg = buildInviteMessage(template, ctx, result.universalLink);
+      await shareInviteWhatsApp(supabase, result.invitationId, msg, person.phone);
+      setInvitedIds((prev) => new Set([...prev, person.id]));
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setInviteLoading(null);
+    }
+  };
+
+  // ============================================================
+  // Step: Notifications
+  // ============================================================
+
+  const requestNotifications = async () => {
+    if (!("Notification" in window)) { setStep("done"); return; }
+    try {
+      const perm = await Notification.requestPermission();
+      trackEvent("notification_permission_result" as any, { result: perm });
+    } catch (_) {}
+    setStep("done");
+  };
+
+  // ============================================================
+  // Render helpers
+  // ============================================================
+
+  const stepIndex = STEP_INDEX[step];
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-ceiba-950 to-ceiba-800 flex flex-col items-center px-4 py-12">
-      {/* Header */}
-      <div className="text-center mb-8">
-        <div className="flex items-center justify-center gap-2 text-white mb-2">
-          <TreePine size={28} className="text-ceiba-300" />
-          <span className="font-display text-2xl font-bold">Ceiba</span>
-        </div>
-        <p className="text-ceiba-300">
-          {step === 0 && "Cuéntanos sobre ti"}
-          {step === 1 && "Tu familia ya está aquí"}
-          {step === 2 && "Empieza tu árbol"}
-          {step === 3 && "¡Bienvenido a Ceiba!"}
-        </p>
-      </div>
+    <>
+      <Toaster position="top-center" />
+      {activeSlot && (
+        <AddRelativeModal
+          slot={activeSlot}
+          onSave={handleAddRelative}
+          onClose={() => setActiveSlot(null)}
+          loading={addLoading}
+        />
+      )}
 
-      {/* Step dots */}
-      <div className="flex items-center gap-2 mb-8">
-        {[0, 1, 2].map(i => {
-          // Compactar: si no hay matches ni se mostró paso 1, skip dot de matches
-          const dots = step === 1 || confirmedMatches.length > 0
-            ? ["Perfil", "Conexiones", "Listo"]
-            : ["Perfil", "Tu familia", "Listo"];
-          const currentDot = step === 0 ? 0 : step === 1 ? 1 : step === 2 ? 1 : 2;
-          return (
-            <div key={i} className="flex items-center gap-2">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
-                i < currentDot ? "bg-ceiba-400 text-white" :
-                i === currentDot ? "bg-white text-ceiba-800" :
-                "bg-white/20 text-white/50"
-              }`}>
-                {i < currentDot ? <Check size={14} /> : dots[i][0]}
-              </div>
-              {i < 2 && <div className={`w-10 h-0.5 ${i < currentDot ? "bg-ceiba-400" : "bg-white/20"}`} />}
-            </div>
-          );
-        })}
-      </div>
+      <div className="min-h-screen bg-gray-50 flex flex-col max-w-lg mx-auto">
+        {/* Progress */}
+        <ProgressBar step={stepIndex} total={TOTAL_STEPS} />
 
-      <div className="w-full max-w-lg card">
-
-        {/* ── STEP 0: Profile ─────────────────────────────────────────────── */}
-        {step === 0 && (
-          <div className="space-y-4">
-            <h2 className="text-xl font-bold text-gray-800 mb-1">Hola, {userFirstName || "bienvenido"}</h2>
-            <p className="text-gray-500 text-sm mb-4">
-              Vamos a verificar si ya estás en el árbol de alguien en Ceiba — puede que tu familia ya te esté esperando.
-            </p>
+        {/* ── PROFILE ─────────────────────────────────────────── */}
+        {step === "profile" && (
+          <div className="flex flex-col px-5 pt-6 pb-10 gap-5 flex-1">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Año de nacimiento</label>
-              <input type="number" className="input-field" placeholder="ej. 1985"
-                value={profile.birth_year}
-                onChange={e => setProfile(p => ({ ...p, birth_year: e.target.value }))}
-                min="1900" max="2020"
-              />
+              <h1 className="text-2xl font-bold text-gray-900 mb-1">Cuéntanos quién eres</h1>
+              <p className="text-gray-500 text-sm">Un par de datos y tu árbol estará listo.</p>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Ciudad</label>
-                <input type="text" className="input-field" placeholder="Donde vives"
-                  value={profile.city}
-                  onChange={e => setProfile(p => ({ ...p, city: e.target.value }))}
+
+            <div className="flex flex-col gap-3">
+              <div className="grid grid-cols-2 gap-3">
+                <input
+                  type="text"
+                  placeholder="Nombres *"
+                  value={profFirstNames}
+                  onChange={(e) => setProfFirstNames(e.target.value)}
+                  className="rounded-2xl border border-gray-200 px-4 py-3.5 outline-none focus:border-ceiba-400 bg-white"
+                />
+                <input
+                  type="text"
+                  placeholder="Apellidos"
+                  value={profLastNames}
+                  onChange={(e) => setProfLastNames(e.target.value)}
+                  className="rounded-2xl border border-gray-200 px-4 py-3.5 outline-none focus:border-ceiba-400 bg-white"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">País</label>
-                <input type="text" className="input-field" placeholder="Tu país"
-                  value={profile.country}
-                  onChange={e => setProfile(p => ({ ...p, country: e.target.value }))}
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Bio <span className="text-gray-400 font-normal">(opcional)</span></label>
-              <textarea className="input-field resize-none h-16" placeholder="Algo sobre ti..."
-                value={profile.bio}
-                onChange={e => setProfile(p => ({ ...p, bio: e.target.value }))}
+              <input
+                type="date"
+                value={profBirthDate}
+                onChange={(e) => setProfBirthDate(e.target.value)}
+                className="rounded-2xl border border-gray-200 px-4 py-3.5 outline-none focus:border-ceiba-400 bg-white text-gray-700"
+              />
+              <input
+                type="text"
+                placeholder="Ciudad donde vives"
+                value={profCity}
+                onChange={(e) => setProfCity(e.target.value)}
+                className="rounded-2xl border border-gray-200 px-4 py-3.5 outline-none focus:border-ceiba-400 bg-white"
               />
             </div>
-            <div className="flex justify-end pt-2">
-              <button onClick={saveProfile} disabled={loading} className="btn-primary flex items-center gap-2">
-                {loading ? "Buscando tu familia..." : "Continuar"} <ChevronRight size={18} />
+
+            <button
+              onClick={saveProfile}
+              disabled={profLoading}
+              className="w-full flex items-center justify-center gap-2 bg-ceiba-500 hover:bg-ceiba-400 disabled:opacity-50 text-white font-bold py-4 rounded-2xl mt-auto transition-colors"
+            >
+              {profLoading ? "Buscando conexiones..." : "Continuar"}
+              {!profLoading && <ChevronRight size={20} />}
+            </button>
+          </div>
+        )}
+
+        {/* ── MATCH ──────────────────────────────────────────── */}
+        {step === "match" && match && (
+          <div className="flex flex-col px-5 pt-6 pb-10 gap-5 flex-1">
+            <h1 className="text-2xl font-bold text-gray-900">Parece que alguien ya te agregó</h1>
+
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center gap-4">
+              <div className="w-16 h-16 rounded-full bg-ceiba-600 flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
+                {match.first_names[0]}
+              </div>
+              <div>
+                <p className="font-bold text-gray-900 text-lg">
+                  {match.first_names} {match.last_names}
+                </p>
+                {match.birth_date && (
+                  <p className="text-gray-500 text-sm">
+                    {new Date(match.birth_date).toLocaleDateString("es", { year: "numeric", month: "long", day: "numeric" })}
+                  </p>
+                )}
+                {match.added_by_name && (
+                  <p className="text-ceiba-600 text-xs mt-1">Agregado por {match.added_by_name}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={claimMatch}
+                className="w-full flex items-center justify-center gap-2 bg-ceiba-500 hover:bg-ceiba-400 text-white font-bold py-4 rounded-2xl"
+              >
+                <Check size={20} /> Sí, soy yo
+              </button>
+              <button
+                onClick={() => { setMatch(null); setStep("add_family"); }}
+                className="w-full text-gray-500 hover:text-gray-800 py-3 text-sm"
+              >
+                No, es otra persona
               </button>
             </div>
           </div>
         )}
 
-        {/* ── STEP 1: Family Discovery Wizard ──────────────────────────── */}
-        {step === 1 && userId && (
-          <FamilyDiscoveryWizard
-            userId={userId}
-            myFirstName={userFirstName}
-            myLastName={userLastName || null}
-            onDone={(count) => {
-              setConfirmedMatches(count > 0 ? [{ family_member_id: "wizard" } as any] : []);
-              if (count > 0) setStep(3);
-              else setStep(2);
-            }}
-            onSkip={() => setStep(2)}
-          />
+        {/* ── ADD FAMILY ─────────────────────────────────────── */}
+        {step === "add_family" && (
+          <div className="flex flex-col px-5 pt-6 pb-32 gap-4 flex-1">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 mb-1">Construye tu árbol</h1>
+              <p className="text-gray-500 text-sm">Empieza por los más cercanos. Detalles después.</p>
+            </div>
+
+            {/* Contador */}
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-ceiba-500 rounded-full transition-all duration-500"
+                  style={{ width: `${(filledCount / 5) * 100}%` }}
+                />
+              </div>
+              <span className="text-sm font-bold text-ceiba-700 flex-shrink-0">
+                {filledCount} / 5
+              </span>
+            </div>
+
+            {/* Slots */}
+            <div className="grid grid-cols-2 gap-3">
+              {SUGGESTED_SLOTS.map((slot) => {
+                const filled = filledSlots[slot.id];
+                return filled ? (
+                  <div
+                    key={slot.id}
+                    className="bg-ceiba-50 border-2 border-ceiba-200 rounded-2xl p-4 flex flex-col gap-1"
+                  >
+                    <span className="text-2xl">{slot.emoji}</span>
+                    <p className="font-semibold text-ceiba-800 text-sm leading-tight">
+                      {filled.first_names}
+                    </p>
+                    <p className="text-ceiba-500 text-xs">{slot.label}</p>
+                    <Check size={14} className="text-ceiba-500 mt-1" />
+                  </div>
+                ) : (
+                  <button
+                    key={slot.id}
+                    onClick={() => setActiveSlot(slot)}
+                    className="bg-white border-2 border-dashed border-gray-200 hover:border-ceiba-400 hover:bg-ceiba-50 rounded-2xl p-4 flex flex-col gap-1 text-left transition-colors"
+                  >
+                    <span className="text-2xl">{slot.emoji}</span>
+                    <p className="font-semibold text-gray-800 text-sm leading-tight">{slot.label}</p>
+                    {slot.optional && <p className="text-gray-400 text-xs">opcional</p>}
+                    <div className="flex items-center gap-1 text-ceiba-600 text-xs mt-1">
+                      <Plus size={12} /> Agregar
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         )}
 
-        {/* ── STEP 2: Manual add family (only shown when no matches confirmed) ── */}
-        {step === 2 && (
-          <div>
-            <h2 className="text-xl font-bold text-gray-800 mb-1">Empieza tu árbol</h2>
-            <p className="text-gray-500 text-sm mb-5">
-              Agrega a tus familiares. Cuando ellos se registren con el mismo nombre,
-              Ceiba los reconocerá y conectará sus árboles automáticamente.
-            </p>
-            <div className="space-y-4 max-h-[55vh] overflow-y-auto pr-1">
-              {members.map((member, i) => (
-                <div key={i} className="border border-gray-200 rounded-xl p-4 bg-gray-50 space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="font-semibold text-sm text-gray-600">Familiar {i + 1}</span>
-                    {members.length > 1 && (
-                      <button onClick={() => removeMember(i)} className="text-red-400 hover:text-red-600">
-                        <Trash2 size={16} />
+        {/* ── AHA MOMENT ─────────────────────────────────────── */}
+        {step === "aha" && (
+          <div className="flex flex-col items-center px-5 pt-10 pb-10 gap-6 flex-1 text-center">
+            <TreePine size={72} className="text-ceiba-400 animate-bounce" />
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                ¡Aquí está tu ceiba, {myFirstName}!
+              </h1>
+              <p className="text-gray-500">Tu árbol familiar ya está tomando forma.</p>
+            </div>
+
+            <div className="w-full flex flex-col gap-2">
+              <div className="bg-ceiba-50 rounded-2xl px-4 py-3 flex items-center gap-3">
+                <span className="text-xl">🌱</span>
+                <span className="text-ceiba-800 text-sm font-medium">
+                  {filledCount} familiar{filledCount !== 1 ? "es" : ""} agregado{filledCount !== 1 ? "s" : ""}
+                </span>
+              </div>
+              <div className="bg-ceiba-50 rounded-2xl px-4 py-3 flex items-center gap-3">
+                <Cake size={20} className="text-ceiba-600" />
+                <span className="text-ceiba-800 text-sm font-medium">
+                  Recibirás recordatorios de cumpleaños
+                </span>
+              </div>
+              <div className="bg-ceiba-50 rounded-2xl px-4 py-3 flex items-center gap-3">
+                <AlertTriangle size={20} className="text-red-500" />
+                <span className="text-ceiba-800 text-sm font-medium">
+                  Tu familia puede mandarte alertas SOS
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3 w-full mt-auto">
+              <button
+                onClick={() => setStep("batch_invite")}
+                className="w-full flex items-center justify-center gap-2 bg-ceiba-500 hover:bg-ceiba-400 text-white font-bold py-4 rounded-2xl"
+              >
+                <Send size={18} /> Invitar a mi familia
+              </button>
+              <button
+                onClick={() => setStep("notifications")}
+                className="w-full text-gray-500 hover:text-gray-800 text-sm py-2"
+              >
+                Explorar mi árbol después
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── BATCH INVITE ───────────────────────────────────── */}
+        {step === "batch_invite" && (
+          <div className="flex flex-col px-5 pt-6 pb-32 gap-4 flex-1">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 mb-1">Invita a los que agregaste</h1>
+              <p className="text-gray-500 text-sm">
+                Cuando entren, cada uno verá el árbol ya listo.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              {Object.values(filledSlots).map((person) => {
+                const isInvited = invitedIds.has(person.id);
+                const isLoading = inviteLoading === person.id;
+                return (
+                  <div
+                    key={person.id}
+                    className={`bg-white rounded-2xl border p-4 flex items-center gap-3 ${
+                      isInvited ? "border-green-200 bg-green-50" : "border-gray-100"
+                    }`}
+                  >
+                    <div className="w-11 h-11 rounded-full bg-ceiba-600 flex items-center justify-center text-white font-bold flex-shrink-0">
+                      {person.first_names[0]}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm text-gray-900 truncate">
+                        {person.first_names} {person.last_names}
+                      </p>
+                      {person.phone ? (
+                        <p className="text-gray-400 text-xs">{person.phone}</p>
+                      ) : (
+                        <p className="text-gray-400 text-xs">Sin teléfono</p>
+                      )}
+                    </div>
+                    {isInvited ? (
+                      <span className="flex items-center gap-1 text-green-600 text-xs font-medium">
+                        <Check size={14} /> Enviada
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => handleInvitePerson(person)}
+                        disabled={!!inviteLoading}
+                        className="flex-shrink-0 bg-[#25D366] hover:bg-[#1ebe5c] disabled:opacity-50 text-white text-xs font-bold px-3 py-2 rounded-xl transition-colors"
+                      >
+                        {isLoading ? "..." : "WhatsApp"}
                       </button>
                     )}
                   </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <input type="text" className="input-field text-sm" placeholder="Nombre(s) *"
-                      value={member.first_name}
-                      onChange={e => updateMember(i, "first_name", e.target.value)}
-                    />
-                    <input type="text" className="input-field text-sm" placeholder="Apellido(s)"
-                      value={member.last_name}
-                      onChange={e => updateMember(i, "last_name", e.target.value)}
-                    />
-                  </div>
-
-                  <select
-                    className="input-field text-sm"
-                    value={member.relation_type}
-                    onChange={e => updateMember(i, "relation_type", e.target.value as RelationType)}
-                  >
-                    {RELATION_GROUPS.map(group => (
-                      <optgroup key={group.kind} label={group.label}>
-                        {group.options.map(opt => (
-                          <option key={opt} value={opt}>{RELATION_LABELS[opt]}</option>
-                        ))}
-                      </optgroup>
-                    ))}
-                  </select>
-
-                  {(member.relation_type === "nephew" || member.relation_type === "niece") && (
-                    <div>
-                      <label className="block text-xs font-medium text-gray-500 mb-1">
-                        ¿Hijo/a de cuál hermano/a? <span className="text-gray-400 font-normal">(opcional)</span>
-                      </label>
-                      <select
-                        className="input-field text-sm"
-                        value={member.parent_member_id}
-                        onChange={e => updateMember(i, "parent_member_id", e.target.value)}
-                      >
-                        <option value="">— No especificar —</option>
-                        {members
-                          .filter((m, idx) => idx !== i && ["brother","sister","half_brother","half_sister"].includes(m.relation_type) && m.first_name.trim())
-                          .map((s, si) => (
-                            <option key={si} value={`__onb_${si}`}>
-                              {s.first_name} {s.last_name || ""}
-                            </option>
-                          ))
-                        }
-                      </select>
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">Fecha de nac.</label>
-                      <input type="date" className="input-field text-sm"
-                        value={member.birth_date}
-                        onChange={e => updateMember(i, "birth_date", e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">Correo (para invitar)</label>
-                      <input type="email" className="input-field text-sm" placeholder="correo@ejemplo.com"
-                        value={member.email}
-                        onChange={e => updateMember(i, "email", e.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  <label className="flex items-center gap-3 cursor-pointer select-none">
-                    <div className="relative">
-                      <input type="checkbox" className="sr-only"
-                        checked={member.is_deceased}
-                        onChange={e => updateMember(i, "is_deceased", e.target.checked)}
-                      />
-                      <div className={`w-9 h-5 rounded-full transition-colors ${member.is_deceased ? "bg-gray-500" : "bg-gray-200"}`} />
-                      <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${member.is_deceased ? "translate-x-4" : ""}`} />
-                    </div>
-                    <span className="text-xs text-gray-600">
-                      Fallecido(a) <span className="text-gray-400">— aparece con † en el árbol</span>
-                    </span>
-                  </label>
-                </div>
-              ))}
+        {/* ── NOTIFICATIONS ──────────────────────────────────── */}
+        {step === "notifications" && (
+          <div className="flex flex-col items-center px-5 pt-10 pb-10 gap-6 flex-1 text-center">
+            <Bell size={64} className="text-ceiba-500" />
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">Un último paso</h1>
+              <p className="text-gray-500 text-sm">Ceiba solo te notifica para cosas que importan.</p>
             </div>
 
-            <button onClick={addMember} className="mt-4 w-full border-2 border-dashed border-ceiba-300 rounded-xl py-3 text-ceiba-700 font-semibold flex items-center justify-center gap-2 hover:bg-ceiba-50 transition-colors">
-              <Plus size={18} /> Agregar otro familiar
-            </button>
+            <div className="w-full flex flex-col gap-2 text-left">
+              {[
+                { icon: "🎂", text: "Cumpleaños de tu familia" },
+                { icon: "🚨", text: "Alertas SOS" },
+                { icon: "📢", text: "Mensajes familiares importantes" },
+              ].map(({ icon, text }) => (
+                <div key={text} className="flex items-center gap-3 bg-ceiba-50 rounded-xl px-4 py-3">
+                  <span className="text-lg">{icon}</span>
+                  <span className="text-ceiba-800 text-sm">{text}</span>
+                </div>
+              ))}
+              <p className="text-center text-gray-400 text-xs mt-1">Nunca para publicidad.</p>
+            </div>
 
-            <div className="flex justify-between pt-4 mt-2">
-              <button onClick={() => setStep(0)} className="btn-secondary flex items-center gap-2">
-                <ChevronLeft size={18} /> Atrás
+            <div className="flex flex-col gap-3 w-full mt-auto">
+              <button
+                onClick={requestNotifications}
+                className="w-full flex items-center justify-center gap-2 bg-ceiba-500 hover:bg-ceiba-400 text-white font-bold py-4 rounded-2xl"
+              >
+                <Bell size={18} /> Activar notificaciones
               </button>
-              <button onClick={saveFamily} disabled={loading} className="btn-primary flex items-center gap-2">
-                {loading ? "Guardando..." : "Finalizar"} <ChevronRight size={18} />
+              <button
+                onClick={() => setStep("done")}
+                className="w-full text-gray-400 hover:text-gray-600 text-sm py-2"
+              >
+                Después
               </button>
             </div>
           </div>
         )}
 
-        {/* ── STEP 3: Done ───────────────────────────────────────────────────── */}
-        {step === 3 && (
-          <DoneStep
-            confirmedCount={confirmedMatches.length}
-            onTree={() => router.push("/tree")}
-            onInvite={() => router.push("/invite")}
-            onAddMore={() => setStep(2)}
-          />
+        {/* ── DONE ───────────────────────────────────────────── */}
+        {step === "done" && (
+          <div className="flex flex-col items-center px-5 pt-16 pb-10 gap-6 flex-1 text-center">
+            <div className="relative">
+              <TreePine size={80} className="text-ceiba-400" />
+              <div className="absolute -top-2 -right-2 w-8 h-8 bg-green-400 rounded-full flex items-center justify-center shadow-lg">
+                <Check size={18} className="text-white" />
+              </div>
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                ¡Bienvenido/a, {myFirstName}!
+              </h1>
+              <p className="text-gray-500">Tu árbol familiar te está esperando.</p>
+            </div>
+            <button
+              onClick={() => router.push("/tree")}
+              className="w-full flex items-center justify-center gap-2 bg-ceiba-500 hover:bg-ceiba-400 text-white font-bold py-4 rounded-2xl text-lg mt-auto"
+            >
+              Entrar a mi árbol
+              <ChevronRight size={22} />
+            </button>
+          </div>
+        )}
+
+        {/* Footer botones de navegación */}
+        {step === "add_family" && (
+          <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-white border-t px-5 py-4 flex flex-col gap-2">
+            <button
+              onClick={() => setStep("aha")}
+              disabled={!canContinue}
+              className={`w-full flex items-center justify-center gap-2 font-bold py-4 rounded-2xl transition-all ${
+                canContinue
+                  ? "bg-ceiba-500 hover:bg-ceiba-400 text-white"
+                  : "bg-gray-100 text-gray-400 cursor-not-allowed"
+              }`}
+            >
+              {canContinue ? (
+                <>Ya tengo mi árbol → Continuar <ChevronRight size={20} /></>
+              ) : (
+                `Faltan ${5 - filledCount} familiar${5 - filledCount !== 1 ? "es" : ""}`
+              )}
+            </button>
+          </div>
+        )}
+
+        {step === "batch_invite" && (
+          <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-white border-t px-5 py-4 flex flex-col gap-2">
+            <button
+              onClick={() => setStep("notifications")}
+              className="w-full flex items-center justify-center gap-2 bg-ceiba-500 hover:bg-ceiba-400 text-white font-bold py-4 rounded-2xl"
+            >
+              Continuar <ChevronRight size={20} />
+            </button>
+            <button
+              onClick={() => setStep("notifications")}
+              className="w-full text-gray-400 hover:text-gray-600 text-sm py-1"
+            >
+              Saltar por ahora
+            </button>
+          </div>
         )}
       </div>
-    </main>
-  );
-}
-
-function DoneStep({
-  confirmedCount,
-  onTree,
-  onInvite,
-  onAddMore,
-}: {
-  confirmedCount: number;
-  onTree: () => void;
-  onInvite: () => void;
-  onAddMore: () => void;
-}) {
-  useEffect(() => {
-    fetch("/api/email/welcome", { method: "POST" }).catch(() => {});
-  }, []);
-
-  return (
-    <div className="text-center py-4">
-      <div className="w-20 h-20 bg-ceiba-100 rounded-full flex items-center justify-center mx-auto mb-5">
-        <TreePine size={40} className="text-ceiba-600" />
-      </div>
-      {confirmedCount > 0 ? (
-        <>
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">¡Tu árbol ya creció!</h2>
-          <p className="text-gray-500 mb-2">
-            Confirmaste <strong className="text-ceiba-700">{confirmedCount} conexión{confirmedCount > 1 ? "es" : ""} familiar{confirmedCount > 1 ? "es" : ""}</strong>.
-            Tu familia ya puede verte en sus árboles.
-          </p>
-          <p className="text-sm text-gray-400 mb-6">
-            A medida que más familiares se registren, el árbol crece automáticamente.
-          </p>
-        </>
-      ) : (
-        <>
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">¡Tu árbol está listo!</h2>
-          <p className="text-gray-500 mb-6">
-            Invita a tus familiares — cuando se registren con el mismo nombre,
-            Ceiba los conectará automáticamente a tu árbol.
-          </p>
-        </>
-      )}
-      <div className="space-y-3">
-        <button onClick={onTree} className="btn-primary w-full py-3">
-          Ver mi árbol familiar
-        </button>
-        {confirmedCount > 0 && (
-          <button onClick={onAddMore} className="btn-secondary w-full py-3">
-            Agregar más familiares
-          </button>
-        )}
-        <button onClick={onInvite} className={`w-full py-3 ${confirmedCount > 0 ? "text-sm text-ceiba-600 underline" : "btn-secondary"}`}>
-          Invitar familiares por WhatsApp
-        </button>
-      </div>
-    </div>
+    </>
   );
 }
