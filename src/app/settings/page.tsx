@@ -22,19 +22,19 @@ function Toggle({ enabled, onChange, label, description, icon }: {
   icon: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center gap-4 py-4 border-b border-gray-100 last:border-0">
+    <div className="flex items-center gap-4 py-4 border-b border-cream-200 last:border-0">
       <div className="w-9 h-9 rounded-xl bg-ceiba-50 flex items-center justify-center text-ceiba-700 flex-shrink-0">
         {icon}
       </div>
       <div className="flex-1 min-w-0">
-        <div className="font-semibold text-gray-900 text-sm">{label}</div>
-        <div className="text-xs text-gray-500 leading-relaxed">{description}</div>
+        <div className="font-semibold text-ceiba-900 text-sm">{label}</div>
+        <div className="text-xs text-ceiba-500 leading-relaxed">{description}</div>
       </div>
       <button
         onClick={() => onChange(!enabled)}
         className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0 ${enabled ? "bg-ceiba-600" : "bg-gray-300"}`}
       >
-        <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${enabled ? "translate-x-7" : "translate-x-1"}`} />
+        <div className={`absolute top-1 w-4 h-4 bg-cream-50 rounded-full shadow transition-transform ${enabled ? "translate-x-7" : "translate-x-1"}`} />
       </button>
     </div>
   );
@@ -90,13 +90,13 @@ export default function SettingsPage() {
   };
 
   if (loading) return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+    <div className="min-h-screen bg-cream-100 flex items-center justify-center">
       <TreePine size={36} className="text-ceiba-600 animate-pulse" />
     </div>
   );
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screen bg-cream-100">
       <nav className="bg-ceiba-800 text-white px-4 py-4 flex items-center gap-3 shadow-lg">
         <Link href="/tree" className="text-ceiba-300 hover:text-white transition-colors">
           <ArrowLeft size={20} />
@@ -112,9 +112,9 @@ export default function SettingsPage() {
         <div className="card">
           <div className="flex items-center gap-2 mb-1">
             <Shield size={16} className="text-ceiba-700" />
-            <h2 className="font-bold text-gray-800">Privacidad</h2>
+            <h2 className="font-bold text-ceiba-800">Privacidad</h2>
           </div>
-          <p className="text-xs text-gray-400 mb-2">Controla qué información comparte Ceiba con tu familia.</p>
+          <p className="text-xs text-ceiba-400 mb-2">Controla qué información comparte Ceiba con tu familia.</p>
 
           <Toggle
             enabled={settings.location_enabled}
@@ -150,23 +150,23 @@ export default function SettingsPage() {
         <div className="card">
           <div className="flex items-center gap-2 mb-4">
             <Bell size={16} className="text-ceiba-700" />
-            <h2 className="font-bold text-gray-800">Notificaciones</h2>
+            <h2 className="font-bold text-ceiba-800">Notificaciones</h2>
           </div>
-          <p className="text-sm text-gray-500 leading-relaxed">
+          <p className="text-sm text-ceiba-500 leading-relaxed">
             Ceiba te notifica cuando un familiar se une, acepta una conexión o confirma una sugerencia.
             Las notificaciones se activan automáticamente al instalar la app.
           </p>
-          <p className="text-xs text-gray-400 mt-2">
+          <p className="text-xs text-ceiba-400 mt-2">
             Para desactivarlas, ve a la configuración de tu dispositivo → Ceiba → Notificaciones.
           </p>
         </div>
 
         {/* Account */}
         <div className="card">
-          <h2 className="font-bold text-gray-800 mb-4">Cuenta</h2>
-          <Link href="/profile" className="flex items-center justify-between py-3 border-b border-gray-100 hover:bg-gray-50 -mx-2 px-2 rounded-xl transition-colors">
-            <span className="text-sm font-medium text-gray-700">Editar perfil</span>
-            <ArrowLeft size={14} className="text-gray-400 rotate-180" />
+          <h2 className="font-bold text-ceiba-800 mb-4">Cuenta</h2>
+          <Link href="/profile" className="flex items-center justify-between py-3 border-b border-cream-200 hover:bg-cream-100 -mx-2 px-2 rounded-xl transition-colors">
+            <span className="text-sm font-medium text-ceiba-700">Editar perfil</span>
+            <ArrowLeft size={14} className="text-ceiba-400 rotate-180" />
           </Link>
           <button
             onClick={logout}

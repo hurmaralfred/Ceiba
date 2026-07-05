@@ -116,7 +116,7 @@ export default function ProfilePage() {
   );
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screen bg-cream-100">
       <nav className="bg-ceiba-800 text-white px-4 py-4 flex items-center gap-3 shadow-lg">
         <Link href="/tree" className="text-ceiba-300 hover:text-white transition-colors">
           <ArrowLeft size={20} />
@@ -138,7 +138,7 @@ export default function ProfilePage() {
             ) : (
               <User size={36} className="text-white" />
             )}
-            <div className="absolute bottom-0 right-0 w-7 h-7 bg-white rounded-full flex items-center justify-center shadow-md">
+            <div className="absolute bottom-0 right-0 w-7 h-7 bg-cream-50 rounded-full flex items-center justify-center shadow-md">
               <Camera size={14} className="text-ceiba-700" />
             </div>
           </div>
@@ -151,18 +151,18 @@ export default function ProfilePage() {
 
         {/* Datos */}
         <div className="card space-y-4">
-          <h3 className="font-bold text-gray-800">Información personal</h3>
+          <h3 className="font-bold text-ceiba-800">Información personal</h3>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nombre <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-medium text-ceiba-700 mb-1">Nombre <span className="text-red-500">*</span></label>
               <input type="text" className="input-field"
                 value={form.first_name}
                 onChange={e => setForm(f => ({ ...f, first_name: e.target.value }))}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Apellido</label>
+              <label className="block text-sm font-medium text-ceiba-700 mb-1">Apellido</label>
               <input type="text" className="input-field"
                 value={form.last_name}
                 onChange={e => setForm(f => ({ ...f, last_name: e.target.value }))}
@@ -171,9 +171,9 @@ export default function ProfilePage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Red social</label>
+            <label className="block text-sm font-medium text-ceiba-700 mb-1">Red social</label>
             <div className="relative">
-              <LinkIcon size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <LinkIcon size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ceiba-400" />
               <input type="url" className="input-field pl-9"
                 placeholder="https://instagram.com/tuperfil"
                 value={form.social_link}
@@ -184,14 +184,14 @@ export default function ProfilePage() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Ciudad</label>
+              <label className="block text-sm font-medium text-ceiba-700 mb-1">Ciudad</label>
               <input type="text" className="input-field" placeholder="Bogotá"
                 value={form.city}
                 onChange={e => setForm(f => ({ ...f, city: e.target.value }))}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">País</label>
+              <label className="block text-sm font-medium text-ceiba-700 mb-1">País</label>
               <input type="text" className="input-field" placeholder="Colombia"
                 value={form.country}
                 onChange={e => setForm(f => ({ ...f, country: e.target.value }))}
@@ -201,14 +201,14 @@ export default function ProfilePage() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de nacimiento</label>
+              <label className="block text-sm font-medium text-ceiba-700 mb-1">Fecha de nacimiento</label>
               <input type="date" className="input-field"
                 value={form.birth_date}
                 onChange={e => setForm(f => ({ ...f, birth_date: e.target.value }))}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+              <label className="block text-sm font-medium text-ceiba-700 mb-1">Teléfono</label>
               <input type="tel" className="input-field" placeholder="+57 300..."
                 value={form.phone}
                 onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
@@ -217,7 +217,7 @@ export default function ProfilePage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Sobre mí</label>
+            <label className="block text-sm font-medium text-ceiba-700 mb-1">Sobre mí</label>
             <textarea className="input-field resize-none" rows={3}
               placeholder="Cuéntale algo a tu familia..."
               value={form.bio}

@@ -41,7 +41,9 @@ function FamilyOrbs() {
             left: (o as any).left,
             right: (o as any).right,
             bottom: (o as any).bottom,
-            background: `radial-gradient(circle, rgba(74,222,128,${o.opacity * 2}) 0%, rgba(74,222,128,${o.opacity}) 50%, transparent 70%)`,
+            background: i % 2 === 0
+              ? `radial-gradient(circle, rgba(193,96,58,${o.opacity * 2}) 0%, rgba(193,96,58,${o.opacity}) 50%, transparent 70%)`
+              : `radial-gradient(circle, rgba(92,122,82,${o.opacity * 2}) 0%, rgba(92,122,82,${o.opacity}) 50%, transparent 70%)`,
             animation: `floatOrb ${o.dur} ease-in-out ${o.delay} infinite alternate`,
           }}
         />
@@ -90,18 +92,18 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="min-h-screen bg-gray-950 flex flex-col relative overflow-hidden">
+    <main className="min-h-screen bg-ceiba-950 flex flex-col relative overflow-hidden">
 
       <FamilyOrbs />
 
       {/* Top gradient */}
-      <div className="absolute inset-0 bg-gradient-to-b from-ceiba-950/80 via-gray-950/60 to-gray-950 pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-b from-ceiba-950/90 via-ceiba-950/60 to-ceiba-950 pointer-events-none" />
 
       {/* Grid texture overlay */}
       <div
         className="absolute inset-0 pointer-events-none opacity-[0.025]"
         style={{
-          backgroundImage: "linear-gradient(rgba(74,222,128,1) 1px, transparent 1px), linear-gradient(90deg, rgba(74,222,128,1) 1px, transparent 1px)",
+          backgroundImage: "linear-gradient(rgba(92,122,82,1) 1px, transparent 1px), linear-gradient(90deg, rgba(92,122,82,1) 1px, transparent 1px)",
           backgroundSize: "40px 40px",
         }}
       />
@@ -111,7 +113,7 @@ export default function LoginPage() {
         {/* Logo */}
         <Link href="/" className="flex flex-col items-center gap-1 mb-10 group">
           <div className="relative">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-ceiba-500 to-ceiba-700 flex items-center justify-center shadow-[0_0_40px_rgba(74,222,128,0.3)] group-hover:shadow-[0_0_60px_rgba(74,222,128,0.4)] transition-shadow">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-earth-500 to-ceiba-700 flex items-center justify-center shadow-[0_0_40px_rgba(193,96,58,0.35)] group-hover:shadow-[0_0_60px_rgba(193,96,58,0.5)] transition-shadow">
               <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
                 {/* Ceiba tree silhouette */}
                 <rect x="16.5" y="20" width="3" height="12" rx="1.5" fill="white" opacity="0.9"/>
@@ -121,19 +123,19 @@ export default function LoginPage() {
                 <ellipse cx="18" cy="8" rx="7" ry="5.5" fill="white" opacity="0.95"/>
               </svg>
             </div>
-            <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-ceiba-400 border-2 border-gray-950 animate-pulse" />
+            <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-earth-400 border-2 border-ceiba-950 animate-pulse" />
           </div>
           <span className="font-display text-2xl font-bold text-white mt-2 tracking-tight">Ceiba</span>
-          <span className="text-ceiba-400 text-xs font-medium tracking-widest uppercase">Tu árbol familiar</span>
+          <span className="text-earth-300 text-xs font-medium tracking-widest uppercase">Tu árbol familiar</span>
         </Link>
 
         {/* Headline */}
         <div className="text-center mb-8 px-4">
           <h1 className="text-white text-3xl font-bold leading-tight mb-2">
             Tu familia<br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-ceiba-400 to-ceiba-300">te espera</span>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-earth-400 to-earth-300">te espera</span>
           </h1>
-          <p className="text-gray-500 text-sm">Inicia sesión y reconéctate con tu árbol</p>
+          <p className="text-ceiba-300 text-sm">Inicia sesión y reconéctate con tu árbol</p>
         </div>
 
         {/* Card */}
@@ -144,7 +146,7 @@ export default function LoginPage() {
               background: "rgba(17,24,39,0.7)",
               backdropFilter: "blur(24px)",
               WebkitBackdropFilter: "blur(24px)",
-              border: "1px solid rgba(74,222,128,0.12)",
+              border: "1px solid rgba(92,122,82,0.25)",
               boxShadow: "0 0 0 1px rgba(255,255,255,0.04) inset, 0 24px 64px rgba(0,0,0,0.5)",
             }}
           >
@@ -182,7 +184,7 @@ export default function LoginPage() {
                     background: "rgba(255,255,255,0.05)",
                     border: "1px solid rgba(255,255,255,0.08)",
                   }}
-                  onFocus={e => e.currentTarget.style.border = "1px solid rgba(74,222,128,0.4)"}
+                  onFocus={e => e.currentTarget.style.border = "1px solid rgba(92,122,82,0.6)"}
                   onBlur={e => e.currentTarget.style.border = "1px solid rgba(255,255,255,0.08)"}
                 />
               </div>
@@ -200,7 +202,7 @@ export default function LoginPage() {
                     background: "rgba(255,255,255,0.05)",
                     border: "1px solid rgba(255,255,255,0.08)",
                   }}
-                  onFocus={e => e.currentTarget.style.border = "1px solid rgba(74,222,128,0.4)"}
+                  onFocus={e => e.currentTarget.style.border = "1px solid rgba(92,122,82,0.6)"}
                   onBlur={e => e.currentTarget.style.border = "1px solid rgba(255,255,255,0.08)"}
                 />
                 <button
@@ -213,7 +215,7 @@ export default function LoginPage() {
               </div>
 
               <div className="text-right">
-                <Link href="/auth/forgot-password" className="text-xs text-ceiba-500 hover:text-ceiba-400 transition-colors">
+                <Link href="/auth/forgot-password" className="text-xs text-earth-400 hover:text-earth-300 transition-colors">
                   ¿Olvidaste tu contraseña?
                 </Link>
               </div>
@@ -224,9 +226,9 @@ export default function LoginPage() {
                 className="w-full flex items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-bold text-white transition-all active:scale-[0.98] disabled:opacity-50"
                 style={{
                   background: loading
-                    ? "rgba(21,128,61,0.5)"
-                    : "linear-gradient(135deg, #16a34a 0%, #15803d 100%)",
-                  boxShadow: loading ? "none" : "0 4px 24px rgba(22,163,74,0.35)",
+                    ? "rgba(168,79,47,0.5)"
+                    : "linear-gradient(135deg, #c1603a 0%, #a84f2f 100%)",
+                  boxShadow: loading ? "none" : "0 4px 24px rgba(193,96,58,0.4)",
                 }}
               >
                 {loading ? "Entrando..." : <>Iniciar sesión <ArrowRight size={16} /></>}
@@ -236,7 +238,7 @@ export default function LoginPage() {
 
           <p className="text-center text-gray-600 text-sm mt-6">
             ¿No tienes cuenta?{" "}
-            <Link href="/auth/register" className="text-ceiba-400 font-semibold hover:text-ceiba-300 transition-colors">
+            <Link href="/auth/register" className="text-earth-400 font-semibold hover:text-earth-300 transition-colors">
               Regístrate gratis
             </Link>
           </p>
@@ -245,10 +247,10 @@ export default function LoginPage() {
         {/* Social proof */}
         <div className="mt-10 flex items-center gap-2 text-xs text-gray-600">
           <div className="flex -space-x-1.5">
-            {["#15803d","#166534","#14532d","#052e16","#4ade80"].map((c, i) => (
+            {["#4a6342","#3d5235","#5c7a52","#8aad7e","#c1603a"].map((c, i) => (
               <div
                 key={i}
-                className="w-6 h-6 rounded-full border-2 border-gray-950 flex items-center justify-center text-white font-bold text-[8px]"
+                className="w-6 h-6 rounded-full border-2 border-ceiba-950 flex items-center justify-center text-white font-bold text-[8px]"
                 style={{ background: c }}
               >
                 {["A","M","J","C","L"][i]}

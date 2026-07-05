@@ -7,7 +7,7 @@ import { FamilyTreeNode } from "@/lib/types";
 // Fix Leaflet default icons in Next.js
 const myIcon = L.divIcon({
   className: "",
-  html: `<div style="width:32px;height:32px;background:#15803d;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;">
+  html: `<div style="width:32px;height:32px;background:#4a6342;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
   </div>`,
   iconSize: [32, 32],
@@ -17,7 +17,7 @@ const myIcon = L.divIcon({
 
 const relativeIcon = (initials: string) => L.divIcon({
   className: "",
-  html: `<div style="width:36px;height:36px;background:#166534;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.25);display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;font-size:12px;">${initials}</div>`,
+  html: `<div style="width:36px;height:36px;background:#3d5235;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.25);display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;font-size:12px;">${initials}</div>`,
   iconSize: [36, 36],
   iconAnchor: [18, 36],
   popupAnchor: [0, -40],
@@ -42,7 +42,7 @@ export default function MapView({ myLocation, relatives }: Props) {
       {/* My location */}
       {myLocation && (
         <>
-          <Circle center={myLocation} radius={2000} color="#15803d" fillOpacity={0.1} weight={1} />
+          <Circle center={myLocation} radius={2000} color="#5c7a52" fillOpacity={0.1} weight={1} />
           <Marker position={myLocation} icon={myIcon}>
             <Popup>
               <strong>Tú estás aquí</strong>

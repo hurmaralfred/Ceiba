@@ -32,7 +32,9 @@ function FamilyOrbs() {
           width: o.size, height: o.size,
           top: (o as any).top, left: (o as any).left,
           right: (o as any).right, bottom: (o as any).bottom,
-          background: `radial-gradient(circle, rgba(74,222,128,${o.opacity * 2}) 0%, rgba(74,222,128,${o.opacity}) 50%, transparent 70%)`,
+          background: i % 2 === 0
+              ? `radial-gradient(circle, rgba(193,96,58,${o.opacity * 2}) 0%, rgba(193,96,58,${o.opacity}) 50%, transparent 70%)`
+              : `radial-gradient(circle, rgba(92,122,82,${o.opacity * 2}) 0%, rgba(92,122,82,${o.opacity}) 50%, transparent 70%)`,
           animation: `floatOrb ${o.dur} ease-in-out ${o.delay} infinite alternate`,
         }} />
       ))}
@@ -52,7 +54,7 @@ const DARK_INPUT = {
   background: "rgba(255,255,255,0.05)",
   border: "1px solid rgba(255,255,255,0.08)",
 };
-const DARK_INPUT_FOCUS = "1px solid rgba(74,222,128,0.4)";
+const DARK_INPUT_FOCUS = "1px solid rgba(92,122,82,0.6)";
 
 function DarkInput({ type = "text", placeholder, value, onChange, required, className = "" }: {
   type?: string; placeholder: string; value: string;
@@ -189,18 +191,18 @@ function RegisterFormInner() {
     background: "rgba(17,24,39,0.7)",
     backdropFilter: "blur(24px)",
     WebkitBackdropFilter: "blur(24px)",
-    border: "1px solid rgba(74,222,128,0.12)",
+    border: "1px solid rgba(92,122,82,0.25)",
     boxShadow: "0 0 0 1px rgba(255,255,255,0.04) inset, 0 24px 64px rgba(0,0,0,0.5)",
   };
 
   return (
-    <main className="min-h-screen bg-gray-950 flex flex-col relative overflow-hidden">
+    <main className="min-h-screen bg-ceiba-950 flex flex-col relative overflow-hidden">
       <FamilyOrbs />
-      <div className="absolute inset-0 bg-gradient-to-b from-ceiba-950/80 via-gray-950/60 to-gray-950 pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-b from-ceiba-950/90 via-ceiba-950/60 to-ceiba-950 pointer-events-none" />
       <div
         className="absolute inset-0 pointer-events-none opacity-[0.025]"
         style={{
-          backgroundImage: "linear-gradient(rgba(74,222,128,1) 1px, transparent 1px), linear-gradient(90deg, rgba(74,222,128,1) 1px, transparent 1px)",
+          backgroundImage: "linear-gradient(rgba(92,122,82,1) 1px, transparent 1px), linear-gradient(90deg, rgba(92,122,82,1) 1px, transparent 1px)",
           backgroundSize: "40px 40px",
         }}
       />
@@ -209,7 +211,7 @@ function RegisterFormInner() {
 
         {/* Logo */}
         <Link href="/" className="flex flex-col items-center gap-1 mb-8 group">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-ceiba-500 to-ceiba-700 flex items-center justify-center shadow-[0_0_32px_rgba(74,222,128,0.25)]">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-earth-500 to-ceiba-700 flex items-center justify-center shadow-[0_0_32px_rgba(193,96,58,0.3)]">
             <svg width="30" height="30" viewBox="0 0 36 36" fill="none">
               <rect x="16.5" y="20" width="3" height="12" rx="1.5" fill="white" opacity="0.9"/>
               <ellipse cx="18" cy="14" rx="10" ry="8" fill="white" opacity="0.9"/>
@@ -229,9 +231,9 @@ function RegisterFormInner() {
                 className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300"
                 style={
                   s < step
-                    ? { background: "rgba(74,222,128,0.2)", border: "1px solid #4ade80", color: "#4ade80" }
+                    ? { background: "rgba(92,122,82,0.25)", border: "1px solid #5c7a52", color: "#8aad7e" }
                     : s === step
-                    ? { background: "linear-gradient(135deg, #16a34a, #15803d)", color: "white", boxShadow: "0 0 16px rgba(22,163,74,0.4)" }
+                    ? { background: "linear-gradient(135deg, #c1603a, #a84f2f)", color: "white", boxShadow: "0 0 16px rgba(193,96,58,0.4)" }
                     : { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#4b5563" }
                 }
               >
@@ -239,7 +241,7 @@ function RegisterFormInner() {
               </div>
               {s < 2 && (
                 <div className="w-8 h-px transition-all duration-300"
-                  style={{ background: s < step ? "rgba(74,222,128,0.5)" : "rgba(255,255,255,0.1)" }}
+                  style={{ background: s < step ? "rgba(92,122,82,0.5)" : "rgba(255,255,255,0.1)" }}
                 />
               )}
             </div>
@@ -287,13 +289,13 @@ function RegisterFormInner() {
                     onClick={() => fileInputRef.current?.click()}
                     className="w-20 h-20 rounded-full flex items-center justify-center cursor-pointer transition-all overflow-hidden relative group"
                     style={{
-                      background: photoPreview ? "transparent" : "rgba(74,222,128,0.07)",
-                      border: photoPreview ? "2px solid #4ade80" : "2px dashed rgba(74,222,128,0.3)",
+                      background: photoPreview ? "transparent" : "rgba(92,122,82,0.1)",
+                      border: photoPreview ? "2px solid #5c7a52" : "2px dashed rgba(92,122,82,0.4)",
                     }}
                   >
                     {photoPreview
                       ? <img src={photoPreview} alt="" className="w-full h-full object-cover" />
-                      : <Camera size={22} className="text-ceiba-500 group-hover:text-ceiba-400 transition-colors" />
+                      : <Camera size={22} className="text-earth-400 group-hover:text-earth-300 transition-colors" />
                     }
                     {photoPreview && (
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -302,7 +304,7 @@ function RegisterFormInner() {
                     )}
                   </div>
                   <button type="button" onClick={() => fileInputRef.current?.click()}
-                    className="text-xs text-ceiba-500 hover:text-ceiba-400 font-medium transition-colors">
+                    className="text-xs text-earth-400 hover:text-earth-300 font-medium transition-colors">
                     {photoPreview ? "Cambiar foto" : "Añadir foto (opcional)"}
                   </button>
                   <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
@@ -327,8 +329,8 @@ function RegisterFormInner() {
                   type="submit"
                   className="w-full flex items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-bold text-white transition-all active:scale-[0.98]"
                   style={{
-                    background: "linear-gradient(135deg, #16a34a 0%, #15803d 100%)",
-                    boxShadow: "0 4px 24px rgba(22,163,74,0.35)",
+                    background: "linear-gradient(135deg, #c1603a 0%, #a84f2f 100%)",
+                    boxShadow: "0 4px 24px rgba(193,96,58,0.4)",
                   }}
                 >
                   Siguiente <ArrowRight size={16} />
@@ -358,10 +360,10 @@ function RegisterFormInner() {
                 {/* Preview del usuario */}
                 <div
                   className="flex items-center gap-3 rounded-2xl px-4 py-3"
-                  style={{ background: "rgba(74,222,128,0.06)", border: "1px solid rgba(74,222,128,0.1)" }}
+                  style={{ background: "rgba(92,122,82,0.1)", border: "1px solid rgba(92,122,82,0.2)" }}
                 >
                   <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center text-sm font-bold text-white shrink-0"
-                    style={{ background: "linear-gradient(135deg, #15803d, #052e16)" }}>
+                    style={{ background: "linear-gradient(135deg, #4a6342, #1a2417)" }}>
                     {photoPreview
                       ? <img src={photoPreview} className="w-full h-full object-cover" alt="" />
                       : `${form.nombre[0] || ""}${form.apellido[0] || ""}`.toUpperCase()
@@ -369,7 +371,7 @@ function RegisterFormInner() {
                   </div>
                   <div>
                     <p className="text-white text-sm font-semibold">{form.nombre} {form.apellido}</p>
-                    <p className="text-ceiba-500 text-xs">Nuevo miembro de Ceiba</p>
+                    <p className="text-earth-400 text-xs">Nuevo miembro de Ceiba</p>
                   </div>
                 </div>
 
@@ -406,9 +408,9 @@ function RegisterFormInner() {
                   className="w-full flex items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-bold text-white transition-all active:scale-[0.98] disabled:opacity-50"
                   style={{
                     background: loading
-                      ? "rgba(21,128,61,0.5)"
-                      : "linear-gradient(135deg, #16a34a 0%, #15803d 100%)",
-                    boxShadow: loading ? "none" : "0 4px 24px rgba(22,163,74,0.35)",
+                      ? "rgba(168,79,47,0.5)"
+                      : "linear-gradient(135deg, #c1603a 0%, #a84f2f 100%)",
+                    boxShadow: loading ? "none" : "0 4px 24px rgba(193,96,58,0.4)",
                   }}
                 >
                   {loading ? "Creando tu árbol..." : <>Entrar a Ceiba <ArrowRight size={16} /></>}
@@ -416,7 +418,7 @@ function RegisterFormInner() {
 
                 <p className="text-center text-gray-700 text-xs">
                   Al registrarte aceptas los{" "}
-                  <span className="text-ceiba-600">términos y privacidad</span>
+                  <span className="text-earth-400">términos y privacidad</span>
                 </p>
               </form>
             </div>
@@ -424,7 +426,7 @@ function RegisterFormInner() {
 
           <p className="text-center text-gray-600 text-sm mt-6">
             ¿Ya tienes cuenta?{" "}
-            <Link href="/auth/login" className="text-ceiba-400 font-semibold hover:text-ceiba-300 transition-colors">
+            <Link href="/auth/login" className="text-earth-400 font-semibold hover:text-earth-300 transition-colors">
               Inicia sesión
             </Link>
           </p>
@@ -437,8 +439,8 @@ function RegisterFormInner() {
 export default function RegisterPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-ceiba-500 to-ceiba-700 animate-pulse" />
+      <div className="min-h-screen bg-ceiba-950 flex items-center justify-center">
+        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-earth-500 to-ceiba-700 animate-pulse" />
       </div>
     }>
       <RegisterFormInner />

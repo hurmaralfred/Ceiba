@@ -211,7 +211,7 @@ export default function LivePage() {
   const withLocation = members.filter(m => m.live_lat && m.location_sharing);
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white flex flex-col">
+    <div className="min-h-screen bg-ceiba-950 text-white flex flex-col">
       {/* Header */}
       <header className="px-4 pt-5 pb-3">
         <div className="flex items-center justify-between mb-1">

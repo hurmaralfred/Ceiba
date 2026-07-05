@@ -117,12 +117,12 @@ function AddRelativeModal({
   return (
     <div className="fixed inset-0 z-50 flex items-end">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative w-full bg-white rounded-t-3xl px-5 pt-5 pb-10 shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div className="relative w-full bg-cream-50 rounded-t-3xl px-5 pt-5 pb-10 shadow-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-5">
-          <h3 className="font-bold text-lg text-gray-900">
+          <h3 className="font-bold text-lg text-ceiba-900">
             {slot.emoji} {slot.label}
           </h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <button onClick={onClose} className="text-ceiba-400 hover:text-ceiba-600">
             <X size={22} />
           </button>
         </div>
@@ -134,7 +134,7 @@ function AddRelativeModal({
               placeholder="Nombres *"
               value={form.first_names}
               onChange={(e) => setForm((f) => ({ ...f, first_names: e.target.value }))}
-              className="col-span-1 rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-ceiba-400"
+              className="col-span-1 rounded-xl border border-cream-300 px-4 py-3 text-sm outline-none focus:border-ceiba-400"
               autoFocus
             />
             <input
@@ -142,7 +142,7 @@ function AddRelativeModal({
               placeholder="Apellidos"
               value={form.last_names}
               onChange={(e) => setForm((f) => ({ ...f, last_names: e.target.value }))}
-              className="col-span-1 rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-ceiba-400"
+              className="col-span-1 rounded-xl border border-cream-300 px-4 py-3 text-sm outline-none focus:border-ceiba-400"
             />
           </div>
 
@@ -151,7 +151,7 @@ function AddRelativeModal({
             placeholder="Fecha de nacimiento (opcional)"
             value={form.birth_date}
             onChange={(e) => setForm((f) => ({ ...f, birth_date: e.target.value }))}
-            className="rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-ceiba-400 text-gray-700"
+            className="rounded-xl border border-cream-300 px-4 py-3 text-sm outline-none focus:border-ceiba-400 text-ceiba-700"
           />
 
           <input
@@ -159,19 +159,19 @@ function AddRelativeModal({
             placeholder="WhatsApp (para invitarlo después)"
             value={form.phone}
             onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-            className="rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-ceiba-400"
+            className="rounded-xl border border-cream-300 px-4 py-3 text-sm outline-none focus:border-ceiba-400"
           />
 
           {/* Toggle fallecido */}
           <button
             type="button"
             onClick={() => setForm((f) => ({ ...f, is_living: !f.is_living }))}
-            className="flex items-center gap-3 text-sm text-gray-600"
+            className="flex items-center gap-3 text-sm text-ceiba-600"
           >
             <div className={`w-10 h-6 rounded-full transition-colors flex items-center px-0.5 ${
               !form.is_living ? "bg-gray-400" : "bg-gray-200"
             }`}>
-              <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${
+              <div className={`w-5 h-5 bg-cream-50 rounded-full shadow transition-transform ${
                 !form.is_living ? "translate-x-4" : ""
               }`} />
             </div>
@@ -471,7 +471,7 @@ export default function OnboardingPage() {
         />
       )}
 
-      <div className="min-h-screen bg-gray-50 flex flex-col max-w-lg mx-auto">
+      <div className="min-h-screen bg-cream-100 flex flex-col max-w-lg mx-auto">
         {/* Progress */}
         <ProgressBar step={stepIndex} total={TOTAL_STEPS} />
 
@@ -479,8 +479,8 @@ export default function OnboardingPage() {
         {step === "profile" && (
           <div className="flex flex-col px-5 pt-6 pb-10 gap-5 flex-1">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-1">Cuéntanos quién eres</h1>
-              <p className="text-gray-500 text-sm">Un par de datos y tu árbol estará listo.</p>
+              <h1 className="text-2xl font-bold text-ceiba-900 mb-1">Cuéntanos quién eres</h1>
+              <p className="text-ceiba-500 text-sm">Un par de datos y tu árbol estará listo.</p>
             </div>
 
             <div className="flex flex-col gap-3">
@@ -490,28 +490,28 @@ export default function OnboardingPage() {
                   placeholder="Nombres *"
                   value={profFirstNames}
                   onChange={(e) => setProfFirstNames(e.target.value)}
-                  className="rounded-2xl border border-gray-200 px-4 py-3.5 outline-none focus:border-ceiba-400 bg-white"
+                  className="rounded-2xl border border-cream-300 px-4 py-3.5 outline-none focus:border-ceiba-400 bg-cream-50"
                 />
                 <input
                   type="text"
                   placeholder="Apellidos"
                   value={profLastNames}
                   onChange={(e) => setProfLastNames(e.target.value)}
-                  className="rounded-2xl border border-gray-200 px-4 py-3.5 outline-none focus:border-ceiba-400 bg-white"
+                  className="rounded-2xl border border-cream-300 px-4 py-3.5 outline-none focus:border-ceiba-400 bg-cream-50"
                 />
               </div>
               <input
                 type="date"
                 value={profBirthDate}
                 onChange={(e) => setProfBirthDate(e.target.value)}
-                className="rounded-2xl border border-gray-200 px-4 py-3.5 outline-none focus:border-ceiba-400 bg-white text-gray-700"
+                className="rounded-2xl border border-cream-300 px-4 py-3.5 outline-none focus:border-ceiba-400 bg-cream-50 text-ceiba-700"
               />
               <input
                 type="text"
                 placeholder="Ciudad donde vives"
                 value={profCity}
                 onChange={(e) => setProfCity(e.target.value)}
-                className="rounded-2xl border border-gray-200 px-4 py-3.5 outline-none focus:border-ceiba-400 bg-white"
+                className="rounded-2xl border border-cream-300 px-4 py-3.5 outline-none focus:border-ceiba-400 bg-cream-50"
               />
             </div>
 
@@ -529,18 +529,18 @@ export default function OnboardingPage() {
         {/* ── MATCH ──────────────────────────────────────────── */}
         {step === "match" && match && (
           <div className="flex flex-col px-5 pt-6 pb-10 gap-5 flex-1">
-            <h1 className="text-2xl font-bold text-gray-900">Parece que alguien ya te agregó</h1>
+            <h1 className="text-2xl font-bold text-ceiba-900">Parece que alguien ya te agregó</h1>
 
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center gap-4">
+            <div className="bg-cream-50 rounded-2xl border border-cream-200 shadow-sm p-5 flex items-center gap-4">
               <div className="w-16 h-16 rounded-full bg-ceiba-600 flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
                 {match.first_names[0]}
               </div>
               <div>
-                <p className="font-bold text-gray-900 text-lg">
+                <p className="font-bold text-ceiba-900 text-lg">
                   {match.first_names} {match.last_names}
                 </p>
                 {match.birth_date && (
-                  <p className="text-gray-500 text-sm">
+                  <p className="text-ceiba-500 text-sm">
                     {new Date(match.birth_date).toLocaleDateString("es", { year: "numeric", month: "long", day: "numeric" })}
                   </p>
                 )}
@@ -559,7 +559,7 @@ export default function OnboardingPage() {
               </button>
               <button
                 onClick={() => { setMatch(null); setStep("add_family"); }}
-                className="w-full text-gray-500 hover:text-gray-800 py-3 text-sm"
+                className="w-full text-ceiba-500 hover:text-ceiba-800 py-3 text-sm"
               >
                 No, es otra persona
               </button>
@@ -571,8 +571,8 @@ export default function OnboardingPage() {
         {step === "add_family" && (
           <div className="flex flex-col px-5 pt-6 pb-32 gap-4 flex-1">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-1">Construye tu árbol</h1>
-              <p className="text-gray-500 text-sm">Empieza por los más cercanos. Detalles después.</p>
+              <h1 className="text-2xl font-bold text-ceiba-900 mb-1">Construye tu árbol</h1>
+              <p className="text-ceiba-500 text-sm">Empieza por los más cercanos. Detalles después.</p>
             </div>
 
             {/* Contador */}
@@ -608,11 +608,11 @@ export default function OnboardingPage() {
                   <button
                     key={slot.id}
                     onClick={() => setActiveSlot(slot)}
-                    className="bg-white border-2 border-dashed border-gray-200 hover:border-ceiba-400 hover:bg-ceiba-50 rounded-2xl p-4 flex flex-col gap-1 text-left transition-colors"
+                    className="bg-cream-50 border-2 border-dashed border-cream-300 hover:border-ceiba-400 hover:bg-ceiba-50 rounded-2xl p-4 flex flex-col gap-1 text-left transition-colors"
                   >
                     <span className="text-2xl">{slot.emoji}</span>
-                    <p className="font-semibold text-gray-800 text-sm leading-tight">{slot.label}</p>
-                    {slot.optional && <p className="text-gray-400 text-xs">opcional</p>}
+                    <p className="font-semibold text-ceiba-800 text-sm leading-tight">{slot.label}</p>
+                    {slot.optional && <p className="text-ceiba-400 text-xs">opcional</p>}
                     <div className="flex items-center gap-1 text-ceiba-600 text-xs mt-1">
                       <Plus size={12} /> Agregar
                     </div>
@@ -628,10 +628,10 @@ export default function OnboardingPage() {
           <div className="flex flex-col items-center px-5 pt-10 pb-10 gap-6 flex-1 text-center">
             <TreePine size={72} className="text-ceiba-400 animate-bounce" />
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              <h1 className="text-3xl font-bold text-ceiba-900 mb-2">
                 ¡Aquí está tu ceiba, {myFirstName}!
               </h1>
-              <p className="text-gray-500">Tu árbol familiar ya está tomando forma.</p>
+              <p className="text-ceiba-500">Tu árbol familiar ya está tomando forma.</p>
             </div>
 
             <div className="w-full flex flex-col gap-2">
@@ -664,7 +664,7 @@ export default function OnboardingPage() {
               </button>
               <button
                 onClick={() => setStep("notifications")}
-                className="w-full text-gray-500 hover:text-gray-800 text-sm py-2"
+                className="w-full text-ceiba-500 hover:text-ceiba-800 text-sm py-2"
               >
                 Explorar mi árbol después
               </button>
@@ -676,8 +676,8 @@ export default function OnboardingPage() {
         {step === "batch_invite" && (
           <div className="flex flex-col px-5 pt-6 pb-32 gap-4 flex-1">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-1">Invita a los que agregaste</h1>
-              <p className="text-gray-500 text-sm">
+              <h1 className="text-2xl font-bold text-ceiba-900 mb-1">Invita a los que agregaste</h1>
+              <p className="text-ceiba-500 text-sm">
                 Cuando entren, cada uno verá el árbol ya listo.
               </p>
             </div>
@@ -689,21 +689,21 @@ export default function OnboardingPage() {
                 return (
                   <div
                     key={person.id}
-                    className={`bg-white rounded-2xl border p-4 flex items-center gap-3 ${
-                      isInvited ? "border-green-200 bg-green-50" : "border-gray-100"
+                    className={`bg-cream-50 rounded-2xl border p-4 flex items-center gap-3 ${
+                      isInvited ? "border-green-200 bg-green-50" : "border-cream-200"
                     }`}
                   >
                     <div className="w-11 h-11 rounded-full bg-ceiba-600 flex items-center justify-center text-white font-bold flex-shrink-0">
                       {person.first_names[0]}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm text-gray-900 truncate">
+                      <p className="font-semibold text-sm text-ceiba-900 truncate">
                         {person.first_names} {person.last_names}
                       </p>
                       {person.phone ? (
-                        <p className="text-gray-400 text-xs">{person.phone}</p>
+                        <p className="text-ceiba-400 text-xs">{person.phone}</p>
                       ) : (
-                        <p className="text-gray-400 text-xs">Sin teléfono</p>
+                        <p className="text-ceiba-400 text-xs">Sin teléfono</p>
                       )}
                     </div>
                     {isInvited ? (
@@ -731,8 +731,8 @@ export default function OnboardingPage() {
           <div className="flex flex-col items-center px-5 pt-10 pb-10 gap-6 flex-1 text-center">
             <Bell size={64} className="text-ceiba-500" />
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">Un último paso</h1>
-              <p className="text-gray-500 text-sm">Ceiba solo te notifica para cosas que importan.</p>
+              <h1 className="text-2xl font-bold text-ceiba-900 mb-2">Un último paso</h1>
+              <p className="text-ceiba-500 text-sm">Ceiba solo te notifica para cosas que importan.</p>
             </div>
 
             <div className="w-full flex flex-col gap-2 text-left">
@@ -746,7 +746,7 @@ export default function OnboardingPage() {
                   <span className="text-ceiba-800 text-sm">{text}</span>
                 </div>
               ))}
-              <p className="text-center text-gray-400 text-xs mt-1">Nunca para publicidad.</p>
+              <p className="text-center text-ceiba-400 text-xs mt-1">Nunca para publicidad.</p>
             </div>
 
             <div className="flex flex-col gap-3 w-full mt-auto">
@@ -758,7 +758,7 @@ export default function OnboardingPage() {
               </button>
               <button
                 onClick={() => setStep("done")}
-                className="w-full text-gray-400 hover:text-gray-600 text-sm py-2"
+                className="w-full text-ceiba-400 hover:text-ceiba-600 text-sm py-2"
               >
                 Después
               </button>
@@ -776,10 +776,10 @@ export default function OnboardingPage() {
               </div>
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              <h1 className="text-3xl font-bold text-ceiba-900 mb-2">
                 ¡Bienvenido/a, {myFirstName}!
               </h1>
-              <p className="text-gray-500">Tu árbol familiar te está esperando.</p>
+              <p className="text-ceiba-500">Tu árbol familiar te está esperando.</p>
             </div>
             <button
               onClick={() => router.push("/tree")}
@@ -793,14 +793,14 @@ export default function OnboardingPage() {
 
         {/* Footer botones de navegación */}
         {step === "add_family" && (
-          <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-white border-t px-5 py-4 flex flex-col gap-2">
+          <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-cream-50 border-t px-5 py-4 flex flex-col gap-2">
             <button
               onClick={() => setStep("aha")}
               disabled={!canContinue}
               className={`w-full flex items-center justify-center gap-2 font-bold py-4 rounded-2xl transition-all ${
                 canContinue
                   ? "bg-ceiba-500 hover:bg-ceiba-400 text-white"
-                  : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                  : "bg-cream-200 text-ceiba-400 cursor-not-allowed"
               }`}
             >
               {canContinue ? (
@@ -813,7 +813,7 @@ export default function OnboardingPage() {
         )}
 
         {step === "batch_invite" && (
-          <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-white border-t px-5 py-4 flex flex-col gap-2">
+          <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-cream-50 border-t px-5 py-4 flex flex-col gap-2">
             <button
               onClick={() => setStep("notifications")}
               className="w-full flex items-center justify-center gap-2 bg-ceiba-500 hover:bg-ceiba-400 text-white font-bold py-4 rounded-2xl"
@@ -822,7 +822,7 @@ export default function OnboardingPage() {
             </button>
             <button
               onClick={() => setStep("notifications")}
-              className="w-full text-gray-400 hover:text-gray-600 text-sm py-1"
+              className="w-full text-ceiba-400 hover:text-ceiba-600 text-sm py-1"
             >
               Saltar por ahora
             </button>

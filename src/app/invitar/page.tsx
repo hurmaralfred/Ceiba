@@ -201,8 +201,8 @@ function MemberCard({
 
   return (
     <div
-      className={`relative bg-white rounded-2xl shadow-sm border p-4 transition-all ${
-        state === "sent" ? "border-green-300 bg-green-50" : "border-gray-100"
+      className={`relative bg-cream-50 rounded-2xl shadow-sm border p-4 transition-all ${
+        state === "sent" ? "border-green-300 bg-green-50" : "border-cream-200"
       } ${batchMode && isSelected ? "ring-2 ring-ceiba-500" : ""}`}
       onClick={() => batchMode && onToggleSelect(member.id)}
     >
@@ -219,11 +219,11 @@ function MemberCard({
       <div className="flex items-start gap-3">
         <Avatar person={member} size={52} />
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-gray-900 truncate">
+          <p className="font-semibold text-ceiba-900 truncate">
             {member.first_names} {member.last_names}
           </p>
           {member.relation && (
-            <p className="text-gray-500 text-sm">{relationLabel(member.relation)}</p>
+            <p className="text-ceiba-500 text-sm">{relationLabel(member.relation)}</p>
           )}
 
           {/* Teléfono */}
@@ -250,7 +250,7 @@ function MemberCard({
               ) : phone ? (
                 <button
                   onClick={(e) => { e.stopPropagation(); setEditingPhone(true); }}
-                  className="flex items-center gap-1 text-gray-400 text-xs mt-1 hover:text-gray-600"
+                  className="flex items-center gap-1 text-ceiba-400 text-xs mt-1 hover:text-ceiba-600"
                 >
                   <Phone size={12} />
                   {phone}
@@ -278,7 +278,7 @@ function MemberCard({
               Invitación enviada
               <button
                 onClick={(e) => { e.stopPropagation(); setState("idle"); }}
-                className="ml-auto text-gray-400 hover:text-gray-600 text-xs underline"
+                className="ml-auto text-ceiba-400 hover:text-ceiba-600 text-xs underline"
               >
                 Reenviar
               </button>
@@ -303,7 +303,7 @@ function MemberCard({
                 onClick={(e) => { e.stopPropagation(); handleCopyLink(); }}
                 disabled={state === "loading"}
                 title="Copiar link"
-                className="flex items-center justify-center w-10 h-10 rounded-xl border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors"
+                className="flex items-center justify-center w-10 h-10 rounded-xl border border-cream-300 text-ceiba-500 hover:bg-cream-100 transition-colors"
               >
                 <Copy size={16} />
               </button>
@@ -480,20 +480,20 @@ export default function InvitarPage() {
 
   if (!loading && members.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col">
-        <header className="bg-white border-b px-4 py-4 flex items-center gap-3">
-          <button onClick={() => router.back()} className="text-gray-500 hover:text-gray-900">
+      <div className="min-h-screen bg-cream-100 flex flex-col">
+        <header className="bg-cream-50 border-b px-4 py-4 flex items-center gap-3">
+          <button onClick={() => router.back()} className="text-ceiba-500 hover:text-ceiba-900">
             <ChevronLeft size={24} />
           </button>
           <div className="flex items-center gap-2">
             <TreePine size={20} className="text-ceiba-600" />
-            <h1 className="font-bold text-lg text-gray-900">Invita a los tuyos</h1>
+            <h1 className="font-bold text-lg text-ceiba-900">Invita a los tuyos</h1>
           </div>
         </header>
         <div className="flex-1 flex flex-col items-center justify-center gap-4 px-6 text-center">
           <Smile size={48} className="text-ceiba-500" />
-          <h2 className="text-xl font-bold text-gray-900">¡Toda tu familia directa ya está en Ceiba!</h2>
-          <p className="text-gray-500 max-w-xs">
+          <h2 className="text-xl font-bold text-ceiba-900">¡Toda tu familia directa ya está en Ceiba!</h2>
+          <p className="text-ceiba-500 max-w-xs">
             Puedes agregar a más familiares extendidos — tíos, primos, abuelos.
           </p>
           <Link
@@ -521,10 +521,10 @@ export default function InvitarPage() {
       {/* Modal celebración */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-6">
-          <div className="bg-white rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl">
+          <div className="bg-cream-50 rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl">
             <div className="text-4xl mb-3">🌱</div>
             <h2 className="text-xl font-bold mb-2">Eres el sembrador de tu rama</h2>
-            <p className="text-gray-500 text-sm mb-5">
+            <p className="text-ceiba-500 text-sm mb-5">
               Cuando 3 de ellos entren, ganas la insignia <strong>Conector</strong>.
             </p>
             <button
@@ -537,26 +537,26 @@ export default function InvitarPage() {
         </div>
       )}
 
-      <div className="min-h-screen bg-gray-50 flex flex-col max-w-lg mx-auto">
+      <div className="min-h-screen bg-cream-100 flex flex-col max-w-lg mx-auto">
         {/* Header */}
-        <header className="bg-white border-b px-4 pt-4 pb-3 sticky top-0 z-20">
+        <header className="bg-cream-50 border-b px-4 pt-4 pb-3 sticky top-0 z-20">
           <div className="flex items-center gap-3 mb-3">
-            <button onClick={() => router.back()} className="text-gray-500 hover:text-gray-900">
+            <button onClick={() => router.back()} className="text-ceiba-500 hover:text-ceiba-900">
               <ChevronLeft size={24} />
             </button>
             <div className="flex-1">
               <div className="flex items-center gap-2">
                 <TreePine size={18} className="text-ceiba-600" />
-                <h1 className="font-bold text-lg text-gray-900">Invita a los tuyos</h1>
+                <h1 className="font-bold text-lg text-ceiba-900">Invita a los tuyos</h1>
               </div>
-              <p className="text-gray-500 text-xs">Cuando entren, ya verán el árbol lleno.</p>
+              <p className="text-ceiba-500 text-xs">Cuando entren, ya verán el árbol lleno.</p>
             </div>
             {/* Contador */}
             <div className="text-right">
               <p className="text-sm font-bold text-ceiba-700">
                 {sentCount} / {GOAL}
               </p>
-              <p className="text-xs text-gray-400">enviadas</p>
+              <p className="text-xs text-ceiba-400">enviadas</p>
             </div>
           </div>
 
@@ -570,9 +570,9 @@ export default function InvitarPage() {
         </header>
 
         {/* Subheader acciones */}
-        <div className="bg-white border-b px-4 py-2 flex items-center justify-between">
-          <p className="text-sm text-gray-500">
-            <strong className="text-gray-800">{members.length}</strong> sin registrar
+        <div className="bg-cream-50 border-b px-4 py-2 flex items-center justify-between">
+          <p className="text-sm text-ceiba-500">
+            <strong className="text-ceiba-800">{members.length}</strong> sin registrar
           </p>
           <button
             onClick={() => {
@@ -595,7 +595,7 @@ export default function InvitarPage() {
         <div className="flex-1 px-4 py-4 flex flex-col gap-3 pb-32">
           {loading
             ? Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="bg-white rounded-2xl h-28 animate-pulse" />
+                <div key={i} className="bg-cream-50 rounded-2xl h-28 animate-pulse" />
               ))
             : members.map((m) => (
                 <MemberCard
@@ -613,7 +613,7 @@ export default function InvitarPage() {
         </div>
 
         {/* Footer flotante */}
-        <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-white border-t px-4 py-4 flex flex-col gap-2 shadow-xl">
+        <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-cream-50 border-t px-4 py-4 flex flex-col gap-2 shadow-xl">
           {batchMode && selected.size > 0 ? (
             <button
               onClick={handleBatchInvite}
@@ -632,13 +632,13 @@ export default function InvitarPage() {
               <ChevronRight size={18} />
             </Link>
           ) : (
-            <p className="text-center text-gray-400 text-sm py-1">
+            <p className="text-center text-ceiba-400 text-sm py-1">
               Invita a 3 personas para desbloquear la insignia Conector 🌿
             </p>
           )}
           <Link
             href="/tree"
-            className="w-full text-center text-gray-400 hover:text-gray-600 text-sm py-1"
+            className="w-full text-center text-ceiba-400 hover:text-ceiba-600 text-sm py-1"
           >
             Invitar más tarde
           </Link>

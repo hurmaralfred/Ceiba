@@ -17,6 +17,7 @@ import BirthdayWidget from "@/components/BirthdayWidget";
 import TodayWidget from "@/components/TodayWidget";
 import NetworkBanner from "@/components/NetworkBanner";
 import BottomNav from "@/components/BottomNav";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import toast from "react-hot-toast";
 
 const FamilyTreeGraph = dynamic(
@@ -47,6 +48,7 @@ const EMPTY_FORM = { primer_nombre: "", segundo_nombre: "", primer_apellido: "",
 export default function TreePage() {
   const router = useRouter();
   const supabase = createClient();
+  usePushNotifications(); // Registra FCM token si el usuario da permiso
   const [profile, setProfile] = useState<Profile | null>(null);
   const [members, setMembers] = useState<FamilyMember[]>([]);
   const [extendedMembers, setExtendedMembers] = useState<ExtendedEntry[]>([]);
@@ -438,7 +440,7 @@ export default function TreePage() {
 
   if (loading) return <LoadingScreen />;
   if (loadError) return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+    <div className="min-h-screen bg-cream-100 flex items-center justify-center p-6">
       <div className="bg-red-50 border border-red-200 rounded-2xl p-6 max-w-lg w-full">
         <p className="text-red-700 font-bold mb-2">Error al cargar</p>
         <p className="text-red-600 text-sm break-all">{loadError}</p>
@@ -452,9 +454,9 @@ export default function TreePage() {
   const pendingMembers = members.filter(m => !m.profile_id);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-cream-100">
       {/* Nav */}
-      <nav className="bg-ceiba-800 text-white px-6 py-4 flex items-center justify-between shadow-lg">
+      <nav className="bg-ceiba-900 text-white px-6 py-4 flex items-center justify-between shadow-lg" style={{borderBottom:"2px solid #4a6342"}}>
         <Link href="/tree" className="flex items-center gap-2 font-display text-xl font-bold">
           <TreePine size={24} className="text-ceiba-300" /> Ceiba
         </Link>
@@ -576,7 +578,7 @@ export default function TreePage() {
               {/* PRIMARY: Agregar familiar */}
               <button
                 onClick={() => setShowModal(true)}
-                className="flex items-center gap-1.5 bg-ceiba-600 hover:bg-ceiba-700 text-white font-bold text-sm px-4 py-2 rounded-xl shadow-sm transition-colors flex-1"
+                className="flex items-center gap-1.5 bg-earth-500 hover:bg-earth-600 text-white font-bold text-sm px-4 py-2 rounded-xl shadow-sm transition-colors flex-1"
               >
                 <Plus size={16} /> Agregar familiar
               </button>
@@ -1083,7 +1085,7 @@ function MemberGroup({ title, members, onInvite, onEdit, kind }: {
 
 function LoadingScreen() {
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+    <div className="min-h-screen bg-cream-100 flex items-center justify-center">
       <div className="text-center">
         <TreePine size={40} className="text-ceiba-600 mx-auto mb-3 animate-pulse" />
         <p className="text-gray-500">Cargando tu árbol...</p>

@@ -4,36 +4,43 @@
 
 @layer base {
   :root {
-    --ceiba-green: #15803d;
-    --ceiba-light: #dcfce7;
-    --earth-brown: #8b3a16;
+    --ceiba-green: #5c7a52;
+    --ceiba-light: #e4eed9;
+    --earth-brown: #c1603a;
+    --cream-bg:   #fdf8f1;
+    --warm-border: #e8ddd0;
   }
   * {
     box-sizing: border-box;
   }
   body {
     @apply antialiased;
+    background-color: #fdf8f1;
   }
 }
 
 @layer components {
+  /* Botón principal: terracota */
   .btn-primary {
-    @apply bg-ceiba-700 hover:bg-ceiba-800 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 shadow-sm hover:shadow-md active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply bg-earth-500 hover:bg-earth-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 shadow-sm hover:shadow-md active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
   }
+  /* Botón secundario: crema cálida */
   .btn-secondary {
-    @apply bg-white hover:bg-gray-50 text-gray-800 font-semibold py-3 px-6 rounded-xl border border-gray-200 transition-all duration-200 shadow-sm hover:shadow-md active:scale-95;
+    @apply bg-cream-50 hover:bg-cream-200 text-ceiba-800 font-semibold py-3 px-6 rounded-xl border border-cream-300 transition-all duration-200 shadow-sm hover:shadow-md active:scale-95;
   }
+  /* Campo de entrada */
   .input-field {
-    @apply w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-ceiba-500 focus:ring-2 focus:ring-ceiba-100 outline-none transition-all bg-white text-gray-900 placeholder-gray-400;
+    @apply w-full px-4 py-3 rounded-xl border border-cream-300 focus:border-ceiba-500 focus:ring-2 focus:ring-ceiba-100 outline-none transition-all bg-cream-50 text-ceiba-900 placeholder-ceiba-400;
   }
+  /* Card base: fondo blanco cálido */
   .card {
-    @apply bg-white rounded-2xl shadow-sm border border-gray-100 p-6;
+    @apply bg-cream-50 rounded-2xl shadow-sm border border-cream-300 p-6;
   }
   .relation-badge-blood {
     @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-ceiba-100 text-ceiba-800;
   }
   .relation-badge-affinity {
-    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-earth-100 text-earth-800;
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-earth-100 text-earth-700;
   }
 }
 

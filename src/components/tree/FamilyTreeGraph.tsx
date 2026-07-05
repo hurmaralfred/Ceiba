@@ -968,7 +968,7 @@ export default function FamilyTreeGraph({
                 {isJoined && !isActive && !isDeceased && (
                   <>
                     <circle cx={n.cx + r * 0.68} cy={n.cy - r * 0.68} r={5.5}
-                      fill="#15803d" stroke="#060b14" strokeWidth={1.5} />
+                      fill="#5c7a52" stroke="#1a2417" strokeWidth={1.5} />
                     <circle cx={n.cx + r * 0.68} cy={n.cy - r * 0.68} r={3}
                       fill="#4ade80" style={{ pointerEvents: "none" }} />
                   </>

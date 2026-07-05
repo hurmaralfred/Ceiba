@@ -165,7 +165,7 @@ function ScreenConfirm({
         <div className="w-full flex flex-col gap-3 mt-2">
           <button
             onClick={onYes}
-            className="w-full flex items-center justify-center gap-2 bg-ceiba-500 hover:bg-ceiba-400 active:bg-ceiba-600 text-white font-bold text-lg py-4 rounded-2xl transition-colors"
+            className="w-full flex items-center justify-center gap-2 bg-earth-500 hover:bg-earth-400 active:bg-earth-600 text-white font-bold text-lg py-4 rounded-2xl transition-colors"
           >
             <Check size={20} />
             Sí, soy yo
@@ -303,7 +303,7 @@ function ScreenRegister({
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex items-center justify-center gap-2 bg-ceiba-500 hover:bg-ceiba-400 disabled:opacity-50 text-white font-bold text-lg py-4 rounded-2xl transition-colors mt-2"
+            className="w-full flex items-center justify-center gap-2 bg-earth-500 hover:bg-earth-400 disabled:opacity-50 text-white font-bold text-lg py-4 rounded-2xl transition-colors mt-2"
           >
             {loading ? "Entrando..." : "Entrar a mi árbol"}
             {!loading && <ChevronRight size={20} />}
@@ -340,7 +340,7 @@ function ScreenNotMe({ onRegisterSeparately }: { onRegisterSeparately: () => voi
       <div className="flex flex-col gap-3 w-full max-w-xs">
         <button
           onClick={onRegisterSeparately}
-          className="w-full bg-ceiba-500 hover:bg-ceiba-400 text-white font-bold py-4 rounded-2xl transition-colors"
+          className="w-full bg-earth-500 hover:bg-earth-400 text-white font-bold py-4 rounded-2xl transition-colors"
         >
           Registrarme aparte
         </button>
@@ -404,7 +404,7 @@ function ScreenWelcome({ invited }: { invited: PersonPreview | null }) {
 
       <button
         onClick={() => router.push("/tree")}
-        className="flex items-center gap-2 bg-ceiba-500 hover:bg-ceiba-400 text-white font-bold text-lg py-4 px-8 rounded-2xl transition-colors"
+        className="flex items-center gap-2 bg-earth-500 hover:bg-earth-400 text-white font-bold text-lg py-4 px-8 rounded-2xl transition-colors"
       >
         Ver mi árbol
         <ChevronRight size={20} />

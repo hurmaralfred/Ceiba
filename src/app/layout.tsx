@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#15803d",
+  themeColor: "#3d5235",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -37,7 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="Ceiba" />
       </head>
-      <body className={`${inter.variable} ${playfair.variable} font-sans bg-gray-50 text-gray-900 min-h-screen`}>
+      <body className={`${inter.variable} ${playfair.variable} font-sans bg-cream-100 text-ceiba-900 min-h-screen`}>
         <Toaster position="top-center" />
         {children}
         <Analytics />
