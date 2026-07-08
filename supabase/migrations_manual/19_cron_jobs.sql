@@ -1,18 +1,25 @@
 -- ============================================================
 -- CEIBA — Paso 10: JOBS DE PROGRAMACIÓN (pg_cron)
 -- ============================================================
--- ⚠️ ANTES DE EJECUTAR:
---   1) Reemplaza txxdzxdzetqlfecqhxkl por tu referencia real
---   2) Reemplaza eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR4eGR6eGR6ZXRxbGZlY3FoeGtsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MjQ0MjE1OCwiZXhwIjoyMDk4MDE4MTU4fQ.0ymRFVpmkUHdxb0yQHCbSh8Tsa0REYdqOYnQ5ehLF4s por tu Service Role Key
---      (Supabase Dashboard → Settings → API → service_role)
+-- ⚠️ ANTES DE EJECUTAR (una sola vez, a mano, en el SQL Editor —
+-- NUNCA pegues la key en este archivo ni la commitees a git):
 --
--- Encuentras tu project-ref en la URL:
---   https://<project-ref>.supabase.co
+--   1) Rota tu service_role key si la anterior alguna vez estuvo
+--      en un commit (Dashboard → Settings → API → Reset).
+--   2) Guarda la key nueva en Supabase Vault (una sola vez):
+--        select vault.create_secret(
+--          '<pega-aquí-tu-service-role-key-nueva>',
+--          'ceiba_service_role_key',
+--          'Service role key para cron jobs (pg_net) — no versionar'
+--        );
+--   3) Los jobs de abajo la leen de Vault por nombre, nunca por
+--      valor — este archivo es seguro de commitear.
 -- ============================================================
 
 -- Habilitar extensiones necesarias
 create extension if not exists pg_cron;
 create extension if not exists pg_net;
+create extension if not exists supabase_vault;
 
 -- ============================================================
 -- Job 1: Cumpleaños diarios
@@ -30,7 +37,10 @@ select cron.schedule(
   select net.http_post(
     url := 'https://txxdzxdzetqlfecqhxkl.functions.supabase.co/cron-birthdays-daily',
     headers := jsonb_build_object(
-      'Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR4eGR6eGR6ZXRxbGZlY3FoeGtsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MjQ0MjE1OCwiZXhwIjoyMDk4MDE4MTU4fQ.0ymRFVpmkUHdxb0yQHCbSh8Tsa0REYdqOYnQ5ehLF4s',
+      'Authorization', 'Bearer ' || (
+        select decrypted_secret from vault.decrypted_secrets
+        where name = 'ceiba_service_role_key'
+      ),
       'Content-Type',  'application/json'
     ),
     body := '{}'::jsonb
@@ -72,7 +82,10 @@ select cron.schedule(
   select net.http_post(
     url := 'https://txxdzxdzetqlfecqhxkl.functions.supabase.co/chat-room-materializer',
     headers := jsonb_build_object(
-      'Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR4eGR6eGR6ZXRxbGZlY3FoeGtsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MjQ0MjE1OCwiZXhwIjoyMDk4MDE4MTU4fQ.0ymRFVpmkUHdxb0yQHCbSh8Tsa0REYdqOYnQ5ehLF4s',
+      'Authorization', 'Bearer ' || (
+        select decrypted_secret from vault.decrypted_secrets
+        where name = 'ceiba_service_role_key'
+      ),
       'Content-Type',  'application/json'
     ),
     body := '{}'::jsonb
