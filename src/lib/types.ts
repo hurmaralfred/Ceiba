@@ -177,3 +177,17 @@ export const INVERSE_RELATION: Record<RelationType, RelationType> = {
   stepchild: 'stepfather',
   other: 'other',
 }
+// Match seguro (privacidad) — solo datos mínimos para confirmar
+export interface PersonMatch {
+  id: string;
+  first_names: string;
+  last_names: string;
+  score: number;
+  breakdown: {
+    name_similarity: number;
+    birth_date_match: boolean;
+    birth_city_match: boolean;
+    email_match: boolean;
+  };
+  needs_review: boolean;
+}
