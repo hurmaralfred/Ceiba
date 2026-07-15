@@ -30,7 +30,13 @@ export interface CeibaClient {
   addRelative(payload: AddRelativePayload, rel: RelationshipType): Promise<AddRelativeResult>;
   confirmMatch(candidateId: string): Promise<string>;   // devuelve relationship_id
   rejectMatch(candidateId: string): Promise<void>;
-  findMatches(payload: AddRelativePayload): Promise<Array<{
+  async findMatches(payload: AddRelativePayload): Promise<PersonMatch[]> {
+  const { data, error } = await supabase.rpc("find_person_matches", {
+    payload: payload as unknown as Record<string, unknown>,
+  });
+  if (error) throw error;
+  return (data ?? []) as PersonMatch[];
+},
     person_id: string;
     score: number;
     breakdown: Record<string, unknown>;
