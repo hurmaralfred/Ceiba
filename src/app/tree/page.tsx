@@ -43,8 +43,7 @@ const RELATION_GROUPS = [
   },
 ];
 
-const EMPTY_FORM = { primer_nombre: "", segundo_nombre: "", primer_apellido: "", segundo_apellido: "", first_name: "", last_name: "", email: "", birth_date: "", relation_type: "father" as RelationType, is_deceased: false, parent_member_id: "" };
-
+const EMPTY_FORM = { primer_nombre: "", segundo_nombre: "", primer_apellido: "", segundo_apellido: "", first_name: "", last_name: "", email: "", birth_date: "", birth_city: "", birth_country: "", relation_type: "father" as RelationType, is_deceased: false, parent_member_id: "" };
 export default function TreePage() {
   const router = useRouter();
   const supabase = createClient();
@@ -187,7 +186,7 @@ export default function TreePage() {
 
   const saveMember = async (_force = false) => {
     if (!form.primer_nombre.trim()) { toast.error("El primer nombre es obligatorio"); return; }
-    if (!form.primer_apellido.trim()) { toast.error("El primer apellido es obligatorio"); return; }
+    if (!form.primer_apellido.trim()) { toast.error("El primer apellido es obligatorio"); return; }    if (!form.birth_date) { toast.error("La fecha de nacimiento es obligatoria"); return; }
     const first_names = [form.primer_nombre.trim(), form.segundo_nombre.trim()].filter(Boolean).join(" ");
     const last_names = [form.primer_apellido.trim(), form.segundo_apellido.trim()].filter(Boolean).join(" ");
     const { data: { user } } = await supabase.auth.getUser();
@@ -202,7 +201,8 @@ export default function TreePage() {
           first_names,
           last_names: last_names || null,
           email: form.email.trim() || null,
-          birth_date: form.birth_date || null,
+          birth_date: form.birth_date || null,            birth_city: form.birth_city.trim() || null,
+            birth_country: form.birth_country.trim() || null,
           is_living: !form.is_deceased,
         },
         p_relationship: relationTypeToGraphType(form.relation_type as RelationType),
@@ -859,7 +859,28 @@ export default function TreePage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Fecha de nacimiento</label>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Fecha de nacimiento</label>              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Ciudad de nacimiento</label>
+                  <input
+                    type="text"
+                    className="input-field text-sm"
+                    placeholder="ej. Bogotá"
+                    value={form.birth_city}
+                    onChange={e => setForm(f => ({ ...f, birth_city: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">País de nacimiento</label>
+                  <input
+                    type="text"
+                    className="input-field text-sm"
+                    placeholder="ej. Colombia"
+                    value={form.birth_country}
+                    onChange={e => setForm(f => ({ ...f, birth_country: e.target.value }))}
+                  />
+                </div>
+              </div>
                   <input
                     type="date"
                     className="input-field text-sm"
