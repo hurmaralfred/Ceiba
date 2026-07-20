@@ -255,28 +255,83 @@ export default function OnboardingPage() {
   // ============================================================
 
   useEffect(() => {
-    supabase.auth.getUser().then(async ({ data }) => {
-      if (!data.user) { router.push("/auth/login"); return; }
-      setUserId(data.user.id);
+    supabase.auth.getUser().then(async ({ data, error: userError }) => {
+      if (userError || !data.user) {
+        router.push("/auth/login");
+        return;
+      }
 
-      // Pre-fill from metadata (set during registration)
+      const uid = data.user.id;
+      setUserId(uid);
+
       const meta = data.user.user_metadata ?? {};
-      if (meta.first_name) { setProfFirstNames(meta.first_name); setMyFirstName(meta.first_name); }
-      if (meta.last_name)  { setProfLastNames(meta.last_name);  setMyLastName(meta.last_name);  }
 
-      // Get my person record
-      const { data: me } = await supabase
-        .from("persons")
-        .select("id, first_names, last_names")
-        .eq("linked_user_id", data.user.id)
+      if (meta.first_name) {
+        setProfFirstNames(meta.first_name);
+        setMyFirstName(meta.first_name);
+      }
+
+      if (meta.last_name) {
+        setProfLastNames(meta.last_name);
+        setMyLastName(meta.last_name);
+      }
+
+      const { data: claim, error: claimError } = await supabase
+        .from("person_claims")
+        .select("person_id")
+        .eq("user_id", uid)
+        .eq("claim_status", "approved")
         .maybeSingle();
 
+      if (claimError) {
+        console.error("Error consultando person_claims:", claimError);
+        toast.error(`No fue posible consultar tu persona: ${claimError.message}`);
+        return;
+      }
+
+      if (!claim?.person_id) return;
+
+      const { data: me, error: personError } = await supabase
+        .from("persons")
+        .select(`
+          id,
+          first_name,
+          middle_name,
+          first_surname,
+          second_surname
+        `)
+        .eq("id", claim.person_id)
+        .maybeSingle();
+
+      if (personError) {
+        console.error("Error consultando persons:", personError);
+        toast.error(`No fue posible consultar tus datos: ${personError.message}`);
+        return;
+      }
+
       if (me) {
+        const firstNames = [me.first_name, me.middle_name]
+          .filter(Boolean)
+          .join(" ");
+
+        const lastNames = [me.first_surname, me.second_surname]
+          .filter(Boolean)
+          .join(" ");
+
         setMyPersonId(me.id);
-        if (!meta.first_name) { setProfFirstNames(me.first_names); setMyFirstName(me.first_names); }
-        if (!meta.last_name)  { setProfLastNames(me.last_names ?? ""); setMyLastName(me.last_names ?? ""); }
+
+        if (!meta.first_name) {
+          setProfFirstNames(firstNames);
+          setMyFirstName(firstNames);
+        }
+
+        if (!meta.last_name) {
+          setProfLastNames(lastNames);
+          setMyLastName(lastNames);
+        }
       }
     });
+
     trackEvent("onboarding_started" as any, { type: "organic" });
   }, []);
 
@@ -285,16 +340,51 @@ export default function OnboardingPage() {
   // ============================================================
 
   const saveProfile = async () => {
-    if (!profFirstNames.trim()) { toast.error("Agrega tu nombre"); return; }
-    setProfLoading(true);
-    try {
-      const uid = userId!;
+    if (!profFirstNames.trim()) {
+      toast.error("Agrega tu nombre");
+      return;
+    }
 
-      // Actualizar perfil usando exclusivamente el esquema nuevo
+    if (!profLastNames.trim()) {
+      toast.error("Agrega tus apellidos");
+      return;
+    }
+
+    setProfLoading(true);
+
+    try {
+      const uid = userId;
+
+      if (!uid) {
+        throw new Error("No existe una sesión válida.");
+      }
+
+      const names = profFirstNames
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean);
+
+      const surnames = profLastNames
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean);
+
+      const firstName = names[0];
+      const middleName =
+        names.length > 1 ? names.slice(1).join(" ") : null;
+
+      const firstSurname = surnames[0];
+      const secondSurname =
+        surnames.length > 1 ? surnames.slice(1).join(" ") : null;
+
       const displayName = [
-        profFirstNames.trim(),
-        profLastNames.trim(),
-      ].filter(Boolean).join(" ");
+        firstName,
+        middleName,
+        firstSurname,
+        secondSurname,
+      ]
+        .filter(Boolean)
+        .join(" ");
 
       const { error: profileError } = await supabase
         .from("profiles")
@@ -309,49 +399,46 @@ export default function OnboardingPage() {
         );
 
       if (profileError) {
-        console.error("Profile save error:", profileError);
         throw new Error(
           `No fue posible guardar el perfil: ${profileError.message}`
         );
       }
 
-      // Buscar nuevamente una persona vinculada antes de crear otra
       let personId = myPersonId;
 
       if (!personId) {
-        const { data: existingPerson, error: existingPersonError } =
+        const { data: existingClaim, error: claimLookupError } =
           await supabase
-            .from("persons")
-            .select("id")
-            .eq("linked_user_id", uid)
+            .from("person_claims")
+            .select("person_id")
+            .eq("user_id", uid)
+            .eq("claim_status", "approved")
             .maybeSingle();
 
-        if (existingPersonError) {
-          console.error(
-            "Existing person lookup error:",
-            existingPersonError
-          );
+        if (claimLookupError) {
           throw new Error(
-            `No fue posible consultar tu persona: ${existingPersonError.message}`
+            `No fue posible consultar tu persona: ${claimLookupError.message}`
           );
         }
 
-        personId = existingPerson?.id ?? null;
+        personId = existingClaim?.person_id ?? null;
       }
 
       if (personId) {
         const { error: personUpdateError } = await supabase
           .from("persons")
           .update({
-            first_names: profFirstNames.trim(),
-            last_names: profLastNames.trim() || null,
+            first_name: firstName,
+            middle_name: middleName,
+            first_surname: firstSurname,
+            second_surname: secondSurname,
             birth_date: profBirthDate || null,
             birth_city: profCity.trim() || null,
+            status: "active",
           })
           .eq("id", personId);
 
         if (personUpdateError) {
-          console.error("Person update error:", personUpdateError);
           throw new Error(
             `No fue posible actualizar tus datos personales: ${personUpdateError.message}`
           );
@@ -361,67 +448,53 @@ export default function OnboardingPage() {
           await supabase
             .from("persons")
             .insert({
-              first_names: profFirstNames.trim(),
-              last_names: profLastNames.trim() || null,
+              first_name: firstName,
+              middle_name: middleName,
+              first_surname: firstSurname,
+              second_surname: secondSurname,
               birth_date: profBirthDate || null,
               birth_city: profCity.trim() || null,
-              is_living: true,
-              linked_user_id: uid,
-              created_by_user_id: uid,
+              created_by: uid,
               status: "active",
-              verification_level: "self_verified",
             })
             .select("id")
             .single();
 
         if (personInsertError) {
-          console.error("Person insert error:", personInsertError);
           throw new Error(
-            `No fue posible crear tu perfil personal: ${personInsertError.message}`
+            `No fue posible crear tu persona: ${personInsertError.message}`
           );
         }
 
-        personId = newPerson?.id ?? null;
-      }
+        personId = newPerson.id;
 
-      if (!personId) {
-        throw new Error(
-          "La base de datos no devolvió el identificador de tu perfil personal."
-        );
+        const { error: claimInsertError } = await supabase
+          .from("person_claims")
+          .insert({
+            person_id: personId,
+            user_id: uid,
+            claim_status: "approved",
+            verification_method: "self_registration",
+            approved_at: new Date().toISOString(),
+          });
+
+        if (claimInsertError) {
+          throw new Error(
+            `La persona fue creada, pero no pudo vincularse a tu usuario: ${claimInsertError.message}`
+          );
+        }
       }
 
       setMyPersonId(personId);
       setMyFirstName(profFirstNames.trim());
       setMyLastName(profLastNames.trim());
-
-      // Check for match candidates
-      const { data: candidates } = await supabase
-        .from("match_candidates")
-        .select("id, score, person_a_id, person_b_id")
-        .or(`person_a_id.eq.${personId},person_b_id.eq.${personId}`)
-        .gte("score", 0.7)
-        .order("score", { ascending: false })
-        .limit(1);
-
-      if (candidates && candidates.length > 0 && personId) {
-        const c = candidates[0];
-        const otherId = c.person_a_id === personId ? c.person_b_id : c.person_a_id;
-        const { data: other } = await supabase
-          .from("persons")
-          .select("id, first_names, last_names, birth_date, profile_photo_url")
-          .eq("id", otherId)
-          .is("linked_user_id", null)
-          .maybeSingle();
-        if (other) {
-          setMatch(other);
-          setStep("match");
-          return;
-        }
-      }
-
       setStep("add_family");
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Ocurrió un error inesperado.";
+
+      console.error("Onboarding profile error:", err);
+      toast.error(message);
     } finally {
       setProfLoading(false);
     }
