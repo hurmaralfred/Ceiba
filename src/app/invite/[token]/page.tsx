@@ -119,13 +119,13 @@ export default function AcceptInvitePage() {
         p_last_name: myProfile?.last_name || "",
         p_relation_type: inviterRelation,
         p_family_member_id: invitation.family_member_id,
-      }).catch(() => {});
+      });
 
       supabase.rpc("generate_reverse_suggestions", {
         p_new_user_id: user.id,
         p_connector_id: invitation.invited_by,
         p_my_relation: myRelation,
-      }).catch(() => {});
+      });
 
       // 7. Push + email al invitador
       if (myProfile) {
@@ -137,7 +137,7 @@ export default function AcceptInvitePage() {
           method: "POST",
           headers: { "Content-Type": "application/json", "x-internal-secret": secret },
           body: JSON.stringify({ invitedBy: invitation.invited_by, joinerName, relationLabel: relLabel }),
-        }).catch(() => {});
+        });
 
         fetch("/api/email/member-joined", {
           method: "POST",
@@ -148,7 +148,7 @@ export default function AcceptInvitePage() {
             joinerName,
             relationLabel: relLabel,
           }),
-        }).catch(() => {});
+        });
       }
 
       toast.success("¡Conexión familiar confirmada! 🌳");

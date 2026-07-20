@@ -150,13 +150,13 @@ export async function POST(
       p_last_name: myProfile.last_name ?? "",
       p_relation_type: inviterRelation,
       p_family_member_id: member.id,
-    }).catch(() => {});
+    });
 
     service.rpc("generate_reverse_suggestions", {
       p_new_user_id: user.id,
       p_connector_id: member.added_by,
       p_my_relation: myRelation,
-    }).catch(() => {});
+    });
   }
 
   return NextResponse.json({ success: true });

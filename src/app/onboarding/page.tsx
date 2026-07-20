@@ -10,6 +10,9 @@ import { createClient } from "@/lib/supabase/client";
 import { createInviteLink, buildInviteMessage, shareInviteWhatsApp, InviteTemplate } from "@/lib/viral/inviteFlow";
 import { trackEvent } from "@/lib/viral/viralAnalytics";
 import toast, { Toaster } from "react-hot-toast";
+import PhoneInput, { isValidPhoneNumber } from "react-phone-number-input";
+import phoneLabels from "react-phone-number-input/locale/es";
+import "react-phone-number-input/style.css";
 
 // ============================================================
 // Tipos y constantes
@@ -154,13 +157,20 @@ function AddRelativeModal({
             className="rounded-xl border border-cream-300 px-4 py-3 text-sm outline-none focus:border-ceiba-400 text-ceiba-700"
           />
 
-          <input
-            type="tel"
-            placeholder="WhatsApp (para invitarlo después)"
-            value={form.phone}
-            onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-            className="rounded-xl border border-cream-300 px-4 py-3 text-sm outline-none focus:border-ceiba-400"
-          />
+          <div className="rounded-xl border border-cream-300 bg-white px-4 py-3 focus-within:border-ceiba-400">
+            <PhoneInput
+              international
+              defaultCountry="CO"
+              countryCallingCodeEditable={false}
+              labels={phoneLabels}
+              placeholder="WhatsApp (opcional)"
+              value={form.phone || undefined}
+              onChange={(value) =>
+                setForm((f) => ({ ...f, phone: value ?? "" }))
+              }
+              className="ceiba-phone-input text-sm"
+            />
+          </div>
 
           {/* Toggle fallecido */}
           <button
@@ -184,6 +194,12 @@ function AddRelativeModal({
                 toast.error("El nombre es obligatorio");
                 return;
               }
+
+              if (form.phone && !isValidPhoneNumber(form.phone)) {
+                toast.error("El número de teléfono no es válido");
+                return;
+              }
+
               onSave(form);
             }}
             disabled={loading}
@@ -274,35 +290,104 @@ export default function OnboardingPage() {
     try {
       const uid = userId!;
 
-      // Update profiles table
-      await supabase.from("profiles").update({
-        first_name: profFirstNames.trim(),
-        last_name: profLastNames.trim(),
-        city: profCity.trim() || null,
-      }).eq("id", uid);
+      // Actualizar perfil usando exclusivamente el esquema nuevo
+      const displayName = [
+        profFirstNames.trim(),
+        profLastNames.trim(),
+      ].filter(Boolean).join(" ");
 
-      // Update persons table
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .upsert(
+          {
+            user_id: uid,
+            display_name: displayName,
+          },
+          {
+            onConflict: "user_id",
+          }
+        );
+
+      if (profileError) {
+        console.error("Profile save error:", profileError);
+        throw new Error(
+          `No fue posible guardar el perfil: ${profileError.message}`
+        );
+      }
+
+      // Buscar nuevamente una persona vinculada antes de crear otra
       let personId = myPersonId;
+
+      if (!personId) {
+        const { data: existingPerson, error: existingPersonError } =
+          await supabase
+            .from("persons")
+            .select("id")
+            .eq("linked_user_id", uid)
+            .maybeSingle();
+
+        if (existingPersonError) {
+          console.error(
+            "Existing person lookup error:",
+            existingPersonError
+          );
+          throw new Error(
+            `No fue posible consultar tu persona: ${existingPersonError.message}`
+          );
+        }
+
+        personId = existingPerson?.id ?? null;
+      }
+
       if (personId) {
-        await supabase.from("persons").update({
-          first_names: profFirstNames.trim(),
-          last_names: profLastNames.trim(),
-          birth_date: profBirthDate || null,
-          birth_city: profCity.trim() || null,
-        }).eq("id", personId);
+        const { error: personUpdateError } = await supabase
+          .from("persons")
+          .update({
+            first_names: profFirstNames.trim(),
+            last_names: profLastNames.trim() || null,
+            birth_date: profBirthDate || null,
+            birth_city: profCity.trim() || null,
+          })
+          .eq("id", personId);
+
+        if (personUpdateError) {
+          console.error("Person update error:", personUpdateError);
+          throw new Error(
+            `No fue posible actualizar tus datos personales: ${personUpdateError.message}`
+          );
+        }
       } else {
-        const { data: newPerson } = await supabase.from("persons").insert({
-          first_names: profFirstNames.trim(),
-          last_names: profLastNames.trim(),
-          birth_date: profBirthDate || null,
-          birth_city: profCity.trim() || null,
-          is_living: true,
-          linked_user_id: uid,
-          created_by_user_id: uid,
-          status: "active",
-          verification_level: "self_verified",
-        }).select("id").single();
-        if (newPerson) personId = newPerson.id;
+        const { data: newPerson, error: personInsertError } =
+          await supabase
+            .from("persons")
+            .insert({
+              first_names: profFirstNames.trim(),
+              last_names: profLastNames.trim() || null,
+              birth_date: profBirthDate || null,
+              birth_city: profCity.trim() || null,
+              is_living: true,
+              linked_user_id: uid,
+              created_by_user_id: uid,
+              status: "active",
+              verification_level: "self_verified",
+            })
+            .select("id")
+            .single();
+
+        if (personInsertError) {
+          console.error("Person insert error:", personInsertError);
+          throw new Error(
+            `No fue posible crear tu perfil personal: ${personInsertError.message}`
+          );
+        }
+
+        personId = newPerson?.id ?? null;
+      }
+
+      if (!personId) {
+        throw new Error(
+          "La base de datos no devolvió el identificador de tu perfil personal."
+        );
       }
 
       setMyPersonId(personId);
@@ -367,11 +452,32 @@ export default function OnboardingPage() {
   // ============================================================
 
   const handleAddRelative = async (form: {
-    first_names: string; last_names: string; birth_date: string;
-    phone: string; is_living: boolean; relation_type: string;
+    first_names: string;
+    last_names: string;
+    birth_date: string;
+    phone: string;
+    is_living: boolean;
+    relation_type: string;
   }) => {
-    if (!myPersonId) return;
+    if (!userId) {
+      toast.error("No se encontró la sesión del usuario");
+      return;
+    }
+
+    if (!myPersonId) {
+      toast.error(
+        "No se encontró tu perfil personal. Regresa al paso anterior y guarda tus datos."
+      );
+      return;
+    }
+
+    if (!activeSlot) {
+      toast.error("No se identificó el familiar que estás agregando");
+      return;
+    }
+
     setAddLoading(true);
+
     try {
       const { data, error } = await supabase.rpc("add_relative", {
         p_first_names: form.first_names.trim(),
@@ -381,14 +487,41 @@ export default function OnboardingPage() {
         p_gender: null,
         p_is_living: form.is_living,
       });
-      if (error) throw error;
 
-      const newId = data?.person_id ?? data?.id;
-
-      // Save phone if provided
-      if (form.phone && newId) {
-        await supabase.from("persons").update({ phone: form.phone }).eq("id", newId);
+      if (error) {
+        console.error("add_relative RPC error:", error);
+        throw new Error(error.message);
       }
+
+      const result = Array.isArray(data) ? data[0] : data;
+
+      const newId =
+        typeof result === "string"
+          ? result
+          : result?.person_id ?? result?.id ?? null;
+
+      if (!newId) {
+        console.error("Respuesta inesperada de add_relative:", data);
+        throw new Error(
+          "El familiar fue procesado, pero la base de datos no devolvió su identificador."
+        );
+      }
+
+      if (form.phone) {
+        const { error: phoneError } = await supabase
+          .from("persons")
+          .update({ phone: form.phone })
+          .eq("id", newId);
+
+        if (phoneError) {
+          console.error("Phone update error:", phoneError);
+          throw new Error(
+            `No fue posible guardar el teléfono: ${phoneError.message}`
+          );
+        }
+      }
+
+      const slotId = activeSlot.id;
 
       const newPerson: AddedPerson = {
         id: newId,
@@ -396,14 +529,27 @@ export default function OnboardingPage() {
         last_names: form.last_names.trim(),
         phone: form.phone || undefined,
         relation_type: form.relation_type,
-        slot_id: activeSlot!.id,
+        slot_id: slotId,
       };
 
-      setFilledSlots((prev) => ({ ...prev, [activeSlot!.id]: newPerson }));
+      setFilledSlots((previous) => ({
+        ...previous,
+        [slotId]: newPerson,
+      }));
+
       setActiveSlot(null);
-      trackEvent("family_member_added" as any, { relation: form.relation_type, step: "onboarding" });
+
+      toast.success(
+        `${form.first_names.trim()} fue agregado correctamente`
+      );
+
+      trackEvent("family_member_added" as any, {
+        relation: form.relation_type,
+        step: "onboarding",
+      });
     } catch (err: any) {
-      toast.error(err.message);
+      console.error("Error agregando familiar:", err);
+      toast.error(err?.message || "No fue posible agregar el familiar");
     } finally {
       setAddLoading(false);
     }

@@ -5,67 +5,85 @@ import { cookies } from "next/headers";
 export async function GET(req: NextRequest) {
   const { searchParams, origin } = new URL(req.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/tree";
+  const next = searchParams.get("next");
 
-  if (!code) return NextResponse.redirect(`${origin}/auth/login`);
+  if (!code) {
+    return NextResponse.redirect(
+      `${origin}/auth/login?error=missing_oauth_code`
+    );
+  }
 
   const cookieStore = await cookies();
+
+  type CookieToSet = {
+    name: string;
+    value: string;
+    options?: Parameters<typeof cookieStore.set>[2];
+  };
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll: () => cookieStore.getAll(),
-        setAll: (cookiesToSet) => {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
-          );
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet: CookieToSet[]) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options);
+          });
         },
       },
     }
   );
 
-  const { data: { user }, error } = await supabase.auth.exchangeCodeForSession(code);
-  if (error || !user) return NextResponse.redirect(`${origin}/auth/login`);
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.exchangeCodeForSession(code);
 
-  // Create profile if this is the first Google login
-  const { data: existingProfile } = await supabase
-    .from("profiles")
-    .select("id")
-    .eq("id", user.id)
-    .single();
-
-  if (!existingProfile) {
-    const fullName = user.user_metadata?.full_name || "";
-    const parts = fullName.trim().split(" ");
-    const first_name = parts.slice(0, Math.ceil(parts.length / 2)).join(" ") || user.email?.split("@")[0] || "Usuario";
-    const last_name = parts.slice(Math.ceil(parts.length / 2)).join(" ") || "";
-
-    await supabase.from("profiles").insert({
-      id: user.id,
-      email: user.email,
-      first_name,
-      last_name,
-      avatar_url: user.user_metadata?.avatar_url || null,
-    });
-
-    // Crear nodo en el nuevo grafo familiar
-    await supabase.from("persons").upsert({
-      id: user.id,
-      first_names: first_name,
-      last_names: last_name,
-      email: user.email,
-      profile_photo_url: user.user_metadata?.avatar_url || null,
-      is_living: true,
-      linked_user_id: user.id,
-      created_by_user_id: user.id,
-      status: "active",
-      verification_level: "self_verified",
-    }, { onConflict: "id" });
-
-    // New Google user → go to onboarding
-    return NextResponse.redirect(`${origin}/onboarding`);
+  if (error || !user) {
+    console.error("OAuth callback error:", error);
+    return NextResponse.redirect(
+      `${origin}/auth/login?error=oauth_callback`
+    );
   }
 
-  return NextResponse.redirect(`${origin}${next}`);
+  const fullName =
+    user.user_metadata?.full_name ||
+    user.user_metadata?.name ||
+    user.email?.split("@")[0] ||
+    "Usuario";
+
+  /*
+   * El trigger handle_new_user crea normalmente este perfil.
+   * Este upsert cubre usuarios existentes o casos en que el trigger
+   * no haya creado el registro.
+   */
+  const { error: profileError } = await supabase
+    .from("profiles")
+    .upsert(
+      {
+        user_id: user.id,
+        display_name: fullName,
+      },
+      {
+        onConflict: "user_id",
+        ignoreDuplicates: false,
+      }
+    );
+
+  if (profileError) {
+    console.error("Profile upsert error:", profileError);
+    return NextResponse.redirect(
+      `${origin}/auth/login?error=profile_creation`
+    );
+  }
+
+  if (next?.startsWith("/") && !next.startsWith("//")) {
+    return NextResponse.redirect(`${origin}${next}`);
+  }
+
+  return NextResponse.redirect(`${origin}/onboarding`);
 }

@@ -119,7 +119,6 @@ export default function TreePage() {
     if (!user) { router.push("/auth/login"); return; }
 
     // Fire-and-forget: presencia + auto-link si nuevo usuario
-    fetch("/api/auth/post-register", { method: "POST" }).catch(() => {});
     fetch("/api/presence", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) }).catch(() => {});
 
     // -- Nuevo grafo familiar ------------------------------------------------
@@ -264,6 +263,8 @@ export default function TreePage() {
       last_name: member.last_name || "",
       email: member.email || "",
       birth_date: (member as any).birth_date || "",
+      birth_city: (member as any).birth_city || "",
+      birth_country: (member as any).birth_country || "",
       relation_type: member.relation_type as RelationType,
       is_deceased: !!(member as any).is_deceased,
       parent_member_id: (member as any).parent_member_id || "",
@@ -682,7 +683,6 @@ export default function TreePage() {
                 </div>
               );
             })()}
-          </div>
 
           {/* Engagement widgets — BELOW the tree so el árbol es el héroe */}
           <div className="space-y-3 mt-4">
@@ -711,6 +711,7 @@ export default function TreePage() {
               </button>
             )}
             <SuggestionCards onAccepted={loadData} />
+          </div>
           </div>
         )}
       </div>

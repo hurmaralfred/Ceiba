@@ -47,8 +47,11 @@ export default function TodayWidget({ userId }: { userId: string }) {
       .not("birth_date", "is", null);
 
     const today = new Date();
-    let todayBday: typeof members extends null ? null : NonNullable<typeof members>[0] | undefined = undefined;
-    let soonBday: typeof todayBday = undefined;
+
+    type BirthdayMember = NonNullable<typeof members>[number];
+
+    let todayBday: BirthdayMember | undefined;
+    let soonBday: BirthdayMember | undefined;
     let minDays = 99;
 
     (members || []).forEach(m => {

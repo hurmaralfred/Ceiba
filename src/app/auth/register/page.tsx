@@ -147,25 +147,50 @@ function RegisterFormInner() {
       const userId = authData.user?.id;
       if (!userId) throw new Error("No se pudo crear la cuenta");
 
-      let avatar_url: string | null = null;
+      let avatarPath: string | null = null;
+      let avatarPublicUrl: string | null = null;
+
       if (photoFile) {
-        const ext = photoFile.name.split(".").pop();
-        const path = `${userId}/avatar.${ext}`;
+        const ext = photoFile.name.split(".").pop() || "jpg";
+        avatarPath = `${userId}/avatar.${ext}`;
+
         const { error: uploadError } = await supabase.storage
-          .from("avatars").upload(path, photoFile, { upsert: true });
-        if (!uploadError) {
-          const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
-          avatar_url = urlData.publicUrl;
+          .from("avatars")
+          .upload(avatarPath, photoFile, { upsert: true });
+
+        if (uploadError) {
+          console.error("Avatar upload error:", uploadError);
+        } else {
+          const { data: urlData } = supabase.storage
+            .from("avatars")
+            .getPublicUrl(avatarPath);
+
+          avatarPublicUrl = urlData.publicUrl;
         }
       }
 
-      if (avatar_url) {
-        await supabase.from("profiles").update({ avatar_url }).eq("id", userId);
-        // Sincronizar foto en persons (nuevo esquema)
-        await supabase.from("persons").update({ profile_photo_url: avatar_url }).eq("linked_user_id", userId);
+      if (avatarPath) {
+        const { error: profileAvatarError } = await supabase
+          .from("profiles")
+          .update({ avatar_path: avatarPath })
+          .eq("user_id", userId);
+
+        if (profileAvatarError) {
+          console.error("Profile avatar error:", profileAvatarError);
+        }
       }
 
-      try { await fetch("/api/auth/post-register", { method: "POST" }); } catch {}
+      if (avatarPublicUrl) {
+        const { error: personAvatarError } = await supabase
+          .from("persons")
+          .update({ profile_photo_url: avatarPublicUrl })
+          .eq("linked_user_id", userId);
+
+        if (personAvatarError) {
+          console.error("Person avatar error:", personAvatarError);
+        }
+      }
+
 
       toast.success("¡Bienvenido a Ceiba! 🌳");
 
