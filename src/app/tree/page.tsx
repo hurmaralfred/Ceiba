@@ -122,7 +122,7 @@ export default function TreePage() {
     fetch("/api/presence", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) }).catch(() => {});
 
     // -- Nuevo grafo familiar ------------------------------------------------
-    const { data: graphData, error: graphError } = await supabase.rpc("get_my_family_graph", { depth: 4 });
+    const { data: graphData, error: graphError } = await supabase.rpc("get_my_family_graph", { p_depth: 4 });
     if (graphError) throw graphError;
 
     const graph = graphData as FamilyGraph | null;

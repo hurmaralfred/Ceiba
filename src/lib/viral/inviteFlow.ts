@@ -256,7 +256,7 @@ export async function listPendingInvitees(
   const { data: user } = await supabase.auth.getUser();
   if (!user.user) return [];
 
-  const graph = await supabase.rpc("get_my_family_graph", { depth: 2 });
+  const graph = await supabase.rpc("get_my_family_graph", { p_depth: 2 });
   if (graph.error || !graph.data) return [];
 
   const nodes = graph.data.nodes as any[];

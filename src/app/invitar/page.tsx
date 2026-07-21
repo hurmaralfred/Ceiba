@@ -366,7 +366,7 @@ export default function InvitarPage() {
       if (me) setMeFirstName(me.first_names);
 
       // Grafo familiar
-      const { data: graph } = await supabase.rpc("get_my_family_graph", { depth: 2 });
+      const { data: graph } = await supabase.rpc("get_my_family_graph", { p_depth: 2 });
       if (!graph) { setLoading(false); return; }
 
       const nodes: any[] = graph.nodes ?? [];
