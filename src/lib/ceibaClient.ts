@@ -189,34 +189,67 @@ export function createCeibaClient(
     },
 
     async addRelative(payload) {
-      const firstNames = [
-        payload.first_name.trim(),
-        payload.middle_name?.trim(),
-      ]
-        .filter(Boolean)
-        .join(" ");
+      const firstName = payload.first_name.trim();
+      const firstSurname = payload.first_surname.trim();
+      const relationKey = payload.relation_key.trim().toLowerCase();
 
-      const lastNames = [
-        payload.first_surname.trim(),
-        payload.second_surname?.trim(),
-      ]
-        .filter(Boolean)
-        .join(" ");
-
-      if (!firstNames) {
+      if (!firstName) {
         throw new Error("El primer nombre es obligatorio.");
       }
 
-      if (!lastNames) {
+      if (!firstSurname) {
         throw new Error("El primer apellido es obligatorio.");
       }
 
+      let relationship: "parent" | "partner" | "guardian";
+
+      switch (relationKey) {
+        case "mother":
+        case "father":
+        case "child":
+          relationship = "parent";
+          break;
+
+        case "spouse":
+          relationship = "partner";
+          break;
+
+        case "guardian":
+          relationship = "guardian";
+          break;
+
+        default:
+          throw new Error(
+            `Tipo de familiar no permitido: ${relationKey}`
+          );
+      }
+
+      const gender =
+        relationKey === "mother"
+          ? "female"
+          : relationKey === "father"
+            ? "male"
+            : "unknown";
+
+      const parentKind =
+        relationship === "parent" ? "biological" : null;
+
       const { data, error } = await supabase.rpc("add_relative", {
-        p_first_names: firstNames,
-        p_last_names: lastNames,
-        p_relation_key: payload.relation_key,
-        p_birth_date: payload.birth_date || undefined,
-        p_is_living: payload.is_living,
+        p_payload: {
+          first_name: firstName,
+          middle_name: payload.middle_name?.trim() || null,
+          first_surname: firstSurname,
+          second_surname: payload.second_surname?.trim() || null,
+          birth_date: payload.birth_date || null,
+          birth_date_precision: payload.birth_date
+            ? "exact"
+            : "unknown",
+          gender,
+          is_deceased: !payload.is_living,
+          relation_key: relationKey,
+          parent_kind: parentKind,
+        },
+        p_relationship: relationship,
       });
 
       if (error) throw error;
@@ -233,7 +266,9 @@ export function createCeibaClient(
         typeof result.relationship_id !== "string" ||
         typeof result.space_id !== "string"
       ) {
-        throw new Error("add_relative no devolvió los identificadores esperados.");
+        throw new Error(
+          "add_relative no devolvió los identificadores esperados."
+        );
       }
 
       return {
@@ -241,16 +276,10 @@ export function createCeibaClient(
         public_id: result.public_id,
         relationship_id: result.relationship_id,
         space_id: result.space_id,
-        relation_key:
-          typeof result.relation_key === "string"
-            ? result.relation_key
-            : payload.relation_key,
+        relation_key: payload.relation_key,
       };
     },
 
-    // ----------------------------------------------------------------
-    // MATCHING
-    // ----------------------------------------------------------------
     async findMatches(
       first_name,
       first_surname,
