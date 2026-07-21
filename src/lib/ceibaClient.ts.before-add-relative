@@ -36,22 +36,6 @@ export interface CeibaClient {
   // Árbol
   getMyFamilyGraph(depth?: number): Promise<Record<string, unknown>>;
 
-  addRelative(payload: {
-    first_name: string;
-    middle_name?: string | null;
-    first_surname: string;
-    second_surname?: string | null;
-    birth_date?: string | null;
-    is_living: boolean;
-    relation_key: "mother" | "father" | "spouse" | "child" | "guardian";
-  }): Promise<{
-    person_id: string;
-    public_id: string;
-    relationship_id: string;
-    space_id: string;
-    relation_key: string;
-  }>;
-
   // Matching
   findMatches(
     first_name: string,
@@ -182,70 +166,8 @@ export function createCeibaClient(
       const { data, error } = await supabase.rpc("get_my_family_graph", {
         p_depth: depth,
       });
-
       if (error) throw error;
-
       return (data ?? {}) as Record<string, unknown>;
-    },
-
-    async addRelative(payload) {
-      const firstNames = [
-        payload.first_name.trim(),
-        payload.middle_name?.trim(),
-      ]
-        .filter(Boolean)
-        .join(" ");
-
-      const lastNames = [
-        payload.first_surname.trim(),
-        payload.second_surname?.trim(),
-      ]
-        .filter(Boolean)
-        .join(" ");
-
-      if (!firstNames) {
-        throw new Error("El primer nombre es obligatorio.");
-      }
-
-      if (!lastNames) {
-        throw new Error("El primer apellido es obligatorio.");
-      }
-
-      const { data, error } = await supabase.rpc("add_relative", {
-        p_first_names: firstNames,
-        p_last_names: lastNames,
-        p_relation_key: payload.relation_key,
-        p_birth_date: payload.birth_date || undefined,
-        p_is_living: payload.is_living,
-      });
-
-      if (error) throw error;
-
-      if (!data || typeof data !== "object" || Array.isArray(data)) {
-        throw new Error("Respuesta inválida de add_relative.");
-      }
-
-      const result = data as Record<string, unknown>;
-
-      if (
-        typeof result.person_id !== "string" ||
-        typeof result.public_id !== "string" ||
-        typeof result.relationship_id !== "string" ||
-        typeof result.space_id !== "string"
-      ) {
-        throw new Error("add_relative no devolvió los identificadores esperados.");
-      }
-
-      return {
-        person_id: result.person_id,
-        public_id: result.public_id,
-        relationship_id: result.relationship_id,
-        space_id: result.space_id,
-        relation_key:
-          typeof result.relation_key === "string"
-            ? result.relation_key
-            : payload.relation_key,
-      };
     },
 
     // ----------------------------------------------------------------

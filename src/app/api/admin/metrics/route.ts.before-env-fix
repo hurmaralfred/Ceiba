@@ -2,26 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createClient as createSSRClient } from "@/lib/supabase/server";
 
-// Service-role client — can read protected administrative data.
-function createAdminClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl) {
-    throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL");
-  }
-
-  if (!serviceRoleKey) {
-    throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY");
-  }
-
-  return createClient(supabaseUrl, serviceRoleKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  });
-}
+// Service-role client — can read auth.users (needed by viral views)
+const admin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 /**
  * GET /api/admin/metrics
@@ -29,19 +14,6 @@ function createAdminClient() {
  * Only accessible to authenticated users; in prod, add an admin check.
  */
 export async function GET(_req: NextRequest) {
-  let admin;
-
-  try {
-    admin = createAdminClient();
-  } catch (error) {
-    console.error("Admin metrics configuration error:", error);
-
-    return NextResponse.json(
-      { error: "Server configuration error" },
-      { status: 500 },
-    );
-  }
-
   // Auth check
   const supabase = createSSRClient();
   const { data: { user }, error: authErr } = await supabase.auth.getUser();

@@ -166,7 +166,7 @@ function AddRelativeModal({
             />
             <input
               type="text"
-              placeholder="Apellidos *"
+              placeholder="Apellidos"
               value={form.last_names}
               onChange={(e) => setForm((f) => ({ ...f, last_names: e.target.value }))}
               className="col-span-1 rounded-xl border border-cream-300 px-4 py-3 text-sm outline-none focus:border-ceiba-400"
@@ -216,11 +216,6 @@ function AddRelativeModal({
             onClick={() => {
               if (!form.first_names.trim()) {
                 toast.error("El nombre es obligatorio");
-                return;
-              }
-
-              if (!form.last_names.trim()) {
-                toast.error("El apellido es obligatorio");
                 return;
               }
 
@@ -528,35 +523,21 @@ export default function OnboardingPage() {
     }
 
     if (!activeSlot) {
-      toast.error(
-        "No se identificó el familiar que estás agregando"
-      );
-      return;
-    }
-
-    if (!form.first_names.trim()) {
-      toast.error("El nombre es obligatorio");
-      return;
-    }
-
-    if (!form.last_names.trim()) {
-      toast.error("El apellido es obligatorio");
+      toast.error("No se identificó el familiar que estás agregando");
       return;
     }
 
     setAddLoading(true);
 
     try {
-      const { data, error } = await supabase.rpc(
-        "add_relative",
-        {
-          p_first_names: form.first_names.trim(),
-          p_last_names: form.last_names.trim(),
-          p_relation_key: form.relation_type,
-          p_birth_date: form.birth_date || null,
-          p_is_living: form.is_living,
-        }
-      );
+      const { data, error } = await supabase.rpc("add_relative", {
+        p_first_names: form.first_names.trim(),
+        p_last_names: form.last_names.trim() || null,
+        p_relation: form.relation_type,
+        p_birth_date: form.birth_date || null,
+        p_gender: null,
+        p_is_living: form.is_living,
+      });
 
       if (error) {
         console.error("add_relative RPC error:", error);
@@ -564,17 +545,31 @@ export default function OnboardingPage() {
       }
 
       const result = Array.isArray(data) ? data[0] : data;
-      const newId = result?.person_id ?? null;
+
+      const newId =
+        typeof result === "string"
+          ? result
+          : result?.person_id ?? result?.id ?? null;
 
       if (!newId) {
-        console.error(
-          "Respuesta inesperada de add_relative:",
-          data
-        );
-
+        console.error("Respuesta inesperada de add_relative:", data);
         throw new Error(
           "El familiar fue procesado, pero la base de datos no devolvió su identificador."
         );
+      }
+
+      if (form.phone) {
+        const { error: phoneError } = await supabase
+          .from("persons")
+          .update({ phone: form.phone })
+          .eq("id", newId);
+
+        if (phoneError) {
+          console.error("Phone update error:", phoneError);
+          throw new Error(
+            `No fue posible guardar el teléfono: ${phoneError.message}`
+          );
+        }
       }
 
       const slotId = activeSlot.id;
@@ -603,14 +598,9 @@ export default function OnboardingPage() {
         relation: form.relation_type,
         step: "onboarding",
       });
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : "No fue posible agregar el familiar";
-
+    } catch (err: any) {
       console.error("Error agregando familiar:", err);
-      toast.error(message);
+      toast.error(err?.message || "No fue posible agregar el familiar");
     } finally {
       setAddLoading(false);
     }

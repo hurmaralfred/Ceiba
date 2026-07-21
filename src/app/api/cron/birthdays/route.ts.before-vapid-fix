@@ -3,24 +3,11 @@ import webpush from "web-push";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { sendBirthdayEmail } from "@/lib/email";
 
-function configureWebPush() {
-  const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-  const privateKey = process.env.VAPID_PRIVATE_KEY;
-
-  if (!publicKey) {
-    throw new Error("Missing NEXT_PUBLIC_VAPID_PUBLIC_KEY");
-  }
-
-  if (!privateKey) {
-    throw new Error("Missing VAPID_PRIVATE_KEY");
-  }
-
-  webpush.setVapidDetails(
-    "mailto:ceiba-app@noreply.com",
-    publicKey,
-    privateKey,
-  );
-}
+webpush.setVapidDetails(
+  "mailto:ceiba-app@noreply.com",
+  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
+  process.env.VAPID_PRIVATE_KEY!
+);
 
 function getServiceClient() {
   return createServiceClient(
@@ -30,7 +17,6 @@ function getServiceClient() {
 }
 
 export async function GET(req: NextRequest) {
-  configureWebPush();
   const authHeader = req.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET || process.env.INTERNAL_SECRET;
   if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {

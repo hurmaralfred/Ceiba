@@ -1,14 +1,6 @@
 import { Resend } from "resend";
 
-function getResend() {
-  const apiKey = process.env.RESEND_API_KEY;
-
-  if (!apiKey) {
-    throw new Error("Missing RESEND_API_KEY");
-  }
-
-  return new Resend(apiKey);
-}
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Use verified domain if set, else Resend's sandbox address
 const FROM = process.env.EMAIL_FROM || "Ceiba <onboarding@resend.dev>";
@@ -78,7 +70,7 @@ export async function sendWelcomeEmail(to: string, firstName: string) {
     </div>
   `);
 
-  return getResend().emails.send({
+  return resend.emails.send({
     from: FROM,
     to,
     subject: "🌳 Tu árbol familiar te espera en Ceiba",
@@ -113,7 +105,7 @@ export async function sendMemberJoinedEmail(
     </div>
   `);
 
-  return getResend().emails.send({
+  return resend.emails.send({
     from: FROM,
     to,
     subject: `🌳 ${joinerName} se unió a tu árbol familiar`,
@@ -167,7 +159,7 @@ export async function sendBirthdayEmail(
     </div>
   `);
 
-  return getResend().emails.send({ from: FROM, to, subject, html });
+  return resend.emails.send({ from: FROM, to, subject, html });
 }
 
 // ─── Email: Nueva foto o evento ─────────────────────────────────────────────
@@ -200,7 +192,7 @@ export async function sendNewContentEmail(
     </div>
   `);
 
-  return getResend().emails.send({
+  return resend.emails.send({
     from: FROM,
     to,
     subject: `${emoji} ${uploaderName} ${isPhoto ? "compartió una foto" : `registró "${displayTitle}"`} en Ceiba`,
@@ -300,7 +292,7 @@ export async function sendWeeklyDigestEmail(
     </div>
   `);
 
-  return getResend().emails.send({
+  return resend.emails.send({
     from: FROM,
     to,
     subject: `🌳 Tu resumen familiar de la semana`,

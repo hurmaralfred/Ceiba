@@ -2,27 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import webpush from "web-push";
 import { createClient } from "@/lib/supabase/server";
 
-function configureWebPush() {
-  const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-  const privateKey = process.env.VAPID_PRIVATE_KEY;
-
-  if (!publicKey) {
-    throw new Error("Missing NEXT_PUBLIC_VAPID_PUBLIC_KEY");
-  }
-
-  if (!privateKey) {
-    throw new Error("Missing VAPID_PRIVATE_KEY");
-  }
-
-  webpush.setVapidDetails(
-    "mailto:ceiba-app@noreply.com",
-    publicKey,
-    privateKey,
-  );
-}
+webpush.setVapidDetails(
+  "mailto:ceiba-app@noreply.com",
+  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
+  process.env.VAPID_PRIVATE_KEY!
+);
 
 export async function POST(req: NextRequest) {
-  configureWebPush();
   // Validate internal secret so only our app can call this
   const secret = req.headers.get("x-internal-secret");
   if (secret !== process.env.INTERNAL_SECRET) {
