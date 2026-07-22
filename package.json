@@ -10,7 +10,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "audit:contracts": "node scripts/audit-contracts.mjs",
+    "verify:baseline": "npm run audit:contracts && npm run typecheck && npm run build"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.1",

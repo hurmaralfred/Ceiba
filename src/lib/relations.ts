@@ -3,7 +3,6 @@
  *
  * Exporta reverseRelation e inferRelation, usadas en:
  *   - src/app/tree/page.tsx
- *   - src/components/FamilyDiscoveryWizard.tsx
  */
 import type { RelationType } from "@/lib/types";
 

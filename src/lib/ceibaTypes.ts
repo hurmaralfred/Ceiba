@@ -11,8 +11,9 @@ export type VerificationLevel =
   | "unverified" | "family_verified" | "self_verified";
 
 export type RelationshipType =
-  | "parent_of" | "partner_of" | "sibling_of"
-  | "half_sibling_of" | "guardian_of" | "adoptive_parent_of";
+  | "parent"
+  | "partner"
+  | "guardian";
 
 export type RelationshipStatus =
   | "pending" | "confirmed" | "rejected" | "system_inferred";
@@ -70,19 +71,6 @@ export interface FamilyGraph {
   me: string | null;
   nodes: Person[];
   edges: Relationship[];
-}
-
-export interface MatchCandidate {
-  id: string;
-  proposed_by_user_id: string;
-  new_person_payload: Record<string, unknown>;
-  matched_person_id: string;
-  score: number;
-  score_breakdown: Record<string, unknown>;
-  proposed_relationship: { type: RelationshipType; target_person_id: string };
-  status: MatchStatus;
-  resolved_at?: string | null;
-  created_at: string;
 }
 
 export interface UpcomingBirthday {

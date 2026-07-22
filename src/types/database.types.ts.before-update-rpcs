@@ -1946,10 +1946,6 @@ export type Database = {
         Returns: Json
       }
       reject_match: { Args: { p_candidate: string }; Returns: undefined }
-      remove_relationship: {
-        Args: { p_relationship_id: string }
-        Returns: boolean
-      }
       resolve_match_candidate: {
         Args: { p_candidate_id: string; p_resolution: string }
         Returns: Json
@@ -2562,48 +2558,6 @@ export type Database = {
           person_id: string
           profile_photo_url: string
         }[]
-      }
-      update_person: {
-        Args: {
-          p_birth_city?: string
-          p_birth_country?: string
-          p_birth_date?: string
-          p_first_name: string
-          p_first_surname?: string
-          p_is_deceased?: boolean
-          p_middle_name?: string
-          p_person_id: string
-          p_second_surname?: string
-        }
-        Returns: {
-          birth_city: string | null
-          birth_country: string | null
-          birth_date: string | null
-          birth_date_precision: string | null
-          birth_year: number | null
-          created_at: string | null
-          created_by: string | null
-          death_date: string | null
-          deleted_at: string | null
-          first_name: string
-          first_surname: string
-          gender: string | null
-          id: string
-          is_deceased: boolean | null
-          middle_name: string | null
-          normalized_full_name: string | null
-          photo_path: string | null
-          public_id: string
-          second_surname: string | null
-          status: Database["public"]["Enums"]["person_status"] | null
-          updated_at: string | null
-        }
-        SetofOptions: {
-          from: "*"
-          to: "persons"
-          isOneToOne: true
-          isSetofReturn: false
-        }
       }
       updategeometrysrid: {
         Args: {

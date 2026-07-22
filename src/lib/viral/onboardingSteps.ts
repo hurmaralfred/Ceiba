@@ -6,6 +6,7 @@
 // ============================================================
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { KinshipKey } from "@/domain/relationships";
 import { trackEvent } from "./viralAnalytics";
 
 // ------------------------------------------------------------
@@ -64,7 +65,7 @@ export function canProceed(state: OnboardingState): boolean {
 
 export interface SuggestedRelative {
   slot: string;             // 'mother','father','sibling_1','partner','child_1'
-  relationship: string;     // 'parent_of','sibling_of','partner_of'
+  relationship: KinshipKey; // clave de parentesco del dominio
   gender?: "M" | "F" | "X";
   label: string;            // texto amigable
   priority: number;
@@ -76,12 +77,12 @@ export interface SuggestedRelative {
  */
 export function suggestedFamilySlots(): SuggestedRelative[] {
   return [
-    { slot: "mother",   relationship: "parent_of",  gender: "F", label: "Tu mamá",   priority: 1 },
-    { slot: "father",   relationship: "parent_of",  gender: "M", label: "Tu papá",   priority: 2 },
-    { slot: "sibling_1",relationship: "sibling_of",              label: "Un hermano/a", priority: 3 },
-    { slot: "partner",  relationship: "partner_of",              label: "Tu pareja", priority: 4 },
-    { slot: "child_1",  relationship: "parent_of",               label: "Un hijo/a", priority: 5 },
-    { slot: "sibling_2",relationship: "sibling_of",              label: "Otro hermano/a", priority: 6 },
+    { slot: "mother",   relationship: "mother",  gender: "F", label: "Tu mamá",   priority: 1 },
+    { slot: "father",   relationship: "father",  gender: "M", label: "Tu papá",   priority: 2 },
+    { slot: "sibling_1",relationship: "sibling",              label: "Un hermano/a", priority: 3 },
+    { slot: "partner",  relationship: "partner",              label: "Tu pareja", priority: 4 },
+    { slot: "child_1",  relationship: "child",                label: "Un hijo/a", priority: 5 },
+    { slot: "sibling_2",relationship: "sibling",              label: "Otro hermano/a", priority: 6 },
   ];
 }
 

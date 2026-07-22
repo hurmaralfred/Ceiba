@@ -1,291 +1,404 @@
 /**
- * graphAdapter.ts
- * Convierte FamilyGraph (persons + relationships) al formato legacy
- * que espera FamilyTreeGraph (FamilyMember[], ExtendedEntry[], MemberLink[]).
+ * Adaptador temporal de presentación.
+ *
+ * Convierte el grafo canónico:
+ *   persons + relationships
+ *
+ * al formato que todavía consume FamilyTreeGraph.
+ *
+ * El modelo persistido solo admite:
+ *   parent | partner | guardian
  */
 
-import { FamilyMember, Profile, RelationType, BLOOD_RELATIONS } from "./types";
-import { inferRelation, reverseRelation } from "./relations";
-import type { ExtendedEntry, MemberLink } from "@/components/tree/FamilyTreeGraph";
-
-// --- Tipos del nuevo esquema de grafo ---
+import type {
+  FamilyMember,
+  Profile,
+  RelationType,
+} from "./types";
+import { BLOOD_RELATIONS } from "./types";
+import { inferRelation } from "./relations";
+import type {
+  ExtendedEntry,
+  MemberLink,
+} from "@/components/tree/FamilyTreeGraph";
+import {
+  planRelationship,
+  type PrimitiveRelationship,
+} from "@/domain/relationships";
 
 export interface PersonNode {
   id: string;
-  first_names: string;
-  last_names: string;
-  email?: string | null;
+  public_id: string;
+  first_name: string;
+  middle_name?: string | null;
+  first_surname: string;
+  second_surname?: string | null;
   birth_date?: string | null;
+  birth_year?: number | null;
   birth_city?: string | null;
-  profile_photo_url?: string | null;
-  is_living: boolean;
-  linked_user_id?: string | null;
-  gender?: "M" | "F" | "X" | "unknown" | null;
-  bio?: string | null;
-  normalized_name?: string | null;
-  status?: string;
-  verification_level?: string;
-  created_at: string;
-  updated_at: string;
+  birth_country?: string | null;
+  gender?: string | null;
+  photo_path?: string | null;
+  is_deceased?: boolean | null;
+  death_date?: string | null;
+  status?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  deleted_at?: string | null;
 }
 
 export interface EdgeNode {
   id: string;
   person_a_id: string;
   person_b_id: string;
-  relationship_type:
-    | "parent_of"
-    | "partner_of"
-    | "sibling_of"
-    | "half_sibling_of"
-    | "guardian_of"
-    | "adoptive_parent_of";
-  status: string;
-  created_at: string;
-  pair_key?: string;
-  confidence_score?: number;
-  source?: string;
+  relationship_type: PrimitiveRelationship;
+  parent_kind?: "biological" | "adoptive" | "unknown" | null;
+  relationship_status?: string | null;
+  is_current?: boolean | null;
+  created_at?: string | null;
+  deleted_at?: string | null;
 }
 
 export interface FamilyGraph {
-  me: string;          // person_id del usuario actual
+  me: string | null;
   nodes: PersonNode[];
   edges: EdgeNode[];
 }
 
-// --- Mapeo de relationship_type > RelationType ---
+function isFemale(gender?: string | null): boolean {
+  return gender === "F" || gender === "female";
+}
 
+function isMale(gender?: string | null): boolean {
+  return gender === "M" || gender === "male";
+}
+
+function genderedRelation(
+  gender: string | null | undefined,
+  female: RelationType,
+  male: RelationType,
+  fallback: RelationType
+): RelationType {
+  if (isFemale(gender)) return female;
+  if (isMale(gender)) return male;
+  return fallback;
+}
+
+/**
+ * Interpreta una arista desde la perspectiva de viewerPersonId.
+ *
+ * parent:
+ *   person_a_id = padre/madre
+ *   person_b_id = hijo/hija
+ *
+ * guardian:
+ *   person_a_id = tutor
+ *   person_b_id = persona bajo tutela
+ */
 export function edgeToRelationType(
   edge: EdgeNode,
   viewerPersonId: string,
-  otherGender: string | null | undefined
+  otherGender?: string | null
 ): RelationType {
-  const iAmA    = edge.person_a_id === viewerPersonId;
-  const isFemale = otherGender === "F";
-  const isMale   = otherGender === "M";
+  const viewerIsA = edge.person_a_id === viewerPersonId;
 
   switch (edge.relationship_type) {
-    case "parent_of":
-      if (!iAmA) return isFemale ? "mother" : "father";
-      return isFemale ? "daughter" : "son";
+    case "parent":
+      if (viewerIsA) {
+        return genderedRelation(
+          otherGender,
+          "daughter",
+          "son",
+          "son"
+        );
+      }
 
-    case "partner_of":
-      return isFemale ? "partner" : "spouse";
+      return genderedRelation(
+        otherGender,
+        "mother",
+        "father",
+        "father"
+      );
 
-    case "sibling_of":
-      return isFemale ? "sister" : "brother";
+    case "partner":
+      return "partner";
 
-    case "half_sibling_of":
-      return isFemale ? "half_sister" : "half_brother";
+    case "guardian":
+      if (viewerIsA) {
+        return "stepchild";
+      }
 
-    case "guardian_of":
-      if (!iAmA) return isFemale ? "stepmother" : "stepfather";
-      return "stepchild";
-
-    case "adoptive_parent_of":
-      if (!iAmA) return isFemale ? "mother" : "father";
-      return isFemale ? "daughter" : "son";
+      return genderedRelation(
+        otherGender,
+        "stepmother",
+        "stepfather",
+        "stepfather"
+      );
 
     default:
       return "other";
   }
 }
 
-// --- Convertir PersonNode > Profile ---
-
-export function personToProfile(p: PersonNode): Profile {
-  return {
-    id: p.linked_user_id || p.id,
-    first_name: p.first_names || "",
-    last_name: p.last_names || "",
-    email: p.email || undefined,
-    avatar_url: p.profile_photo_url || undefined,
-    bio: p.bio || undefined,
-    location_enabled: false,
-    created_at: p.created_at,
-    updated_at: p.updated_at,
-  };
+function fullFirstName(person: PersonNode): string {
+  return [person.first_name, person.middle_name]
+    .filter(Boolean)
+    .join(" ");
 }
 
-// --- Convertir PersonNode + edge > FamilyMember ---
+function fullSurname(person: PersonNode): string {
+  return [person.first_surname, person.second_surname]
+    .filter(Boolean)
+    .join(" ");
+}
+
+export function personToProfile(person: PersonNode): Profile {
+  return {
+    id: person.id,
+    first_name: fullFirstName(person),
+    last_name: fullSurname(person),
+    avatar_url: person.photo_path || undefined,
+    birth_year:
+      person.birth_year ??
+      (person.birth_date
+        ? Number(person.birth_date.slice(0, 4))
+        : undefined),
+    gender: person.gender || undefined,
+    location_enabled: false,
+    city: person.birth_city || undefined,
+    country: person.birth_country || undefined,
+    created_at: person.created_at || "",
+    updated_at: person.updated_at || "",
+  };
+}
 
 function personToFamilyMember(
   person: PersonNode,
   relationType: RelationType,
-  myUserId: string
+  userId: string
 ): FamilyMember {
+  const profile = personToProfile(person);
+
   return {
-    id: person.id,                               // person.id como identificador de nodo
-    added_by: myUserId,
-    profile_id: person.linked_user_id || undefined,
-    first_name: person.first_names || "",
-    last_name: person.last_names || undefined,
-    email: person.email || undefined,
+    id: person.id,
+    added_by: userId,
+    profile_id: person.id,
+    first_name: profile.first_name,
+    last_name: profile.last_name || undefined,
     relation_type: relationType,
-    relation_kind: BLOOD_RELATIONS.has(relationType) ? "blood" : "affinity",
+    relation_kind: BLOOD_RELATIONS.has(relationType)
+      ? "blood"
+      : "affinity",
     invitation_sent: false,
-    is_deceased: !person.is_living,
-    created_at: person.created_at,
-    profile: person.linked_user_id
-      ? {
-          id: person.linked_user_id,
-          first_name: person.first_names || "",
-          last_name: person.last_names || "",
-          avatar_url: person.profile_photo_url || undefined,
-          location_enabled: false,
-          created_at: person.created_at,
-          updated_at: person.updated_at,
-        }
-      : undefined,
-  } as FamilyMember;
+    is_deceased: Boolean(person.is_deceased),
+    created_at: person.created_at || "",
+    profile,
+  };
 }
 
-// --- Función principal: FamilyGraph > {members, extendedMembers, memberLinks} ---
+function buildAdjacency(edges: EdgeNode[]): Map<string, EdgeNode[]> {
+  const adjacency = new Map<string, EdgeNode[]>();
+
+  for (const edge of edges) {
+    const forA = adjacency.get(edge.person_a_id) || [];
+    forA.push(edge);
+    adjacency.set(edge.person_a_id, forA);
+
+    const forB = adjacency.get(edge.person_b_id) || [];
+    forB.push(edge);
+    adjacency.set(edge.person_b_id, forB);
+  }
+
+  return adjacency;
+}
 
 export function adaptGraph(
   graph: FamilyGraph,
-  myUserId: string
+  userId: string
 ): {
   profile: Profile | null;
   members: FamilyMember[];
   extendedMembers: ExtendedEntry[];
   memberLinks: MemberLink[];
 } {
-  const { me: myPersonId, nodes, edges } = graph;
+  const me = graph.me;
 
-  // Index nodes and edges for fast lookup
-  const nodeById = new Map<string, PersonNode>(nodes.map((n) => [n.id, n]));
-
-  const myNode = nodeById.get(myPersonId);
-  if (!myNode) return { profile: null, members: [], extendedMembers: [], memberLinks: [] };
-
-  const profile = personToProfile(myNode);
-
-  // BFS for relation labels
-  // Map: personId > RelationType (as seen FROM the current user)
-  const relationFromMe = new Map<string, RelationType>();
-  const visited = new Set<string>([myPersonId]);
-  const queue: Array<{ personId: string; depth: number; parentId: string | null }> = [
-    { personId: myPersonId, depth: 0, parentId: null },
-  ];
-
-  // Depth-1 neighbors: direct edges touching myPersonId
-  const directEdges = edges.filter(
-    (e) => e.person_a_id === myPersonId || e.person_b_id === myPersonId
-  );
-
-  for (const edge of directEdges) {
-    const otherId = edge.person_a_id === myPersonId ? edge.person_b_id : edge.person_a_id;
-    if (visited.has(otherId)) continue;
-    const otherNode = nodeById.get(otherId);
-    if (!otherNode) continue;
-    const rel = edgeToRelationType(edge, myPersonId, otherNode.gender);
-    relationFromMe.set(otherId, rel);
-    visited.add(otherId);
+  if (!me) {
+    return {
+      profile: null,
+      members: [],
+      extendedMembers: [],
+      memberLinks: [],
+    };
   }
 
-  // Depth 2+: BFS through the graph using inferRelation
-  const bfsQueue = Array.from(relationFromMe.entries()).map(([id, rel]) => ({ id, rel }));
-  while (bfsQueue.length > 0) {
-    const { id: parentId, rel: parentRel } = bfsQueue.shift()!;
-    const neighborEdges = edges.filter(
-      (e) => e.person_a_id === parentId || e.person_b_id === parentId
-    );
+  const nodes = graph.nodes || [];
+  const edges = graph.edges || [];
+
+  const nodeById = new Map(
+    nodes.map((node) => [node.id, node])
+  );
+
+  const myNode = nodeById.get(me);
+
+  if (!myNode) {
+    return {
+      profile: null,
+      members: [],
+      extendedMembers: [],
+      memberLinks: [],
+    };
+  }
+
+  const adjacency = buildAdjacency(edges);
+  const relationFromMe = new Map<string, RelationType>();
+  const predecessor = new Map<string, string>();
+  const depthById = new Map<string, number>([[me, 0]]);
+  const visited = new Set<string>([me]);
+
+  const queue: Array<{
+    personId: string;
+    relationFromRoot: RelationType | null;
+  }> = [
+    {
+      personId: me,
+      relationFromRoot: null,
+    },
+  ];
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+
+    if (!current) break;
+
+    const currentDepth = depthById.get(current.personId) || 0;
+    const neighborEdges = adjacency.get(current.personId) || [];
+
     for (const edge of neighborEdges) {
-      const childId = edge.person_a_id === parentId ? edge.person_b_id : edge.person_a_id;
-      if (visited.has(childId)) continue;
-      const childNode = nodeById.get(childId);
-      if (!childNode) continue;
-      // Edge relation FROM parent's perspective
-      const edgeRel = edgeToRelationType(edge, parentId, childNode.gender);
-      const inferredRel = inferRelation(parentRel, edgeRel);
-      if (!inferredRel) continue;
-      relationFromMe.set(childId, inferredRel as RelationType);
-      visited.add(childId);
-      bfsQueue.push({ id: childId, rel: inferredRel as RelationType });
+      const otherId =
+        edge.person_a_id === current.personId
+          ? edge.person_b_id
+          : edge.person_a_id;
+
+      if (visited.has(otherId)) continue;
+
+      const otherNode = nodeById.get(otherId);
+      if (!otherNode) continue;
+
+      const localRelation = edgeToRelationType(
+        edge,
+        current.personId,
+        otherNode.gender
+      );
+
+      const relationFromRoot =
+        current.personId === me
+          ? localRelation
+          : current.relationFromRoot
+            ? inferRelation(
+                current.relationFromRoot,
+                localRelation
+              )
+            : null;
+
+      if (!relationFromRoot) continue;
+
+      visited.add(otherId);
+      relationFromMe.set(
+        otherId,
+        relationFromRoot as RelationType
+      );
+      predecessor.set(otherId, current.personId);
+      depthById.set(otherId, currentDepth + 1);
+
+      queue.push({
+        personId: otherId,
+        relationFromRoot:
+          relationFromRoot as RelationType,
+      });
     }
   }
 
-  // Build members (depth 1 = directly connected to me)
-  const directPersonIds = new Set(
-    directEdges.flatMap((e) => [e.person_a_id, e.person_b_id]).filter((id) => id !== myPersonId)
-  );
-
   const members: FamilyMember[] = [];
-  for (const personId of directPersonIds) {
-    const node = nodeById.get(personId);
-    const rel = relationFromMe.get(personId);
-    if (!node || !rel) continue;
-    members.push(personToFamilyMember(node, rel, myUserId));
-  }
-
-  // Build extended members (depth 2+)
   const extendedMembers: ExtendedEntry[] = [];
-  for (const [personId, rel] of relationFromMe.entries()) {
-    if (personId === myPersonId) continue;
-    if (directPersonIds.has(personId)) continue;
-    const node = nodeById.get(personId);
-    if (!node) continue;
-    const member = personToFamilyMember(node, rel, myUserId);
-    // Find the "entry point" — the direct member that connects this person
-    const connectingEdge = edges.find(
-      (e) =>
-        (e.person_a_id === personId || e.person_b_id === personId) &&
-        (directPersonIds.has(e.person_a_id) || directPersonIds.has(e.person_b_id))
+
+  for (const [personId, relation] of relationFromMe) {
+    const person = nodeById.get(personId);
+    if (!person) continue;
+
+    const member = personToFamilyMember(
+      person,
+      relation,
+      userId
     );
-    const parentMemberId =
-      connectingEdge
-        ? connectingEdge.person_a_id === personId
-          ? connectingEdge.person_b_id
-          : connectingEdge.person_a_id
-        : "";
+
+    const depth = depthById.get(personId) || 1;
+
+    if (depth === 1) {
+      members.push(member);
+      continue;
+    }
+
+    let connectorId = predecessor.get(personId) || "";
+
+    while (
+      connectorId &&
+      (depthById.get(connectorId) || 0) > 1
+    ) {
+      connectorId = predecessor.get(connectorId) || "";
+    }
+
     extendedMembers.push({
       member,
-      parentMemberId,
-      inferredRelation: rel,
+      parentMemberId: connectorId,
+      inferredRelation: relation,
     });
   }
 
-  // Build member links (edges between non-me nodes)
-  const memberLinks: MemberLink[] = [];
-  for (const edge of edges) {
-    if (edge.person_a_id === myPersonId || edge.person_b_id === myPersonId) continue;
-    const aRel = relationFromMe.get(edge.person_a_id);
-    const bRel = relationFromMe.get(edge.person_b_id);
-    if (!aRel || !bRel) continue;
-    const edgeRel = edgeToRelationType(edge, edge.person_a_id, nodeById.get(edge.person_b_id)?.gender);
-    memberLinks.push({
-      fromMemberId: edge.person_a_id,
-      toMemberId: edge.person_b_id,
-      relation: edgeRel,
-    });
-  }
+  const memberLinks: MemberLink[] = edges
+    .filter(
+      (edge) =>
+        edge.person_a_id !== me &&
+        edge.person_b_id !== me
+    )
+    .map((edge) => {
+      const personB = nodeById.get(edge.person_b_id);
 
-  return { profile, members, extendedMembers, memberLinks };
+      return {
+        fromMemberId: edge.person_a_id,
+        toMemberId: edge.person_b_id,
+        relation: edgeToRelationType(
+          edge,
+          edge.person_a_id,
+          personB?.gender
+        ),
+      };
+    });
+
+  return {
+    profile: personToProfile(myNode),
+    members,
+    extendedMembers,
+    memberLinks,
+  };
 }
 
-// --- Mapeo inverso: RelationType > relationship_type para add_relative ---
+/**
+ * Convierte el parentesco seleccionado por el usuario al único tipo
+ * primitivo que puede persistirse.
+ *
+ * Los parentescos derivados siguen enviando su relation_key al backend.
+ */
+export function relationTypeToPrimitive(
+  relation: RelationType
+): PrimitiveRelationship {
+  const plan = planRelationship(relation);
 
-export function relationTypeToGraphType(
-  rel: RelationType
-): "parent_of" | "partner_of" | "sibling_of" | "half_sibling_of" | "guardian_of" {
-  const MAP: Record<RelationType, "parent_of" | "partner_of" | "sibling_of" | "half_sibling_of" | "guardian_of"> = {
-    father: "parent_of",    mother: "parent_of",
-    son: "parent_of",       daughter: "parent_of",
-    brother: "sibling_of",  sister: "sibling_of",
-    half_brother: "half_sibling_of", half_sister: "half_sibling_of",
-    spouse: "partner_of",   partner: "partner_of",
-    stepfather: "guardian_of", stepmother: "guardian_of",
-    stepchild: "guardian_of",
-    nephew: "sibling_of",   niece: "sibling_of",
-    uncle: "parent_of",     aunt: "parent_of",
-    grandfather_paternal: "parent_of", grandmother_paternal: "parent_of",
-    grandfather_maternal: "parent_of", grandmother_maternal: "parent_of",
-    grandson: "parent_of",  granddaughter: "parent_of",
-    cousin: "sibling_of",
-    father_in_law: "parent_of", mother_in_law: "parent_of",
-    brother_in_law: "sibling_of", sister_in_law: "sibling_of",
-    other: "sibling_of",
-  };
-  return MAP[rel] ?? "sibling_of";
+  if (plan.kind === "direct") {
+    return plan.primitive;
+  }
+
+  throw new Error(
+    `El parentesco "${relation}" requiere seleccionar familiares intermedios.`
+  );
 }

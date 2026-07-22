@@ -22,3 +22,7 @@ next-env.d.ts
 *.backup
 *.backup-*
 *.old
+
+# Auditoría local temporal
+ceiba-audit/
+ceiba-audit.zip

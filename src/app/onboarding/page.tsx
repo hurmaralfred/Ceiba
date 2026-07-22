@@ -32,11 +32,18 @@ const STEP_INDEX: Record<Step, number> = {
   profile: 1, match: 2, add_family: 3, aha: 4, batch_invite: 5, notifications: 6, done: 7
 };
 
+type CanonicalRelationship =
+  | "parent"
+  | "partner"
+  | "guardian";
+
 interface SlotDef {
   id: string;
   emoji: string;
   label: string;
-  relation_type: string;
+  relation_key: string;
+  relationship: CanonicalRelationship;
+  parent_kind?: "biological" | "adoptive" | "step" | "unknown";
   optional?: boolean;
 }
 
@@ -45,31 +52,39 @@ const SUGGESTED_SLOTS: SlotDef[] = [
     id: "mom",
     emoji: "👩",
     label: "Tu mamá",
-    relation_type: "mother",
+    relation_key: "mother",
+    relationship: "parent",
+    parent_kind: "biological",
   },
   {
     id: "dad",
     emoji: "👨",
     label: "Tu papá",
-    relation_type: "father",
+    relation_key: "father",
+    relationship: "parent",
+    parent_kind: "biological",
   },
   {
     id: "spouse",
     emoji: "💑",
     label: "Tu pareja",
-    relation_type: "spouse",
+    relation_key: "spouse",
+    relationship: "partner",
   },
   {
     id: "child",
     emoji: "👶",
     label: "Un hijo/a",
-    relation_type: "child",
+    relation_key: "child",
+    relationship: "parent",
+    parent_kind: "biological",
   },
   {
     id: "guardian",
     emoji: "🫶",
     label: "Un tutor/a",
-    relation_type: "guardian",
+    relation_key: "guardian",
+    relationship: "guardian",
   },
 ];
 
@@ -84,11 +99,17 @@ interface AddedPerson {
 
 interface MatchCandidate {
   id: string;
+  public_id?: string;
   first_names: string;
   last_names: string;
   birth_date?: string;
+  birth_city?: string;
+  birth_country?: string;
   profile_photo_url?: string;
   added_by_name?: string;
+  match_score?: number;
+  already_claimed?: boolean;
+  claimable?: boolean;
 }
 
 // ============================================================
@@ -138,7 +159,7 @@ function AddRelativeModal({
     birth_date: "",
     phone: "",
     is_living: true,
-    relation_type: slot.relation_type,
+    relation_type: slot.relation_key,
   });
 
   return (
@@ -420,6 +441,40 @@ export default function OnboardingPage() {
 
       const result = Array.isArray(data) ? data[0] : data;
 
+      if (
+        result?.success === false &&
+        result?.action === "review_required"
+      ) {
+        const candidate = result.candidates?.[0];
+
+        if (!candidate) {
+          throw new Error(
+            "Se encontraron coincidencias pero no fueron devueltas por el servidor."
+          );
+        }
+
+        setMatch({
+          id: candidate.person_id,
+          public_id: candidate.public_id,
+          first_names: candidate.first_name,
+          last_names: [
+            candidate.first_surname,
+            candidate.second_surname,
+          ]
+            .filter(Boolean)
+            .join(" "),
+          birth_date: candidate.birth_date,
+          birth_city: candidate.birth_city,
+          birth_country: candidate.birth_country,
+          match_score: candidate.match_score,
+          already_claimed: candidate.already_claimed,
+          claimable: candidate.claimable,
+        });
+
+        setStep("match");
+        return;
+      }
+
       const personId = result?.person_id ?? null;
       const spaceId = result?.space_id ?? null;
 
@@ -457,6 +512,13 @@ export default function OnboardingPage() {
 
   const claimMatch = async () => {
     if (!match || !userId) return;
+
+    if (match.already_claimed || match.claimable === false) {
+      toast.error(
+        "Esta persona ya está vinculada a otra cuenta."
+      );
+      return;
+    }
 
     try {
       const matchPersonId = match.id;
@@ -547,14 +609,45 @@ export default function OnboardingPage() {
     setAddLoading(true);
 
     try {
+      const nameParts = form.first_names
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean);
+
+      const surnameParts = form.last_names
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean);
+
+      const payload = {
+        first_name: nameParts[0],
+        middle_name:
+          nameParts.length > 1
+            ? nameParts.slice(1).join(" ")
+            : null,
+        first_surname: surnameParts[0],
+        second_surname:
+          surnameParts.length > 1
+            ? surnameParts.slice(1).join(" ")
+            : null,
+        birth_date: form.birth_date || null,
+        is_living: form.is_living,
+        relation_key: activeSlot.relation_key,
+        parent_kind:
+          activeSlot.relationship === "parent"
+            ? activeSlot.parent_kind ?? "unknown"
+            : undefined,
+        is_current:
+          activeSlot.relationship === "partner"
+            ? true
+            : undefined,
+      };
+
       const { data, error } = await supabase.rpc(
         "add_relative",
         {
-          p_first_names: form.first_names.trim(),
-          p_last_names: form.last_names.trim(),
-          p_relation_key: form.relation_type,
-          p_birth_date: form.birth_date || null,
-          p_is_living: form.is_living,
+          p_payload: payload,
+          p_relationship: activeSlot.relationship,
         }
       );
 

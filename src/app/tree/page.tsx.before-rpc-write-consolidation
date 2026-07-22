@@ -129,8 +129,6 @@ export default function TreePage() {
     const { data: graphData, error: graphError } = await supabase.rpc("get_my_family_graph", { p_depth: 4 });
     if (graphError) throw graphError;
 
-    console.log("get_my_family_graph response:", graphData);
-
     const graph = graphData as FamilyGraph | null;
     if (!graph || !graph.me) {
       // Usuario nuevo sin nodo en persons todavía — mostrar árbol vacío
@@ -285,29 +283,24 @@ export default function TreePage() {
 
   const updateMember = async () => {
     if (!editingMember || !form.primer_nombre.trim()) return;
-
+    const first_names = [form.primer_nombre.trim(), form.segundo_nombre.trim()].filter(Boolean).join(" ");
+    const last_names = [form.primer_apellido.trim(), form.segundo_apellido.trim()].filter(Boolean).join(" ");
     setSaving(true);
-
     try {
-      const { error } = await supabase.rpc("update_person", {
-        p_person_id: editingMember.id,
-        p_first_name: form.primer_nombre.trim(),
-        p_middle_name: form.segundo_nombre.trim() || undefined,
-        p_first_surname: form.primer_apellido.trim() || undefined,
-        p_second_surname: form.segundo_apellido.trim() || undefined,
-        p_birth_date: form.birth_date || undefined,
-        p_birth_city: form.birth_city.trim() || undefined,
-        p_birth_country: form.birth_country.trim() || undefined,
-        p_is_deceased: form.is_deceased,
-      });
-
+      // Actualizar el nodo persons (editingMember.id es el person.id)
+      const { error } = await supabase.from("persons").update({
+        first_names,
+        last_names: last_names || null,
+        email: form.email.trim() || null,
+        birth_date: form.birth_date || null,
+        is_living: !form.is_deceased,
+      }).eq("id", editingMember.id);
       if (error) throw error;
-
       toast.success("Familiar actualizado");
       setShowModal(false);
       setEditingMember(null);
       setForm(EMPTY_FORM);
-      await loadData();
+      loadData();
     } catch (err: any) {
       toast.error(err?.message || "Error al guardar");
     } finally {
@@ -316,58 +309,23 @@ export default function TreePage() {
   };
 
   const deleteMember = async () => {
-    if (!editingMember || !profile) return;
-
-    const confirmed = confirm(
-      `¿Quitar a ${editingMember.first_name} ${editingMember.last_name || ""} de tu árbol?`
-    );
-
-    if (!confirmed) return;
-
-    setSaving(true);
-
+    if (!editingMember) return;
+    if (!confirm(`¿Eliminar a ${editingMember.first_name} ${editingMember.last_name || ""}?`)) return;
     try {
-      const { data: relationships, error: lookupError } = await supabase
-        .from("relationships")
-        .select("id")
-        .or(
-          `and(person_a_id.eq.${profile.id},person_b_id.eq.${editingMember.id}),` +
-          `and(person_a_id.eq.${editingMember.id},person_b_id.eq.${profile.id})`
-        )
-        .is("deleted_at", null);
-
-      if (lookupError) throw lookupError;
-
-      if (!relationships || relationships.length === 0) {
-        throw new Error(
-          "No se encontró una relación directa entre estas personas."
-        );
-      }
-
-      for (const relationship of relationships) {
-        const { data: removed, error: removeError } = await supabase.rpc(
-          "remove_relationship",
-          {
-            p_relationship_id: relationship.id,
-          }
-        );
-
-        if (removeError) throw removeError;
-
-        if (!removed) {
-          throw new Error("La relación no pudo ser eliminada.");
-        }
-      }
-
-      toast.success("Familiar retirado del árbol");
+      // Eliminar todas las relaciones donde aparece esta persona
+      const { error } = await supabase.from("relationships")
+        .delete()
+        .or(`person_a_id.eq.${editingMember.id},person_b_id.eq.${editingMember.id}`);
+      if (error) throw error;
+      // No eliminamos el nodo persons para preservar historia; si el usuario quiere
+      // borrar la persona completa puede hacerlo desde su perfil.
+      toast.success("Familiar eliminado del árbol");
       setShowModal(false);
       setEditingMember(null);
       setForm(EMPTY_FORM);
-      await loadData();
+      loadData();
     } catch (err: any) {
-      toast.error(err?.message || "Error al retirar al familiar");
-    } finally {
-      setSaving(false);
+      toast.error(err?.message || "Error al eliminar");
     }
   };
 
