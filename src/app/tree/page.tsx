@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 import { TreePine, MapPin, Users, Share2, LogOut, User, Send, List, GitFork, Plus, X, Pencil, Map as MapIcon, Image, Calendar, MessageCircle, Megaphone, Camera, AlertTriangle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Profile, FamilyMember, RelationType, RELATION_LABELS } from "@/lib/types";
-import { adaptGraph, relationTypeToPrimitive, type FamilyGraph } from "@/lib/graphAdapter";
+import { adaptGraph, buildAddRelativeRequest, relationRequiresConnector, type FamilyGraph } from "@/lib/graphAdapter";
 import type { ExtendedEntry, MemberLink } from "@/components/tree/FamilyTreeGraph";
 import InstallBanner from "@/components/InstallBanner";
 import TreeErrorBoundary from "@/components/TreeErrorBoundary";
@@ -28,23 +28,46 @@ const MapView = dynamic(
   { ssr: false, loading: () => <div className="w-full h-[520px] rounded-2xl bg-gray-100 animate-pulse" /> }
 );
 
+// Catálogo genealógico v1 — selector visible hasta bisabuelos/bisnietos.
 const RELATION_GROUPS = [
   {
-    label: "Familia directa",
+    label: "Ascendientes",
     kind: "blood" as const,
     options: [
       "father",
       "mother",
-      "son",
-      "daughter",
+      "grandfather",
+      "grandmother",
+      "great_grandfather",
+      "great_grandmother",
     ] as RelationType[],
   },
   {
-    label: "Pareja y tutela",
+    label: "Hermanos",
+    kind: "blood" as const,
+    options: [
+      "brother",
+      "sister",
+    ] as RelationType[],
+  },
+  {
+    label: "Pareja",
     kind: "affinity" as const,
     options: [
       "spouse",
       "partner",
+    ] as RelationType[],
+  },
+  {
+    label: "Descendientes",
+    kind: "blood" as const,
+    options: [
+      "son",
+      "daughter",
+      "grandson",
+      "granddaughter",
+      "great_grandson",
+      "great_granddaughter",
     ] as RelationType[],
   },
 ];
@@ -126,12 +149,15 @@ export default function TreePage() {
     fetch("/api/presence", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) }).catch(() => {});
 
     // -- Nuevo grafo familiar ------------------------------------------------
-    const { data: graphData, error: graphError } = await supabase.rpc("get_my_family_graph", { p_depth: 4 });
+    console.log("① Antes RPC");
+const { data: graphData, error: graphError } = await supabase.rpc("get_my_family_graph", { p_depth: 4 });
+console.log("② Después RPC");
     if (graphError) throw graphError;
 
     console.log("get_my_family_graph response:", graphData);
 
-    const graph = graphData as FamilyGraph | null;
+    console.log("③ Antes adaptGraph");
+const graph = graphData as FamilyGraph | null;
     if (!graph || !graph.me) {
       // Usuario nuevo sin nodo en persons todavía — mostrar árbol vacío
       setLoading(false);
@@ -139,10 +165,12 @@ export default function TreePage() {
     }
 
     const { profile, members, extendedMembers, memberLinks } = adaptGraph(graph, user.id);
+console.log("④ Después adaptGraph");
     setProfile(profile);
     setMembers(members);
     setExtendedMembers(extendedMembers);
     setMemberLinks(memberLinks);
+console.log("⑤ Datos cargados");
 
     // Ubicación del usuario (de persons)
     const myNode = (graph.nodes || []).find((n: any) => n.id === graph.me);
@@ -185,6 +213,12 @@ export default function TreePage() {
   const saveMember = async (_force = false) => {
     if (!form.primer_nombre.trim()) { toast.error("El primer nombre es obligatorio"); return; }
     if (!form.primer_apellido.trim()) { toast.error("El primer apellido es obligatorio"); return; }    if (!form.birth_date) { toast.error("La fecha de nacimiento es obligatoria"); return; }
+    // Catálogo genealógico v1: abuelos/bisabuelos/nietos/bisnietos exigen el
+    // familiar conector (no se crean personas intermedias ficticias).
+    if (relationRequiresConnector(form.relation_type as RelationType) && !form.parent_member_id) {
+      toast.error("Selecciona el familiar que conecta este parentesco");
+      return;
+    }
     const first_names = [form.primer_nombre.trim(), form.segundo_nombre.trim()].filter(Boolean).join(" ");
     const last_names = [form.primer_apellido.trim(), form.segundo_apellido.trim()].filter(Boolean).join(" ");
     const { data: { user } } = await supabase.auth.getUser();
@@ -193,6 +227,14 @@ export default function TreePage() {
     setDuplicateWarning(null);
     setSaving(true);
     try {
+      // Catálogo genealógico v1: traduce el parentesco elegido al payload real
+      // de add_relative. Los derivados (abuelos/bisabuelos/nietos/bisnietos)
+      // viajan como cadena parent apoyada en el conector (related_person_id).
+      const relRequest = buildAddRelativeRequest(
+        form.relation_type as RelationType,
+        form.parent_member_id || null
+      );
+
       // add_relative maneja detección de duplicados + creación atómica + relación
       const { data: result, error } = await supabase.rpc("add_relative", {
         p_payload: {
@@ -204,18 +246,12 @@ export default function TreePage() {
           birth_city: form.birth_city.trim() || null,
           birth_country: form.birth_country.trim() || null,
           is_deceased: form.is_deceased,
-          relation_key: form.relation_type,
-          parent_kind:
-            form.relation_type === "father" ||
-            form.relation_type === "mother" ||
-            form.relation_type === "son" ||
-            form.relation_type === "daughter"
-              ? "biological"
-              : "unknown",
+          related_person_id: relRequest.relatedPersonId || null,
+          relation_key: relRequest.backendRelationKey,
+          parent_kind: relRequest.parentKind,
+          gender: relRequest.gender,
         },
-        p_relationship: relationTypeToPrimitive(
-          form.relation_type as RelationType
-        ),
+        p_relationship: relRequest.primitive,
       });
       if (error) throw error;
 
@@ -259,6 +295,49 @@ export default function TreePage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  // Catálogo genealógico v1 — texto del selector de conector según parentesco.
+  const connectorLabel = (rt: RelationType): string => {
+    if (rt === "grandfather" || rt === "grandmother") return "¿Padre o madre de cuál de tus padres?";
+    if (rt === "great_grandfather" || rt === "great_grandmother") return "¿Padre o madre de cuál de tus abuelos?";
+    if (rt === "grandson" || rt === "granddaughter") return "¿Hijo o hija de cuál de tus hijos?";
+    if (rt === "great_grandson" || rt === "great_granddaughter") return "¿Hijo o hija de cuál de tus nietos?";
+    return "";
+  };
+
+  // Familiares elegibles como conector, filtrados por su relación inferida.
+  const connectorCandidates = (rt: RelationType): Array<{ id: string; name: string }> => {
+    let allowed: string[] = [];
+    if (rt === "grandfather" || rt === "grandmother") {
+      allowed = ["father", "mother"];
+    } else if (rt === "great_grandfather" || rt === "great_grandmother") {
+      // Incluye las variantes paternas/maternas que aún produce el grafo.
+      allowed = [
+        "grandfather", "grandmother",
+        "grandfather_paternal", "grandmother_paternal",
+        "grandfather_maternal", "grandmother_maternal",
+      ];
+    } else if (rt === "grandson" || rt === "granddaughter") {
+      allowed = ["son", "daughter"];
+    } else if (rt === "great_grandson" || rt === "great_granddaughter") {
+      allowed = ["grandson", "granddaughter"];
+    }
+    const allowedSet = new Set(allowed);
+    const seen = new Set<string>();
+    const out: Array<{ id: string; name: string }> = [];
+    const push = (id: string, first: string, last?: string | null) => {
+      if (!id || seen.has(id)) return;
+      seen.add(id);
+      out.push({ id, name: `${first} ${last || ""}`.trim() });
+    };
+    members
+      .filter((m) => allowedSet.has(m.relation_type))
+      .forEach((m) => push(m.id, m.first_name, m.last_name));
+    extendedMembers
+      .filter((e) => e.inferredRelation != null && allowedSet.has(e.inferredRelation))
+      .forEach((e) => push(e.member.id, e.member.first_name, e.member.last_name));
+    return out;
   };
 
   const openEdit = (member: FamilyMember) => {
@@ -939,10 +1018,10 @@ export default function TreePage() {
                 <select
                   className="input-field text-sm"
                   value={form.relation_type}
-                  onChange={e => setForm(f => ({ ...f, relation_type: e.target.value as RelationType }))}
+                  onChange={e => setForm(f => ({ ...f, relation_type: e.target.value as RelationType, parent_member_id: "" }))}
                 >
                   {RELATION_GROUPS.map(group => (
-                    <optgroup key={group.kind} label={group.label}>
+                    <optgroup key={group.label} label={group.label}>
                       {group.options.map(opt => (
                         <option key={opt} value={opt}>{RELATION_LABELS[opt]}</option>
                       ))}
@@ -951,27 +1030,28 @@ export default function TreePage() {
                 </select>
               </div>
 
-              {/* Parent selector — solo para sobrinos/sobrinas */}
-              {(form.relation_type === "nephew" || form.relation_type === "niece") && (
+              {/* Selector de familiar conector — abuelos/bisabuelos/nietos/bisnietos */}
+              {relationRequiresConnector(form.relation_type) && (
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">
-                    ¿Hijo/a de cuál hermano/a? <span className="text-gray-400 font-normal">(opcional)</span>
+                    {connectorLabel(form.relation_type)} <span className="text-red-400">*</span>
                   </label>
-                  <select
-                    className="input-field text-sm"
-                    value={form.parent_member_id}
-                    onChange={e => setForm(f => ({ ...f, parent_member_id: e.target.value }))}
-                  >
-                    <option value="">— No especificar —</option>
-                    {members
-                      .filter(m => ["brother","sister","half_brother","half_sister"].includes(m.relation_type))
-                      .map(s => (
-                        <option key={s.id} value={s.id}>
-                          {s.first_name} {s.last_name || ""}
-                        </option>
-                      ))
-                    }
-                  </select>
+                  {connectorCandidates(form.relation_type).length === 0 ? (
+                    <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg p-2">
+                      Primero agrega el familiar intermedio (el {(form.relation_type.startsWith("great_grand") ? "abuelo/a o nieto/a" : "padre/madre o hijo/a")} correspondiente) para poder conectar este parentesco.
+                    </p>
+                  ) : (
+                    <select
+                      className="input-field text-sm"
+                      value={form.parent_member_id}
+                      onChange={e => setForm(f => ({ ...f, parent_member_id: e.target.value }))}
+                    >
+                      <option value="">— Selecciona un familiar —</option>
+                      {connectorCandidates(form.relation_type).map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                  )}
                 </div>
               )}
             </div>

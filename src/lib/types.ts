@@ -3,13 +3,21 @@ export type RelationType =
   | 'brother' | 'sister' | 'half_brother' | 'half_sister'
   | 'nephew' | 'niece'
   | 'spouse' | 'partner'
+  // Catálogo genealógico v1 (unificado con KinshipKey): claves canónicas de
+  // abuelos/bisabuelos/nietos/bisnietos. Las variantes *_paternal/*_maternal
+  // se conservan porque inferRelation las sigue produciendo en el grafo.
+  | 'grandfather' | 'grandmother'
+  | 'great_grandfather' | 'great_grandmother'
   | 'grandfather_paternal' | 'grandmother_paternal'
   | 'grandfather_maternal' | 'grandmother_maternal'
   | 'grandson' | 'granddaughter'
+  | 'great_grandson' | 'great_granddaughter'
   | 'uncle' | 'aunt' | 'cousin'
   | 'father_in_law' | 'mother_in_law'
   | 'brother_in_law' | 'sister_in_law'
+  | 'son_in_law' | 'daughter_in_law'
   | 'stepfather' | 'stepmother' | 'stepchild'
+  | 'stepson' | 'stepdaughter'
   | 'other'
 
 export type RelationKind = 'blood' | 'affinity' | 'other'
@@ -121,12 +129,21 @@ export const RELATION_LABELS: Record<RelationType, string> = {
   niece: 'Sobrina',
   spouse: 'Esposo/a',
   partner: 'Pareja',
-  grandfather_paternal: 'Abuelo paterno',
-  grandmother_paternal: 'Abuela paterna',
-  grandfather_maternal: 'Abuelo materno',
-  grandmother_maternal: 'Abuela materna',
+  grandfather: 'Abuelo',
+  grandmother: 'Abuela',
+  great_grandfather: 'Bisabuelo',
+  great_grandmother: 'Bisabuela',
+  // Gen +2: la etiqueta es plana (Abuelo/Abuela) según el catálogo genealógico
+  // v1; la variante paterna/materna se conserva SOLO para el posicionamiento
+  // (rama izquierda/derecha), no para el texto.
+  grandfather_paternal: 'Abuelo',
+  grandmother_paternal: 'Abuela',
+  grandfather_maternal: 'Abuelo',
+  grandmother_maternal: 'Abuela',
   grandson: 'Nieto',
   granddaughter: 'Nieta',
+  great_grandson: 'Bisnieto',
+  great_granddaughter: 'Bisnieta',
   uncle: 'Tío',
   aunt: 'Tía',
   cousin: 'Primo/a',
@@ -134,16 +151,22 @@ export const RELATION_LABELS: Record<RelationType, string> = {
   mother_in_law: 'Suegra',
   brother_in_law: 'Cuñado',
   sister_in_law: 'Cuñada',
+  son_in_law: 'Yerno',
+  daughter_in_law: 'Nuera',
   stepfather: 'Padrastro',
   stepmother: 'Madrastra',
   stepchild: 'Hijastro/a',
+  stepson: 'Hijastro',
+  stepdaughter: 'Hijastra',
   other: 'Otro familiar',
 }
 
 export const BLOOD_RELATIONS = new Set<RelationType>([
   'father','mother','son','daughter','brother','sister','half_brother','half_sister',
-  'nephew','niece','grandfather_paternal','grandmother_paternal',
-  'grandfather_maternal','grandmother_maternal','grandson','granddaughter','uncle','aunt','cousin',
+  'nephew','niece','grandfather','grandmother','great_grandfather','great_grandmother',
+  'grandfather_paternal','grandmother_paternal',
+  'grandfather_maternal','grandmother_maternal','grandson','granddaughter',
+  'great_grandson','great_granddaughter','uncle','aunt','cousin',
 ])
 
 export const INVERSE_RELATION: Record<RelationType, RelationType> = {
@@ -159,12 +182,18 @@ export const INVERSE_RELATION: Record<RelationType, RelationType> = {
   niece: 'aunt',
   spouse: 'spouse',
   partner: 'partner',
+  grandfather: 'grandson',
+  grandmother: 'granddaughter',
+  great_grandfather: 'great_grandson',
+  great_grandmother: 'great_granddaughter',
   grandfather_paternal: 'grandson',
   grandmother_paternal: 'grandson',
   grandfather_maternal: 'grandson',
   grandmother_maternal: 'grandson',
   grandson: 'grandfather_paternal',
   granddaughter: 'grandmother_paternal',
+  great_grandson: 'great_grandfather',
+  great_granddaughter: 'great_grandmother',
   uncle: 'nephew',
   aunt: 'niece',
   cousin: 'cousin',
@@ -172,9 +201,15 @@ export const INVERSE_RELATION: Record<RelationType, RelationType> = {
   mother_in_law: 'son',
   brother_in_law: 'brother_in_law',
   sister_in_law: 'sister_in_law',
+  // Yerno/nuera ↔ suegro/a; hijastro/a ↔ padrastro (masculino por defecto,
+  // como el resto del mapa; el género real lo aplica applyGenderToRelation).
+  son_in_law: 'father_in_law',
+  daughter_in_law: 'father_in_law',
   stepfather: 'stepchild',
   stepmother: 'stepchild',
   stepchild: 'stepfather',
+  stepson: 'stepfather',
+  stepdaughter: 'stepfather',
   other: 'other',
 }
 // Match seguro (privacidad) — solo datos mínimos para confirmar

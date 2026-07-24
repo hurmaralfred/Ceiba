@@ -34,7 +34,12 @@ const TOP_PAD = 48;
 // Slot width per node (for layout calculations)
 const SLOT_W = R * 2 + HGAP;
 
+// Jerarquía genealógica determinista. La Y de cada nodo depende EXCLUSIVAMENTE
+// de este número de generación (bisabuelos -3 … bisnietos +3). Todas las claves
+// de relación inferida deben tener su generación, o el nodo caería a 0.
 const GENERATION: Record<string, number> = {
+  great_grandfather: -3, great_grandmother: -3,
+  grandfather: -2, grandmother: -2,
   grandfather_paternal: -2, grandmother_paternal: -2,
   grandfather_maternal: -2, grandmother_maternal: -2,
   father: -1, mother: -1, father_in_law: -1, mother_in_law: -1,
@@ -43,6 +48,7 @@ const GENERATION: Record<string, number> = {
   spouse: 0, partner: 0, cousin: 0, brother_in_law: 0, sister_in_law: 0,
   son: 1, daughter: 1, stepchild: 1, nephew: 1, niece: 1,
   grandson: 2, granddaughter: 2,
+  great_grandson: 3, great_granddaughter: 3,
 };
 
 const POS_HINT: Record<string, number> = {
@@ -222,9 +228,8 @@ function buildLayout(
       isDeceased: !!(m as any).is_deceased,
     })),
     ...safeExtended.map(({ member: m, parentMemberId, inferredRelation }) => {
-      // Use inferredRelation's generation directly — it already tells us where this person
-      // sits RELATIVE TO ME, regardless of how deep in the network they came from.
-      // Fallback to parentGen+childRelation only when inferredRelation is unknown.
+      // inferredRelation ya trae la relación (con género) de esta persona
+      // respecto a mí; es la ÚNICA base para su etiqueta.
       const infRel = (inferredRelation && inferredRelation !== "other") ? inferredRelation : null;
       const extGen = infRel
         ? (GENERATION[infRel] ?? 0)
@@ -234,15 +239,11 @@ function buildLayout(
         : ((POS_HINT[members.find(pm => pm.id === parentMemberId)?.relation_type ?? ""] ?? 0)
             + (POS_HINT[m.relation_type] ?? 0) * 0.5);
 
-      const isGreatGrandparent = extGen <= -3 && !!inferredRelation &&
-        (inferredRelation.includes("grandfather") || inferredRelation.includes("grandmother"));
-      // When inferredRelation is "other" (null fallback), show the raw relation_type
-      // the person entered (e.g. "uncle" → "Tío") rather than showing "Otro familiar".
-      const finalRelType = isGreatGrandparent ? "bisabuelo" :
-        (inferredRelation && inferredRelation !== "other" ? inferredRelation : m.relation_type);
-      const relLabel = isGreatGrandparent
-        ? (["father","grandfather_paternal","grandfather_maternal"].includes(m.relation_type) ? "Bisabuelo" : "Bisabuela")
-        : (RELATION_LABELS[finalRelType as keyof typeof RELATION_LABELS] ?? finalRelType);
+      // Etiqueta y tipo: SIEMPRE desde RELATION_LABELS con la relación inferida
+      // (única fuente de verdad). Sin listas ni condiciones especiales por
+      // género — el género ya viene resuelto en inferredRelation.
+      const finalRelType = infRel ?? m.relation_type;
+      const relLabel = RELATION_LABELS[finalRelType as keyof typeof RELATION_LABELS] ?? finalRelType;
 
       return {
         id: m.id,
@@ -309,6 +310,8 @@ function buildLayout(
     const from = posMap.get(fromId);
     const to = posMap.get(toId);
     if (!from || !to) return;
+    // DIAGNÓSTICO TEMPORAL (retirar tras validar): cada arista real dibujada.
+    console.log("[tree-edge]", { sourceId: fromId, targetId: toId, relationship: kind });
     // from bottom of circle → to top of circle
     edges.push({ x1: from.cx, y1: from.cy + from.r, x2: to.cx, y2: to.cy - to.r, kind });
   };
@@ -316,6 +319,8 @@ function buildLayout(
     const from = posMap.get(fromId);
     const to = posMap.get(toId);
     if (!from || !to) return;
+    // DIAGNÓSTICO TEMPORAL (retirar tras validar): cada arista real dibujada.
+    console.log("[tree-edge]", { sourceId: fromId, targetId: toId, relationship: kind });
     const fromRight = from.cx < to.cx;
     edges.push({
       x1: from.cx + (fromRight ? from.r : -from.r),

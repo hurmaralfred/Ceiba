@@ -65,12 +65,26 @@ export interface FamilyGraph {
   edges: EdgeNode[];
 }
 
+// El género en la base viene en formatos distintos según el origen: el enum
+// canónico de `persons` es "M" | "F" | "X" | "unknown", pero también existen
+// filas con "male"/"female" (p. ej. las que fija el cliente). La comparación
+// anterior era sensible a mayúsculas y solo aceptaba "F"/"female", así que
+// "Female", "f", "M"→ok pero "male" en otra caja, etc. caían al MASCULINO por
+// defecto — de ahí que una mujer apareciera como "Padre". Normalizamos.
+export function classifyGender(gender?: string | null): "male" | "female" | null {
+  if (!gender) return null;
+  const g = String(gender).trim().toLowerCase();
+  if (["f", "female", "femenino", "femenina", "mujer"].includes(g)) return "female";
+  if (["m", "male", "masculino", "hombre", "varon", "varón"].includes(g)) return "male";
+  return null; // "x"/"unknown"/"other"/"prefer_not_to_say" → neutro
+}
+
 function isFemale(gender?: string | null): boolean {
-  return gender === "F" || gender === "female";
+  return classifyGender(gender) === "female";
 }
 
 function isMale(gender?: string | null): boolean {
-  return gender === "M" || gender === "male";
+  return classifyGender(gender) === "male";
 }
 
 function genderedRelation(
@@ -82,6 +96,56 @@ function genderedRelation(
   if (isFemale(gender)) return female;
   if (isMale(gender)) return male;
   return fallback;
+}
+
+// Corrección autoritativa de la etiqueta por el género REAL de la persona.
+// La cadena de inferencia (multi-salto) puede perder el género; esto lo fija
+// al final usando graph.persons.gender de la propia persona, conservando la
+// generación y la rama (paterna/materna). Si el género es neutro/desconocido,
+// se respeta lo inferido.
+const GENDER_PAIRS: Partial<Record<RelationType, { male: RelationType; female: RelationType }>> = {
+  father: { male: "father", female: "mother" },
+  mother: { male: "father", female: "mother" },
+  son: { male: "son", female: "daughter" },
+  daughter: { male: "son", female: "daughter" },
+  grandfather: { male: "grandfather", female: "grandmother" },
+  grandmother: { male: "grandfather", female: "grandmother" },
+  grandfather_paternal: { male: "grandfather_paternal", female: "grandmother_paternal" },
+  grandmother_paternal: { male: "grandfather_paternal", female: "grandmother_paternal" },
+  grandfather_maternal: { male: "grandfather_maternal", female: "grandmother_maternal" },
+  grandmother_maternal: { male: "grandfather_maternal", female: "grandmother_maternal" },
+  great_grandfather: { male: "great_grandfather", female: "great_grandmother" },
+  great_grandmother: { male: "great_grandfather", female: "great_grandmother" },
+  grandson: { male: "grandson", female: "granddaughter" },
+  granddaughter: { male: "grandson", female: "granddaughter" },
+  great_grandson: { male: "great_grandson", female: "great_granddaughter" },
+  great_granddaughter: { male: "great_grandson", female: "great_granddaughter" },
+  // Consanguíneos colaterales
+  uncle: { male: "uncle", female: "aunt" },
+  aunt: { male: "uncle", female: "aunt" },
+  nephew: { male: "nephew", female: "niece" },
+  niece: { male: "nephew", female: "niece" },
+  // Familia política
+  father_in_law: { male: "father_in_law", female: "mother_in_law" },
+  mother_in_law: { male: "father_in_law", female: "mother_in_law" },
+  brother_in_law: { male: "brother_in_law", female: "sister_in_law" },
+  sister_in_law: { male: "brother_in_law", female: "sister_in_law" },
+  son_in_law: { male: "son_in_law", female: "daughter_in_law" },
+  daughter_in_law: { male: "son_in_law", female: "daughter_in_law" },
+  stepfather: { male: "stepfather", female: "stepmother" },
+  stepmother: { male: "stepfather", female: "stepmother" },
+  stepson: { male: "stepson", female: "stepdaughter" },
+  stepdaughter: { male: "stepson", female: "stepdaughter" },
+};
+
+export function applyGenderToRelation(
+  relation: RelationType,
+  gender?: string | null
+): RelationType {
+  const cls = classifyGender(gender);
+  if (!cls) return relation;
+  const pair = GENDER_PAIRS[relation];
+  return pair ? pair[cls] : relation;
 }
 
 /**
@@ -221,6 +285,18 @@ export function adaptGraph(
   extendedMembers: ExtendedEntry[];
   memberLinks: MemberLink[];
 } {
+  console.table(
+    (graph.nodes || []).map((node: any) => ({
+      id: node.id,
+      name:
+        node.display_name ||
+        node.full_name ||
+        [node.first_names, node.last_names].filter(Boolean).join(" "),
+      gender: node.gender,
+      genderType: typeof node.gender,
+    }))
+  );
+
   const me = graph.me;
 
   if (!me) {
@@ -304,10 +380,15 @@ export function adaptGraph(
       if (!relationFromRoot) continue;
 
       visited.add(otherId);
-      relationFromMe.set(
-        otherId,
-        relationFromRoot as RelationType
+      // Etiqueta final: corrige el género con el de la persona real (Padre vs
+      // Madre, Abuelo vs Abuela, Nieto vs Nieta, ...). La cadena sigue usando
+      // la relación canónica para no alterar la inferencia de los siguientes
+      // saltos.
+      const relationAfterGender = applyGenderToRelation(
+        relationFromRoot as RelationType,
+        otherNode.gender
       );
+      relationFromMe.set(otherId, relationAfterGender);
       predecessor.set(otherId, current.personId);
       depthById.set(otherId, currentDepth + 1);
 
@@ -401,4 +482,113 @@ export function relationTypeToPrimitive(
   throw new Error(
     `El parentesco "${relation}" requiere seleccionar familiares intermedios.`
   );
+}
+
+/**
+ * Catálogo genealógico v1.
+ *
+ * Parentescos que NO pueden persistirse tal cual (el modelo canónico solo
+ * admite parent | partner | guardian) y que, en cambio, se agregan como una
+ * cadena "parent" apoyada en un familiar conector ya existente:
+ *
+ *   abuelo/abuela      → parent respecto de mi padre/madre
+ *   bisabuelo/bisabuela → parent respecto de mi abuelo/abuela
+ *   nieto/nieta        → parent respecto de mi hijo/hija
+ *   bisnieto/bisnieta  → parent respecto de mi nieto/nieta
+ *
+ * Ninguno se guarda como grandfather/great_grandfather/etc.: esas etiquetas
+ * las deriva el grafo desde las cadenas parent (ver inferRelation).
+ */
+const CONNECTOR_RELATIONS = new Set<RelationType>([
+  "grandfather",
+  "grandmother",
+  "great_grandfather",
+  "great_grandmother",
+  "grandson",
+  "granddaughter",
+  "great_grandson",
+  "great_granddaughter",
+]);
+
+export function relationRequiresConnector(
+  relation: RelationType
+): boolean {
+  return CONNECTOR_RELATIONS.has(relation);
+}
+
+export type AddRelativeGender = "male" | "female" | null;
+
+export interface AddRelativeRequest {
+  /** Primitivo persistible (única forma que acepta relationships). */
+  primitive: PrimitiveRelationship;
+  /** relation_key que interpreta el RPC add_relative (padre, hijo, ...). */
+  backendRelationKey: string;
+  /** Persona de referencia (conector). null ⇒ usa la persona reclamada. */
+  relatedPersonId: string | null;
+  parentKind: "biological" | "adoptive" | "unknown" | null;
+  gender: AddRelativeGender;
+}
+
+/**
+ * Traduce el parentesco elegido en el formulario al payload real de
+ * add_relative(p_payload, p_relationship). Nunca lanza para los parentescos
+ * ofrecidos por el selector; para los abuelos/bisabuelos/nietos/bisnietos usa
+ * `connectorId` como related_person_id (BR: no se crean personas intermedias
+ * ficticias — el conector es un familiar que ya existe).
+ */
+export function buildAddRelativeRequest(
+  relationType: RelationType,
+  connectorId?: string | null
+): AddRelativeRequest {
+  const connector = connectorId || null;
+
+  switch (relationType) {
+    case "father":
+      return { primitive: "parent", backendRelationKey: "father", relatedPersonId: null, parentKind: "biological", gender: "male" };
+    case "mother":
+      return { primitive: "parent", backendRelationKey: "mother", relatedPersonId: null, parentKind: "biological", gender: "female" };
+    case "son":
+      return { primitive: "parent", backendRelationKey: "son", relatedPersonId: null, parentKind: "biological", gender: "male" };
+    case "daughter":
+      return { primitive: "parent", backendRelationKey: "daughter", relatedPersonId: null, parentKind: "biological", gender: "female" };
+
+    case "spouse":
+      return { primitive: "partner", backendRelationKey: "spouse", relatedPersonId: null, parentKind: null, gender: null };
+    case "partner":
+      return { primitive: "partner", backendRelationKey: "partner", relatedPersonId: null, parentKind: null, gender: null };
+
+    // Hermanos: se conserva el flujo derived existente del RPC (relation_key
+    // 'brother'/'sister'). No requieren conector explícito.
+    case "brother":
+      return { primitive: "parent", backendRelationKey: "brother", relatedPersonId: null, parentKind: "unknown", gender: "male" };
+    case "sister":
+      return { primitive: "parent", backendRelationKey: "sister", relatedPersonId: null, parentKind: "unknown", gender: "female" };
+
+    // Ascendientes con conector: el nuevo es padre/madre del conector.
+    case "grandfather":
+    case "great_grandfather":
+      return { primitive: "parent", backendRelationKey: "father", relatedPersonId: connector, parentKind: "biological", gender: "male" };
+    case "grandmother":
+    case "great_grandmother":
+      return { primitive: "parent", backendRelationKey: "mother", relatedPersonId: connector, parentKind: "biological", gender: "female" };
+
+    // Descendientes con conector: el nuevo es hijo/hija del conector.
+    case "grandson":
+    case "great_grandson":
+      return { primitive: "parent", backendRelationKey: "son", relatedPersonId: connector, parentKind: "biological", gender: "male" };
+    case "granddaughter":
+    case "great_granddaughter":
+      return { primitive: "parent", backendRelationKey: "daughter", relatedPersonId: connector, parentKind: "biological", gender: "female" };
+
+    default:
+      // Parentescos directos no cubiertos arriba (p. ej. guardian si se
+      // agregara al selector): delega en el planner del catálogo.
+      return {
+        primitive: relationTypeToPrimitive(relationType),
+        backendRelationKey: relationType,
+        relatedPersonId: connector,
+        parentKind: null,
+        gender: null,
+      };
+  }
 }
