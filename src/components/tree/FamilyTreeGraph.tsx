@@ -337,6 +337,82 @@ function buildLayout(
   const NEPHEW_NIECE     = new Set(["nephew","niece"]);
   const GRANDCHILD_TYPES = new Set(["grandson","granddaughter"]);
 
+  // ── Doble filiación visual ────────────────────────────────────────────
+  // Pareja del punto de unión: SOLO un miembro DIRECTO de root con
+  // relation_type spouse|partner, generación 0 y ya posicionado en posMap.
+  // Suegros, ex parejas y cuñados tienen relation_type distintos (no están
+  // en COUPLE_TYPES) y quedan excluidos por construcción, no por filtro
+  // adicional.
+  const unionPartner = members.find(
+    (m) =>
+      COUPLE_TYPES.has(m.relation_type) &&
+      (GENERATION[m.relation_type] ?? 0) === 0 &&
+      posMap.has(m.id)
+  );
+
+  const UNION_POINT_ID = "__union:root__";
+  let unionPointReady = false;
+  if (unionPartner) {
+    const rootPos = posMap.get("root");
+    const partnerPos = posMap.get(unionPartner.id);
+    if (rootPos && partnerPos) {
+      // Punto sintético, nunca se agrega a `nodes` (no se renderiza como
+      // círculo) — solo sirve de ancla para addVertEdge, reutilizando el
+      // helper existente sin modificarlo.
+      posMap.set(UNION_POINT_ID, {
+        id: UNION_POINT_ID,
+        name: "",
+        shortName: "",
+        relation: "",
+        relationType: "union",
+        generation: 0,
+        posHint: 0,
+        kind: "root",
+        isExtended: false,
+        avatarUrl: null,
+        isJoined: false,
+        isActive: false,
+        cx: (rootPos.cx + partnerPos.cx) / 2,
+        cy: rootPos.cy,
+        r: 0,
+      });
+      unionPointReady = true;
+    }
+  }
+
+  // Hijo compartido = existen AMBAS aristas parent reales:
+  //   root → parent → hijo        (ya garantizada: el hijo está en
+  //                                 `members` con relation_type son/daughter)
+  //   pareja visible → parent → mismo hijo   (memberLink con relation
+  //                                 EXACTAMENTE "son"|"daughter")
+  // "son"/"daughter" en un memberLink solo lo produce edgeToRelationType
+  // para una arista relationship_type='parent' vista desde person_a (el
+  // progenitor real) — nunca desde la dirección inversa ni desde
+  // partner/guardian (ver case "parent" en graphAdapter.ts). No hay
+  // ambigüedad de sentido posible; no se infiere nada por apellido,
+  // matrimonio, convivencia ni posición visual.
+  const sharedChildIds = new Set<string>();
+  const consumedLinkKeys = new Set<string>();
+  if (unionPartner) {
+    const directChildIds = new Set(
+      members
+        .filter((m) => m.relation_type === "son" || m.relation_type === "daughter")
+        .map((m) => m.id)
+    );
+    memberLinks.forEach((l) => {
+      const isParentEdge = l.relation === "son" || l.relation === "daughter";
+      if (
+        isParentEdge &&
+        l.fromMemberId === unionPartner.id &&
+        directChildIds.has(l.toMemberId) &&
+        posMap.has(l.toMemberId)
+      ) {
+        sharedChildIds.add(l.toMemberId);
+        consumedLinkKeys.add(`${l.fromMemberId}->${l.toMemberId}`);
+      }
+    });
+  }
+
   members.forEach(m => {
     const gen = GENERATION[m.relation_type] ?? 0;
     if (gen < 0) {
@@ -354,7 +430,11 @@ function buildLayout(
         // Connect grandchildren to root — we don't know which child is the parent
         addVertEdge("root", m.id, m.relation_kind as "blood" | "affinity");
       } else {
-        addVertEdge("root", m.id, m.relation_kind as "blood" | "affinity");
+        // Compartido (root Y la pareja visible tienen parent real hacia
+        // este hijo) → se conecta desde el punto de unión. Exclusivo (solo
+        // root) → exactamente la conexión actual, sin cambios.
+        const origin = unionPointReady && sharedChildIds.has(m.id) ? UNION_POINT_ID : "root";
+        addVertEdge(origin, m.id, m.relation_kind as "blood" | "affinity");
       }
     } else {
       if (COUPLE_TYPES.has(m.relation_type)) addHorizEdge("root", m.id, "peer");
@@ -377,6 +457,9 @@ function buildLayout(
   });
 
   memberLinks.forEach(l => {
+    // Ya dibujado como filiación real desde el punto de unión — evita la
+    // diagonal "peer" duplicada.
+    if (consumedLinkKeys.has(`${l.fromMemberId}->${l.toMemberId}`)) return;
     const from = posMap.get(l.fromMemberId);
     const to = posMap.get(l.toMemberId);
     if (!from || !to) return;
