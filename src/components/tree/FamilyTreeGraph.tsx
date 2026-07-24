@@ -441,20 +441,13 @@ function buildLayout(
     }
   });
 
-  visibleExtended.forEach(({ member: m, parentMemberId }) => {
-    const parent = posMap.get(parentMemberId);
-    const child = posMap.get(m.id);
-    if (!parent || !child) return;
-    const pGen = memberGenMap.get(parentMemberId) ?? 0;
-    const eGen = pGen + (GENERATION[m.relation_type] ?? 0);
-    if (eGen !== pGen) {
-      const upper = eGen < pGen ? m.id : parentMemberId;
-      const lower = eGen < pGen ? parentMemberId : m.id;
-      addVertEdge(upper, lower, m.relation_kind as "blood" | "affinity");
-    } else {
-      addHorizEdge(parentMemberId, m.id, "peer");
-    }
-  });
+  // NOTA: aquí NO se dibuja ninguna arista hacia `parentMemberId`. Ese campo
+  // es el "ancla de profundidad 1" que calcula adaptGraph para agrupar la
+  // rama, NO el progenitor real: un bisabuelo cuelga del padre/madre (p. ej.
+  // Victor→Enna, Patricio→Jose). Dibujarlo producía líneas inexistentes que
+  // cruzaban ramas y hacían parecer abuelos a los bisabuelos.
+  // Todas las conexiones entre no-root salen de `memberLinks`, que se
+  // construye desde las aristas REALES del payload.
 
   memberLinks.forEach(l => {
     // Ya dibujado como filiación real desde el punto de unión — evita la
@@ -463,6 +456,19 @@ function buildLayout(
     const from = posMap.get(l.fromMemberId);
     const to = posMap.get(l.toMemberId);
     if (!from || !to) return;
+
+    // `relation` viene de edgeToRelationType sobre la arista real:
+    //   son/daughter  ⇒ relationship_type='parent'  (fromMemberId = progenitor)
+    //   partner       ⇒ relationship_type='partner'
+    // Se dibuja según la relación real, no según la posición en el lienzo.
+    if (l.relation === "son" || l.relation === "daughter") {
+      addVertEdge(l.fromMemberId, l.toMemberId, "blood");
+      return;
+    }
+    if (l.relation === "partner" || l.relation === "spouse") {
+      addHorizEdge(l.fromMemberId, l.toMemberId, "peer");
+      return;
+    }
     edges.push({
       x1: from.cx, y1: from.cy,
       x2: to.cx,   y2: to.cy,
