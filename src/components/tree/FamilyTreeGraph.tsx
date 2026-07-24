@@ -34,7 +34,12 @@ const TOP_PAD = 48;
 // Slot width per node (for layout calculations)
 const SLOT_W = R * 2 + HGAP;
 
+// Jerarquía genealógica determinista. La Y de cada nodo depende EXCLUSIVAMENTE
+// de este número de generación (bisabuelos -3 … bisnietos +3). Todas las claves
+// de relación inferida deben tener su generación, o el nodo caería a 0.
 const GENERATION: Record<string, number> = {
+  great_grandfather: -3, great_grandmother: -3,
+  grandfather: -2, grandmother: -2,
   grandfather_paternal: -2, grandmother_paternal: -2,
   grandfather_maternal: -2, grandmother_maternal: -2,
   father: -1, mother: -1, father_in_law: -1, mother_in_law: -1,
@@ -43,6 +48,7 @@ const GENERATION: Record<string, number> = {
   spouse: 0, partner: 0, cousin: 0, brother_in_law: 0, sister_in_law: 0,
   son: 1, daughter: 1, stepchild: 1, nephew: 1, niece: 1,
   grandson: 2, granddaughter: 2,
+  great_grandson: 3, great_granddaughter: 3,
 };
 
 const POS_HINT: Record<string, number> = {
@@ -222,9 +228,8 @@ function buildLayout(
       isDeceased: !!(m as any).is_deceased,
     })),
     ...safeExtended.map(({ member: m, parentMemberId, inferredRelation }) => {
-      // Use inferredRelation's generation directly — it already tells us where this person
-      // sits RELATIVE TO ME, regardless of how deep in the network they came from.
-      // Fallback to parentGen+childRelation only when inferredRelation is unknown.
+      // inferredRelation ya trae la relación (con género) de esta persona
+      // respecto a mí; es la ÚNICA base para su etiqueta.
       const infRel = (inferredRelation && inferredRelation !== "other") ? inferredRelation : null;
       const extGen = infRel
         ? (GENERATION[infRel] ?? 0)
@@ -234,15 +239,11 @@ function buildLayout(
         : ((POS_HINT[members.find(pm => pm.id === parentMemberId)?.relation_type ?? ""] ?? 0)
             + (POS_HINT[m.relation_type] ?? 0) * 0.5);
 
-      const isGreatGrandparent = extGen <= -3 && !!inferredRelation &&
-        (inferredRelation.includes("grandfather") || inferredRelation.includes("grandmother"));
-      // When inferredRelation is "other" (null fallback), show the raw relation_type
-      // the person entered (e.g. "uncle" → "Tío") rather than showing "Otro familiar".
-      const finalRelType = isGreatGrandparent ? "bisabuelo" :
-        (inferredRelation && inferredRelation !== "other" ? inferredRelation : m.relation_type);
-      const relLabel = isGreatGrandparent
-        ? (["father","grandfather_paternal","grandfather_maternal"].includes(m.relation_type) ? "Bisabuelo" : "Bisabuela")
-        : (RELATION_LABELS[finalRelType as keyof typeof RELATION_LABELS] ?? finalRelType);
+      // Etiqueta y tipo: SIEMPRE desde RELATION_LABELS con la relación inferida
+      // (única fuente de verdad). Sin listas ni condiciones especiales por
+      // género — el género ya viene resuelto en inferredRelation.
+      const finalRelType = infRel ?? m.relation_type;
+      const relLabel = RELATION_LABELS[finalRelType as keyof typeof RELATION_LABELS] ?? finalRelType;
 
       return {
         id: m.id,
@@ -332,6 +333,82 @@ function buildLayout(
   const NEPHEW_NIECE     = new Set(["nephew","niece"]);
   const GRANDCHILD_TYPES = new Set(["grandson","granddaughter"]);
 
+  // ── Doble filiación visual ────────────────────────────────────────────
+  // Pareja del punto de unión: SOLO un miembro DIRECTO de root con
+  // relation_type spouse|partner, generación 0 y ya posicionado en posMap.
+  // Suegros, ex parejas y cuñados tienen relation_type distintos (no están
+  // en COUPLE_TYPES) y quedan excluidos por construcción, no por filtro
+  // adicional.
+  const unionPartner = members.find(
+    (m) =>
+      COUPLE_TYPES.has(m.relation_type) &&
+      (GENERATION[m.relation_type] ?? 0) === 0 &&
+      posMap.has(m.id)
+  );
+
+  const UNION_POINT_ID = "__union:root__";
+  let unionPointReady = false;
+  if (unionPartner) {
+    const rootPos = posMap.get("root");
+    const partnerPos = posMap.get(unionPartner.id);
+    if (rootPos && partnerPos) {
+      // Punto sintético, nunca se agrega a `nodes` (no se renderiza como
+      // círculo) — solo sirve de ancla para addVertEdge, reutilizando el
+      // helper existente sin modificarlo.
+      posMap.set(UNION_POINT_ID, {
+        id: UNION_POINT_ID,
+        name: "",
+        shortName: "",
+        relation: "",
+        relationType: "union",
+        generation: 0,
+        posHint: 0,
+        kind: "root",
+        isExtended: false,
+        avatarUrl: null,
+        isJoined: false,
+        isActive: false,
+        cx: (rootPos.cx + partnerPos.cx) / 2,
+        cy: rootPos.cy,
+        r: 0,
+      });
+      unionPointReady = true;
+    }
+  }
+
+  // Hijo compartido = existen AMBAS aristas parent reales:
+  //   root → parent → hijo        (ya garantizada: el hijo está en
+  //                                 `members` con relation_type son/daughter)
+  //   pareja visible → parent → mismo hijo   (memberLink con relation
+  //                                 EXACTAMENTE "son"|"daughter")
+  // "son"/"daughter" en un memberLink solo lo produce edgeToRelationType
+  // para una arista relationship_type='parent' vista desde person_a (el
+  // progenitor real) — nunca desde la dirección inversa ni desde
+  // partner/guardian (ver case "parent" en graphAdapter.ts). No hay
+  // ambigüedad de sentido posible; no se infiere nada por apellido,
+  // matrimonio, convivencia ni posición visual.
+  const sharedChildIds = new Set<string>();
+  const consumedLinkKeys = new Set<string>();
+  if (unionPartner) {
+    const directChildIds = new Set(
+      members
+        .filter((m) => m.relation_type === "son" || m.relation_type === "daughter")
+        .map((m) => m.id)
+    );
+    memberLinks.forEach((l) => {
+      const isParentEdge = l.relation === "son" || l.relation === "daughter";
+      if (
+        isParentEdge &&
+        l.fromMemberId === unionPartner.id &&
+        directChildIds.has(l.toMemberId) &&
+        posMap.has(l.toMemberId)
+      ) {
+        sharedChildIds.add(l.toMemberId);
+        consumedLinkKeys.add(`${l.fromMemberId}->${l.toMemberId}`);
+      }
+    });
+  }
+
   members.forEach(m => {
     const gen = GENERATION[m.relation_type] ?? 0;
     if (gen < 0) {
@@ -349,32 +426,45 @@ function buildLayout(
         // Connect grandchildren to root — we don't know which child is the parent
         addVertEdge("root", m.id, m.relation_kind as "blood" | "affinity");
       } else {
-        addVertEdge("root", m.id, m.relation_kind as "blood" | "affinity");
+        // Compartido (root Y la pareja visible tienen parent real hacia
+        // este hijo) → se conecta desde el punto de unión. Exclusivo (solo
+        // root) → exactamente la conexión actual, sin cambios.
+        const origin = unionPointReady && sharedChildIds.has(m.id) ? UNION_POINT_ID : "root";
+        addVertEdge(origin, m.id, m.relation_kind as "blood" | "affinity");
       }
     } else {
       if (COUPLE_TYPES.has(m.relation_type)) addHorizEdge("root", m.id, "peer");
     }
   });
 
-  visibleExtended.forEach(({ member: m, parentMemberId }) => {
-    const parent = posMap.get(parentMemberId);
-    const child = posMap.get(m.id);
-    if (!parent || !child) return;
-    const pGen = memberGenMap.get(parentMemberId) ?? 0;
-    const eGen = pGen + (GENERATION[m.relation_type] ?? 0);
-    if (eGen !== pGen) {
-      const upper = eGen < pGen ? m.id : parentMemberId;
-      const lower = eGen < pGen ? parentMemberId : m.id;
-      addVertEdge(upper, lower, m.relation_kind as "blood" | "affinity");
-    } else {
-      addHorizEdge(parentMemberId, m.id, "peer");
-    }
-  });
+  // NOTA: aquí NO se dibuja ninguna arista hacia `parentMemberId`. Ese campo
+  // es el "ancla de profundidad 1" que calcula adaptGraph para agrupar la
+  // rama, NO el progenitor real: un bisabuelo cuelga del padre/madre (p. ej.
+  // Victor→Enna, Patricio→Jose). Dibujarlo producía líneas inexistentes que
+  // cruzaban ramas y hacían parecer abuelos a los bisabuelos.
+  // Todas las conexiones entre no-root salen de `memberLinks`, que se
+  // construye desde las aristas REALES del payload.
 
   memberLinks.forEach(l => {
+    // Ya dibujado como filiación real desde el punto de unión — evita la
+    // diagonal "peer" duplicada.
+    if (consumedLinkKeys.has(`${l.fromMemberId}->${l.toMemberId}`)) return;
     const from = posMap.get(l.fromMemberId);
     const to = posMap.get(l.toMemberId);
     if (!from || !to) return;
+
+    // `relation` viene de edgeToRelationType sobre la arista real:
+    //   son/daughter  ⇒ relationship_type='parent'  (fromMemberId = progenitor)
+    //   partner       ⇒ relationship_type='partner'
+    // Se dibuja según la relación real, no según la posición en el lienzo.
+    if (l.relation === "son" || l.relation === "daughter") {
+      addVertEdge(l.fromMemberId, l.toMemberId, "blood");
+      return;
+    }
+    if (l.relation === "partner" || l.relation === "spouse") {
+      addHorizEdge(l.fromMemberId, l.toMemberId, "peer");
+      return;
+    }
     edges.push({
       x1: from.cx, y1: from.cy,
       x2: to.cx,   y2: to.cy,

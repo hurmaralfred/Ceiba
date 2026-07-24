@@ -63,8 +63,11 @@ export function inferRelation(parentRelation: RelationType | string, childRelati
 
     // ── Mi esposo/a o pareja ──────────────────────────────────
     case "spouse": case "partner":
-      if (childRelation === "son")        return "son";
-      if (childRelation === "daughter")   return "daughter";
+      // El hijo/a de mi pareja que NO es mi hijo/a es mi HIJASTRO/A. Mis
+      // propios hijos se alcanzan antes por la arista parent directa (el BFS
+      // los marca visited), así que llegar a un hijo por la pareja ⇒ hijastro.
+      if (childRelation === "son")        return "stepson";
+      if (childRelation === "daughter")   return "stepdaughter";
       if (childRelation === "stepchild")  return "stepchild";
       if (["brother","half_brother"].includes(childRelation)) return "brother_in_law";
       if (["sister","half_sister"].includes(childRelation))   return "sister_in_law";
@@ -187,16 +190,20 @@ export function inferRelation(parentRelation: RelationType | string, childRelati
       if (childRelation === "son")            return "grandson";
       if (childRelation === "daughter")       return "granddaughter";
       if (childRelation === "stepchild")      return "grandson";
-      if (childRelation === "grandson")       return "grandson";
-      if (childRelation === "granddaughter")  return "granddaughter";
-      if (["spouse","partner"].includes(childRelation)) return "son"; // hijo/a político/a
+      if (childRelation === "grandson")       return "great_grandson";
+      if (childRelation === "granddaughter")  return "great_granddaughter";
+      // La pareja de mi hijo/a es mi yerno/nuera. Base masculina; el género
+      // real de la persona lo resuelve applyGenderToRelation (→ Nuera si female).
+      if (["spouse","partner"].includes(childRelation)) return "son_in_law";
       break;
 
     // ── Mis nietos ───────────────────────────────────────────
     case "grandson": case "granddaughter":
-      if (childRelation === "son")            return "grandson";
-      if (childRelation === "daughter")       return "granddaughter";
-      if (["spouse","partner"].includes(childRelation)) return "grandson";
+      // Catálogo genealógico v1: el hijo/hija de un nieto es un BISNIETO
+      // (profundidad 3 descendente). Antes esto se colapsaba a nieto.
+      if (childRelation === "son")            return "great_grandson";
+      if (childRelation === "daughter")       return "great_granddaughter";
+      if (["spouse","partner"].includes(childRelation)) return "great_grandson";
       break;
 
     // ── Mis tíos ─────────────────────────────────────────────
@@ -227,10 +234,10 @@ export function inferRelation(parentRelation: RelationType | string, childRelati
       if (childRelation === "cousin")         return "uncle";
       if (["brother","half_brother"].includes(childRelation)) return "uncle";
       if (["sister","half_sister"].includes(childRelation))   return "aunt";
-      if (childRelation === "father")         return "grandfather_paternal";
-      if (childRelation === "mother")         return "grandmother_paternal";
-      if (["grandfather_paternal","grandfather_maternal"].includes(childRelation)) return "grandfather_paternal";
-      if (["grandmother_paternal","grandmother_maternal"].includes(childRelation)) return "grandmother_paternal";
+      // Catálogo genealógico v1: el padre/madre de un abuelo es un BISABUELO
+      // (profundidad 3 ascendente). Antes esto se colapsaba a abuelo.
+      if (childRelation === "father")         return "great_grandfather";
+      if (childRelation === "mother")         return "great_grandmother";
       break;
 
     // ── Mis sobrinos ─────────────────────────────────────────

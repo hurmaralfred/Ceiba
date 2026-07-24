@@ -213,6 +213,46 @@ export const KINSHIP_CATALOG: Record<
     },
   },
 
+  great_grandfather: {
+    key: "great_grandfather",
+    label: "Bisabuelo",
+    plan: {
+      kind: "derived",
+      operation: "parent-of-ancestor",
+      requiresSelection: true,
+    },
+  },
+
+  great_grandmother: {
+    key: "great_grandmother",
+    label: "Bisabuela",
+    plan: {
+      kind: "derived",
+      operation: "parent-of-ancestor",
+      requiresSelection: true,
+    },
+  },
+
+  great_grandson: {
+    key: "great_grandson",
+    label: "Bisnieto",
+    plan: {
+      kind: "derived",
+      operation: "child-of-descendant",
+      requiresSelection: true,
+    },
+  },
+
+  great_granddaughter: {
+    key: "great_granddaughter",
+    label: "Bisnieta",
+    plan: {
+      kind: "derived",
+      operation: "child-of-descendant",
+      requiresSelection: true,
+    },
+  },
+
   aunt: {
     key: "aunt",
     label: "Tía",
