@@ -310,8 +310,6 @@ function buildLayout(
     const from = posMap.get(fromId);
     const to = posMap.get(toId);
     if (!from || !to) return;
-    // DIAGNÓSTICO TEMPORAL (retirar tras validar): cada arista real dibujada.
-    console.log("[tree-edge]", { sourceId: fromId, targetId: toId, relationship: kind });
     // from bottom of circle → to top of circle
     edges.push({ x1: from.cx, y1: from.cy + from.r, x2: to.cx, y2: to.cy - to.r, kind });
   };
@@ -319,8 +317,6 @@ function buildLayout(
     const from = posMap.get(fromId);
     const to = posMap.get(toId);
     if (!from || !to) return;
-    // DIAGNÓSTICO TEMPORAL (retirar tras validar): cada arista real dibujada.
-    console.log("[tree-edge]", { sourceId: fromId, targetId: toId, relationship: kind });
     const fromRight = from.cx < to.cx;
     edges.push({
       x1: from.cx + (fromRight ? from.r : -from.r),

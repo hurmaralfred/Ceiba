@@ -53,6 +53,13 @@ export interface EdgeNode {
   person_b_id: string;
   relationship_type: PrimitiveRelationship;
   parent_kind?: "biological" | "adoptive" | "unknown" | null;
+  /**
+   * Distingue matrimonio de unión libre SIN ampliar el enum canónico
+   * `relationship_type` (que sigue siendo parent | partner | guardian).
+   * NULL = no declarado ⇒ se muestra como "Pareja"; nunca se infiere
+   * matrimonio desde is_current ni desde la existencia de la arista.
+   */
+  union_kind?: "marriage" | "partnership" | null;
   relationship_status?: string | null;
   is_current?: boolean | null;
   created_at?: string | null;
@@ -125,6 +132,11 @@ const GENDER_PAIRS: Partial<Record<RelationType, { male: RelationType; female: R
   aunt: { male: "uncle", female: "aunt" },
   nephew: { male: "nephew", female: "niece" },
   niece: { male: "nephew", female: "niece" },
+  // Unión matrimonial: `spouse` es la forma neutra; con género conocido se
+  // convierte en esposo/esposa. Sin género se respeta `spouse` ("Esposo/a").
+  spouse: { male: "husband", female: "wife" },
+  husband: { male: "husband", female: "wife" },
+  wife: { male: "husband", female: "wife" },
   // Familia política
   father_in_law: { male: "father_in_law", female: "mother_in_law" },
   mother_in_law: { male: "father_in_law", female: "mother_in_law" },
@@ -185,7 +197,9 @@ export function edgeToRelationType(
       );
 
     case "partner":
-      return "partner";
+      // Solo un matrimonio declarado explícitamente produce `spouse`; el
+      // género lo aplica después applyGenderToRelation (spouse → esposo/esposa).
+      return edge.union_kind === "marriage" ? "spouse" : "partner";
 
     case "guardian":
       if (viewerIsA) {

@@ -2,7 +2,9 @@ export type RelationType =
   | 'father' | 'mother' | 'son' | 'daughter'
   | 'brother' | 'sister' | 'half_brother' | 'half_sister'
   | 'nephew' | 'niece'
-  | 'spouse' | 'partner'
+  // Unión: `spouse` es la forma neutra (matrimonio sin género conocido);
+  // husband/wife son sus formas con género. `partner` = unión no matrimonial.
+  | 'spouse' | 'partner' | 'husband' | 'wife'
   // Catálogo genealógico v1 (unificado con KinshipKey): claves canónicas de
   // abuelos/bisabuelos/nietos/bisnietos. Las variantes *_paternal/*_maternal
   // se conservan porque inferRelation las sigue produciendo en el grafo.
@@ -129,6 +131,8 @@ export const RELATION_LABELS: Record<RelationType, string> = {
   niece: 'Sobrina',
   spouse: 'Esposo/a',
   partner: 'Pareja',
+  husband: 'Esposo',
+  wife: 'Esposa',
   grandfather: 'Abuelo',
   grandmother: 'Abuela',
   great_grandfather: 'Bisabuelo',
@@ -182,6 +186,10 @@ export const INVERSE_RELATION: Record<RelationType, RelationType> = {
   niece: 'aunt',
   spouse: 'spouse',
   partner: 'partner',
+  // El inverso de un cónyuge es su cónyuge; el género real lo aplica
+  // applyGenderToRelation sobre la persona del otro lado.
+  husband: 'spouse',
+  wife: 'spouse',
   grandfather: 'grandson',
   grandmother: 'granddaughter',
   great_grandfather: 'great_grandson',
