@@ -14,12 +14,15 @@ import PhoneInput, { isValidPhoneNumber } from "react-phone-number-input";
 import phoneLabels from "react-phone-number-input/locale/es";
 import "react-phone-number-input/style.css";
 import { ONBOARDING_GENDER_OPTIONS, getProfileGenderFormState, type OnboardingGender } from "@/lib/onboardingGender";
+import { decideExistingIdentityStep, getAddFamilyContinueLabel } from "@/lib/onboardingFlow";
 
 // ============================================================
 // Tipos y constantes
 // ============================================================
 
 type Step =
+  | "checking"      // 0 — verificando si ya existe una identidad reclamada
+  | "init_error"    // 0b — la verificación inicial falló: reintentar o continuar
   | "profile"       // 3 — Cuéntanos quién eres
   | "match"         // 4 — Match condicional
   | "add_family"    // 5 — Agregar 5 familiares
@@ -28,8 +31,30 @@ type Step =
   | "notifications" // 8 — Habilitar notificaciones
   | "done";         // 9 — ¡Listo!
 
+/**
+ * ¿La persona identificada (nueva, reclamada o ya vinculada) tiene
+ * relaciones familiares activas? Se usa para decidir si el onboarding debe
+ * saltar "Construye tu árbol" y llevar directo a /tree (ver
+ * decideExistingIdentityStep en @/lib/onboardingFlow).
+ */
+async function personHasActiveRelationships(
+  supabase: ReturnType<typeof createClient>,
+  personId: string
+): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("relationships")
+    .select("id")
+    .is("deleted_at", null)
+    .or(`person_a_id.eq.${personId},person_b_id.eq.${personId}`)
+    .limit(1);
+
+  if (error) throw error;
+  return (data?.length ?? 0) > 0;
+}
+
 const TOTAL_STEPS = 7;
 const STEP_INDEX: Record<Step, number> = {
+  checking: 0, init_error: 0,
   profile: 1, match: 2, add_family: 3, aha: 4, batch_invite: 5, notifications: 6, done: 7
 };
 
@@ -272,7 +297,8 @@ export default function OnboardingPage() {
   const supabase = createClient();
   const router = useRouter();
 
-  const [step, setStep] = useState<Step>("profile");
+  const [step, setStep] = useState<Step>("checking");
+  const [initError, setInitError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [myPersonId, setMyPersonId] = useState<string | null>(null);
   const [myFirstName, setMyFirstName] = useState("");
@@ -306,8 +332,18 @@ export default function OnboardingPage() {
   // Init
   // ============================================================
 
-  useEffect(() => {
-    supabase.auth.getUser().then(async ({ data, error: userError }) => {
+  // Verificación inicial: ¿este usuario ya tiene una identidad reclamada?
+  // Si la tiene y esa persona ya tiene relaciones familiares reales, el
+  // onboarding no debe mostrarse en absoluto — se salta directo a /tree.
+  // Cualquier error en el camino cae en "init_error" (Reintentar / Continuar
+  // al árbol), nunca deja al usuario atrapado en una pantalla en blanco.
+  const runInitialCheck = async () => {
+    setInitError(null);
+    setStep("checking");
+
+    try {
+      const { data, error: userError } = await supabase.auth.getUser();
+
       if (userError || !data.user) {
         router.push("/auth/login");
         return;
@@ -335,13 +371,13 @@ export default function OnboardingPage() {
         .eq("claim_status", "approved")
         .maybeSingle();
 
-      if (claimError) {
-        console.error("Error consultando person_claims:", claimError);
-        toast.error(`No fue posible consultar tu persona: ${claimError.message}`);
+      if (claimError) throw claimError;
+
+      if (!claim?.person_id) {
+        // Usuario sin identidad reclamada todavía: onboarding normal.
+        setStep("profile");
         return;
       }
-
-      if (!claim?.person_id) return;
 
       const { data: me, error: personError } = await supabase
         .from("persons")
@@ -355,11 +391,7 @@ export default function OnboardingPage() {
         .eq("id", claim.person_id)
         .maybeSingle();
 
-      if (personError) {
-        console.error("Error consultando persons:", personError);
-        toast.error(`No fue posible consultar tus datos: ${personError.message}`);
-        return;
-      }
+      if (personError) throw personError;
 
       if (me) {
         const firstNames = [me.first_name, me.middle_name]
@@ -382,8 +414,32 @@ export default function OnboardingPage() {
           setMyLastName(lastNames);
         }
       }
-    });
 
+      const alreadyConnected = await personHasActiveRelationships(
+        supabase,
+        claim.person_id
+      );
+
+      if (decideExistingIdentityStep(alreadyConnected) === "redirect_to_tree") {
+        router.push("/tree");
+        return;
+      }
+
+      // Identidad ya reclamada pero sin árbol todavía: directo a
+      // "Construye tu árbol" (el nombre ya se conoce, no hace falta
+      // repetir el paso de perfil).
+      setStep("add_family");
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "No fue posible verificar tu cuenta.";
+      console.error("Error en la verificación inicial de onboarding:", err);
+      setInitError(message);
+      setStep("init_error");
+    }
+  };
+
+  useEffect(() => {
+    runInitialCheck();
     trackEvent("onboarding_started" as any, { type: "organic" });
   }, []);
 
@@ -502,6 +558,22 @@ export default function OnboardingPage() {
       setMyPersonId(personId);
       setMyFirstName(profFirstNames.trim());
       setMyLastName(profLastNames.trim());
+
+      // Igual que en claimMatch: si esta identidad (nueva o retomada) ya
+      // tiene relaciones reales, saltar "Construye tu árbol" directo a
+      // /tree. complete_onboarding no expone has_relationships todavía,
+      // así que se verifica del lado del cliente (misma regla, mismo
+      // helper que usa la verificación inicial).
+      const alreadyConnected = await personHasActiveRelationships(
+        supabase,
+        personId
+      ).catch(() => false);
+
+      if (decideExistingIdentityStep(alreadyConnected) === "redirect_to_tree") {
+        router.push("/tree");
+        return;
+      }
+
       setStep("add_family");
     } catch (err: unknown) {
       const message =
@@ -563,6 +635,16 @@ export default function OnboardingPage() {
 
       setMyPersonId(personId);
       toast.success("¡Te conectamos con tu árbol existente!");
+
+      // has_relationships lo calcula el propio RPC (relaciones activas de
+      // la persona reclamada) — si ya tiene árbol, saltar "Construye tu
+      // árbol" por completo (escenario A). Si no, seguir el onboarding
+      // normal, pero sin exigir 5/5 (escenario B).
+      if (decideExistingIdentityStep(!!result?.has_relationships) === "redirect_to_tree") {
+        router.push("/tree");
+        return;
+      }
+
       setStep("add_family");
     } catch (err: unknown) {
       const message =
@@ -720,7 +802,6 @@ export default function OnboardingPage() {
   };
 
   const filledCount = Object.keys(filledSlots).length;
-  const canContinue = filledCount >= 5;
 
   // ============================================================
   // Step: Batch invite
@@ -784,6 +865,42 @@ export default function OnboardingPage() {
       <div className="min-h-screen bg-cream-100 flex flex-col max-w-lg mx-auto">
         {/* Progress */}
         <ProgressBar step={stepIndex} total={TOTAL_STEPS} />
+
+        {/* ── CHECKING ──────────────────────────────────────────── */}
+        {step === "checking" && (
+          <div className="flex flex-col items-center justify-center px-5 flex-1 gap-3 text-center">
+            <TreePine size={48} className="text-ceiba-300 animate-pulse" />
+            <p className="text-ceiba-500 text-sm">Verificando tu cuenta...</p>
+          </div>
+        )}
+
+        {/* ── INIT ERROR ────────────────────────────────────────── */}
+        {/* Escenario D: un fallo aquí (person_claims/persons/relationships)
+            nunca debe atrapar al usuario — siempre ofrece Reintentar o
+            Continuar al árbol igual. */}
+        {step === "init_error" && (
+          <div className="flex flex-col items-center justify-center px-5 flex-1 gap-4 text-center">
+            <AlertTriangle size={48} className="text-red-400" />
+            <div>
+              <h1 className="text-xl font-bold text-ceiba-900 mb-1">No pudimos verificar tu cuenta</h1>
+              <p className="text-ceiba-500 text-sm">{initError}</p>
+            </div>
+            <div className="flex flex-col gap-3 w-full max-w-xs">
+              <button
+                onClick={() => runInitialCheck()}
+                className="w-full bg-ceiba-500 hover:bg-ceiba-400 text-white font-bold py-3.5 rounded-2xl"
+              >
+                Reintentar
+              </button>
+              <button
+                onClick={() => router.push("/tree")}
+                className="w-full text-ceiba-600 hover:text-ceiba-800 text-sm py-2"
+              >
+                Continuar al árbol
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* ── PROFILE ─────────────────────────────────────────── */}
         {step === "profile" && (
@@ -1122,22 +1239,18 @@ export default function OnboardingPage() {
         )}
 
         {/* Footer botones de navegación */}
+        {/* 0/5 es progreso recomendado, NUNCA un requisito: el botón está
+            siempre habilitado, ya sea para omitir (0 agregados) o para
+            continuar (1+). Al pulsarlo se completa el onboarding y se
+            redirige directo a /tree. */}
         {step === "add_family" && (
           <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-cream-50 border-t px-5 py-4 flex flex-col gap-2">
             <button
-              onClick={() => setStep("aha")}
-              disabled={!canContinue}
-              className={`w-full flex items-center justify-center gap-2 font-bold py-4 rounded-2xl transition-all ${
-                canContinue
-                  ? "bg-ceiba-500 hover:bg-ceiba-400 text-white"
-                  : "bg-cream-200 text-ceiba-400 cursor-not-allowed"
-              }`}
+              onClick={() => router.push("/tree")}
+              className="w-full flex items-center justify-center gap-2 font-bold py-4 rounded-2xl transition-all bg-ceiba-500 hover:bg-ceiba-400 text-white"
             >
-              {canContinue ? (
-                <>Ya tengo mi árbol → Continuar <ChevronRight size={20} /></>
-              ) : (
-                `Faltan ${5 - filledCount} familiar${5 - filledCount !== 1 ? "es" : ""}`
-              )}
+              {getAddFamilyContinueLabel(filledCount)}
+              <ChevronRight size={20} />
             </button>
           </div>
         )}
