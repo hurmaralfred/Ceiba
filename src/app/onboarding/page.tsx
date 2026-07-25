@@ -13,6 +13,7 @@ import toast, { Toaster } from "react-hot-toast";
 import PhoneInput, { isValidPhoneNumber } from "react-phone-number-input";
 import phoneLabels from "react-phone-number-input/locale/es";
 import "react-phone-number-input/style.css";
+import { ONBOARDING_GENDER_OPTIONS, getProfileGenderFormState, type OnboardingGender } from "@/lib/onboardingGender";
 
 // ============================================================
 // Tipos y constantes
@@ -282,6 +283,7 @@ export default function OnboardingPage() {
   const [profLastNames, setProfLastNames] = useState("");
   const [profBirthDate, setProfBirthDate] = useState("");
   const [profCity, setProfCity] = useState("");
+  const [profGender, setProfGender] = useState<OnboardingGender | null>(null);
   const [profLoading, setProfLoading] = useState(false);
 
   // Match candidate
@@ -400,6 +402,13 @@ export default function OnboardingPage() {
       return;
     }
 
+    const genderState = getProfileGenderFormState(profGender);
+
+    if (!genderState.canSubmit) {
+      toast.error("Selecciona una opción de género");
+      return;
+    }
+
     setProfLoading(true);
 
     try {
@@ -430,6 +439,7 @@ export default function OnboardingPage() {
         p_birth_date: profBirthDate || null,
         p_birth_city: profCity.trim() || null,
         p_birth_country: null,
+        p_gender: genderState.genderToSubmit,
       });
 
       if (error) {
@@ -813,11 +823,31 @@ export default function OnboardingPage() {
                 onChange={(e) => setProfCity(e.target.value)}
                 className="rounded-2xl border border-cream-300 px-4 py-3.5 outline-none focus:border-ceiba-400 bg-cream-50"
               />
+
+              <div>
+                <p className="text-sm font-semibold text-ceiba-700 mb-2">Género *</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {ONBOARDING_GENDER_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setProfGender(opt.value)}
+                      className={`rounded-2xl border px-2 py-3 text-sm font-semibold transition-colors ${
+                        profGender === opt.value
+                          ? "border-ceiba-500 bg-ceiba-500 text-white"
+                          : "border-cream-300 bg-cream-50 text-ceiba-700"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
 
             <button
               onClick={saveProfile}
-              disabled={profLoading}
+              disabled={profLoading || !getProfileGenderFormState(profGender).canSubmit}
               className="w-full flex items-center justify-center gap-2 bg-ceiba-500 hover:bg-ceiba-400 disabled:opacity-50 text-white font-bold py-4 rounded-2xl mt-auto transition-colors"
             >
               {profLoading ? "Buscando conexiones..." : "Continuar"}

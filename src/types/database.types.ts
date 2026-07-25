@@ -1056,6 +1056,7 @@ export type Database = {
           relationship_status: string | null
           relationship_type: Database["public"]["Enums"]["relationship_type"]
           source: string | null
+          union_kind: string | null
           updated_at: string | null
         }
         Insert: {
@@ -1071,6 +1072,7 @@ export type Database = {
           relationship_status?: string | null
           relationship_type: Database["public"]["Enums"]["relationship_type"]
           source?: string | null
+          union_kind?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -1086,6 +1088,7 @@ export type Database = {
           relationship_status?: string | null
           relationship_type?: Database["public"]["Enums"]["relationship_type"]
           source?: string | null
+          union_kind?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -1600,6 +1603,7 @@ export type Database = {
               p_birth_date?: string
               p_first_name: string
               p_first_surname: string
+              p_gender?: string
               p_second_surname?: string
             }
             Returns: Json
@@ -2614,6 +2618,14 @@ export type Database = {
           table_name: string
         }
         Returns: string
+      }
+      validate_guardian_rules: {
+        Args: { p_dependent_id: string }
+        Returns: undefined
+      }
+      validate_parent_rules: {
+        Args: { p_child_id: string; p_parent_id: string; p_parent_kind: string }
+        Returns: undefined
       }
       validate_partner_rules: {
         Args: {
