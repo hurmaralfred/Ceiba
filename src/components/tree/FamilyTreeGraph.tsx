@@ -149,12 +149,116 @@ interface LayoutEdge {
   x1: number; y1: number;
   x2: number; y2: number;
   kind: "blood" | "affinity" | "peer";
+  // IDs de los nodos que conecta — necesarios para saber si esta arista
+  // toca a la persona seleccionada o a su familia inmediata (Bloque A2).
+  // Aditivo y local a este archivo (LayoutEdge no se exporta).
+  fromId: string;
+  toId: string;
 }
 
 function normStr(s: string) {
   return (s || "").toLowerCase()
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
     .replace(/\s+/g, " ").trim();
+}
+
+// \u2500\u2500 Bloque A2: familia inmediata de la persona seleccionada \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+// Solo un salto: padres, hijos, pareja, hermanos. Nunca abuelos, nietos,
+// t\u00edos, sobrinos, cu\u00f1ados, suegros ni primos \u2014 eso queda fuera de alcance.
+// Se calcula \u00daNICAMENTE con datos ya disponibles en el componente
+// (members/memberLinks), sin tocar graphAdapter ni inferir relaciones
+// nuevas: reusa las mismas etiquetas que ya produce edgeToRelationType.
+const IMMEDIATE_PARENT_LABELS  = new Set(["father", "mother", "stepfather", "stepmother"]);
+const IMMEDIATE_CHILD_LABELS   = new Set(["son", "daughter", "stepson", "stepdaughter", "stepchild"]);
+const IMMEDIATE_PARTNER_LABELS = new Set(["spouse", "partner", "husband", "wife"]);
+const IMMEDIATE_SIBLING_LABELS = new Set(["brother", "sister", "half_brother", "half_sister"]);
+
+export function computeImmediateFamily(
+  selectedId: string | null,
+  members: FamilyMember[],
+  memberLinks: MemberLink[],
+): Set<string> {
+  const result = new Set<string>();
+  if (!selectedId) return result;
+
+  // parentOf.get(childId)   \u2192 padres reales de childId
+  // childrenOf.get(parentId) \u2192 hijos reales de parentId
+  // partnersOf.get(id)      \u2192 parejas reales de id
+  const parentOf = new Map<string, Set<string>>();
+  const childrenOf = new Map<string, Set<string>>();
+  const partnersOf = new Map<string, Set<string>>();
+
+  const addParentChild = (parentId: string, childId: string) => {
+    if (!parentOf.has(childId)) parentOf.set(childId, new Set());
+    parentOf.get(childId)!.add(parentId);
+    if (!childrenOf.has(parentId)) childrenOf.set(parentId, new Set());
+    childrenOf.get(parentId)!.add(childId);
+  };
+  const addPartners = (a: string, b: string) => {
+    if (!partnersOf.has(a)) partnersOf.set(a, new Set());
+    partnersOf.get(a)!.add(b);
+    if (!partnersOf.has(b)) partnersOf.set(b, new Set());
+    partnersOf.get(b)!.add(a);
+  };
+
+  // Fuente 1: relaciones directas de la persona ra\u00edz (members[].relation_type).
+  members.forEach((m) => {
+    if (IMMEDIATE_PARENT_LABELS.has(m.relation_type)) addParentChild(m.id, "root");
+    else if (IMMEDIATE_CHILD_LABELS.has(m.relation_type)) addParentChild("root", m.id);
+    else if (IMMEDIATE_PARTNER_LABELS.has(m.relation_type)) addPartners("root", m.id);
+  });
+
+  // Fuente 2: relaciones reales entre dos personas que no son la ra\u00edz.
+  // `l.relation` siempre describe "qu\u00e9 es toMemberId de fromMemberId"
+  // (ver edgeToRelationType en graphAdapter.ts) \u2014 nunca se infiere aqu\u00ed.
+  memberLinks.forEach((l) => {
+    if (IMMEDIATE_CHILD_LABELS.has(l.relation)) addParentChild(l.fromMemberId, l.toMemberId);
+    else if (l.relation === "partner" || l.relation === "spouse") addPartners(l.fromMemberId, l.toMemberId);
+  });
+
+  (parentOf.get(selectedId) ?? new Set()).forEach((id) => result.add(id));
+  (childrenOf.get(selectedId) ?? new Set()).forEach((id) => result.add(id));
+  (partnersOf.get(selectedId) ?? new Set()).forEach((id) => result.add(id));
+
+  // Hermanos: comparten al menos un padre real con la persona seleccionada.
+  if (selectedId === "root") {
+    // Para la ra\u00edz, relation_type ya lo dice directamente \u2014 m\u00e1s robusto
+    // que depender de que los padres tambi\u00e9n est\u00e9n cargados como personas.
+    members.forEach((m) => {
+      if (IMMEDIATE_SIBLING_LABELS.has(m.relation_type)) result.add(m.id);
+    });
+  } else {
+    (parentOf.get(selectedId) ?? new Set()).forEach((parentId) => {
+      (childrenOf.get(parentId) ?? new Set()).forEach((siblingId) => {
+        if (siblingId !== selectedId) result.add(siblingId);
+      });
+    });
+  }
+
+  return result;
+}
+
+// ── Bloque A2 (corrección): reglas puras mínimas de interacción ────────
+// Extraídas para poder probar, en aislamiento y sin DOM, que seleccionar y
+// expandir/colapsar son operaciones independientes — sin abrir una
+// arquitectura de estado nueva. Cada una es exactamente la lógica que usa
+// su handler real en el componente, no una reimplementación paralela.
+
+// Expandir/colapsar: opera ÚNICAMENTE sobre el set de ramas expandidas.
+// No recibe ni puede tocar selectedId — la propia firma lo garantiza.
+export function toggleExpandedSet(current: Set<string>, memberId: string): Set<string> {
+  const next = new Set(current);
+  if (next.has(memberId)) next.delete(memberId);
+  else next.add(memberId);
+  return next;
+}
+
+// ID de layout de la persona central: se OBTIENE de los nodos ya
+// construidos (buscando relationType === "root"), nunca se asume. Si el
+// esquema interno de buildLayout cambiara el id de la raíz a un UUID real,
+// esta función lo seguiría encontrando sin cambios.
+export function findRootNodeId(nodes: { id: string; relationType: string }[]): string {
+  return nodes.find((n) => n.relationType === "root")?.id ?? "root";
 }
 
 // Exportada para permitir pruebas de integración del pipeline real
@@ -326,7 +430,7 @@ export function buildLayout(
     const to = posMap.get(toId);
     if (!from || !to) return;
     // from bottom of circle → to top of circle
-    edges.push({ x1: from.cx, y1: from.cy + from.r, x2: to.cx, y2: to.cy - to.r, kind });
+    edges.push({ x1: from.cx, y1: from.cy + from.r, x2: to.cx, y2: to.cy - to.r, kind, fromId, toId });
   };
   const addHorizEdge = (fromId: string, toId: string, kind: LayoutEdge["kind"]) => {
     const from = posMap.get(fromId);
@@ -339,6 +443,8 @@ export function buildLayout(
       x2: to.cx + (fromRight ? -to.r : to.r),
       y2: to.cy,
       kind,
+      fromId,
+      toId,
     });
   };
 
@@ -484,6 +590,8 @@ export function buildLayout(
       x1: from.cx, y1: from.cy,
       x2: to.cx,   y2: to.cy,
       kind: "peer",
+      fromId: l.fromMemberId,
+      toId: l.toMemberId,
     });
   });
 
@@ -534,6 +642,25 @@ export default function FamilyTreeGraph({
     [profile, members, visibleExtended, memberLinks],
   );
 
+  // Bloque A2 (corrección): el ID de layout de la persona central se
+  // OBTIENE de `nodes` (buscando relationType === "root"), nunca se asume
+  // como el literal "root" de forma independiente. Si en el futuro
+  // buildLayout cambiara ese id interno (p. ej. a un UUID real), este
+  // componente lo seguiría encontrando correctamente sin cambios — el
+  // fallback a "root" es solo defensivo (nodes siempre lo produce hoy,
+  // contrato cubierto por generation.integration.test.ts vía byId("root")).
+  const rootNodeId = useMemo(() => findRootNodeId(nodes), [nodes]);
+
+  // La raíz inicia seleccionada por defecto. Clic en un nodo cambia la
+  // selección; clic en el fondo del lienzo vuelve a rootNodeId (regla
+  // única y consistente, ver handleBackgroundClick).
+  const [selectedId, setSelectedId] = useState<string>(rootNodeId);
+
+  const immediateFamily = useMemo(
+    () => computeImmediateFamily(selectedId, members, memberLinks),
+    [selectedId, members, memberLinks],
+  );
+
   // D3 zoom
   useEffect(() => {
     if (!svgRef.current || !gRef.current) return;
@@ -546,22 +673,24 @@ export default function FamilyTreeGraph({
     );
   }, []);
 
-  const handleNodeClick = useCallback((node: LayoutNode) => {
-    const extCount = node.memberId ? (extCountByParent.get(node.memberId) ?? 0) : 0;
-    if (extCount > 0 && node.memberId) {
-      // Toggle expansion of this node's extended branch
-      setExpandedParents(prev => {
-        const next = new Set(prev);
-        if (next.has(node.memberId!)) next.delete(node.memberId!);
-        else next.add(node.memberId!);
-        return next;
-      });
-    } else if (node.memberId && !node.isExtended) {
-      // Direct member without extended children → open profile
-      onNodeClick?.(node.memberId);
-    }
-    // Extended members with no children: no-op (no profile to open)
-  }, [extCountByParent, onNodeClick]);
+  // Bloque A2 (corrección): seleccionar y expandir/colapsar son AHORA dos
+  // eventos separados — antes un solo onClick en todo el nodo hacía ambas
+  // cosas a la vez (causa exacta del comportamiento doble). Cada uno vive
+  // en su propio elemento, con su propio onClick.
+  const handleSelect = useCallback((memberId: string) => {
+    setSelectedId(memberId);
+  }, []);
+
+  const handleToggleExpand = useCallback((memberId: string) => {
+    setExpandedParents(prev => toggleExpandedSet(prev, memberId));
+  }, []);
+
+  // Clic en el fondo del lienzo (no en un nodo) → vuelve a rootNodeId.
+  // Única regla de "limpiar selección": no hay un estado "sin selección",
+  // siempre hay alguien enfocado — la raíz es el reposo natural.
+  const handleBackgroundClick = useCallback(() => {
+    setSelectedId(rootNodeId);
+  }, [rootNodeId]);
 
   const EDGE_COLORS = { blood: "#86efac", affinity: "#fdba74", peer: "#c084fc" };
 
@@ -657,11 +786,29 @@ export default function FamilyTreeGraph({
         <defs>
           <style>{`
             /* ── Bloque A1: sin animaciones infinitas en reposo ──────────
-               El árbol permanece estático mientras el usuario no interactúa.
-               Las animaciones POR EVENTO (seleccionar, agregar, expandir
-               rama, actualizar, novedad) se definirán en el Bloque A2/B
-               junto con el elemento que las use — evita CSS sin aplicar
-               ni valores de timing sin verificar en este commit. */
+               El árbol permanece estático mientras el usuario no interactúa. */
+
+            /* ── Bloque A2: foco visual por selección ────────────────────
+               Transiciones cortas y puntuales (150–250ms), nunca infinitas.
+               Bajo prefers-reduced-motion los cambios de opacidad/escala
+               siguen aplicándose (el foco sigue siendo legible) pero sin
+               animarse — quedan instantáneos. */
+            .edge-line {
+              transition: opacity 0.2s ease, stroke-width 0.2s ease;
+            }
+            .node-focus-group {
+              transform-box: fill-box;
+              transform-origin: center;
+              transition: transform 0.2s ease, opacity 0.2s ease;
+            }
+            .node-focus-group.is-selected {
+              transform: scale(1.05);
+            }
+            @media (prefers-reduced-motion: reduce) {
+              .edge-line, .node-focus-group, .node-focus-group.is-selected {
+                transition: none;
+              }
+            }
           `}</style>
 
           {/* Sky-to-forest radial gradient — clearing in center */}
@@ -728,8 +875,14 @@ export default function FamilyTreeGraph({
           </filter>
         </defs>
 
-        {/* Background */}
-        <rect width={svgWidth} height={Math.max(380, totalHeight)} fill="url(#bg-grad)" />
+        {/* Background — clic aquí (fuera de cualquier nodo) vuelve a la raíz */}
+        <rect
+          width={svgWidth}
+          height={Math.max(380, totalHeight)}
+          fill="url(#bg-grad)"
+          onClick={handleBackgroundClick}
+          style={{ cursor: selectedId !== "root" ? "pointer" : "default" }}
+        />
 
         {/* ── Forest scene — static, doesn't move with zoom ── */}
         {(() => {
@@ -827,23 +980,35 @@ export default function FamilyTreeGraph({
         <g ref={gRef}>
           {/* ── Edges ── */}
           {/* Bloque A1: líneas estáticas en reposo — sin flujo de guiones
-              animado. Opacidad reducida para que se sientan discretas y no
-              compitan entre sí; la transición de opacidad se conserva para
-              cuando una futura interacción (selección) la anime puntualmente. */}
+              animado. Bloque A2: jerarquía de foco — las aristas que tocan
+              a la persona seleccionada Y a su familia inmediata (en ambos
+              extremos) se refuerzan; el resto baja de opacidad sin perder
+              legibilidad. El patrón de guiones distingue el tipo de
+              relación sin depender solo del color:
+                sangre (blood)    → línea sólida
+                pareja/unión (peer) → patrón propio (guion largo, existente)
+                afinidad/derivada  → guion corto, distinto de "peer" */}
           {edges.map((e, i) => {
             const isPeer = e.kind === "peer";
             const isBlood = e.kind === "blood";
+            // El punto de unión sintético (pareja de root) cuenta como
+            // "root" para la jerarquía de foco — nunca es una persona real.
+            const effectiveFrom = e.fromId.startsWith("__union:") ? "root" : e.fromId;
+            const effectiveTo   = e.toId.startsWith("__union:") ? "root" : e.toId;
+            const endpointHighlighted = (id: string) => id === selectedId || immediateFamily.has(id);
+            const isHighlighted = endpointHighlighted(effectiveFrom) && endpointHighlighted(effectiveTo);
+
             return (
               <path
                 key={i}
                 d={curvePath(e.x1, e.y1, e.x2, e.y2)}
                 fill="none"
                 stroke={EDGE_COLORS[e.kind]}
-                strokeWidth={isPeer ? 1.2 : 1.6}
-                strokeDasharray={isPeer ? "4,3" : isBlood ? "6,5" : undefined}
+                strokeWidth={isPeer ? 1.2 : (isHighlighted ? 1.9 : 1.6)}
+                strokeDasharray={isPeer ? "4,3" : isBlood ? undefined : "2,3"}
                 strokeLinecap="round"
-                opacity={isPeer ? 0.3 : 0.5}
-                style={{ transition: "opacity 0.2s ease" }}
+                opacity={isHighlighted ? (isPeer ? 0.55 : 0.75) : (isPeer ? 0.15 : 0.2)}
+                className="edge-line"
               />
             );
           })}
@@ -865,8 +1030,13 @@ export default function FamilyTreeGraph({
             const isExpanded = n.memberId ? expandedParents.has(n.memberId) : false;
             // Badge visible on ALL nodes (direct and extended) that have hidden children
             const hasBadge   = extCount > 0;
-            // Extended nodes are clickable IF they have extended children; direct always clickable
-            const clickable  = !isRoot && !!n.memberId && (extCount > 0 || !n.isExtended);
+            // Bloque A2 (corrección): seleccionar y expandir son eventos
+            // independientes. Cualquier persona (directa o extendida, con
+            // o sin rama oculta) puede seleccionarse — antes un extendido
+            // sin rama oculta no era clicable en absoluto y no podía
+            // enfocarse. Expandir sigue dependiendo solo de tener rama oculta.
+            const canSelect  = !isRoot && !!n.memberId;
+            const canExpand  = !!n.memberId && hasBadge;
 
             // Unique gradient / clip IDs per node
             const gradId  = `sg-${n.id}`;
@@ -893,11 +1063,20 @@ export default function FamilyTreeGraph({
                 glowFilter = "url(#glow-orange)"; // hermanos
             }
 
+            // Bloque A2: jerarquía de tres niveles.
+            //   Nivel 1 — seleccionada: opacidad 1, anillo propio, escala +5%.
+            //   Nivel 2 — familia inmediata: opacidad alta (0.92), normal.
+            //   Nivel 3 — resto: opacidad reducida, nunca por debajo de 0.35.
+            const isSelected  = n.id === selectedId;
+            const isImmediate = immediateFamily.has(n.id);
+            const tierOpacity = isSelected ? 1 : isImmediate ? 0.92 : 0.4;
+
             return (
               <g
                 key={n.id}
-                onClick={clickable ? () => handleNodeClick(n) : undefined}
-                style={{ cursor: clickable ? "pointer" : "default" }}
+                onClick={canSelect ? () => handleSelect(n.memberId!) : undefined}
+                className={`node-focus-group${isSelected ? " is-selected" : ""}`}
+                style={{ cursor: canSelect ? "pointer" : "default", opacity: tierOpacity }}
               >
                 {/* Per-node 3D sphere gradient + clip */}
                 <defs>
@@ -910,6 +1089,14 @@ export default function FamilyTreeGraph({
                     <circle cx={n.cx} cy={n.cy} r={r - 0.5} />
                   </clipPath>
                 </defs>
+
+                {/* Nivel 1 — anillo de selección: propio, siempre estático
+                    (sin pulso). Distinto en color del anillo de raíz/activo
+                    para no confundir "seleccionado" con "raíz"/"activo hoy". */}
+                {isSelected && (
+                  <circle cx={n.cx} cy={n.cy} r={r + 5}
+                    fill="none" stroke="#f59e0b" strokeWidth="2.5" opacity={0.9} />
+                )}
 
                 {/* Anillo distintivo de raíz / activo hoy — estático en
                     reposo (Bloque A1: sin pulso infinito). */}
@@ -1042,9 +1229,18 @@ export default function FamilyTreeGraph({
                   </g>
                 )}
 
-                {/* +N expansion badge */}
+                {/* +N/− expansion badge — evento PROPIO e independiente de
+                    la selección (Bloque A2, corrección). stopPropagation
+                    evita que el clic también dispare el onClick de
+                    selección del nodo, del que este badge es hijo. */}
                 {hasBadge && (
-                  <g>
+                  <g
+                    onClick={canExpand ? (e) => {
+                      e.stopPropagation();
+                      handleToggleExpand(n.memberId!);
+                    } : undefined}
+                    style={{ cursor: canExpand ? "pointer" : "default" }}
+                  >
                     <circle
                       cx={n.cx - r * 0.68}
                       cy={n.cy - r * 0.68}
