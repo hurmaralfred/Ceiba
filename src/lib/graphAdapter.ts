@@ -274,6 +274,47 @@ function personToFamilyMember(
   };
 }
 
+/**
+ * Generación ESTRUCTURAL de `otherId` respecto a `currentId`, calculada
+ * ÚNICAMENTE desde el tipo de arista real y su dirección — nunca desde la
+ * etiqueta de parentesco derivada (esa etiqueta responde a "¿cómo se llama
+ * esta persona para mí?", no a "¿en qué generación está?").
+ *
+ *   parent:   person_a_id = padre/madre, person_b_id = hijo/hija
+ *             → el hijo queda una generación por debajo del padre/madre.
+ *   guardian: person_a_id = tutor, person_b_id = persona bajo tutela
+ *             → estructuralmente igual que parent (el tutelado baja una
+ *               generación), aunque la etiqueta mostrada sea "Hijastro/a".
+ *   partner:  ambos miembros de la unión quedan en la MISMA generación.
+ */
+function structuralGenerationDelta(
+  edge: EdgeNode,
+  currentId: string
+): number {
+  const currentIsA = edge.person_a_id === currentId;
+
+  switch (edge.relationship_type) {
+    case "parent":
+    case "guardian":
+      return currentIsA ? 1 : -1;
+    case "partner":
+    default:
+      return 0;
+  }
+}
+
+// Orden de exploración por nodo: las relaciones parent/guardian se procesan
+// antes que partner, para que —ante dos rutas de la misma longitud— la ruta
+// de sangre gane sobre una ruta de afinidad. Combinado con el `visited` de
+// la búsqueda (cada persona se resuelve una sola vez), esto hace que el
+// resultado sea determinista y nunca dependa del orden de llegada de las
+// aristas desde la base de datos.
+const STRUCTURAL_EDGE_PRIORITY: Record<string, number> = {
+  parent: 0,
+  guardian: 1,
+  partner: 2,
+};
+
 function buildAdjacency(edges: EdgeNode[]): Map<string, EdgeNode[]> {
   const adjacency = new Map<string, EdgeNode[]>();
 
@@ -345,6 +386,11 @@ export function adaptGraph(
   const predecessor = new Map<string, string>();
   const depthById = new Map<string, number>([[me, 0]]);
   const visited = new Set<string>([me]);
+  // Posición vertical del árbol: generación estructural (0 = mi generación,
+  // -1 = padres, +1 = hijos...). Independiente de `relationFromMe`, que es
+  // solo la etiqueta. Un hijastro/a comparte la misma generación estructural
+  // que un hijo/a — únicamente cambia cómo se le llama.
+  const generationById = new Map<string, number>([[me, 0]]);
 
   const queue: Array<{
     personId: string;
@@ -362,7 +408,11 @@ export function adaptGraph(
     if (!current) break;
 
     const currentDepth = depthById.get(current.personId) || 0;
-    const neighborEdges = adjacency.get(current.personId) || [];
+    const neighborEdges = [...(adjacency.get(current.personId) || [])].sort(
+      (a, b) =>
+        (STRUCTURAL_EDGE_PRIORITY[a.relationship_type] ?? 9) -
+        (STRUCTURAL_EDGE_PRIORITY[b.relationship_type] ?? 9)
+    );
 
     for (const edge of neighborEdges) {
       const otherId =
@@ -405,6 +455,11 @@ export function adaptGraph(
       relationFromMe.set(otherId, relationAfterGender);
       predecessor.set(otherId, current.personId);
       depthById.set(otherId, currentDepth + 1);
+      generationById.set(
+        otherId,
+        (generationById.get(current.personId) ?? 0) +
+          structuralGenerationDelta(edge, current.personId)
+      );
 
       queue.push({
         personId: otherId,
@@ -426,6 +481,7 @@ export function adaptGraph(
       relation,
       userId
     );
+    member.generation = generationById.get(personId) ?? 0;
 
     const depth = depthById.get(personId) || 1;
 

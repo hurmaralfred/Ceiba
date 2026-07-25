@@ -62,6 +62,14 @@ export interface FamilyMember {
   parent_member_id?: string | null
   created_at: string
   profile?: Profile
+  /**
+   * Generación genealógica ESTRUCTURAL respecto al usuario raíz (0 = misma
+   * generación, -1 = padres, +1 = hijos, ...), calculada únicamente a partir
+   * de relaciones parent/partner/guardian reales — nunca desde la etiqueta
+   * de parentesco mostrada (p. ej. "Hijastra" también es generación +1).
+   * Opcional: si falta, quien la use debe caer a un cálculo de respaldo.
+   */
+  generation?: number
 }
 
 export interface Relationship {

@@ -157,14 +157,21 @@ function normStr(s: string) {
     .replace(/\s+/g, " ").trim();
 }
 
-function buildLayout(
+// Exportada para permitir pruebas de integración del pipeline real
+// (adaptGraph → buildLayout) sin duplicar su lógica en el test.
+export function buildLayout(
   profile: Profile,
   members: FamilyMember[],
   visibleExtended: ExtendedEntry[],
   memberLinks: MemberLink[],
 ) {
+  // Posición vertical: SIEMPRE la generación estructural que ya calculó
+  // adaptGraph (relaciones parent/partner/guardian reales), nunca la
+  // etiqueta de parentesco mostrada. `GENERATION[relationType]` solo es un
+  // respaldo para member.generation ausente (no debería ocurrir viniendo de
+  // adaptGraph, pero evita que un nodo caiga silenciosamente a la fila 0).
   const memberGenMap = new Map<string, number>();
-  members.forEach(m => memberGenMap.set(m.id, GENERATION[m.relation_type] ?? 0));
+  members.forEach(m => memberGenMap.set(m.id, m.generation ?? GENERATION[m.relation_type] ?? 0));
 
   // Safety-net dedup: build direct member name keys to filter any duplicates
   // that escaped the page-level filter (different name spellings, missing last names, etc.)
@@ -217,7 +224,7 @@ function buildLayout(
       shortName: m.first_name.slice(0, 10),
       relation: RELATION_LABELS[m.relation_type as keyof typeof RELATION_LABELS] ?? m.relation_type,
       relationType: m.relation_type,
-      generation: GENERATION[m.relation_type] ?? 0,
+      generation: m.generation ?? GENERATION[m.relation_type] ?? 0,
       posHint: POS_HINT[m.relation_type] ?? 0,
       kind: m.relation_kind as "blood" | "affinity",
       isExtended: false,
@@ -229,11 +236,19 @@ function buildLayout(
     })),
     ...safeExtended.map(({ member: m, parentMemberId, inferredRelation }) => {
       // inferredRelation ya trae la relación (con género) de esta persona
-      // respecto a mí; es la ÚNICA base para su etiqueta.
+      // respecto a mí; es la ÚNICA base para su ETIQUETA. La POSICIÓN vertical
+      // es un concepto aparte: usa siempre m.generation (estructural, de
+      // adaptGraph). Antes se recalculaba desde GENERATION[infRel], y como el
+      // mapa de etiquetas no cubre variantes con género (p. ej. "stepdaughter"
+      // solo tenía "stepchild"), una hijastra caía por defecto a generación 0
+      // — apareciendo junto a su padre y su madrastra en vez de con sus
+      // hermanos. Al separar etiqueta de posición, ese bug desaparece.
       const infRel = (inferredRelation && inferredRelation !== "other") ? inferredRelation : null;
-      const extGen = infRel
-        ? (GENERATION[infRel] ?? 0)
-        : (memberGenMap.get(parentMemberId) ?? 0) + (GENERATION[m.relation_type] ?? 0);
+      const extGen = m.generation !== undefined
+        ? m.generation
+        : infRel
+          ? (GENERATION[infRel] ?? 0)
+          : (memberGenMap.get(parentMemberId) ?? 0) + (GENERATION[m.relation_type] ?? 0);
       const extHint = infRel
         ? (POS_HINT[infRel] ?? 0)
         : ((POS_HINT[members.find(pm => pm.id === parentMemberId)?.relation_type ?? ""] ?? 0)
@@ -410,7 +425,7 @@ function buildLayout(
   }
 
   members.forEach(m => {
-    const gen = GENERATION[m.relation_type] ?? 0;
+    const gen = m.generation ?? GENERATION[m.relation_type] ?? 0;
     if (gen < 0) {
       if (DIRECT_ANCESTORS.has(m.relation_type)) addVertEdge(m.id, "root", m.relation_kind as "blood" | "affinity");
       else if (["father_in_law","mother_in_law"].includes(m.relation_type)) addVertEdge(m.id, "root", "peer");
@@ -893,8 +908,9 @@ export default function FamilyTreeGraph({
             const ring   = isDeceased ? "#6b7280" : n.isExtended ? "#374151" : colors.ring;
             const nodeFilter = isDeceased ? "url(#deceased)" : undefined;
 
-            // Glow filter — matches node color family
-            const relGen = GENERATION[n.relationType] ?? 0;
+            // Glow filter — matches node color family. `n.generation` ya es
+            // la posición final asignada (estructural), no se recalcula.
+            const relGen = n.generation;
             let glowFilter = "url(#glow-blue)"; // ascendentes
             if (isRoot) glowFilter = "url(#glow-green)";
             else if (relGen >= 1) glowFilter = "url(#glow-emerald)"; // descendientes
