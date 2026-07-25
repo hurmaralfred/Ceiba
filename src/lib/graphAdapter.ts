@@ -530,6 +530,37 @@ export function relationRequiresConnector(
   return CONNECTOR_RELATIONS.has(relation);
 }
 
+/**
+ * Parentescos que `buildAddRelativeRequest` sabe traducir HOY a relaciones
+ * canónicas (parent | partner) sin inventar personas intermedias.
+ *
+ * Fuente única para habilitar/deshabilitar opciones del selector: el resto del
+ * catálogo central se sigue MOSTRANDO, pero deshabilitado y con explicación —
+ * nunca se oculta en silencio ni se persiste un parentesco derivado.
+ */
+const ADD_RELATIVE_SUPPORTED = new Set<RelationType>([
+  "father",
+  "mother",
+  "son",
+  "daughter",
+  "brother",
+  "sister",
+  "spouse",
+  "partner",
+  "grandfather",
+  "grandmother",
+  "great_grandfather",
+  "great_grandmother",
+  "grandson",
+  "granddaughter",
+  "great_grandson",
+  "great_granddaughter",
+]);
+
+export function isAddRelativeSupported(relation: string): boolean {
+  return ADD_RELATIVE_SUPPORTED.has(relation as RelationType);
+}
+
 export type AddRelativeGender = "male" | "female" | null;
 
 export interface AddRelativeRequest {

@@ -323,6 +323,26 @@ export const KINSHIP_CATALOG: Record<
     },
   },
 
+  son_in_law: {
+    key: "son_in_law",
+    label: "Yerno",
+    plan: {
+      kind: "derived",
+      operation: "partner-of-child",
+      requiresSelection: true,
+    },
+  },
+
+  daughter_in_law: {
+    key: "daughter_in_law",
+    label: "Nuera",
+    plan: {
+      kind: "derived",
+      operation: "partner-of-child",
+      requiresSelection: true,
+    },
+  },
+
   sister_in_law: {
     key: "sister_in_law",
     label: "Cuñada",

@@ -40,6 +40,8 @@ export type KinshipKey =
   | "cousin"
   | "mother_in_law"
   | "father_in_law"
+  | "son_in_law"
+  | "daughter_in_law"
   | "sister_in_law"
   | "brother_in_law"
   | "stepmother"
@@ -70,6 +72,7 @@ export type RelationshipPlan =
         | "parent-of-partner"
         | "sibling-of-partner"
         | "partner-of-sibling"
+        | "partner-of-child"
         | "partner-parent-child";
       requiresSelection: boolean;
     };

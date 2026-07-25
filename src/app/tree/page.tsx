@@ -6,7 +6,8 @@ import dynamic from "next/dynamic";
 import { TreePine, MapPin, Users, Share2, LogOut, User, Send, List, GitFork, Plus, X, Pencil, Map as MapIcon, Image, Calendar, MessageCircle, Megaphone, Camera, AlertTriangle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Profile, FamilyMember, RelationType, RELATION_LABELS } from "@/lib/types";
-import { adaptGraph, buildAddRelativeRequest, relationRequiresConnector, type FamilyGraph } from "@/lib/graphAdapter";
+import { adaptGraph, buildAddRelativeRequest, isAddRelativeSupported, relationRequiresConnector, type FamilyGraph } from "@/lib/graphAdapter";
+import { KINSHIP_CATALOG, type KinshipKey } from "@/domain/relationships";
 import type { ExtendedEntry, MemberLink } from "@/components/tree/FamilyTreeGraph";
 import InstallBanner from "@/components/InstallBanner";
 import TreeErrorBoundary from "@/components/TreeErrorBoundary";
@@ -28,49 +29,32 @@ const MapView = dynamic(
   { ssr: false, loading: () => <div className="w-full h-[520px] rounded-2xl bg-gray-100 animate-pulse" /> }
 );
 
-// Catálogo genealógico v1 — selector visible hasta bisabuelos/bisnietos.
-const RELATION_GROUPS = [
+// Catálogo genealógico v1 — el selector se construye desde el CATÁLOGO CENTRAL
+// (KINSHIP_CATALOG). Aquí solo se define el orden y el agrupado visual: las
+// etiquetas salen del catálogo, nunca se duplican en el componente.
+//
+// Las opciones que `buildAddRelativeRequest` todavía no sabe traducir a
+// relaciones canónicas se muestran DESHABILITADAS con una explicación visible;
+// no se ocultan en silencio ni se guardan como parentesco derivado.
+const RELATION_GROUPS: { label: string; keys: KinshipKey[] }[] = [
   {
     label: "Ascendientes",
-    kind: "blood" as const,
-    options: [
-      "father",
-      "mother",
-      "grandfather",
-      "grandmother",
-      "great_grandfather",
-      "great_grandmother",
-    ] as RelationType[],
+    keys: ["father", "mother", "grandfather", "grandmother", "great_grandfather", "great_grandmother"],
   },
-  {
-    label: "Hermanos",
-    kind: "blood" as const,
-    options: [
-      "brother",
-      "sister",
-    ] as RelationType[],
-  },
-  {
-    label: "Pareja",
-    kind: "affinity" as const,
-    options: [
-      "spouse",
-      "partner",
-    ] as RelationType[],
-  },
+  { label: "Hermanos", keys: ["brother", "sister"] },
+  { label: "Pareja", keys: ["spouse", "partner"] },
   {
     label: "Descendientes",
-    kind: "blood" as const,
-    options: [
-      "son",
-      "daughter",
-      "grandson",
-      "granddaughter",
-      "great_grandson",
-      "great_granddaughter",
-    ] as RelationType[],
+    keys: ["son", "daughter", "grandson", "granddaughter", "great_grandson", "great_granddaughter"],
+  },
+  { label: "Tíos y sobrinos", keys: ["uncle", "aunt", "nephew", "niece"] },
+  {
+    label: "Familia política",
+    keys: ["father_in_law", "mother_in_law", "son_in_law", "daughter_in_law", "brother_in_law", "sister_in_law"],
   },
 ];
+
+const UNSUPPORTED_SUFFIX = " — próximamente";
 
 const EMPTY_FORM = { primer_nombre: "", segundo_nombre: "", primer_apellido: "", segundo_apellido: "", first_name: "", last_name: "", email: "", birth_date: "", birth_city: "", birth_country: "", relation_type: "father" as RelationType, is_deceased: false, parent_member_id: "" };
 export default function TreePage() {
@@ -94,6 +78,8 @@ export default function TreePage() {
   const [editingMember, setEditingMember] = useState<FamilyMember | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  // Error real de add_relative, visible en el propio modal (no solo en toast).
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [duplicateWarning, setDuplicateWarning] = useState<{
     candidate_id: string;
     matchedName: string;       // nombre de la persona ya existente
@@ -225,6 +211,7 @@ console.log("⑤ Datos cargados");
     if (!user) return;
 
     setDuplicateWarning(null);
+    setSaveError(null);
     setSaving(true);
     try {
       // Catálogo genealógico v1: traduce el parentesco elegido al payload real
@@ -291,7 +278,11 @@ console.log("⑤ Datos cargados");
       setForm(EMPTY_FORM);
       loadData();
     } catch (err: any) {
-      toast.error(err?.message || "Error al guardar");
+      // Se muestra el error REAL devuelto por add_relative (p. ej. permisos o
+      // espacio familiar), no un mensaje genérico que oculte la causa.
+      const real = err?.message || err?.details || err?.hint || String(err);
+      setSaveError(real);
+      toast.error(real);
     } finally {
       setSaving(false);
     }
@@ -1022,9 +1013,16 @@ console.log("⑤ Datos cargados");
                 >
                   {RELATION_GROUPS.map(group => (
                     <optgroup key={group.label} label={group.label}>
-                      {group.options.map(opt => (
-                        <option key={opt} value={opt}>{RELATION_LABELS[opt]}</option>
-                      ))}
+                      {group.keys.map(key => {
+                        // Etiqueta desde el catálogo central; deshabilitada si
+                        // todavía no se puede ejecutar de forma segura.
+                        const supported = isAddRelativeSupported(key);
+                        return (
+                          <option key={key} value={key} disabled={!supported}>
+                            {KINSHIP_CATALOG[key].label}{supported ? "" : UNSUPPORTED_SUFFIX}
+                          </option>
+                        );
+                      })}
                     </optgroup>
                   ))}
                 </select>
@@ -1067,6 +1065,13 @@ console.log("⑤ Datos cargados");
                 </>
               ) : (
                 <>
+                  {/* Error real devuelto por add_relative — sin ocultar la causa */}
+                  {saveError && (
+                    <div className="w-full mb-2 bg-red-50 border border-red-200 rounded-xl p-3">
+                      <p className="text-xs font-semibold text-red-800 mb-1">No se pudo agregar</p>
+                      <p className="text-xs text-red-700 leading-relaxed break-words">{saveError}</p>
+                    </div>
+                  )}
                   {/* Duplicate warning */}
                   {duplicateWarning && (
                     <div className="w-full mb-2 bg-amber-50 border border-amber-200 rounded-xl p-3">
