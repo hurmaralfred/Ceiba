@@ -2,6 +2,7 @@
 import { useEffect, useRef, useMemo, useState, useCallback } from "react";
 import * as d3 from "d3";
 import { FamilyMember, Profile, RELATION_LABELS } from "@/lib/types";
+import ForestAmbientLayer from "./ForestAmbientLayer";
 
 export interface ExtendedEntry {
   member: FamilyMember;
@@ -904,30 +905,11 @@ export default function FamilyTreeGraph({
           // Foreground large trees — extreme edges
           const fgLeft  = { cx: -W * 0.02, base: H, h: H * 0.78, w: W * 0.28 };
           const fgRight = { cx:  W * 1.02, base: H, h: H * 0.78, w: W * 0.28 };
-          // Fireflies in the clearing
-          const fireflies = [
-            [0.20, 0.28], [0.78, 0.22], [0.50, 0.62], [0.68, 0.38],
-            [0.33, 0.50], [0.62, 0.18], [0.42, 0.72], [0.85, 0.55],
-            [0.14, 0.60], [0.55, 0.80],
-          ] as [number, number][];
 
           return (
             <g style={{ pointerEvents: "none" }}>
-              {/* God rays from top-center */}
-              {[-28, -16, -6, 6, 16, 28].map((deg, i) => {
-                const rad = (deg * Math.PI) / 180;
-                return (
-                  <line key={`ray-${i}`}
-                    x1={W / 2} y1={0}
-                    x2={W / 2 + Math.sin(rad) * H * 1.6}
-                    y2={H * 1.4}
-                    stroke="#4ade80"
-                    strokeWidth={Math.max(18, 50 - Math.abs(deg) * 0.8)}
-                    opacity={0.025 - Math.abs(deg) * 0.0004}
-                    strokeLinecap="butt"
-                  />
-                );
-              })}
+              {/* Rayos de luz: movidos a ForestAmbientLayer (F3.0) — allí
+                  varían de intensidad. Aquí el bosque queda estático. */}
 
               {/* Far background pines */}
               {farPines.map((t, i) => (
@@ -964,18 +946,19 @@ export default function FamilyTreeGraph({
               <rect x={0} y={H * 0.80} width={W} height={H * 0.20}
                 fill="url(#mist-grad)" />
 
-              {/* Fireflies — glowing dots in the clearing */}
-              {fireflies.map(([fx, fy], i) => (
-                <circle key={`ff-${i}`}
-                  cx={W * fx} cy={H * fy} r={1.8}
-                  fill="#86efac"
-                  opacity={0.35 + (i % 4) * 0.12}
-                  filter="url(#glow-green)"
-                />
-              ))}
+              {/* Luciérnagas: movidas a ForestAmbientLayer (F3.0) — allí
+                  derivan lento y aparecen/desaparecen. */}
             </g>
           );
         })()}
+
+        {/* ── F3.0 — Respiración del Bosque ──────────────────────────────
+            Capa de ambiente independiente: rayos que varían, luciérnagas
+            que derivan, hoja ocasional y respiración del fondo. Detrás del
+            grafo (antes de <g ref={gRef}>) y sin eventos → nunca toca nodos
+            ni líneas. FamilyTreeGraph solo la renderiza. */}
+        <ForestAmbientLayer width={svgWidth} height={Math.max(380, totalHeight)} />
+
 
         <g ref={gRef}>
           {/* ── Edges ── */}

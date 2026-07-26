@@ -107,3 +107,53 @@ describe("invariantes de código fuente — separación de eventos", () => {
     expect(SOURCE.toLowerCase()).not.toContain("infinite");
   });
 });
+
+// F3.0 — el ambiente vive en un archivo aparte. El grafo (nodos/líneas)
+// NUNCA anima; el loop ambiental está aislado y bajo contrato estricto.
+const AMBIENT = fs.readFileSync(
+  path.join(__dirname, "ForestAmbientLayer.tsx"),
+  "utf8",
+);
+
+describe("F3.0 — ambiente aislado y bajo contrato", () => {
+  it("FamilyTreeGraph solo renderiza el ambiente, no lo define", () => {
+    expect(SOURCE).toContain("import ForestAmbientLayer");
+    expect(SOURCE).toContain("<ForestAmbientLayer");
+    // El grafo no contiene keyframes/animaciones infinitas propias.
+    expect(SOURCE.toLowerCase()).not.toContain("infinite");
+  });
+
+  it("el ambiente no captura eventos (no interfiere con nodos ni clics)", () => {
+    expect(AMBIENT).toContain('pointerEvents: "none"');
+  });
+
+  it("el ambiente respeta prefers-reduced-motion y document.hidden", () => {
+    expect(AMBIENT).toContain("prefers-reduced-motion");
+    expect(AMBIENT).toContain("visibilitychange");
+    expect(AMBIENT).toContain("animation-play-state: paused");
+  });
+
+  it("el ambiente solo anima transform/opacity — nunca filter/blur/layout/stroke", () => {
+    // Verifica sobre el bloque <style> que no aparezcan propiedades
+    // prohibidas por P3. (max-width en media queries es válido y no cuenta
+    // como animación de layout, por eso no se chequea "width:" a secas.)
+    const styleMatch = AMBIENT.match(/@keyframes[\s\S]*?(?=`}<\/style>)/);
+    expect(styleMatch).not.toBeNull();
+    const kf = styleMatch![0].toLowerCase();
+    for (const forbidden of ["filter:", "blur(", "box-shadow", "drop-shadow", "stroke-dashoffset", "stroke-width"]) {
+      expect(kf.includes(forbidden), `el ambiente no debe animar "${forbidden}"`).toBe(false);
+    }
+  });
+
+  it("el ambiente reduce carga en móvil (media query <768px)", () => {
+    expect(AMBIENT).toContain("max-width: 767px");
+  });
+
+  it("no invoca requestAnimationFrame ni setInterval/setTimeout", () => {
+    // Se comprueba la forma de LLAMADA (con paréntesis); la palabra puede
+    // aparecer en comentarios describiendo justamente que no se usa.
+    expect(AMBIENT).not.toContain("requestAnimationFrame(");
+    expect(AMBIENT).not.toContain("setInterval(");
+    expect(AMBIENT).not.toContain("setTimeout(");
+  });
+});
