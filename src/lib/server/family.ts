@@ -227,3 +227,41 @@ export async function resolveFamilyRoster(
   const map = await resolvePersonsByUserIds(service, userIds);
   return [...map.values()];
 }
+
+/**
+ * Valida si el usuario actual puede editar una persona.
+ * Reglas:
+ * - No reclamada: el que la agregó (added_by)
+ * - Reclamada por usuario actual: sí
+ * - Reclamada por otro usuario: no
+ */
+export async function canEditPerson(
+  service: SupabaseLike,
+  personId: string,
+  myUserId: string,
+  addedBy: string
+): Promise<boolean> {
+  // Si yo la agregué y no está reclamada, puedo editarla
+  if (addedBy === myUserId) {
+    const { data: claim } = await service
+      .from("person_claims")
+      .select("user_id, claim_status")
+      .eq("person_id", personId)
+      .eq("claim_status", "approved")
+      .is("revoked_at", null)
+      .maybeSingle();
+    if (!claim) return true; // No reclamada, yo puedo editarla
+  }
+
+  // Si está reclamada por mí, puedo editarla
+  const { data: myClaim } = await service
+    .from("person_claims")
+    .select("user_id")
+    .eq("person_id", personId)
+    .eq("user_id", myUserId)
+    .eq("claim_status", "approved")
+    .is("revoked_at", null)
+    .maybeSingle();
+
+  return !!myClaim;
+}

@@ -100,6 +100,8 @@ export default function TreePage() {
   // Contador global. `null` = no disponible -> se oculta solo esa línea,
   // el árbol sigue cargando con normalidad.
   const [growthStats, setGrowthStats] = useState<CeibaGrowthStats | null>(null);
+  const [canEditMember, setCanEditMember] = useState(false);
+  const [checkingEditPermission, setCheckingEditPermission] = useState(false);
 
   // El contador global es informativo: nunca debe impedir que el árbol
   // cargue. Si la RPC falla se registra en consola y se oculta la línea,
@@ -361,8 +363,30 @@ console.log("⑤ Datos cargados");
     return out;
   };
 
-  const openEdit = (member: FamilyMember) => {
+  const openEdit = async (member: FamilyMember) => {
     setEditingMember(member);
+    setCheckingEditPermission(true);
+    setCanEditMember(false);
+
+    try {
+      const res = await fetch(`/api/members/${member.id}/can-edit`);
+      if (res.ok) {
+        const data = await res.json();
+        setCanEditMember(data.can_edit === true);
+        if (!data.can_edit) {
+          toast.error("No tienes permisos para editar a este familiar");
+          setCheckingEditPermission(false);
+          return;
+        }
+      }
+    } catch (err) {
+      console.error("Error checking edit permission:", err);
+      setCanEditMember(false);
+      setCheckingEditPermission(false);
+      toast.error("Error al verificar permisos");
+      return;
+    }
+
     const nameParts = (member.first_name || "").split(" ");
     const lastParts = (member.last_name || "").split(" ");
     setForm({
@@ -381,6 +405,7 @@ console.log("⑤ Datos cargados");
       parent_member_id: (member as any).parent_member_id || "",
     });
     setShowModal(true);
+    setCheckingEditPermission(false);
   };
 
   const updateMember = async () => {
@@ -915,6 +940,13 @@ console.log("⑤ Datos cargados");
               </button>
             </div>
             <div className="space-y-3">
+              {/* Permission denied message */}
+              {editingMember && !canEditMember && !checkingEditPermission && (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-3">
+                  <p className="text-xs font-semibold text-red-800 mb-1">No tienes permisos para editar</p>
+                  <p className="text-xs text-red-700">Este familiar fue reclamado por otro usuario. Solo el propietario de la cuenta puede editarlo.</p>
+                </div>
+              )}
               {/* Foto del familiar */}
               {!editingMember && (
                 <div className="flex items-center gap-3 pb-1">
@@ -1098,11 +1130,19 @@ console.log("⑤ Datos cargados");
             <div className="flex gap-3 mt-6">
               {editingMember ? (
                 <>
-                  <button onClick={deleteMember} className="btn-secondary text-red-500 border-red-200 hover:bg-red-50">
+                  <button
+                    onClick={deleteMember}
+                    disabled={saving || !canEditMember}
+                    className="btn-secondary text-red-500 border-red-200 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
                     Eliminar
                   </button>
-                  <button onClick={updateMember} disabled={saving} className="flex-1 btn-primary">
-                    {saving ? "Guardando..." : "Guardar cambios"}
+                  <button
+                    onClick={updateMember}
+                    disabled={saving || !canEditMember}
+                    className="flex-1 btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {checkingEditPermission ? "Verificando..." : saving ? "Guardando..." : "Guardar cambios"}
                   </button>
                 </>
               ) : (
