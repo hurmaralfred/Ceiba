@@ -762,13 +762,6 @@ console.log("⑤ Datos cargados");
           <div className="space-y-3">
             {/* Action bar — 1 CTA dominante */}
             <div className="flex items-center gap-2">
-              {/* PRIMARY: Agregar familiar */}
-              <button
-                onClick={() => setShowModal(true)}
-                className="flex items-center gap-1.5 bg-earth-500 hover:bg-earth-600 text-white font-bold text-sm px-4 py-2 rounded-xl shadow-sm transition-colors flex-1"
-              >
-                <Plus size={16} /> Agregar familiar
-              </button>
               {/* SECONDARY: Anunciar — icono only */}
               {joinedMembers.length > 0 && (
                 <button
@@ -1191,6 +1184,70 @@ console.log("⑤ Datos cargados");
           </div>
         </div>
       )}
+      {/* Floating 3D "Agregar familiar" button */}
+      <style>{`
+        @keyframes ceiba-fab-breathe {
+          0%, 100% { box-shadow: 0 6px 20px rgba(94,138,80,0.45), 0 2px 6px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.22); }
+          50%       { box-shadow: 0 8px 28px rgba(94,138,80,0.55), 0 3px 8px rgba(0,0,0,0.20), inset 0 1px 0 rgba(255,255,255,0.22); }
+        }
+        .ceiba-fab {
+          position: fixed;
+          right: 20px;
+          bottom: 96px;
+          width: 62px;
+          height: 62px;
+          border-radius: 50%;
+          border: none;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: linear-gradient(145deg, #7daa72 0%, #6e9464 45%, #5c7a52 100%);
+          box-shadow: 0 6px 20px rgba(94,138,80,0.45), 0 2px 6px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.22);
+          color: white;
+          z-index: 40;
+          transition: transform 0.15s ease, box-shadow 0.15s ease;
+          animation: ceiba-fab-breathe 4s ease-in-out infinite;
+          outline-offset: 3px;
+        }
+        .ceiba-fab:hover {
+          transform: translateY(-3px) scale(1.05);
+          box-shadow: 0 12px 32px rgba(94,138,80,0.55), 0 4px 10px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.22);
+        }
+        .ceiba-fab:active {
+          transform: translateY(0px) scale(0.95);
+          box-shadow: 0 3px 10px rgba(94,138,80,0.35), 0 1px 3px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.18);
+        }
+        .ceiba-fab:focus-visible {
+          outline: 2px solid #6e9464;
+          outline-offset: 3px;
+        }
+        @media (min-width: 768px) {
+          .ceiba-fab {
+            width: 70px;
+            height: 70px;
+            bottom: 32px;
+            right: 28px;
+          }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .ceiba-fab {
+            animation: none;
+            transition: none;
+          }
+          .ceiba-fab:hover { transform: none; }
+          .ceiba-fab:active { transform: none; }
+        }
+      `}</style>
+      <button
+        className="ceiba-fab"
+        onClick={() => setShowModal(true)}
+        aria-label="Agregar familiar"
+        title="Agregar familiar"
+      >
+        <Plus size={26} strokeWidth={2.5} />
+      </button>
+
       <BottomNav />
 
     </div>
