@@ -29,8 +29,14 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  const protectedPaths = ['/tree', '/map', '/invite', '/profile', '/onboarding']
-  const isProtected = protectedPaths.some(p => request.nextUrl.pathname.startsWith(p))
+  // /invite (sin token) requiere sesión — es el flujo de invitar a otros.
+  // /invite/[token] debe quedar público: es el enlace que recibe un familiar
+  // sin cuenta todavía; get_invitation_by_token() ya está diseñada para
+  // funcionar sin sesión y la propia página resuelve el registro/login.
+  const protectedPaths = ['/tree', '/map', '/profile', '/onboarding']
+  const isProtected =
+    protectedPaths.some(p => request.nextUrl.pathname.startsWith(p)) ||
+    request.nextUrl.pathname === '/invite'
 
   if (!user && isProtected) {
     const url = request.nextUrl.clone()
