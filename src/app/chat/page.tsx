@@ -7,17 +7,23 @@ import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 import BottomNav from "@/components/BottomNav";
 
-const GROUP_ROOM_ID = "00000000-0000-0000-0000-000000000001";
-
 interface Conversation {
   roomId: string;
   type: "group" | "direct";
   name: string;
-  avatar?: string;
-  lastMessage?: string;
-  lastAt?: string;
+  avatar?: string | null;
+  lastMessage?: string | null;
+  lastAt?: string | null;
   unread: boolean;
   otherUserId?: string;
+}
+
+interface RosterMember {
+  person_id: string;
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  photo_path: string | null;
 }
 
 function timeAgo(iso: string) {
@@ -34,197 +40,48 @@ export default function ChatListPage() {
   const router = useRouter();
   const supabase = createClient();
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [familyMembers, setFamilyMembers] = useState<any[]>([]);
-  const [userId, setUserId] = useState<string | null>(null);
+  const [familyMembers, setFamilyMembers] = useState<RosterMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNewDM, setShowNewDM] = useState(false);
+  const [starting, setStarting] = useState(false);
 
   useEffect(() => { init(); }, []);
 
   const init = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { router.push("/auth/login"); return; }
-    setUserId(user.id);
-    await Promise.all([loadConversations(user.id), loadFamilyMembers(user.id)]);
+    await Promise.all([loadConversations(), loadFamilyMembers()]);
     setLoading(false);
   };
 
-  const loadConversations = async (uid: string) => {
-    const convs: Conversation[] = [];
-
-    // 1. Group chat — always show
-    const { data: lastGroupMsg } = await supabase
-      .from("family_messages")
-      .select("content, created_at")
-      .eq("room_id", GROUP_ROOM_ID)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    convs.push({
-      roomId: GROUP_ROOM_ID,
-      type: "group",
-      name: "Chat Familiar",
-      lastMessage: lastGroupMsg?.content,
-      lastAt: lastGroupMsg?.created_at,
-      unread: false,
-    });
-
-    // 2. DM rooms this user belongs to
-    const { data: memberOf } = await supabase
-      .from("chat_room_members")
-      .select("room_id, last_read_at, room:chat_rooms!room_id(id, type, created_at)")
-      .eq("user_id", uid);
-
-    const dmRoomIds = (memberOf || [])
-      .filter((m: any) => m.room?.type === "direct")
-      .map((m: any) => m.room_id);
-
-    for (const roomId of dmRoomIds) {
-      // Get the other member's user_id (no join)
-      const { data: others } = await supabase
-        .from("chat_room_members")
-        .select("user_id")
-        .eq("room_id", roomId)
-        .neq("user_id", uid);
-
-      const otherUserId = others?.[0]?.user_id;
-      if (!otherUserId) continue;
-
-      // Fetch profile separately
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("first_name, last_name, avatar_url")
-        .eq("id", otherUserId)
-        .maybeSingle();
-
-      const { data: lastMsg } = await supabase
-        .from("family_messages")
-        .select("content, created_at")
-        .eq("room_id", roomId)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      const myMembership = memberOf?.find((m: any) => m.room_id === roomId);
-      const unread = lastMsg
-        ? new Date(lastMsg.created_at) > new Date(myMembership?.last_read_at || 0)
-        : false;
-
-      convs.push({
-        roomId,
-        type: "direct",
-        name: profile ? `${profile.first_name} ${profile.last_name}` : "Familiar",
-        avatar: profile?.avatar_url,
-        lastMessage: lastMsg?.content,
-        lastAt: lastMsg?.created_at,
-        unread,
-        otherUserId,
-      });
-    }
-
-    convs.sort((a, b) => {
-      if (!a.lastAt) return 1;
-      if (!b.lastAt) return -1;
-      return new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime();
-    });
-
-    setConversations(convs);
+  const loadConversations = async () => {
+    const res = await fetch("/api/chat/rooms");
+    if (!res.ok) { toast.error("Error al cargar conversaciones"); return; }
+    const { conversations } = await res.json();
+    setConversations(conversations || []);
   };
 
-  const loadFamilyMembers = async (uid: string) => {
-    // Step 1: get family members
-    const { data: members } = await supabase
-      .from("family_members")
-      .select("profile_id, first_name, last_name")
-      .eq("added_by", uid)
-      .not("profile_id", "is", null);
-
-    if (!members || members.length === 0) return;
-
-    // Step 2: fetch profile data separately (avoids FK join issue)
-    const profileIds = members.map(m => m.profile_id).filter(Boolean);
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("id, first_name, last_name, avatar_url")
-      .in("id", profileIds);
-
-    const profileMap = Object.fromEntries((profiles || []).map(p => [p.id, p]));
-
-    setFamilyMembers(
-      members
-        .filter(m => m.profile_id)
-        .map(m => ({ ...m, profile: profileMap[m.profile_id] || null }))
-    );
+  const loadFamilyMembers = async () => {
+    const res = await fetch("/api/family/roster");
+    if (!res.ok) return;
+    const { members } = await res.json();
+    setFamilyMembers(members || []);
   };
 
   const startDM = async (otherUserId: string) => {
-    if (!userId || !otherUserId) return;
-
+    if (starting) return;
+    setStarting(true);
     try {
-      // Step 1: get rooms where current user is a member
-      const { data: myRooms, error: myRoomsErr } = await supabase
-        .from("chat_room_members")
-        .select("room_id")
-        .eq("user_id", userId);
-
-      if (myRoomsErr) throw myRoomsErr;
-
-      const myRoomIds = (myRooms || []).map(r => r.room_id);
-
-      if (myRoomIds.length > 0) {
-        // Step 2: rooms where the other user is also a member
-        const { data: otherRooms } = await supabase
-          .from("chat_room_members")
-          .select("room_id")
-          .eq("user_id", otherUserId)
-          .in("room_id", myRoomIds);
-
-        const sharedRoomIds = (otherRooms || []).map(r => r.room_id);
-
-        if (sharedRoomIds.length > 0) {
-          // Step 3: check which shared rooms are "direct" type
-          const { data: rooms } = await supabase
-            .from("chat_rooms")
-            .select("id, type")
-            .in("id", sharedRoomIds)
-            .eq("type", "direct");
-
-          if (rooms && rooms.length > 0) {
-            router.push(`/chat/${rooms[0].id}`);
-            return;
-          }
-        }
-      }
-
-      // Create new DM room
-      const { data: room, error: roomErr } = await supabase
-        .from("chat_rooms")
-        .insert({ type: "direct", created_by: userId })
-        .select("id")
-        .single();
-
-      if (roomErr || !room) {
-        console.error("Error creating DM room:", roomErr);
-        toast.error("Error al crear conversación. ¿Corriste el SQL de chat?");
-        return;
-      }
-
-      const { error: membersErr } = await supabase.from("chat_room_members").insert([
-        { room_id: room.id, user_id: userId },
-        { room_id: room.id, user_id: otherUserId },
-      ]);
-
-      if (membersErr) {
-        console.error("Error adding members:", membersErr);
-        toast.error("Error al configurar conversación");
-        return;
-      }
-
-      router.push(`/chat/${room.id}`);
-    } catch (err) {
-      console.error("startDM error:", err);
-      toast.error("Error al abrir conversación");
+      const res = await fetch("/api/chat/rooms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ otherUserId }),
+      });
+      const body = await res.json();
+      if (!res.ok) { toast.error(body.error || "Error al abrir conversación"); return; }
+      router.push(`/chat/${body.roomId}`);
+    } finally {
+      setStarting(false);
     }
   };
 
@@ -252,7 +109,6 @@ export default function ChatListPage() {
       </nav>
 
       <div className="max-w-lg mx-auto pb-20">
-        {/* New DM picker */}
         {showNewDM && (
           <div className="bg-white border-b border-gray-100 px-4 py-3">
             <p className="text-xs font-semibold text-gray-500 mb-2">Enviar mensaje a:</p>
@@ -262,14 +118,15 @@ export default function ChatListPage() {
               <div className="flex gap-2 flex-wrap">
                 {familyMembers.map(m => (
                   <button
-                    key={m.profile_id}
-                    onClick={() => { setShowNewDM(false); startDM(m.profile_id); }}
-                    className="flex items-center gap-2 bg-gray-100 hover:bg-ceiba-50 rounded-full px-3 py-1.5 text-sm font-medium transition-colors"
+                    key={m.person_id}
+                    disabled={starting}
+                    onClick={() => { setShowNewDM(false); startDM(m.user_id); }}
+                    className="flex items-center gap-2 bg-gray-100 hover:bg-ceiba-50 rounded-full px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50"
                   >
                     <div className="w-6 h-6 rounded-full bg-ceiba-700 overflow-hidden flex items-center justify-center text-white text-xs font-bold">
-                      {(m.profile as any)?.avatar_url
-                        ? <img src={(m.profile as any).avatar_url} className="w-full h-full object-cover" alt="" />
-                        : `${m.first_name[0]}${(m.last_name || "")[0]}`}
+                      {m.photo_path
+                        ? <img src={m.photo_path} className="w-full h-full object-cover" alt="" />
+                        : `${m.first_name[0] || "?"}${(m.last_name || "")[0] || ""}`}
                     </div>
                     {m.first_name} {m.last_name}
                   </button>
@@ -279,7 +136,6 @@ export default function ChatListPage() {
           </div>
         )}
 
-        {/* Conversation list */}
         <div className="divide-y divide-gray-100">
           {conversations.map(conv => (
             <Link

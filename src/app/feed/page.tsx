@@ -2,13 +2,11 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { TreePine, Cake, UserPlus, Camera, Calendar, RefreshCw, Bell, Heart, Baby, GraduationCap, Users, Star, BookOpen, Megaphone } from "lucide-react";
+import { TreePine, Cake, Camera, Calendar, RefreshCw, Bell, Megaphone } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { RELATION_LABELS, RelationType } from "@/lib/types";
 import BottomNav from "@/components/BottomNav";
 
-// ── Types ──────────────────────────────────────────────────────
-type FeedItemType = "birthday" | "joined" | "photo" | "event" | "announcement";
+type FeedItemType = "birthday" | "photo" | "event" | "announcement";
 
 interface FeedItem {
   id: string;
@@ -18,11 +16,10 @@ interface FeedItem {
   date: Date;
   imageUrl?: string;
   linkTo?: string;
-  accent: string; // tailwind color class
+  accent: string;
   icon: React.ReactNode;
 }
 
-// ── Helpers ───────────────────────────────────────────────────
 function timeAgo(date: Date): string {
   const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
   if (seconds < 60) return "ahora mismo";
@@ -37,110 +34,46 @@ function timeAgo(date: Date): string {
   return date.toLocaleDateString("es", { day: "numeric", month: "short" });
 }
 
-function isBirthdayToday(birthDate: string): boolean {
-  const bd = new Date(birthDate);
-  const today = new Date();
-  return bd.getMonth() === today.getMonth() && bd.getDate() === today.getDate();
-}
-
-function isBirthdaySoon(birthDate: string, days = 7): boolean {
-  const bd = new Date(birthDate);
-  const today = new Date();
-  const next = new Date(today.getFullYear(), bd.getMonth(), bd.getDate());
-  if (next < today) next.setFullYear(today.getFullYear() + 1);
-  return (next.getTime() - today.getTime()) / (1000 * 60 * 60 * 24) <= days;
-}
-
-const EVENT_META: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
-  birth:       { label: "Nacimiento",    icon: <Baby size={14} />,          color: "text-pink-600 bg-pink-50" },
-  marriage:    { label: "Matrimonio",    icon: <Heart size={14} />,         color: "text-red-600 bg-red-50" },
-  death:       { label: "Fallecimiento", icon: <Star size={14} />,          color: "text-gray-600 bg-gray-100" },
-  graduation:  { label: "Graduación",    icon: <GraduationCap size={14} />, color: "text-blue-600 bg-blue-50" },
-  reunion:     { label: "Reunión",       icon: <Users size={14} />,         color: "text-green-600 bg-green-50" },
-  anniversary: { label: "Aniversario",   icon: <Calendar size={14} />,      color: "text-amber-600 bg-amber-50" },
-  other:       { label: "Evento",        icon: <BookOpen size={14} />,      color: "text-purple-600 bg-purple-50" },
+const EVENT_LABEL: Record<string, string> = {
+  birth: "Nacimiento", marriage: "Matrimonio", death: "Fallecimiento",
+  graduation: "Graduación", reunion: "Reunión", anniversary: "Aniversario", other: "Evento",
 };
 
-// ── Main component ────────────────────────────────────────────
 export default function FeedPage() {
   const router = useRouter();
   const supabase = createClient();
-
   const [items, setItems] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
 
-  const loadFeed = useCallback(async (uid: string) => {
+  const loadFeed = useCallback(async () => {
+    const res = await fetch("/api/feed");
+    if (!res.ok) { setItems([]); return; }
+    const { birthdays, photos, broadcasts, events } = await res.json();
     const feedItems: FeedItem[] = [];
-    const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // 30 days ago
+    const now = new Date();
 
-    // ── 1. Birthdays today & this week ─────────────────────────
-    const { data: members } = await supabase
-      .from("family_members")
-      .select("id, first_name, last_name, relation_type, birth_date")
-      .eq("added_by", uid)
-      .not("birth_date", "is", null);
-
-    (members || []).forEach(m => {
-      if (!m.birth_date) return;
-      const isToday = isBirthdayToday(m.birth_date);
-      const isSoon = isBirthdaySoon(m.birth_date, 7);
-      if (!isToday && !isSoon) return;
-      const bd = new Date(m.birth_date);
-      const age = new Date().getFullYear() - bd.getFullYear() + (isToday ? 0 : 1);
-      const relation = RELATION_LABELS[m.relation_type as RelationType] || m.relation_type;
+    (birthdays || []).forEach((p: any) => {
+      const bd = new Date(p.birth_date);
+      const next = new Date(now.getFullYear(), bd.getMonth(), bd.getDate());
+      if (next < now) next.setFullYear(now.getFullYear() + 1);
+      const days = Math.ceil((next.getTime() - now.getTime()) / 86400000);
+      const isToday = days === 0 || days === 366;
+      const name = `${p.first_name} ${p.last_name || ""}`.trim();
       feedItems.push({
-        id: `bday-${m.id}`,
+        id: `bday-${p.person_id}`,
         type: "birthday",
-        title: isToday
-          ? `🎂 Hoy es el cumpleaños de ${m.first_name}`
-          : `🎂 Cumpleaños de ${m.first_name} en ${Math.ceil((new Date(new Date().getFullYear(), bd.getMonth(), bd.getDate()).getTime() - Date.now()) / 86400000)} días`,
-        subtitle: `${relation} · ${age} años`,
-        date: new Date(), // pin to top
+        title: isToday ? `🎂 Hoy es el cumpleaños de ${p.first_name}` : `🎂 Cumpleaños de ${p.first_name} en ${days} días`,
+        subtitle: name,
+        date: new Date(),
         accent: "border-amber-400 bg-amber-50",
         icon: <Cake size={18} className="text-amber-600" />,
         linkTo: "/tree",
       });
     });
 
-    // ── 2. Family members who recently joined ──────────────────
-    const { data: joined } = await supabase
-      .from("family_members")
-      .select("id, first_name, last_name, relation_type, profile_id, profiles:profile_id(created_at, avatar_url)")
-      .eq("added_by", uid)
-      .not("profile_id", "is", null);
-
-    (joined || []).forEach((m: any) => {
-      const profile = Array.isArray(m.profiles) ? m.profiles[0] : m.profiles;
-      if (!profile?.created_at) return;
-      const joinedAt = new Date(profile.created_at);
-      if (joinedAt < cutoff) return;
-      const relation = RELATION_LABELS[m.relation_type as RelationType] || m.relation_type;
-      feedItems.push({
-        id: `joined-${m.id}`,
-        type: "joined",
-        title: `${m.first_name} ${m.last_name || ""} se unió a Ceiba`,
-        subtitle: `Tu ${relation.toLowerCase()} ya está en el árbol`,
-        date: joinedAt,
-        imageUrl: profile.avatar_url,
-        accent: "border-green-400 bg-green-50",
-        icon: <UserPlus size={18} className="text-green-600" />,
-        linkTo: "/tree",
-      });
-    });
-
-    // ── 3. Recent photos ───────────────────────────────────────
-    const { data: photos } = await supabase
-      .from("family_photos")
-      .select("id, url, caption, created_at, profiles:uploaded_by(first_name, last_name, avatar_url)")
-      .gte("created_at", cutoff.toISOString())
-      .order("created_at", { ascending: false })
-      .limit(10);
-
     (photos || []).forEach((p: any) => {
-      const uploader = Array.isArray(p.profiles) ? p.profiles[0] : p.profiles;
-      const name = uploader ? `${uploader.first_name} ${uploader.last_name || ""}`.trim() : "Alguien";
+      const name = p.uploader ? `${p.uploader.first_name} ${p.uploader.last_name || ""}`.trim() : "Alguien";
       feedItems.push({
         id: `photo-${p.id}`,
         type: "photo",
@@ -154,23 +87,13 @@ export default function FeedPage() {
       });
     });
 
-    // ── 4. Recent family events ────────────────────────────────
-    const { data: events } = await supabase
-      .from("family_events")
-      .select("id, title, event_type, event_date, created_at, profiles:created_by(first_name, last_name)")
-      .gte("created_at", cutoff.toISOString())
-      .order("created_at", { ascending: false })
-      .limit(10);
-
     (events || []).forEach((e: any) => {
-      const creator = Array.isArray(e.profiles) ? e.profiles[0] : e.profiles;
-      const name = creator ? `${creator.first_name} ${creator.last_name || ""}`.trim() : "Alguien";
-      const meta = EVENT_META[e.event_type] || EVENT_META.other;
+      const name = e.creator ? `${e.creator.first_name} ${e.creator.last_name || ""}`.trim() : "Alguien";
       feedItems.push({
         id: `event-${e.id}`,
         type: "event",
         title: `${name} registró: ${e.title}`,
-        subtitle: `${meta.label} · ${new Date(e.event_date).toLocaleDateString("es", { day: "numeric", month: "long", year: "numeric" })}`,
+        subtitle: `${EVENT_LABEL[e.event_type] || "Evento"} · ${new Date(e.event_date).toLocaleDateString("es", { day: "numeric", month: "long", year: "numeric" })}`,
         date: new Date(e.created_at),
         accent: "border-purple-400 bg-purple-50",
         icon: <Calendar size={18} className="text-purple-600" />,
@@ -178,40 +101,20 @@ export default function FeedPage() {
       });
     });
 
-    // ── 5. Anuncios familiares (broadcast + emergencias) ──────
-    const { data: announcements } = await supabase
-      .from("announcements")
-      .select("id, message, type, created_at, profiles:created_by(first_name, last_name, avatar_url)")
-      .gte("created_at", cutoff.toISOString())
-      .order("created_at", { ascending: false })
-      .limit(20);
-
-    (announcements || []).forEach((a: any) => {
-      const sender = Array.isArray(a.profiles) ? a.profiles[0] : a.profiles;
-      const name = sender ? `${sender.first_name} ${sender.last_name || ""}`.trim() : "Un familiar";
-      const isEmergency = a.type === "emergency";
+    (broadcasts || []).forEach((b: any) => {
+      const name = b.sender ? `${b.sender.first_name} ${b.sender.last_name || ""}`.trim() : "Un familiar";
       feedItems.push({
-        id: `ann-${a.id}`,
+        id: `ann-${b.id}`,
         type: "announcement",
-        title: isEmergency ? `🚨 EMERGENCIA — ${name}` : `📢 ${name}`,
-        subtitle: a.message,
-        date: new Date(a.created_at),
-        imageUrl: sender?.avatar_url,
-        accent: isEmergency ? "border-red-500 bg-red-50" : "border-amber-400 bg-amber-50",
-        icon: isEmergency
-          ? <span className="text-lg">🚨</span>
-          : <Megaphone size={18} className="text-amber-600" />,
+        title: `📢 ${name}`,
+        subtitle: b.message,
+        date: new Date(b.created_at),
+        accent: "border-amber-400 bg-amber-50",
+        icon: <Megaphone size={18} className="text-amber-600" />,
       });
     });
 
-    // ── Sort: birthdays first, then by date desc ───────────────
     feedItems.sort((a, b) => {
-      // Emergencias siempre primero
-      const aEmerg = a.type === "announcement" && a.title.startsWith("🚨");
-      const bEmerg = b.type === "announcement" && b.title.startsWith("🚨");
-      if (aEmerg && !bEmerg) return -1;
-      if (bEmerg && !aEmerg) return 1;
-      // Luego cumpleaños
       if (a.type === "birthday" && b.type !== "birthday") return -1;
       if (b.type === "birthday" && a.type !== "birthday") return 1;
       return b.date.getTime() - a.date.getTime();
@@ -223,32 +126,26 @@ export default function FeedPage() {
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       if (!data.user) { router.push("/auth/login"); return; }
-      setUserId(data.user.id);
-      loadFeed(data.user.id).finally(() => setLoading(false));
+      loadFeed().finally(() => setLoading(false));
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleRefresh = async () => {
-    if (!userId) return;
     setRefreshing(true);
-    await loadFeed(userId);
+    await loadFeed();
     setRefreshing(false);
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <header className="sticky top-0 z-40 bg-white border-b border-gray-200">
         <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Bell size={20} className="text-ceiba-700" />
             <h1 className="text-lg font-bold text-gray-900">Actividad familiar</h1>
           </div>
-          <button
-            onClick={handleRefresh}
-            disabled={refreshing}
-            className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-          >
+          <button onClick={handleRefresh} disabled={refreshing} className="p-2 rounded-full hover:bg-gray-100 transition-colors">
             <RefreshCw size={18} className={`text-gray-500 ${refreshing ? "animate-spin" : ""}`} />
           </button>
         </div>
@@ -257,9 +154,7 @@ export default function FeedPage() {
       <main className="max-w-lg mx-auto px-4 py-4 pb-24 space-y-3">
         {loading ? (
           <div className="space-y-3">
-            {[1,2,3,4,5].map(i => (
-              <div key={i} className="bg-white rounded-2xl h-20 animate-pulse" />
-            ))}
+            {[1,2,3,4,5].map(i => <div key={i} className="bg-white rounded-2xl h-20 animate-pulse" />)}
           </div>
         ) : items.length === 0 ? (
           <EmptyFeed />
@@ -273,7 +168,6 @@ export default function FeedPage() {
   );
 }
 
-// ── Feed Card ─────────────────────────────────────────────────
 function FeedCard({ item }: { item: FeedItem }) {
   const content = (
     <div className={`bg-white rounded-2xl border-l-4 ${item.accent} shadow-sm p-4 flex items-start gap-3 active:scale-[0.98] transition-transform`}>
@@ -284,30 +178,20 @@ function FeedCard({ item }: { item: FeedItem }) {
           item.icon
         )}
       </div>
-
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-gray-900 leading-snug">{item.title}</p>
         <p className={`text-xs text-gray-500 mt-0.5 ${item.type === "announcement" ? "whitespace-pre-wrap" : "truncate"}`}>{item.subtitle}</p>
         <p className="text-[10px] text-gray-400 mt-1">{timeAgo(item.date)}</p>
       </div>
-
       {item.imageUrl && item.type === "photo" && (
-        <img
-          src={item.imageUrl}
-          alt=""
-          className="w-14 h-14 rounded-xl object-cover shrink-0"
-        />
+        <img src={item.imageUrl} alt="" className="w-14 h-14 rounded-xl object-cover shrink-0" />
       )}
     </div>
   );
-
-  if (item.linkTo) {
-    return <Link href={item.linkTo}>{content}</Link>;
-  }
+  if (item.linkTo) return <Link href={item.linkTo}>{content}</Link>;
   return content;
 }
 
-// ── Empty state ───────────────────────────────────────────────
 function EmptyFeed() {
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -316,11 +200,9 @@ function EmptyFeed() {
       </div>
       <h2 className="text-lg font-bold text-gray-800 mb-2">Todo tranquilo por aquí</h2>
       <p className="text-sm text-gray-500 max-w-xs">
-        Cuando tus familiares se unan, suban fotos o registren eventos, aparecerán aquí.
+        Cuando tus familiares suban fotos, registren eventos o envíen anuncios, aparecerán aquí.
       </p>
-      <Link href="/tree" className="mt-6 btn-primary text-sm">
-        Invitar a mi familia
-      </Link>
+      <Link href="/tree" className="mt-6 btn-primary text-sm">Invitar a mi familia</Link>
     </div>
   );
 }

@@ -8,12 +8,20 @@ import toast from "react-hot-toast";
 
 const GROUP_ROOM_ID = "00000000-0000-0000-0000-000000000001";
 
+interface Sender {
+  person_id: string;
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  photo_path: string | null;
+}
+
 interface Message {
   id: string;
-  sender_id: string;
-  content: string;
+  sender_user_id: string;
+  body: string;
   created_at: string;
-  sender?: { first_name: string; last_name: string; avatar_url?: string };
+  sender?: Sender | null;
 }
 
 function formatTime(iso: string) {
@@ -45,15 +53,27 @@ export default function ChatRoomPage() {
   const [roomType, setRoomType] = useState<"group" | "direct">("group");
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastCountRef = useRef(0);
 
   const scrollToBottom = useCallback(() => {
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
   }, []);
 
+  const loadMessages = useCallback(async (scroll = false) => {
+    const res = await fetch(`/api/chat/rooms/${roomId}/messages`);
+    if (!res.ok) return;
+    const { messages: data } = await res.json();
+    const list: Message[] = data || [];
+    setMessages(list);
+    if (scroll || list.length !== lastCountRef.current) scrollToBottom();
+    lastCountRef.current = list.length;
+  }, [roomId, scrollToBottom]);
+
   useEffect(() => {
-    let cleanup: (() => void) | undefined;
-    init().then(fn => { cleanup = fn; });
-    return () => { cleanup?.(); };
+    init();
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomId]);
 
   const init = async () => {
@@ -61,132 +81,49 @@ export default function ChatRoomPage() {
     if (!user) { router.push("/auth/login"); return; }
     setUserId(user.id);
 
-    // Load room info
     if (roomId === GROUP_ROOM_ID) {
       setRoomName("Chat Familiar");
       setRoomType("group");
     } else {
-      // Get other member's user_id (no FK join)
-      const { data: members } = await supabase
-        .from("chat_room_members")
-        .select("user_id")
-        .eq("room_id", roomId)
-        .neq("user_id", user.id);
-      const otherUserId = members?.[0]?.user_id;
-      if (otherUserId) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("first_name, last_name")
-          .eq("id", otherUserId)
-          .maybeSingle();
-        if (profile) setRoomName(`${profile.first_name} ${profile.last_name}`);
-      }
       setRoomType("direct");
-
-      // Ensure user is a member of this room
-      await supabase.from("chat_room_members").upsert({
-        room_id: roomId,
-        user_id: user.id,
-        last_read_at: new Date().toISOString(),
-      });
+      const rosterRes = await fetch("/api/chat/rooms");
+      if (rosterRes.ok) {
+        const { conversations } = await rosterRes.json();
+        const conv = (conversations || []).find((c: any) => c.roomId === roomId);
+        if (conv) setRoomName(conv.name);
+      }
     }
 
-    await loadMessages();
-
-    // Mark as read
-    await supabase.from("chat_room_members").update({
-      last_read_at: new Date().toISOString(),
-    }).eq("room_id", roomId).eq("user_id", user.id);
-
-    // Realtime
-    const channel = supabase
-      .channel(`room-${roomId}`)
-      .on("postgres_changes", {
-        event: "INSERT",
-        schema: "public",
-        table: "family_messages",
-        filter: `room_id=eq.${roomId}`,
-      }, async (payload) => {
-        const newMsg = payload.new as Message;
-        const { data: sender } = await supabase
-          .from("profiles")
-          .select("first_name, last_name, avatar_url")
-          .eq("id", newMsg.sender_id)
-          .single();
-        setMessages(prev => [...prev, { ...newMsg, sender: sender || undefined }]);
-        scrollToBottom();
-        // Mark read
-        await supabase.from("chat_room_members").update({
-          last_read_at: new Date().toISOString(),
-        }).eq("room_id", roomId).eq("user_id", user.id);
-      })
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
-  };
-
-  const loadMessages = async () => {
-    const { data } = await supabase
-      .from("family_messages")
-      .select("*, sender:profiles!sender_id(first_name, last_name, avatar_url)")
-      .eq("room_id", roomId)
-      .order("created_at", { ascending: true })
-      .limit(100);
-    setMessages(data || []);
+    await loadMessages(true);
     setLoading(false);
-    scrollToBottom();
+
+    // Recepción: polling ligero (chat_messages tiene RLS sin políticas de
+    // cliente, así que Realtime no entrega estas filas — el servidor las
+    // sirve vía /api/chat/rooms/[roomId]/messages).
+    pollRef.current = setInterval(() => { loadMessages(false); }, 4000);
   };
 
   const send = async () => {
-    const content = text.trim();
-    if (!content || !userId) return;
+    const body = text.trim();
+    if (!body || !userId) return;
     setSending(true);
     setText("");
 
-    const { error } = await supabase.from("family_messages").insert({
-      sender_id: userId,
-      content,
-      room_id: roomId,
+    const res = await fetch(`/api/chat/rooms/${roomId}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body }),
     });
 
-    if (error) {
-      toast.error("Error al enviar");
-      setText(content);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      toast.error(err.error || "Error al enviar");
+      setText(body);
       setSending(false);
       return;
     }
 
-    // Push notification to other room members
-    const { data: members } = await supabase
-      .from("chat_room_members")
-      .select("user_id")
-      .eq("room_id", roomId)
-      .neq("user_id", userId);
-
-    if (members && members.length > 0) {
-      const { data: myProfile } = await supabase
-        .from("profiles")
-        .select("first_name, last_name")
-        .eq("id", userId)
-        .single();
-
-      members.forEach(m => {
-        fetch("/api/push/notify", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-internal-secret": process.env.NEXT_PUBLIC_INTERNAL_SECRET || "",
-          },
-          body: JSON.stringify({
-            invitedBy: m.user_id,
-            joinerName: myProfile ? `${myProfile.first_name} ${myProfile.last_name}` : "Un familiar",
-            relationLabel: roomType === "group" ? "Chat familiar" : "mensaje directo",
-            message: `te envió un mensaje: "${content.slice(0, 50)}${content.length > 50 ? "..." : ""}"`,
-          }),
-        }).catch(() => {});
-      });
-    }
-
+    await loadMessages(true);
     setSending(false);
     inputRef.current?.focus();
   };
@@ -198,7 +135,6 @@ export default function ChatRoomPage() {
     }
   };
 
-  // Group messages by date
   const grouped: { date: string; messages: Message[] }[] = [];
   messages.forEach(m => {
     const label = formatDateLabel(m.created_at);
@@ -219,7 +155,7 @@ export default function ChatRoomPage() {
         <Link href="/chat" className="text-ceiba-300 hover:text-white">
           <ArrowLeft size={20} />
         </Link>
-        <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${roomType === "group" ? "bg-white/20" : "bg-white/20"}`}>
+        <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 bg-white/20">
           {roomType === "group" ? <Users size={16} className="text-white" /> : <span className="text-white text-sm font-bold">{roomName[0]}</span>}
         </div>
         <div className="flex-1 min-w-0">
@@ -231,7 +167,6 @@ export default function ChatRoomPage() {
         </div>
       </nav>
 
-      {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-4">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center">
@@ -251,9 +186,9 @@ export default function ChatRoomPage() {
             </div>
             <div className="space-y-3">
               {group.messages.map((m, i) => {
-                const isMe = m.sender_id === userId;
+                const isMe = m.sender_user_id === userId;
                 const prev = group.messages[i - 1];
-                const showAvatar = !isMe && (!prev || prev.sender_id !== m.sender_id);
+                const showAvatar = !isMe && (!prev || prev.sender_user_id !== m.sender_user_id);
 
                 return (
                   <div key={m.id} className={`flex items-end gap-2 ${isMe ? "flex-row-reverse" : "flex-row"}`}>
@@ -261,9 +196,9 @@ export default function ChatRoomPage() {
                       <div className="w-7 h-7 flex-shrink-0">
                         {showAvatar && (
                           <div className="w-7 h-7 rounded-full bg-ceiba-700 overflow-hidden flex items-center justify-center text-white text-xs font-bold">
-                            {m.sender?.avatar_url
-                              ? <img src={m.sender.avatar_url} className="w-full h-full object-cover" alt="" />
-                              : `${m.sender?.first_name?.[0]}${m.sender?.last_name?.[0]}`}
+                            {m.sender?.photo_path
+                              ? <img src={m.sender.photo_path} className="w-full h-full object-cover" alt="" />
+                              : `${m.sender?.first_name?.[0] ?? ""}${m.sender?.last_name?.[0] ?? ""}`}
                           </div>
                         )}
                       </div>
@@ -277,7 +212,7 @@ export default function ChatRoomPage() {
                       <div className={`px-3 py-2 rounded-2xl text-sm leading-relaxed ${
                         isMe ? "bg-ceiba-700 text-white rounded-br-sm" : "bg-white text-gray-900 shadow-sm rounded-bl-sm"
                       }`}>
-                        {m.content}
+                        {m.body}
                       </div>
                       <span className="text-[10px] text-gray-400 mt-1 mx-1">{formatTime(m.created_at)}</span>
                     </div>
@@ -290,7 +225,6 @@ export default function ChatRoomPage() {
         <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
       <div className="bg-white border-t border-gray-200 px-4 py-3 flex-shrink-0">
         <div className="flex items-end gap-2 max-w-2xl mx-auto">
           <textarea

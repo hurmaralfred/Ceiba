@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { TreePine, ArrowLeft, Plus, X, Trash2, Calendar, MapPin, Heart, Baby, GraduationCap, Users, Star, BookOpen } from "lucide-react";
+import { TreePine, ArrowLeft, Plus, X, Trash2, Pencil, Calendar, MapPin, Heart, Baby, GraduationCap, Users, Star, BookOpen } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 import BottomNav from "@/components/BottomNav";
@@ -16,11 +16,11 @@ interface FamilyEvent {
   description: string | null;
   location: string | null;
   created_at: string;
-  creator?: { first_name: string; last_name: string; avatar_url?: string };
+  creator?: { first_name: string; last_name: string; photo_path: string | null } | null;
 }
 
 const EVENT_TYPES = [
-  { value: "birth",        label: "Nacimiento",    icon: <Baby size={16} />,         color: "bg-pink-100 text-pink-700" },
+  { value: "birth",        label: "Nacimiento",    icon: <Baby size={16} />,          color: "bg-pink-100 text-pink-700" },
   { value: "marriage",     label: "Matrimonio",    icon: <Heart size={16} />,         color: "bg-red-100 text-red-700" },
   { value: "death",        label: "Fallecimiento", icon: <Star size={16} />,          color: "bg-gray-100 text-gray-600" },
   { value: "graduation",   label: "Graduación",    icon: <GraduationCap size={16} />, color: "bg-blue-100 text-blue-700" },
@@ -40,6 +40,7 @@ export default function EventsPage() {
   const [saving, setSaving] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => { init(); }, []);
 
@@ -51,53 +52,58 @@ export default function EventsPage() {
   };
 
   const loadEvents = async () => {
-    const { data } = await supabase
-      .from("family_events")
-      .select("*, creator:profiles!created_by(first_name, last_name, avatar_url)")
-      .order("event_date", { ascending: false });
-    setEvents(data || []);
+    const res = await fetch("/api/events");
+    if (res.ok) {
+      const { events } = await res.json();
+      setEvents(events || []);
+    }
     setLoading(false);
+  };
+
+  const openCreate = () => { setEditingId(null); setForm(EMPTY_FORM); setShowModal(true); };
+  const openEdit = (e: FamilyEvent) => {
+    setEditingId(e.id);
+    setForm({
+      title: e.title, event_type: e.event_type, event_date: e.event_date,
+      description: e.description || "", location: e.location || "",
+    });
+    setShowModal(true);
   };
 
   const saveEvent = async () => {
     if (!form.title.trim()) { toast.error("El título es obligatorio"); return; }
     if (!form.event_date) { toast.error("La fecha es obligatoria"); return; }
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
     setSaving(true);
-    const { error } = await supabase.from("family_events").insert({
-      created_by: user.id,
-      title: form.title.trim(),
-      event_type: form.event_type,
-      event_date: form.event_date,
-      description: form.description.trim() || null,
-      location: form.location.trim() || null,
-    });
+    const res = editingId
+      ? await fetch("/api/events", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: editingId, ...form }),
+        })
+      : await fetch("/api/events", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form),
+        });
     setSaving(false);
-    if (error) { toast.error("Error al guardar"); return; }
-    toast.success("Evento registrado");
-    fetch("/api/notify/new-content", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: "event", title: form.title.trim() }),
-    }).catch(() => {});
+    if (!res.ok) { const b = await res.json().catch(() => ({})); toast.error(b.error || "Error al guardar"); return; }
+    toast.success(editingId ? "Evento actualizado" : "Evento registrado");
     setShowModal(false);
     setForm(EMPTY_FORM);
+    setEditingId(null);
     await loadEvents();
   };
 
   const deleteEvent = async (id: string) => {
     if (!confirm("¿Eliminar este evento?")) return;
-    await supabase.from("family_events").delete().eq("id", id);
+    const res = await fetch(`/api/events?id=${id}`, { method: "DELETE" });
+    if (!res.ok) { toast.error("Error al eliminar"); return; }
     toast.success("Evento eliminado");
     await loadEvents();
   };
 
   const getTypeInfo = (type: string) => EVENT_TYPES.find(t => t.value === type) || EVENT_TYPES[6];
 
-  const formatDate = (d: string) => new Date(d).toLocaleDateString("es", { day: "numeric", month: "long", year: "numeric" });
-
-  // Group events by year
   const byYear = events.reduce((acc, e) => {
     const year = new Date(e.event_date).getFullYear();
     if (!acc[year]) acc[year] = [];
@@ -121,10 +127,8 @@ export default function EventsPage() {
         <div className="flex items-center gap-2 font-display text-lg font-bold flex-1">
           <TreePine size={20} className="text-ceiba-300" /> Historia familiar
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors"
-        >
+        <button onClick={openCreate}
+          className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors">
           <Plus size={15} /> Agregar
         </button>
       </nav>
@@ -137,22 +141,18 @@ export default function EventsPage() {
             <p className="text-gray-400 text-sm mb-6 max-w-xs mx-auto">
               Registra nacimientos, matrimonios, graduaciones y otros hitos importantes de tu familia.
             </p>
-            <button onClick={() => setShowModal(true)} className="btn-primary">
+            <button onClick={openCreate} className="btn-primary">
               <Plus size={16} className="inline mr-2" /> Registrar primer evento
             </button>
           </div>
         )}
 
-        {/* ── Visual timeline ── */}
         {years.length > 0 && (
           <div className="relative">
-            {/* Vertical spine */}
             <div className="absolute left-[27px] top-0 bottom-0 w-0.5 bg-gray-200" />
-
             <div className="space-y-1">
               {years.map(year => (
                 <div key={year}>
-                  {/* Year marker */}
                   <div className="flex items-center gap-3 py-3 relative">
                     <div className="w-14 h-7 bg-ceiba-800 rounded-full flex items-center justify-center shrink-0 z-10 shadow-sm">
                       <span className="text-xs font-bold text-white">{year}</span>
@@ -160,20 +160,16 @@ export default function EventsPage() {
                     <div className="h-px bg-gray-200 flex-1" />
                   </div>
 
-                  {/* Events for this year */}
                   {byYear[year].map((event, idx) => {
                     const typeInfo = getTypeInfo(event.event_type);
                     const isLast = idx === byYear[year].length - 1;
                     return (
                       <div key={event.id} className={`flex gap-3 ${isLast ? "mb-2" : "mb-1"}`}>
-                        {/* Timeline dot */}
                         <div className="flex flex-col items-center shrink-0 w-14">
                           <div className={`w-8 h-8 rounded-full flex items-center justify-center z-10 shadow-sm border-2 border-white ${typeInfo.color}`}>
                             {typeInfo.icon}
                           </div>
                         </div>
-
-                        {/* Event card */}
                         <div className="flex-1 bg-white rounded-2xl shadow-sm border border-gray-100 p-3.5 mb-2">
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1 min-w-0">
@@ -194,10 +190,16 @@ export default function EventsPage() {
                               </div>
                             </div>
                             {event.created_by === userId && (
-                              <button onClick={() => deleteEvent(event.id)}
-                                className="text-gray-200 hover:text-red-400 transition-colors shrink-0 p-0.5">
-                                <Trash2 size={13} />
-                              </button>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <button onClick={() => openEdit(event)}
+                                  className="text-gray-200 hover:text-ceiba-500 transition-colors p-0.5">
+                                  <Pencil size={13} />
+                                </button>
+                                <button onClick={() => deleteEvent(event.id)}
+                                  className="text-gray-200 hover:text-red-400 transition-colors p-0.5">
+                                  <Trash2 size={13} />
+                                </button>
+                              </div>
                             )}
                           </div>
 
@@ -209,12 +211,12 @@ export default function EventsPage() {
 
                           <div className="flex items-center gap-1.5 mt-2">
                             <div className="w-4 h-4 rounded-full bg-ceiba-200 overflow-hidden flex items-center justify-center text-ceiba-700 text-[9px] font-bold shrink-0">
-                              {event.creator?.avatar_url
-                                ? <img src={event.creator.avatar_url} className="w-full h-full object-cover" alt="" />
-                                : `${event.creator?.first_name?.[0]}${event.creator?.last_name?.[0]}`}
+                              {event.creator?.photo_path
+                                ? <img src={event.creator.photo_path} className="w-full h-full object-cover" alt="" />
+                                : `${event.creator?.first_name?.[0] ?? ""}${event.creator?.last_name?.[0] ?? ""}`}
                             </div>
                             <span className="text-[10px] text-gray-400">
-                              Registrado por {event.creator?.first_name}
+                              Registrado por {event.creator?.first_name || "un familiar"}
                             </span>
                           </div>
                         </div>
@@ -228,13 +230,12 @@ export default function EventsPage() {
         )}
       </div>
 
-      {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center px-4 pb-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-bold">Registrar evento familiar</h2>
-              <button onClick={() => { setShowModal(false); setForm(EMPTY_FORM); }} className="text-gray-400 hover:text-gray-600">
+              <h2 className="text-lg font-bold">{editingId ? "Editar evento" : "Registrar evento familiar"}</h2>
+              <button onClick={() => { setShowModal(false); setForm(EMPTY_FORM); setEditingId(null); }} className="text-gray-400 hover:text-gray-600">
                 <X size={20} />
               </button>
             </div>
@@ -244,7 +245,6 @@ export default function EventsPage() {
                 <input type="text" className="input-field" placeholder="ej. Nació Valentina Hurtado"
                   value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} />
               </div>
-
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
@@ -258,24 +258,21 @@ export default function EventsPage() {
                     value={form.event_date} onChange={e => setForm(f => ({ ...f, event_date: e.target.value }))} />
                 </div>
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Lugar (opcional)</label>
                 <input type="text" className="input-field" placeholder="ej. Bogotá, Colombia"
                   value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} />
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Descripción (opcional)</label>
                 <textarea className="input-field resize-none" rows={3}
                   placeholder="Cuenta algo sobre este momento..."
                   value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
               </div>
-
               <div className="flex gap-3 pt-1">
-                <button onClick={() => { setShowModal(false); setForm(EMPTY_FORM); }} className="flex-1 btn-secondary">Cancelar</button>
+                <button onClick={() => { setShowModal(false); setForm(EMPTY_FORM); setEditingId(null); }} className="flex-1 btn-secondary">Cancelar</button>
                 <button onClick={saveEvent} disabled={saving} className="flex-1 btn-primary">
-                  {saving ? "Guardando..." : "Registrar"}
+                  {saving ? "Guardando..." : editingId ? "Guardar cambios" : "Registrar"}
                 </button>
               </div>
             </div>
