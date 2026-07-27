@@ -67,10 +67,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Falta lat/lng" }, { status: 400 });
   }
 
+  // city/country son NOT NULL en person_locations sin default. Solo tenemos
+  // coordenadas del navegador (no un nombre de ciudad), así que se guardan
+  // como cadena vacía en vez de inventar un valor — nunca se muestran ni se
+  // usan para nada, son puro relleno del constraint.
   const { error: upsertError } = await service
     .from("person_locations")
     .upsert(
-      { person_id: personId, lat_city: lat, lon_city: lng, updated_at: new Date().toISOString() },
+      { person_id: personId, city: "", country: "", lat_city: lat, lon_city: lng, updated_at: new Date().toISOString() },
       { onConflict: "person_id" }
     );
 
