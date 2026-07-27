@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { getServiceClient, resolvePersonsByUserIds } from "@/lib/server/family";
-
-const GROUP_ROOM_ID = "00000000-0000-0000-0000-000000000001";
+import { getServiceClient, resolvePersonsByUserIds, resolveOrCreateFamilyGroupRoom } from "@/lib/server/family";
 
 /**
  * GET /api/chat/rooms
- * Lista el chat grupal + mis salas directas, con el otro miembro resuelto
- * vía person_claims y el último mensaje (chat_messages, sin RLS directa).
+ * Lista el chat grupal de mi family_space + mis salas directas, con el otro
+ * miembro resuelto vía person_claims y el último mensaje (chat_messages).
  */
 export async function GET(_req: NextRequest) {
   const supabase = createClient();
@@ -16,32 +14,36 @@ export async function GET(_req: NextRequest) {
 
   const service = getServiceClient();
 
-  const { data: lastGroupMsg } = await service
-    .from("chat_messages")
-    .select("body, created_at")
-    .eq("room_id", GROUP_ROOM_ID)
-    .is("deleted_at", null)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  // Room grupal canónico de mi familia (aislado por family_space).
+  const groupRoomId = await resolveOrCreateFamilyGroupRoom(service, user.id);
 
-  const conversations: any[] = [
-    {
-      roomId: GROUP_ROOM_ID,
+  const conversations: any[] = [];
+  if (groupRoomId) {
+    const { data: lastGroupMsg } = await service
+      .from("chat_messages")
+      .select("body, created_at")
+      .eq("room_id", groupRoomId)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    conversations.push({
+      roomId: groupRoomId,
       type: "group",
       name: "Chat Familiar",
       lastMessage: lastGroupMsg?.body ?? null,
       lastAt: lastGroupMsg?.created_at ?? null,
       unread: false,
-    },
-  ];
+    });
+  }
 
   const { data: memberOf } = await service
     .from("chat_room_members")
     .select("room_id, last_read_at")
     .eq("user_id", user.id);
 
-  const roomIds = ((memberOf ?? []) as any[]).map((m) => m.room_id as string).filter((id) => id !== GROUP_ROOM_ID);
+  const roomIds = ((memberOf ?? []) as any[]).map((m) => m.room_id as string).filter((id) => id !== groupRoomId);
 
   if (roomIds.length > 0) {
     const { data: rooms } = await service.from("chat_rooms").select("id, type").in("id", roomIds).eq("type", "direct");

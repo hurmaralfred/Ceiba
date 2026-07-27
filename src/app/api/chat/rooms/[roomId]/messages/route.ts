@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getServiceClient, resolvePersonsByUserIds } from "@/lib/server/family";
 
-const GROUP_ROOM_ID = "00000000-0000-0000-0000-000000000001";
-
+/**
+ * La pertenencia a la sala es la única puerta de acceso: tanto los grupos
+ * (por family_space) como los directos tienen membresías reales en
+ * chat_room_members. No hay salas globales de acceso implícito.
+ */
 async function assertMember(service: ReturnType<typeof getServiceClient>, roomId: string, userId: string) {
-  if (roomId === GROUP_ROOM_ID) return true;
   const { data } = await service
     .from("chat_room_members")
     .select("room_id")

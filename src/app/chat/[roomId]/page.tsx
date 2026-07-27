@@ -6,8 +6,6 @@ import { TreePine, ArrowLeft, Send, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 
-const GROUP_ROOM_ID = "00000000-0000-0000-0000-000000000001";
-
 interface Sender {
   person_id: string;
   user_id: string;
@@ -81,16 +79,15 @@ export default function ChatRoomPage() {
     if (!user) { router.push("/auth/login"); return; }
     setUserId(user.id);
 
-    if (roomId === GROUP_ROOM_ID) {
-      setRoomName("Chat Familiar");
-      setRoomType("group");
-    } else {
-      setRoomType("direct");
-      const rosterRes = await fetch("/api/chat/rooms");
-      if (rosterRes.ok) {
-        const { conversations } = await rosterRes.json();
-        const conv = (conversations || []).find((c: any) => c.roomId === roomId);
-        if (conv) setRoomName(conv.name);
+    // El tipo/nombre de la sala vienen de la lista canónica de conversaciones
+    // (grupal por family_space o directa), no de un ID hardcodeado.
+    const roomsRes = await fetch("/api/chat/rooms");
+    if (roomsRes.ok) {
+      const { conversations } = await roomsRes.json();
+      const conv = (conversations || []).find((c: any) => c.roomId === roomId);
+      if (conv) {
+        setRoomName(conv.name);
+        setRoomType(conv.type);
       }
     }
 

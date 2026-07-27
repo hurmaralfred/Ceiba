@@ -119,6 +119,90 @@ export async function resolvePersonsByUserIds(
 }
 
 /**
+ * user_ids (con cuenta reclamada) de mi family_space, incluyéndome a mí.
+ * Base de membresía para el chat grupal familiar.
+ */
+export async function resolveFamilyUserIds(
+  service: SupabaseLike,
+  myUserId: string
+): Promise<string[]> {
+  const myPersonId = await resolveApprovedPersonId(service, myUserId);
+  if (!myPersonId) return [myUserId];
+
+  const familyPersonIds = await resolveFamilySpaceMemberIds(service, myPersonId);
+  if (familyPersonIds.length === 0) return [myUserId];
+
+  const { data: claims } = await service
+    .from("person_claims")
+    .select("user_id")
+    .in("person_id", familyPersonIds)
+    .eq("claim_status", "approved")
+    .is("revoked_at", null);
+
+  return [...new Set([myUserId, ...((claims ?? []) as any[]).map((c) => c.user_id as string)])];
+}
+
+/**
+ * Room grupal de MI familia (family_space), canónico y aislado por espacio.
+ * - Busca una sala type='group' donde ya soy miembro.
+ * - Si no existe, crea una ("Chat Familiar") y me agrega.
+ * - Sincroniza la membresía con los user_ids actuales de mi family_space,
+ *   de modo que el grupo crece con la familia. Nunca es un room global
+ *   compartido entre familias distintas.
+ * Devuelve el roomId, o null si no tengo identidad reclamada.
+ */
+export async function resolveOrCreateFamilyGroupRoom(
+  service: SupabaseLike,
+  myUserId: string
+): Promise<string | null> {
+  const familyUserIds = await resolveFamilyUserIds(service, myUserId);
+
+  const { data: myMemberships } = await service
+    .from("chat_room_members")
+    .select("room_id")
+    .eq("user_id", myUserId);
+
+  const myRoomIds = ((myMemberships ?? []) as any[]).map((m) => m.room_id as string);
+
+  let groupRoomId: string | null = null;
+  if (myRoomIds.length > 0) {
+    const { data: groupRooms } = await service
+      .from("chat_rooms")
+      .select("id")
+      .in("id", myRoomIds)
+      .eq("type", "group")
+      .limit(1);
+    groupRoomId = ((groupRooms ?? []) as any[])[0]?.id ?? null;
+  }
+
+  if (!groupRoomId) {
+    const { data: room, error } = await service
+      .from("chat_rooms")
+      .insert({ type: "group", name: "Chat Familiar", created_by: myUserId })
+      .select("id")
+      .single();
+    if (error || !room) {
+      console.error("resolveOrCreateFamilyGroupRoom create error:", JSON.stringify(error));
+      return null;
+    }
+    groupRoomId = room.id as string;
+  }
+
+  // Sincronizar membresía con la familia actual (idempotente).
+  const { data: currentMembers } = await service
+    .from("chat_room_members")
+    .select("user_id")
+    .eq("room_id", groupRoomId);
+  const existing = new Set(((currentMembers ?? []) as any[]).map((m) => m.user_id as string));
+  const toAdd = familyUserIds.filter((uid) => !existing.has(uid)).map((uid) => ({ room_id: groupRoomId, user_id: uid }));
+  if (toAdd.length > 0) {
+    await service.from("chat_room_members").insert(toAdd);
+  }
+
+  return groupRoomId;
+}
+
+/**
  * Roster completo de mi familia (mismo family_space), con display info.
  * Incluye únicamente personas con claim aprobado (las que sí tienen cuenta).
  */
