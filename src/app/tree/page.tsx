@@ -15,6 +15,12 @@ import SuggestionCards from "@/components/SuggestionCards";
 import BirthdayWidget from "@/components/BirthdayWidget";
 import TodayWidget from "@/components/TodayWidget";
 import NetworkBanner from "@/components/NetworkBanner";
+import {
+  parseGrowthStats,
+  formatFamilyLine,
+  formatGrowthLine,
+  type CeibaGrowthStats,
+} from "@/lib/growthStats";
 import BottomNav from "@/components/BottomNav";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import toast from "react-hot-toast";
@@ -90,9 +96,27 @@ export default function TreePage() {
   const [modalPhotoPreview, setModalPhotoPreview] = useState<string | null>(null);
   const [sosSending, setSosSending] = useState(false);
   const [sosActive, setSosActive] = useState(false);
+  // Contador global. `null` = no disponible -> se oculta solo esa línea,
+  // el árbol sigue cargando con normalidad.
+  const [growthStats, setGrowthStats] = useState<CeibaGrowthStats | null>(null);
+
+  // El contador global es informativo: nunca debe impedir que el árbol
+  // cargue. Si la RPC falla se registra en consola y se oculta la línea,
+  // sin toast invasivo.
+  const loadGrowthStats = async () => {
+    try {
+      const { data, error } = await supabase.rpc("get_ceiba_growth_stats");
+      if (error) throw error;
+      setGrowthStats(parseGrowthStats(data));
+    } catch (err) {
+      console.error("get_ceiba_growth_stats falló; se oculta el contador global:", err);
+      setGrowthStats(null);
+    }
+  };
 
   useEffect(() => {
     loadData();
+    loadGrowthStats();
     if (!("Notification" in window)) {
       setNotifPermission("unsupported");
     } else {
@@ -189,6 +213,7 @@ console.log("⑤ Datos cargados");
       setForm(EMPTY_FORM);
       setDuplicateWarning(null);
       loadData();
+      loadGrowthStats();
     } catch (err: any) {
       toast.error(err?.message || "Error al vincular");
     } finally {
@@ -277,6 +302,7 @@ console.log("⑤ Datos cargados");
       setShowModal(false);
       setForm(EMPTY_FORM);
       loadData();
+      loadGrowthStats();
     } catch (err: any) {
       // Se muestra el error REAL devuelto por add_relative (p. ej. permisos o
       // espacio familiar), no un mensaje genérico que oculte la causa.
@@ -655,17 +681,30 @@ console.log("⑤ Datos cargados");
       <div className="max-w-4xl mx-auto px-3 py-3 pb-24">
         {/* SLIM profile strip */}
         {profile && (
-          <div className="flex items-center gap-2.5 mb-3">
-            <div className="w-9 h-9 rounded-xl bg-ceiba-700 flex-shrink-0 overflow-hidden flex items-center justify-center text-white font-bold text-sm">
-              {profile.avatar_url
-                ? <img src={profile.avatar_url} className="w-full h-full object-cover" alt="" />
-                : `${profile.first_name[0]}${profile.last_name?.[0] || ""}`}
+          <div className="mb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-ceiba-700 flex-shrink-0 overflow-hidden flex items-center justify-center text-white font-bold text-sm">
+                {profile.avatar_url
+                  ? <img src={profile.avatar_url} className="w-full h-full object-cover" alt="" />
+                  : `${profile.first_name[0]}${profile.last_name?.[0] || ""}`}
+              </div>
+              <span className="font-semibold text-gray-800 flex-1 truncate">{profile.first_name} {profile.last_name}</span>
+              <span className="text-xs text-gray-400 flex-shrink-0">
+                {formatFamilyLine(members.length, joinedMembers.length)}
+              </span>
+              <button onClick={shareTree} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors flex-shrink-0" title="Compartir árbol">
+                <Share2 size={16} />
+              </button>
             </div>
-            <span className="font-semibold text-gray-800 flex-1 truncate">{profile.first_name} {profile.last_name}</span>
-            <span className="text-xs text-gray-400 flex-shrink-0">{members.length} familiares · {joinedMembers.length} en Ceiba</span>
-            <button onClick={shareTree} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors flex-shrink-0" title="Compartir árbol">
-              <Share2 size={16} />
-            </button>
+
+            {/* Contador global de crecimiento. Segunda línea discreta;
+                se oculta por completo si la RPC no respondió. */}
+            {growthStats && (
+              <p className="text-[11px] text-gray-400 mt-0.5 pl-11 truncate">
+                <span className="hidden sm:inline">{formatGrowthLine(growthStats, "desktop")}</span>
+                <span className="sm:hidden">{formatGrowthLine(growthStats, "mobile")}</span>
+              </p>
+            )}
           </div>
         )}
 
