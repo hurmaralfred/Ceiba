@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import webpush from "web-push";
+import { resolveApprovedPersonId, resolveFamilySpaceMemberIds } from "@/lib/server/presence";
 
 function configureWebPush() {
   const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
@@ -27,49 +28,6 @@ function getServiceClient() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
-}
-
-/**
- * Resuelve la persona reclamada (aprobada, no revocada) de un usuario
- * autenticado. Único punto de entrada canónico:
- *   auth.users.id -> person_claims.user_id -> person_claims.person_id -> persons.id
- * person_locations no tiene políticas RLS: solo el service role puede
- * leerla/escribirla, por eso esta ruta hace todo el trabajo server-side.
- */
-async function resolveApprovedPersonId(
-  service: ReturnType<typeof getServiceClient>,
-  userId: string
-): Promise<string | null> {
-  const { data } = await service
-    .from("person_claims")
-    .select("person_id")
-    .eq("user_id", userId)
-    .eq("claim_status", "approved")
-    .is("revoked_at", null)
-    .maybeSingle();
-  return data?.person_id ?? null;
-}
-
-/** IDs de otras personas que comparten al menos un family_space con la mía. */
-async function resolveFamilySpaceMemberIds(
-  service: ReturnType<typeof getServiceClient>,
-  personId: string
-): Promise<string[]> {
-  const { data: mySpaces } = await service
-    .from("space_memberships")
-    .select("space_id")
-    .eq("person_id", personId);
-
-  const spaceIds = (mySpaces ?? []).map((s) => s.space_id as string);
-  if (spaceIds.length === 0) return [];
-
-  const { data: members } = await service
-    .from("space_memberships")
-    .select("person_id")
-    .in("space_id", spaceIds)
-    .neq("person_id", personId);
-
-  return [...new Set((members ?? []).map((m) => m.person_id as string))];
 }
 
 /**
