@@ -9,6 +9,7 @@ import { Profile, FamilyMember, RelationType, RELATION_LABELS } from "@/lib/type
 import { adaptGraph, buildAddRelativeRequest, isAddRelativeSupported, relationRequiresConnector, type FamilyGraph } from "@/lib/graphAdapter";
 import { KINSHIP_CATALOG, type KinshipKey } from "@/domain/relationships";
 import type { ExtendedEntry, MemberLink } from "@/components/tree/FamilyTreeGraph";
+import { buildVisibleMembers } from "@/lib/visibleMembers";
 import InstallBanner from "@/components/InstallBanner";
 import TreeErrorBoundary from "@/components/TreeErrorBoundary";
 import BirthdayWidget from "@/components/BirthdayWidget";
@@ -70,6 +71,7 @@ export default function TreePage() {
   const [members, setMembers] = useState<FamilyMember[]>([]);
   const [extendedMembers, setExtendedMembers] = useState<ExtendedEntry[]>([]);
   const [memberLinks, setMemberLinks] = useState<MemberLink[]>([]);
+  const [visibleMembers, setVisibleMembers] = useState<FamilyMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [view, setView] = useState<"graph" | "list" | "map">("graph");
@@ -175,10 +177,13 @@ const graph = graphData as FamilyGraph | null;
 
     const { profile, members, extendedMembers, memberLinks } = adaptGraph(graph, user.id);
 console.log("④ Después adaptGraph");
+    const unified = buildVisibleMembers(members, extendedMembers);
+console.log("④.5 Conjunto unificado:", unified.length, "miembros");
     setProfile(profile);
     setMembers(members);
     setExtendedMembers(extendedMembers);
     setMemberLinks(memberLinks);
+    setVisibleMembers(unified);
 console.log("⑤ Datos cargados");
 
     // Ubicación del usuario (de persons)
@@ -595,10 +600,10 @@ console.log("⑤ Datos cargados");
     </div>
   );
 
-  const bloodMembers = members.filter(m => m.relation_kind === "blood");
-  const affinityMembers = members.filter(m => m.relation_kind === "affinity");
-  const joinedMembers = members.filter(m => m.profile_id);
-  const pendingMembers = members.filter(m => !m.profile_id);
+  const bloodMembers = visibleMembers.filter(m => m.relation_kind === "blood");
+  const affinityMembers = visibleMembers.filter(m => m.relation_kind === "affinity");
+  const joinedMembers = visibleMembers.filter(m => m.profile_id);
+  const pendingMembers = visibleMembers.filter(m => !m.profile_id);
 
   return (
     <div className="min-h-screen bg-cream-100">
@@ -689,7 +694,7 @@ console.log("⑤ Datos cargados");
               </div>
               <span className="font-semibold text-gray-800 flex-1 truncate">{profile.first_name} {profile.last_name}</span>
               <span className="text-xs text-gray-400 flex-shrink-0">
-                {formatFamilyLine(members.length, joinedMembers.length)}
+                {formatFamilyLine(visibleMembers.length, joinedMembers.length)}
               </span>
               <button onClick={shareTree} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors flex-shrink-0" title="Compartir árbol">
                 <Share2 size={16} />
@@ -709,12 +714,12 @@ console.log("⑤ Datos cargados");
 
         {/* Red familiar progress — stays compact */}
         <NetworkBanner
-          totalMembers={members.length}
-          joinedMembers={members.filter(m => m.profile_id).length}
+          totalMembers={visibleMembers.length}
+          joinedMembers={visibleMembers.filter(m => m.profile_id).length}
         />
 
         {/* Family list / graph */}
-        {members.length === 0 ? (
+        {visibleMembers.length === 0 ? (
           <div className="card text-center py-10 px-6">
             <div className="w-20 h-20 rounded-3xl bg-ceiba-50 flex items-center justify-center mx-auto mb-5">
               <TreePine size={40} className="text-ceiba-400" />
