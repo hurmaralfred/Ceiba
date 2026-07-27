@@ -203,7 +203,13 @@ export function inferRelation(parentRelation: RelationType | string, childRelati
       // (profundidad 3 descendente). Antes esto se colapsaba a nieto.
       if (childRelation === "son")            return "great_grandson";
       if (childRelation === "daughter")       return "great_granddaughter";
-      if (["spouse","partner"].includes(childRelation)) return "great_grandson";
+      // La pareja de mi nieto/a NO es mi bisnieto/a: es afinidad, y está en
+      // la MISMA generación que mi nieto, no una por debajo. Devolver
+      // "great_grandson" afirmaba un descendiente de sangre inexistente
+      // (caso real: la pareja de un nieto aparecía como "Bisnieto/a").
+      // El catálogo no tiene término para "nieto político", así que se
+      // devuelve `other` → "Familiar": impreciso, pero nunca falso.
+      if (["spouse","partner"].includes(childRelation)) return "other";
       break;
 
     // ── Mis tíos ─────────────────────────────────────────────

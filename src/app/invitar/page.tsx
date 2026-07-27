@@ -15,6 +15,13 @@ import {
   copyInviteLink, InviteTemplate,
 } from "@/lib/viral/inviteFlow";
 import { trackEvent } from "@/lib/viral/viralAnalytics";
+import {
+  resolveRelationsFromRoot,
+  describeRelation,
+  describeRelationPossessive,
+  UNKNOWN_RELATION_LABEL,
+} from "@/lib/genealogy";
+import type { FamilyGraph } from "@/lib/graphAdapter";
 import toast, { Toaster } from "react-hot-toast";
 
 // ============================================================
@@ -29,7 +36,10 @@ interface FamilyMember {
   phone?: string | null;
   linked_user_id?: string | null;
   is_living?: boolean;
-  relation?: string;          // relación relativa al usuario
+  /** Etiqueta posesiva ya resuelta ("Tu madre"). Ver @/lib/genealogy. */
+  relation?: string;
+  /** Misma relación sin posesivo ("madre"), para el texto del mensaje. */
+  relationPlain?: string;
 }
 
 type CardState = "idle" | "loading" | "sent" | "adding_phone";
@@ -37,22 +47,6 @@ type CardState = "idle" | "loading" | "sent" | "adding_phone";
 // ============================================================
 // Helpers
 // ============================================================
-
-function relationLabel(rel: string): string {
-  const map: Record<string, string> = {
-    parent: "Tu papá/mamá",
-    child: "Tu hijo/a",
-    sibling: "Tu hermano/a",
-    spouse: "Tu pareja",
-    grandparent: "Tu abuelo/a",
-    grandchild: "Tu nieto/a",
-    uncle_aunt: "Tu tío/a",
-    nephew_niece: "Tu sobrino/a",
-    cousin: "Tu primo/a",
-    family: "Tu familiar",
-  };
-  return map[rel] ?? "Tu familiar";
-}
 
 function Avatar({
   person, size = 48,
@@ -158,7 +152,7 @@ function MemberCard({
       const ctx = {
         inviterFirstName,
         invitedFirstName: member.first_names,
-        invitedRelation: member.relation ?? "familiar",
+        invitedRelation: member.relationPlain ?? UNKNOWN_RELATION_LABEL.toLowerCase(),
         previewMembers: previewNames,
       };
       const result = await createInviteLink(supabase, member.id, template);
@@ -179,7 +173,7 @@ function MemberCard({
       const ctx = {
         inviterFirstName,
         invitedFirstName: member.first_names,
-        invitedRelation: member.relation ?? "familiar",
+        invitedRelation: member.relationPlain ?? UNKNOWN_RELATION_LABEL.toLowerCase(),
         previewMembers: previewNames,
       };
       const message = buildInviteMessage(template, ctx, result.universalLink);
@@ -223,7 +217,7 @@ function MemberCard({
             {member.first_names} {member.last_names}
           </p>
           {member.relation && (
-            <p className="text-ceiba-500 text-sm">{relationLabel(member.relation)}</p>
+            <p className="text-ceiba-500 text-sm">{member.relation}</p>
           )}
 
           {/* Teléfono */}
@@ -416,22 +410,17 @@ export default function InvitarPage() {
         setMeFirstName(me.first_name);
       }
 
-      // Relación directa de cada persona respecto al usuario.
-      const relationMap = new Map<string, string>();
-
-      for (const edge of edges) {
-        if (edge.person_a_id === myId) {
-          relationMap.set(
-            edge.person_b_id,
-            edge.relationship_type ?? "family"
-          );
-        } else if (edge.person_b_id === myId) {
-          relationMap.set(
-            edge.person_a_id,
-            edge.relationship_type ?? "family"
-          );
-        }
-      }
+      // Parentesco: se delega en la ÚNICA lógica canónica, la misma que
+      // usa /tree (resolveRelationsFromRoot). Antes se leía
+      // `edge.relationship_type` en crudo sin mirar la dirección de la
+      // arista, así que en una relación `parent` los HIJOS quedaban
+      // etiquetados como "Tu papá/mamá" (person_a es el progenitor y
+      // person_b el hijo: quién es quién depende de desde dónde se mire).
+      const { byPersonId: relationsById } = resolveRelationsFromRoot({
+        me: myId,
+        nodes,
+        edges,
+      } as unknown as FamilyGraph);
 
       // Personas vivas, distintas del usuario y todavía sin cuenta vinculada.
       const pending: FamilyMember[] = nodes
@@ -459,7 +448,8 @@ export default function InvitarPage() {
             phone: null,
             linked_user_id: null,
             is_living: node.is_deceased !== true,
-            relation: relationMap.get(node.id) ?? "family",
+            relation: describeRelationPossessive(relationsById.get(node.id)),
+            relationPlain: describeRelation(relationsById.get(node.id)).toLowerCase(),
           };
         });
 
@@ -533,7 +523,7 @@ export default function InvitarPage() {
         const ctx = {
           inviterFirstName: meFirstName,
           invitedFirstName: m.first_names,
-          invitedRelation: m.relation ?? "familiar",
+          invitedRelation: m.relationPlain ?? UNKNOWN_RELATION_LABEL.toLowerCase(),
           previewMembers: previewNames,
         };
         const msg = buildInviteMessage(template, ctx, result.universalLink);

@@ -331,6 +331,156 @@ function buildAdjacency(edges: EdgeNode[]): Map<string, EdgeNode[]> {
   return adjacency;
 }
 
+/**
+ * Relación resuelta de una persona respecto a la raíz del grafo.
+ */
+export interface ResolvedRelation {
+  /** Parentesco canónico con género ya aplicado cuando se conoce. */
+  relation: RelationType;
+  /**
+   * `false` cuando el género de la persona es desconocido/neutro. Permite
+   * a la capa de presentación elegir una etiqueta neutral ("Tío/Tía") en
+   * vez de caer al masculino por defecto. NO altera ningún dato.
+   */
+  genderKnown: boolean;
+  /** Saltos desde la raíz (1 = relación directa). */
+  depth: number;
+  /** Generación estructural (0 = misma, -1 = padres, +1 = hijos). */
+  generation: number;
+  /** Persona desde la que se alcanzó (para agrupar ramas). */
+  predecessorId: string;
+}
+
+/**
+ * ÚNICA fuente de verdad del parentesco en la app.
+ *
+ * Recorre el grafo desde la persona raíz y resuelve, para cada persona
+ * alcanzable, qué es respecto a la raíz. Consumida por:
+ *   - /tree     (vía adaptGraph)
+ *   - /invitar  (vía @/lib/genealogy)
+ *
+ * Interpreta correctamente:
+ *   - la DIRECCIÓN de person_a_id / person_b_id (en una arista `parent`,
+ *     person_a es el progenitor y person_b el hijo: quién es quién depende
+ *     de desde dónde se mire — esto es justo lo que /invitar ignoraba);
+ *   - relationship_type canónico (parent | partner | guardian);
+ *   - relaciones inversas y caminos indirectos (multi-salto) vía
+ *     inferRelation;
+ *   - personas eliminadas o fusionadas (se excluyen del recorrido);
+ *   - género desconocido (se marca en genderKnown, sin asumir masculino).
+ */
+export function resolveRelationsFromRoot(graph: FamilyGraph): {
+  me: string | null;
+  byPersonId: Map<string, ResolvedRelation>;
+} {
+  const byPersonId = new Map<string, ResolvedRelation>();
+  const me = graph.me;
+  if (!me) return { me: null, byPersonId };
+
+  const allNodes = graph.nodes || [];
+  const edges = graph.edges || [];
+
+  // Personas eliminadas o fusionadas nunca participan del parentesco.
+  const isUsable = (n: PersonNode) =>
+    !n.deleted_at && (!n.status || n.status === "active");
+
+  const nodeById = new Map(
+    allNodes.filter(isUsable).map((node) => [node.id, node])
+  );
+
+  if (!nodeById.has(me)) return { me, byPersonId };
+
+  // Solo aristas vivas entre personas utilizables.
+  const usableEdges = edges.filter(
+    (e) =>
+      !e.deleted_at &&
+      nodeById.has(e.person_a_id) &&
+      nodeById.has(e.person_b_id)
+  );
+
+  const adjacency = buildAdjacency(usableEdges);
+  const depthById = new Map<string, number>([[me, 0]]);
+  const generationById = new Map<string, number>([[me, 0]]);
+  const visited = new Set<string>([me]);
+
+  const queue: Array<{
+    personId: string;
+    relationFromRoot: RelationType | null;
+  }> = [{ personId: me, relationFromRoot: null }];
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (!current) break;
+
+    const currentDepth = depthById.get(current.personId) || 0;
+    const neighborEdges = [...(adjacency.get(current.personId) || [])].sort(
+      (a, b) =>
+        (STRUCTURAL_EDGE_PRIORITY[a.relationship_type] ?? 9) -
+        (STRUCTURAL_EDGE_PRIORITY[b.relationship_type] ?? 9)
+    );
+
+    for (const edge of neighborEdges) {
+      const otherId =
+        edge.person_a_id === current.personId
+          ? edge.person_b_id
+          : edge.person_a_id;
+
+      if (visited.has(otherId)) continue;
+
+      const otherNode = nodeById.get(otherId);
+      if (!otherNode) continue;
+
+      // La dirección de la arista se interpreta SIEMPRE desde quien mira.
+      const localRelation = edgeToRelationType(
+        edge,
+        current.personId,
+        otherNode.gender
+      );
+
+      const relationFromRoot =
+        current.personId === me
+          ? localRelation
+          : current.relationFromRoot
+            ? inferRelation(current.relationFromRoot, localRelation)
+            : null;
+
+      if (!relationFromRoot) continue;
+
+      visited.add(otherId);
+
+      // Etiqueta final: corrige el género con el de la persona real (Padre
+      // vs Madre, Abuelo vs Abuela, ...). La cadena sigue usando la
+      // relación canónica para no alterar los siguientes saltos.
+      const relationAfterGender = applyGenderToRelation(
+        relationFromRoot as RelationType,
+        otherNode.gender
+      );
+
+      depthById.set(otherId, currentDepth + 1);
+      generationById.set(
+        otherId,
+        (generationById.get(current.personId) ?? 0) +
+          structuralGenerationDelta(edge, current.personId)
+      );
+
+      byPersonId.set(otherId, {
+        relation: relationAfterGender,
+        genderKnown: classifyGender(otherNode.gender) !== null,
+        depth: currentDepth + 1,
+        generation: generationById.get(otherId) ?? 0,
+        predecessorId: current.personId,
+      });
+
+      queue.push({
+        personId: otherId,
+        relationFromRoot: relationFromRoot as RelationType,
+      });
+    }
+  }
+
+  return { me, byPersonId };
+}
+
 export function adaptGraph(
   graph: FamilyGraph,
   userId: string
@@ -381,92 +531,19 @@ export function adaptGraph(
     };
   }
 
-  const adjacency = buildAdjacency(edges);
+  // Recorrido canónico compartido: la MISMA función que usa /invitar.
+  // No se duplica lógica de parentesco en ninguna página.
+  const resolved = resolveRelationsFromRoot(graph);
   const relationFromMe = new Map<string, RelationType>();
   const predecessor = new Map<string, string>();
   const depthById = new Map<string, number>([[me, 0]]);
-  const visited = new Set<string>([me]);
-  // Posición vertical del árbol: generación estructural (0 = mi generación,
-  // -1 = padres, +1 = hijos...). Independiente de `relationFromMe`, que es
-  // solo la etiqueta. Un hijastro/a comparte la misma generación estructural
-  // que un hijo/a — únicamente cambia cómo se le llama.
   const generationById = new Map<string, number>([[me, 0]]);
 
-  const queue: Array<{
-    personId: string;
-    relationFromRoot: RelationType | null;
-  }> = [
-    {
-      personId: me,
-      relationFromRoot: null,
-    },
-  ];
-
-  while (queue.length > 0) {
-    const current = queue.shift();
-
-    if (!current) break;
-
-    const currentDepth = depthById.get(current.personId) || 0;
-    const neighborEdges = [...(adjacency.get(current.personId) || [])].sort(
-      (a, b) =>
-        (STRUCTURAL_EDGE_PRIORITY[a.relationship_type] ?? 9) -
-        (STRUCTURAL_EDGE_PRIORITY[b.relationship_type] ?? 9)
-    );
-
-    for (const edge of neighborEdges) {
-      const otherId =
-        edge.person_a_id === current.personId
-          ? edge.person_b_id
-          : edge.person_a_id;
-
-      if (visited.has(otherId)) continue;
-
-      const otherNode = nodeById.get(otherId);
-      if (!otherNode) continue;
-
-      const localRelation = edgeToRelationType(
-        edge,
-        current.personId,
-        otherNode.gender
-      );
-
-      const relationFromRoot =
-        current.personId === me
-          ? localRelation
-          : current.relationFromRoot
-            ? inferRelation(
-                current.relationFromRoot,
-                localRelation
-              )
-            : null;
-
-      if (!relationFromRoot) continue;
-
-      visited.add(otherId);
-      // Etiqueta final: corrige el género con el de la persona real (Padre vs
-      // Madre, Abuelo vs Abuela, Nieto vs Nieta, ...). La cadena sigue usando
-      // la relación canónica para no alterar la inferencia de los siguientes
-      // saltos.
-      const relationAfterGender = applyGenderToRelation(
-        relationFromRoot as RelationType,
-        otherNode.gender
-      );
-      relationFromMe.set(otherId, relationAfterGender);
-      predecessor.set(otherId, current.personId);
-      depthById.set(otherId, currentDepth + 1);
-      generationById.set(
-        otherId,
-        (generationById.get(current.personId) ?? 0) +
-          structuralGenerationDelta(edge, current.personId)
-      );
-
-      queue.push({
-        personId: otherId,
-        relationFromRoot:
-          relationFromRoot as RelationType,
-      });
-    }
+  for (const [personId, r] of resolved.byPersonId) {
+    relationFromMe.set(personId, r.relation);
+    if (r.predecessorId) predecessor.set(personId, r.predecessorId);
+    depthById.set(personId, r.depth);
+    generationById.set(personId, r.generation);
   }
 
   const members: FamilyMember[] = [];
