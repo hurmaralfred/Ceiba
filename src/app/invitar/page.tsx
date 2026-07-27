@@ -353,55 +353,134 @@ export default function InvitarPage() {
 
   const loadData = useCallback(async () => {
     setLoading(true);
+
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push("/auth/login"); return; }
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-      // Mi persona
-      const { data: me } = await supabase
-        .from("persons")
-        .select("first_names, last_names")
-        .eq("linked_user_id", user.id)
-        .maybeSingle();
-      if (me) setMeFirstName(me.first_names);
-
-      // Grafo familiar
-      const { data: graph } = await supabase.rpc("get_my_family_graph", { p_depth: 2 });
-      if (!graph) { setLoading(false); return; }
-
-      const nodes: any[] = graph.nodes ?? [];
-      const edges: any[] = graph.edges ?? [];
-      const myId = graph.me;
-
-      // Mapear relaciones para cada nodo
-      const relationMap = new Map<string, string>();
-      for (const e of edges) {
-        if (e.person_a_id === myId) relationMap.set(e.person_b_id, e.relation_type ?? "family");
-        else if (e.person_b_id === myId) relationMap.set(e.person_a_id, e.relation_type ?? "family");
+      if (!user) {
+        router.push("/auth/login");
+        return;
       }
 
-      // Filtrar: no vinculados, vivos, no son yo
-      const pending = nodes
-        .filter((n) => n.id !== myId && !n.linked_user_id && n.is_living !== false)
-        .map((n) => ({
-          id: n.id,
-          first_names: n.first_names,
-          last_names: n.last_names ?? "",
-          profile_photo_url: n.profile_photo_url ?? null,
-          phone: n.phone ?? null,
-          linked_user_id: n.linked_user_id,
-          is_living: n.is_living,
-          relation: relationMap.get(n.id) ?? "family",
-        }));
+      // Cargar el grafo familiar canónico.
+      const { data: graph, error: graphError } = await supabase.rpc(
+        "get_my_family_graph",
+        { p_depth: 2 }
+      );
 
-      // Preview: nombres de los que SÍ están activos
+      if (graphError) {
+        throw graphError;
+      }
+
+      if (!graph) {
+        setMembers([]);
+        return;
+      }
+
+      const nodes: any[] = Array.isArray(graph.nodes) ? graph.nodes : [];
+      const edges: any[] = Array.isArray(graph.edges) ? graph.edges : [];
+      const myId: string | null = graph.me ?? null;
+
+      // Obtener las personas que ya tienen una identidad reclamada.
+      const personIds = nodes
+        .map((node) => node.id)
+        .filter((id): id is string => Boolean(id));
+
+      const claimedPersonIds = new Set<string>();
+
+      if (personIds.length > 0) {
+        const { data: claims, error: claimsError } = await supabase
+          .from("person_claims")
+          .select("person_id")
+          .in("person_id", personIds)
+          .eq("claim_status", "approved")
+          .is("revoked_at", null);
+
+        if (claimsError) {
+          throw claimsError;
+        }
+
+        for (const claim of claims ?? []) {
+          if (claim.person_id) {
+            claimedPersonIds.add(claim.person_id);
+          }
+        }
+      }
+
+      // Nombre de la persona autenticada.
+      const me = nodes.find((node) => node.id === myId);
+
+      if (me?.first_name) {
+        setMeFirstName(me.first_name);
+      }
+
+      // Relación directa de cada persona respecto al usuario.
+      const relationMap = new Map<string, string>();
+
+      for (const edge of edges) {
+        if (edge.person_a_id === myId) {
+          relationMap.set(
+            edge.person_b_id,
+            edge.relationship_type ?? "family"
+          );
+        } else if (edge.person_b_id === myId) {
+          relationMap.set(
+            edge.person_a_id,
+            edge.relationship_type ?? "family"
+          );
+        }
+      }
+
+      // Personas vivas, distintas del usuario y todavía sin cuenta vinculada.
+      const pending: FamilyMember[] = nodes
+        .filter(
+          (node) =>
+            node.id !== myId &&
+            node.deleted_at == null &&
+            node.is_deceased !== true &&
+            !claimedPersonIds.has(node.id)
+        )
+        .map((node) => {
+          const givenNames = [node.first_name, node.middle_name]
+            .filter(Boolean)
+            .join(" ");
+
+          const surnames = [node.first_surname, node.second_surname]
+            .filter(Boolean)
+            .join(" ");
+
+          return {
+            id: node.id,
+            first_names: givenNames,
+            last_names: surnames,
+            profile_photo_url: node.photo_path ?? null,
+            phone: null,
+            linked_user_id: null,
+            is_living: node.is_deceased !== true,
+            relation: relationMap.get(node.id) ?? "family",
+          };
+        });
+
+      // Personas del grafo que ya tienen una cuenta activa.
       const active = nodes
-        .filter((n) => n.id !== myId && n.linked_user_id)
+        .filter(
+          (node) =>
+            node.id !== myId &&
+            node.deleted_at == null &&
+            claimedPersonIds.has(node.id)
+        )
         .slice(0, 3)
-        .map((n) => n.first_names);
-      setPreviewNames(active);
+        .map((node) => node.first_name)
+        .filter(Boolean);
 
+      setPreviewNames(active);
       setMembers(pending);
+    } catch (error) {
+      console.error("Error cargando familiares para invitar:", error);
+      toast.error("No se pudieron cargar los familiares");
+      setMembers([]);
     } finally {
       setLoading(false);
     }
