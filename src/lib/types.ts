@@ -111,20 +111,6 @@ export interface FamilyTreeNode {
   country?: string
 }
 
-export interface RelationshipSuggestion {
-  id: string
-  suggested_to: string
-  first_name: string
-  last_name?: string
-  suggested_relation: RelationType
-  suggested_relation_kind: RelationKind
-  suggested_by_profile_id: string
-  suggested_by_name: string
-  family_member_id?: string
-  status: 'pending' | 'accepted' | 'rejected'
-  created_at: string
-}
-
 // Label maps
 export const RELATION_LABELS: Record<RelationType, string> = {
   father: 'Padre',

@@ -1,6 +1,6 @@
 "use client";
-import { useState, useRef, useEffect, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useRef, Suspense } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Eye, EyeOff, ArrowRight, ArrowLeft, Camera, Check } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -77,8 +77,6 @@ function DarkInput({ type = "text", placeholder, value, onChange, required, clas
 
 function RegisterFormInner() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const paraToken = searchParams.get("para");
   const supabase = createClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -94,22 +92,6 @@ function RegisterFormInner() {
     email: "",
     password: "",
   });
-
-  // Pre-fill name if coming from a personalized invite
-  useEffect(() => {
-    if (!paraToken) return;
-    fetch(`/api/para/${paraToken}`)
-      .then(r => r.json())
-      .then(data => {
-        if (!data.member) return;
-        setForm(f => ({
-          ...f,
-          nombre:   data.member.first_name ?? "",
-          apellido: data.member.last_name  ?? "",
-        }));
-      })
-      .catch(() => {});
-  }, [paraToken]);
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -180,28 +162,24 @@ function RegisterFormInner() {
         }
       }
 
-      if (avatarPublicUrl) {
-        const { error: personAvatarError } = await supabase
-          .from("persons")
-          .update({ profile_photo_url: avatarPublicUrl })
-          .eq("linked_user_id", userId);
-
-        if (personAvatarError) {
-          console.error("Person avatar error:", personAvatarError);
-        }
-      }
-
+      // NOTA: la foto de perfil ya quedó en profiles.avatar_path (arriba).
+      // Vincularla también a `persons` no aplica aqui: en este punto del
+      // registro el usuario todavia no tiene ninguna persona reclamada
+      // (eso ocurre en /onboarding o al aceptar una invitacion), y
+      // `persons` no tiene una columna `linked_user_id` — el vinculo
+      // usuario<->persona vive en `person_claims`.
 
       toast.success("¡Bienvenido a Ceiba! 🌳");
 
-      const storedPara = typeof window !== "undefined" ? sessionStorage.getItem("para_token") : null;
-      const joinRef    = typeof window !== "undefined" ? sessionStorage.getItem("join_ref") : null;
-      if (paraToken || storedPara) {
-        const t = paraToken || storedPara;
-        if (storedPara) sessionStorage.removeItem("para_token");
-        router.push(`/para/${t}`);
-      } else if (joinRef) {
-        router.push(`/join/connect?ref=${joinRef}`);
+      // Si llegamos aqui desde /invite/[token] (invitacion personalizada),
+      // volvemos ahi ya autenticados para completar accept_invitation.
+      const pendingInviteToken = typeof window !== "undefined"
+        ? sessionStorage.getItem("pending_invite_token")
+        : null;
+
+      if (pendingInviteToken) {
+        sessionStorage.removeItem("pending_invite_token");
+        router.push(`/invite/${pendingInviteToken}`);
       } else {
         router.push("/onboarding");
       }

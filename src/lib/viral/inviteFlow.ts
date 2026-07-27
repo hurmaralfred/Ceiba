@@ -235,39 +235,3 @@ export async function copyInviteLink(
     await navigator.clipboard.writeText(link);
   }
 }
-
-// ------------------------------------------------------------
-// Invitar en batch: todos los familiares que aún no están registrados
-// ------------------------------------------------------------
-
-export interface BatchInviteTarget {
-  personId: string;
-  firstName: string;
-  relation: string;
-  phone?: string;
-}
-
-/**
- * Devuelve los familiares del usuario que aún no tienen linked_user_id.
- */
-export async function listPendingInvitees(
-  supabase: SupabaseClient,
-): Promise<BatchInviteTarget[]> {
-  const { data: user } = await supabase.auth.getUser();
-  if (!user.user) return [];
-
-  const graph = await supabase.rpc("get_my_family_graph", { p_depth: 2 });
-  if (graph.error || !graph.data) return [];
-
-  const nodes = graph.data.nodes as any[];
-  const me = graph.data.me;
-
-  return nodes
-    .filter((n) => n.id !== me && !n.linked_user_id && n.is_living)
-    .map((n) => ({
-      personId: n.id,
-      firstName: n.first_names,
-      relation: "familiar",
-      phone: n.phone ?? undefined,
-    }));
-}

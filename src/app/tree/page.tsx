@@ -11,7 +11,6 @@ import { KINSHIP_CATALOG, type KinshipKey } from "@/domain/relationships";
 import type { ExtendedEntry, MemberLink } from "@/components/tree/FamilyTreeGraph";
 import InstallBanner from "@/components/InstallBanner";
 import TreeErrorBoundary from "@/components/TreeErrorBoundary";
-import SuggestionCards from "@/components/SuggestionCards";
 import BirthdayWidget from "@/components/BirthdayWidget";
 import TodayWidget from "@/components/TodayWidget";
 import NetworkBanner from "@/components/NetworkBanner";
@@ -845,7 +844,6 @@ console.log("⑤ Datos cargados");
           <div className="space-y-3 mt-4">
             {profile && <TodayWidget userId={profile.id} />}
             {profile && <BirthdayWidget userId={profile.id} />}
-            <SuggestionCards onAccepted={loadData} />
           </div>
           </div>
         )}
