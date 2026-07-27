@@ -5,7 +5,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { TreePine, MapPin, ToggleLeft, ToggleRight, ChevronLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { FamilyTreeNode, RELATION_LABELS } from "@/lib/types";
+import { FamilyTreeNode } from "@/lib/types";
 import toast from "react-hot-toast";
 
 // Leaflet must be loaded client-side only
@@ -18,71 +18,95 @@ export default function MapPage() {
   const [myLocation, setMyLocation] = useState<[number, number] | null>(null);
   const [locationEnabled, setLocationEnabled] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [userId, setUserId] = useState<string | null>(null);
+  const [toggling, setToggling] = useState(false);
 
-  useEffect(() => {
-    init();
+  const loadPresence = useCallback(async () => {
+    const res = await fetch("/api/presence");
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      toast.error(body.error || "No se pudo cargar el mapa familiar");
+      setLoading(false);
+      return;
+    }
+    const { members, sharing, myLocation: mine } = await res.json();
+
+    setLocationEnabled(!!sharing);
+    setMyLocation(mine ? [mine.lat, mine.lng] : null);
+    setRelatives(
+      (members ?? []).map((m: any) => ({
+        profile_id: m.id,
+        first_name: m.first_name,
+        last_name: m.last_name,
+        avatar_url: m.avatar_url,
+        relation_path: [],
+        depth: 1,
+        location_enabled: true,
+        latitude: m.live_lat,
+        longitude: m.live_lng,
+      }))
+    );
+    setLoading(false);
   }, []);
 
-  const init = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { router.push("/auth/login"); return; }
-    setUserId(user.id);
-
-    // Load user's location preference
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("location_enabled, latitude, longitude")
-      .eq("id", user.id)
-      .single();
-
-    if (profile?.location_enabled) {
-      setLocationEnabled(true);
-      if (profile.latitude && profile.longitude) {
-        setMyLocation([profile.latitude, profile.longitude]);
-      }
-    }
-
-    // Load family tree (only those with location enabled)
-    const { data: tree } = await supabase.rpc("get_family_tree", {
-      start_profile_id: user.id,
-      max_depth: 10,
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) { router.push("/auth/login"); return; }
+      loadPresence();
     });
-    setRelatives((tree || []).filter((n: FamilyTreeNode) => n.location_enabled && n.latitude && n.longitude));
-    setLoading(false);
-  };
+  }, [loadPresence]);
 
   const toggleLocation = useCallback(async () => {
-    if (!userId) return;
+    if (toggling) return;
+    setToggling(true);
+
     if (!locationEnabled) {
-      // Request browser location
       if (!navigator.geolocation) {
         toast.error("Tu navegador no soporta geolocalización");
+        setToggling(false);
         return;
       }
       navigator.geolocation.getCurrentPosition(
         async (pos) => {
           const { latitude, longitude } = pos.coords;
-          const { error } = await supabase.from("profiles").update({
-            location_enabled: true,
-            latitude,
-            longitude,
-            location_updated_at: new Date().toISOString(),
-          }).eq("id", userId);
-          if (error) { toast.error("Error guardando ubicación"); return; }
+          const res = await fetch("/api/presence", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ lat: latitude, lng: longitude }),
+          });
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            toast.error(body.error || "Error guardando ubicación");
+            setToggling(false);
+            return;
+          }
           setMyLocation([latitude, longitude]);
           setLocationEnabled(true);
           toast.success("Ubicación activada");
+          setToggling(false);
         },
-        () => toast.error("No se pudo obtener tu ubicación. Revisa los permisos del navegador.")
+        () => {
+          toast.error("No se pudo obtener tu ubicación. Revisa los permisos del navegador.");
+          setToggling(false);
+        }
       );
     } else {
-      await supabase.from("profiles").update({ location_enabled: false, latitude: null, longitude: null }).eq("id", userId);
+      const res = await fetch("/api/presence", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pause: true }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        toast.error(body.error || "Error al desactivar ubicación");
+        setToggling(false);
+        return;
+      }
       setLocationEnabled(false);
       setMyLocation(null);
       toast.success("Ubicación desactivada");
+      setToggling(false);
     }
-  }, [locationEnabled, userId]);
+  }, [locationEnabled, toggling]);
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -98,7 +122,8 @@ export default function MapPage() {
         </div>
         <button
           onClick={toggleLocation}
-          className="flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 transition-colors"
+          disabled={toggling}
+          className="flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 transition-colors disabled:opacity-50"
         >
           {locationEnabled ? <ToggleRight size={20} className="text-ceiba-300" /> : <ToggleLeft size={20} />}
           {locationEnabled ? "Ubicación activa" : "Activar ubicación"}
@@ -139,11 +164,10 @@ export default function MapPage() {
             {relatives.map(r => (
               <div key={r.profile_id} className="flex-shrink-0 bg-white border border-gray-200 rounded-xl px-4 py-3 min-w-[140px] shadow-sm">
                 <div className="w-8 h-8 rounded-lg bg-ceiba-700 text-white flex items-center justify-center font-bold text-sm mb-2">
-                  {r.first_name[0]}{r.last_name[0]}
+                  {r.first_name[0]}{r.last_name ? r.last_name[0] : ""}
                 </div>
                 <div className="font-semibold text-sm text-gray-900 truncate">{r.first_name} {r.last_name}</div>
                 <div className="text-xs text-gray-400 mt-0.5">{r.city || "Ubicación desconocida"}</div>
-                <div className="text-xs text-ceiba-600 mt-1">{r.depth} grado{r.depth !== 1 ? "s" : ""}</div>
               </div>
             ))}
           </div>

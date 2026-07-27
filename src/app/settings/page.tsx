@@ -2,87 +2,21 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { TreePine, ArrowLeft, MapPin, Cake, Link as LinkIcon, Eye, Shield, LogOut, Bell } from "lucide-react";
+import { TreePine, ArrowLeft, LogOut, Bell, MapPin } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import toast from "react-hot-toast";
 import BottomNav from "@/components/BottomNav";
-
-interface PrivacySettings {
-  location_enabled: boolean;
-  privacy_birth_date: boolean;
-  privacy_social_link: boolean;
-  privacy_map: boolean;
-}
-
-function Toggle({ enabled, onChange, label, description, icon }: {
-  enabled: boolean;
-  onChange: (v: boolean) => void;
-  label: string;
-  description: string;
-  icon: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-center gap-4 py-4 border-b border-cream-200 last:border-0">
-      <div className="w-9 h-9 rounded-xl bg-ceiba-50 flex items-center justify-center text-ceiba-700 flex-shrink-0">
-        {icon}
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="font-semibold text-ceiba-900 text-sm">{label}</div>
-        <div className="text-xs text-ceiba-500 leading-relaxed">{description}</div>
-      </div>
-      <button
-        onClick={() => onChange(!enabled)}
-        className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0 ${enabled ? "bg-ceiba-600" : "bg-gray-300"}`}
-      >
-        <div className={`absolute top-1 w-4 h-4 bg-cream-50 rounded-full shadow transition-transform ${enabled ? "translate-x-7" : "translate-x-1"}`} />
-      </button>
-    </div>
-  );
-}
 
 export default function SettingsPage() {
   const router = useRouter();
   const supabase = createClient();
-  const [settings, setSettings] = useState<PrivacySettings>({
-    location_enabled: false,
-    privacy_birth_date: true,
-    privacy_social_link: true,
-    privacy_map: true,
-  });
   const [loading, setLoading] = useState(true);
-  const [userId, setUserId] = useState<string | null>(null);
 
-  useEffect(() => { loadSettings(); }, []);
-
-  const loadSettings = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { router.push("/auth/login"); return; }
-    setUserId(user.id);
-    const { data } = await supabase
-      .from("profiles")
-      .select("location_enabled, privacy_birth_date, privacy_social_link, privacy_map")
-      .eq("id", user.id)
-      .single();
-    if (data) setSettings({
-      location_enabled: data.location_enabled ?? false,
-      privacy_birth_date: data.privacy_birth_date ?? true,
-      privacy_social_link: data.privacy_social_link ?? true,
-      privacy_map: data.privacy_map ?? true,
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) { router.push("/auth/login"); return; }
+      setLoading(false);
     });
-    setLoading(false);
-  };
-
-  const updateSetting = async (key: keyof PrivacySettings, value: boolean) => {
-    const next = { ...settings, [key]: value };
-    setSettings(next);
-    const { error } = await supabase.from("profiles").update({ [key]: value }).eq("id", userId!);
-    if (error) {
-      setSettings(settings); // revert
-      toast.error("Error al guardar");
-    } else {
-      toast.success("Preferencia guardada");
-    }
-  };
+  }, []);
 
   const logout = async () => {
     await supabase.auth.signOut();
@@ -108,44 +42,6 @@ export default function SettingsPage() {
 
       <div className="max-w-md mx-auto px-4 py-6 pb-24 space-y-4">
 
-        {/* Privacy */}
-        <div className="card">
-          <div className="flex items-center gap-2 mb-1">
-            <Shield size={16} className="text-ceiba-700" />
-            <h2 className="font-bold text-ceiba-800">Privacidad</h2>
-          </div>
-          <p className="text-xs text-ceiba-400 mb-2">Controla qué información comparte Ceiba con tu familia.</p>
-
-          <Toggle
-            enabled={settings.location_enabled}
-            onChange={v => updateSetting("location_enabled", v)}
-            label="Compartir ubicación"
-            description="Apareces en el mapa familiar cuando activas esto."
-            icon={<MapPin size={16} />}
-          />
-          <Toggle
-            enabled={settings.privacy_map}
-            onChange={v => updateSetting("privacy_map", v)}
-            label="Visible en el mapa"
-            description="Tu ubicación es visible para tus familiares conectados."
-            icon={<Eye size={16} />}
-          />
-          <Toggle
-            enabled={settings.privacy_birth_date}
-            onChange={v => updateSetting("privacy_birth_date", v)}
-            label="Mostrar fecha de nacimiento"
-            description="Tu familia verá tu cumpleaños en el widget de próximos cumpleaños."
-            icon={<Cake size={16} />}
-          />
-          <Toggle
-            enabled={settings.privacy_social_link}
-            onChange={v => updateSetting("privacy_social_link", v)}
-            label="Mostrar red social"
-            description="Tu link de Instagram, Facebook u otra red es visible en tu perfil."
-            icon={<LinkIcon size={16} />}
-          />
-        </div>
-
         {/* Notifications */}
         <div className="card">
           <div className="flex items-center gap-2 mb-4">
@@ -166,6 +62,10 @@ export default function SettingsPage() {
           <h2 className="font-bold text-ceiba-800 mb-4">Cuenta</h2>
           <Link href="/profile" className="flex items-center justify-between py-3 border-b border-cream-200 hover:bg-cream-100 -mx-2 px-2 rounded-xl transition-colors">
             <span className="text-sm font-medium text-ceiba-700">Editar perfil</span>
+            <ArrowLeft size={14} className="text-ceiba-400 rotate-180" />
+          </Link>
+          <Link href="/map" className="flex items-center justify-between py-3 border-b border-cream-200 hover:bg-cream-100 -mx-2 px-2 rounded-xl transition-colors">
+            <span className="text-sm font-medium text-ceiba-700 flex items-center gap-2"><MapPin size={14} /> Ubicación y mapa familiar</span>
             <ArrowLeft size={14} className="text-ceiba-400 rotate-180" />
           </Link>
           <button

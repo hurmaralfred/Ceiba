@@ -22,145 +22,230 @@ function configureWebPush() {
   );
 }
 
+function getServiceClient() {
+  return createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
+
+/**
+ * Resuelve la persona reclamada (aprobada, no revocada) de un usuario
+ * autenticado. Único punto de entrada canónico:
+ *   auth.users.id -> person_claims.user_id -> person_claims.person_id -> persons.id
+ * person_locations no tiene políticas RLS: solo el service role puede
+ * leerla/escribirla, por eso esta ruta hace todo el trabajo server-side.
+ */
+async function resolveApprovedPersonId(
+  service: ReturnType<typeof getServiceClient>,
+  userId: string
+): Promise<string | null> {
+  const { data } = await service
+    .from("person_claims")
+    .select("person_id")
+    .eq("user_id", userId)
+    .eq("claim_status", "approved")
+    .is("revoked_at", null)
+    .maybeSingle();
+  return data?.person_id ?? null;
+}
+
+/** IDs de otras personas que comparten al menos un family_space con la mía. */
+async function resolveFamilySpaceMemberIds(
+  service: ReturnType<typeof getServiceClient>,
+  personId: string
+): Promise<string[]> {
+  const { data: mySpaces } = await service
+    .from("space_memberships")
+    .select("space_id")
+    .eq("person_id", personId);
+
+  const spaceIds = (mySpaces ?? []).map((s) => s.space_id as string);
+  if (spaceIds.length === 0) return [];
+
+  const { data: members } = await service
+    .from("space_memberships")
+    .select("person_id")
+    .in("space_id", spaceIds)
+    .neq("person_id", personId);
+
+  return [...new Set((members ?? []).map((m) => m.person_id as string))];
+}
+
 /**
  * POST /api/presence
  * Body: { lat?, lng?, checkin?: boolean, pause?: boolean }
  *
- * - Siempre actualiza last_seen_at
- * - Si lat/lng presentes y location_sharing=true: actualiza live_lat/lng/location_at
- * - Si checkin=true: además envía push notification "Llegué bien" a toda la familia
- * - Si pause=true: desactiva location_sharing
+ * - pause=true: deja de compartir ubicación (borra la fila en person_locations)
+ * - lat/lng presentes: guarda/actualiza mi ubicación en person_locations
+ * - checkin=true: además envía push "llegué bien" a la familia de mi(s) espacio(s)
+ *
+ * person_locations no tiene columna de "compartir sí/no": la existencia de la
+ * fila ES la señal de que estoy compartiendo ubicación.
  */
 export async function POST(req: NextRequest) {
-  configureWebPush();
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
 
   const { lat, lng, checkin = false, pause = false } = await req.json();
 
-  const service = createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-
-  const now = new Date().toISOString();
-
-  // Build update payload
-  const update: Record<string, any> = { last_seen_at: now };
-  if (pause) {
-    update.location_sharing = false;
-  } else if (lat != null && lng != null) {
-    update.live_lat = lat;
-    update.live_lng = lng;
-    update.live_location_at = now;
-    update.location_sharing = true;
+  const service = getServiceClient();
+  const personId = await resolveApprovedPersonId(service, user.id);
+  if (!personId) {
+    return NextResponse.json(
+      { error: "No tienes una identidad reclamada en el árbol familiar todavía." },
+      { status: 400 }
+    );
   }
 
-  await service.from("profiles").update(update).eq("id", user.id);
+  if (pause) {
+    const { error } = await service.from("person_locations").delete().eq("person_id", personId);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ ok: true, sharing: false });
+  }
 
-  // If checkin: send push to all family
-  if (checkin && lat != null && lng != null) {
+  if (lat == null || lng == null) {
+    return NextResponse.json({ error: "Falta lat/lng" }, { status: 400 });
+  }
+
+  const { error: upsertError } = await service
+    .from("person_locations")
+    .upsert(
+      { person_id: personId, lat_city: lat, lon_city: lng, updated_at: new Date().toISOString() },
+      { onConflict: "person_id" }
+    );
+
+  if (upsertError) {
+    return NextResponse.json({ error: upsertError.message }, { status: 500 });
+  }
+
+  if (checkin) {
+    try {
+      configureWebPush();
+    } catch (e: any) {
+      return NextResponse.json({ ok: true, sharing: true, pushError: e.message });
+    }
+
     const { data: me } = await service
-      .from("profiles")
-      .select("first_name, last_name")
-      .eq("id", user.id)
-      .single();
-    const name = me ? `${me.first_name} ${me.last_name || ""}`.trim() : "Un familiar";
+      .from("persons")
+      .select("first_name, first_surname")
+      .eq("id", personId)
+      .maybeSingle();
+    const name = me ? `${me.first_name ?? ""} ${me.first_surname ?? ""}`.trim() : "Un familiar";
 
-    // Get all connected family members
-    const { data: direct } = await service
-      .from("family_members")
-      .select("profile_id")
-      .eq("added_by", user.id)
-      .not("profile_id", "is", null);
+    const familyPersonIds = await resolveFamilySpaceMemberIds(service, personId);
 
-    const { data: reverse } = await service
-      .from("family_members")
-      .select("added_by")
-      .eq("profile_id", user.id);
+    if (familyPersonIds.length > 0) {
+      const { data: recipientClaims } = await service
+        .from("person_claims")
+        .select("user_id")
+        .in("person_id", familyPersonIds)
+        .eq("claim_status", "approved")
+        .is("revoked_at", null);
 
-    const directIds = (direct || []).map(m => m.profile_id as string);
-    const reverseIds = (reverse || []).map(m => m.added_by as string);
-    const recipientIds = [...new Set([...directIds, ...reverseIds])].filter(id => id !== user.id);
+      const recipientUserIds = [...new Set((recipientClaims ?? []).map((c) => c.user_id as string))];
 
-    if (recipientIds.length > 0) {
-      const { data: subs } = await service
-        .from("push_subscriptions")
-        .select("*")
-        .in("user_id", recipientIds);
+      if (recipientUserIds.length > 0) {
+        const { data: subs } = await service
+          .from("push_subscriptions")
+          .select("*")
+          .in("user_id", recipientUserIds);
 
-      const payload = JSON.stringify({
-        title: `✅ ${name} llegó bien`,
-        body: "Ver su ubicación en el mapa familiar",
-        icon: "/icons/icon-192.png",
-        url: "/live",
-      });
+        const payload = JSON.stringify({
+          title: `✅ ${name} llegó bien`,
+          body: "Ver su ubicación en el mapa familiar",
+          icon: "/icons/icon-192.png",
+          url: "/map",
+        });
 
-      await Promise.allSettled(
-        (subs || []).map(sub =>
-          webpush.sendNotification(
-            { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-            payload
+        await Promise.allSettled(
+          (subs ?? []).map((sub) =>
+            webpush.sendNotification(
+              { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+              payload
+            )
           )
-        )
-      );
+        );
+      }
     }
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, sharing: true });
 }
 
 /**
  * GET /api/presence
- * Returns last_seen, live location, location_sharing for all connected family members
+ * Devuelve la ubicación de las personas que comparten al menos un
+ * family_space conmigo (space_memberships) y que tienen fila en
+ * person_locations (= están compartiendo ubicación).
  */
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
 
-  const service = createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-
-  // Get all connected family profile IDs
-  const { data: direct } = await service
-    .from("family_members")
-    .select("profile_id, first_name, last_name, relation_type")
-    .eq("added_by", user.id)
-    .not("profile_id", "is", null);
-
-  const { data: reverse } = await service
-    .from("family_members")
-    .select("added_by, first_name, last_name, relation_type")
-    .eq("profile_id", user.id);
-
-  const directIds = (direct || []).map(m => m.profile_id as string);
-  const reverseIds = (reverse || []).map(m => m.added_by as string);
-  const allIds = [...new Set([...directIds, ...reverseIds])].filter(id => id !== user.id);
-
-  if (allIds.length === 0) return NextResponse.json({ members: [] });
-
-  const { data: profiles } = await service
-    .from("profiles")
-    .select("id, first_name, last_name, avatar_url, last_seen_at, live_lat, live_lng, live_location_at, location_sharing")
-    .in("id", allIds);
-
-  // Merge relation info
-  const relationMap: Record<string, string> = {};
-  for (const m of direct || []) {
-    if (m.profile_id) relationMap[m.profile_id] = m.relation_type;
-  }
-  for (const m of reverse || []) {
-    if (m.added_by && !relationMap[m.added_by]) relationMap[m.added_by] = m.relation_type;
+  const service = getServiceClient();
+  const personId = await resolveApprovedPersonId(service, user.id);
+  if (!personId) {
+    return NextResponse.json({ members: [], sharing: false });
   }
 
-  const members = (profiles || []).map(p => ({
-    ...p,
-    relation_type: relationMap[p.id] ?? "family",
-  }));
+  const familyPersonIds = await resolveFamilySpaceMemberIds(service, personId);
 
-  return NextResponse.json({ members });
+  const { data: myLocation } = await service
+    .from("person_locations")
+    .select("lat_city, lon_city, updated_at")
+    .eq("person_id", personId)
+    .maybeSingle();
+
+  if (familyPersonIds.length === 0) {
+    return NextResponse.json({
+      members: [],
+      sharing: !!myLocation,
+      myLocation: myLocation
+        ? { lat: myLocation.lat_city, lng: myLocation.lon_city, updatedAt: myLocation.updated_at }
+        : null,
+    });
+  }
+
+  const [{ data: locations }, { data: persons }] = await Promise.all([
+    service
+      .from("person_locations")
+      .select("person_id, lat_city, lon_city, updated_at")
+      .in("person_id", familyPersonIds),
+    service
+      .from("persons")
+      .select("id, first_name, first_surname, photo_path")
+      .in("id", familyPersonIds),
+  ]);
+
+  const personMap = new Map((persons ?? []).map((p) => [p.id, p]));
+
+  const members = (locations ?? [])
+    .map((loc) => {
+      const p = personMap.get(loc.person_id);
+      if (!p) return null;
+      return {
+        id: loc.person_id as string,
+        first_name: p.first_name ?? "",
+        last_name: p.first_surname ?? "",
+        avatar_url: p.photo_path ?? null,
+        last_seen_at: loc.updated_at,
+        live_lat: loc.lat_city,
+        live_lng: loc.lon_city,
+        live_location_at: loc.updated_at,
+        location_sharing: true,
+        relation_type: "family",
+      };
+    })
+    .filter((m): m is NonNullable<typeof m> => m !== null);
+
+  return NextResponse.json({
+    members,
+    sharing: !!myLocation,
+    myLocation: myLocation
+      ? { lat: myLocation.lat_city, lng: myLocation.lon_city, updatedAt: myLocation.updated_at }
+      : null,
+  });
 }

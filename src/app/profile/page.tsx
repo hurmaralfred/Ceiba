@@ -2,51 +2,107 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { TreePine, ArrowLeft, Camera, Link as LinkIcon, Save, User } from "lucide-react";
+import { TreePine, ArrowLeft, Camera, Save, User } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { Profile } from "@/lib/types";
 import toast from "react-hot-toast";
+
+interface ProfileForm {
+  display_name: string;
+  locale: string;
+  timezone: string;
+}
+
+interface PersonForm {
+  first_name: string;
+  middle_name: string;
+  first_surname: string;
+  second_surname: string;
+  birth_date: string;
+  birth_city: string;
+  birth_country: string;
+}
 
 export default function ProfilePage() {
   const router = useRouter();
   const supabase = createClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [avatarPath, setAvatarPath] = useState<string | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [form, setForm] = useState({
-    first_name: "",
-    last_name: "",
-    bio: "",
-    social_link: "",
-    city: "",
-    country: "",
-    birth_date: "",
-    phone: "",
-  });
 
-  useEffect(() => { loadProfile(); }, []);
+  const [form, setForm] = useState<ProfileForm>({ display_name: "", locale: "", timezone: "" });
 
-  const loadProfile = async () => {
+  const [personId, setPersonId] = useState<string | null>(null);
+  const [personForm, setPersonForm] = useState<PersonForm | null>(null);
+  const [noClaim, setNoClaim] = useState(false);
+
+  useEffect(() => { load(); }, []);
+
+  const load = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { router.push("/auth/login"); return; }
-    const { data } = await supabase.from("profiles").select("*").eq("id", user.id).single();
-    if (data) {
-      setProfile(data);
+    setUserId(user.id);
+
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("display_name, avatar_path, locale, timezone")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (profileError) {
+      toast.error("Error al cargar el perfil: " + profileError.message);
+    } else if (profile) {
       setForm({
-        first_name: data.first_name || "",
-        last_name: data.last_name || "",
-        bio: data.bio || "",
-        social_link: data.social_link || "",
-        city: data.city || "",
-        country: data.country || "",
-        birth_date: (data as any).birth_date || "",
-        phone: data.phone || "",
+        display_name: profile.display_name ?? "",
+        locale: profile.locale ?? "",
+        timezone: profile.timezone ?? "",
       });
-      if (data.avatar_url) setPhotoPreview(data.avatar_url);
+      setAvatarPath(profile.avatar_path ?? null);
+      if (profile.avatar_path) {
+        const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(profile.avatar_path);
+        setAvatarPreview(urlData.publicUrl);
+      }
     }
+
+    const { data: claim, error: claimError } = await supabase
+      .from("person_claims")
+      .select("person_id")
+      .eq("user_id", user.id)
+      .eq("claim_status", "approved")
+      .is("revoked_at", null)
+      .maybeSingle();
+
+    if (claimError) {
+      toast.error("Error al verificar tu identidad reclamada: " + claimError.message);
+    } else if (!claim) {
+      setNoClaim(true);
+    } else {
+      setPersonId(claim.person_id);
+      const { data: person, error: personError } = await supabase
+        .from("persons")
+        .select("first_name, middle_name, first_surname, second_surname, birth_date, birth_city, birth_country")
+        .eq("id", claim.person_id)
+        .maybeSingle();
+
+      if (personError) {
+        toast.error("Error al cargar tus datos genealógicos: " + personError.message);
+      } else if (person) {
+        setPersonForm({
+          first_name: person.first_name ?? "",
+          middle_name: person.middle_name ?? "",
+          first_surname: person.first_surname ?? "",
+          second_surname: person.second_surname ?? "",
+          birth_date: person.birth_date ?? "",
+          birth_city: person.birth_city ?? "",
+          birth_country: person.birth_country ?? "",
+        });
+      }
+    }
+
     setLoading(false);
   };
 
@@ -55,58 +111,74 @@ export default function ProfilePage() {
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) { toast.error("La foto debe pesar menos de 5MB"); return; }
     setPhotoFile(file);
-    setPhotoPreview(URL.createObjectURL(file));
+    setAvatarPreview(URL.createObjectURL(file));
   };
 
   const save = async () => {
-    if (!form.first_name.trim()) { toast.error("El nombre es obligatorio"); return; }
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!form.display_name.trim()) { toast.error("El nombre para mostrar es obligatorio"); return; }
+    if (!userId) return;
     setSaving(true);
 
-    let avatar_url = profile?.avatar_url;
+    let nextAvatarPath = avatarPath;
     if (photoFile) {
       const ext = photoFile.name.split(".").pop();
-      const path = `${user.id}/avatar.${ext}`;
+      const path = `${userId}/avatar.${ext}`;
       const { error: uploadError } = await supabase.storage
         .from("avatars")
         .upload(path, photoFile, { upsert: true });
-      if (!uploadError) {
-        const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
-        avatar_url = urlData.publicUrl;
-      } else {
-        toast.error("Error al subir la foto");
+      if (uploadError) {
+        setSaving(false);
+        toast.error("Error al subir la foto: " + uploadError.message);
+        return;
+      }
+      nextAvatarPath = path;
+    }
+
+    const { error: profileError } = await supabase
+      .from("profiles")
+      .update({
+        display_name: form.display_name.trim(),
+        locale: form.locale.trim() || null,
+        timezone: form.timezone.trim() || null,
+        ...(nextAvatarPath ? { avatar_path: nextAvatarPath } : {}),
+      })
+      .eq("user_id", userId);
+
+    if (profileError) {
+      setSaving(false);
+      toast.error("Error al guardar el perfil: " + profileError.message);
+      return;
+    }
+
+    if (personId && personForm) {
+      if (!personForm.first_name.trim() || !personForm.first_surname.trim()) {
+        setSaving(false);
+        toast.error("Nombre y primer apellido son obligatorios");
+        return;
+      }
+      const { error: personRpcError } = await supabase.rpc("update_person", {
+        p_person_id: personId,
+        p_first_name: personForm.first_name.trim(),
+        p_middle_name: personForm.middle_name.trim() || null,
+        p_first_surname: personForm.first_surname.trim(),
+        p_second_surname: personForm.second_surname.trim() || null,
+        p_birth_date: personForm.birth_date || null,
+        p_birth_city: personForm.birth_city.trim() || null,
+        p_birth_country: personForm.birth_country.trim() || null,
+      });
+
+      if (personRpcError) {
+        setSaving(false);
+        toast.error("Error al guardar tus datos genealógicos: " + personRpcError.message);
+        return;
       }
     }
 
-    const { error } = await supabase.from("profiles").update({
-      first_name: form.first_name.trim(),
-      last_name: form.last_name.trim(),
-      bio: form.bio.trim() || null,
-      social_link: form.social_link.trim() || null,
-      city: form.city.trim() || null,
-      country: form.country.trim() || null,
-      birth_date: form.birth_date || null,
-      phone: form.phone.trim() || null,
-      ...(avatar_url ? { avatar_url } : {}),
-    }).eq("id", user.id);
-
-    if (error) { setSaving(false); toast.error("Error al guardar"); return; }
-
-    // Sincronizar campos solapados en persons (nuevo esquema)
-    await supabase.from("persons").update({
-      first_names: form.first_name.trim(),
-      last_names: form.last_name.trim() || null,
-      bio: form.bio.trim() || null,
-      birth_date: form.birth_date || null,
-      birth_city: form.city.trim() || null,
-      ...(avatar_url ? { profile_photo_url: avatar_url } : {}),
-    }).eq("linked_user_id", user.id);
-    // (si no existe fila en persons aún, el update no falla — simplemente afecta 0 filas)
-
+    setAvatarPath(nextAvatarPath);
+    setPhotoFile(null);
     setSaving(false);
     toast.success("¡Perfil actualizado!");
-    router.push("/tree");
+    router.push("/settings");
   };
 
   if (loading) return (
@@ -118,7 +190,7 @@ export default function ProfilePage() {
   return (
     <main className="min-h-screen bg-cream-100">
       <nav className="bg-ceiba-800 text-white px-4 py-4 flex items-center gap-3 shadow-lg">
-        <Link href="/tree" className="text-ceiba-300 hover:text-white transition-colors">
+        <Link href="/settings" className="text-ceiba-300 hover:text-white transition-colors">
           <ArrowLeft size={20} />
         </Link>
         <div className="flex items-center gap-2 font-display text-lg font-bold">
@@ -133,8 +205,8 @@ export default function ProfilePage() {
             onClick={() => fileInputRef.current?.click()}
             className="w-24 h-24 rounded-full bg-ceiba-700 flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity overflow-hidden relative"
           >
-            {photoPreview ? (
-              <img src={photoPreview} alt="Foto" className="w-full h-full object-cover" />
+            {avatarPreview ? (
+              <img src={avatarPreview} alt="Foto" className="w-full h-full object-cover" />
             ) : (
               <User size={36} className="text-white" />
             )}
@@ -144,92 +216,114 @@ export default function ProfilePage() {
           </div>
           <button type="button" onClick={() => fileInputRef.current?.click()}
             className="text-sm text-ceiba-700 font-semibold hover:underline">
-            {photoPreview ? "Cambiar foto" : "Agregar foto de perfil"}
+            {avatarPreview ? "Cambiar foto" : "Agregar foto de perfil"}
           </button>
           <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
         </div>
 
-        {/* Datos */}
+        {/* Cuenta (profiles) */}
         <div className="card space-y-4">
-          <h3 className="font-bold text-ceiba-800">Información personal</h3>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-ceiba-700 mb-1">Nombre <span className="text-red-500">*</span></label>
-              <input type="text" className="input-field"
-                value={form.first_name}
-                onChange={e => setForm(f => ({ ...f, first_name: e.target.value }))}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-ceiba-700 mb-1">Apellido</label>
-              <input type="text" className="input-field"
-                value={form.last_name}
-                onChange={e => setForm(f => ({ ...f, last_name: e.target.value }))}
-              />
-            </div>
-          </div>
-
+          <h3 className="font-bold text-ceiba-800">Cuenta</h3>
           <div>
-            <label className="block text-sm font-medium text-ceiba-700 mb-1">Red social</label>
-            <div className="relative">
-              <LinkIcon size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ceiba-400" />
-              <input type="url" className="input-field pl-9"
-                placeholder="https://instagram.com/tuperfil"
-                value={form.social_link}
-                onChange={e => setForm(f => ({ ...f, social_link: e.target.value }))}
-              />
-            </div>
+            <label className="block text-sm font-medium text-ceiba-700 mb-1">Nombre para mostrar <span className="text-red-500">*</span></label>
+            <input type="text" className="input-field"
+              value={form.display_name}
+              onChange={e => setForm(f => ({ ...f, display_name: e.target.value }))}
+            />
           </div>
-
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-ceiba-700 mb-1">Ciudad</label>
-              <input type="text" className="input-field" placeholder="Bogotá"
-                value={form.city}
-                onChange={e => setForm(f => ({ ...f, city: e.target.value }))}
+              <label className="block text-sm font-medium text-ceiba-700 mb-1">Idioma</label>
+              <input type="text" className="input-field" placeholder="es"
+                value={form.locale}
+                onChange={e => setForm(f => ({ ...f, locale: e.target.value }))}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-ceiba-700 mb-1">País</label>
-              <input type="text" className="input-field" placeholder="Colombia"
-                value={form.country}
-                onChange={e => setForm(f => ({ ...f, country: e.target.value }))}
+              <label className="block text-sm font-medium text-ceiba-700 mb-1">Zona horaria</label>
+              <input type="text" className="input-field" placeholder="America/Bogota"
+                value={form.timezone}
+                onChange={e => setForm(f => ({ ...f, timezone: e.target.value }))}
               />
             </div>
           </div>
+        </div>
 
-          <div className="grid grid-cols-2 gap-3">
+        {/* Datos genealógicos (persons, vía person_claims) */}
+        {noClaim && (
+          <div className="card">
+            <h3 className="font-bold text-ceiba-800 mb-1">Datos genealógicos</h3>
+            <p className="text-sm text-ceiba-500">
+              Todavía no tienes una identidad reclamada en el árbol familiar, así que no hay datos genealógicos que editar aquí.
+            </p>
+          </div>
+        )}
+
+        {personForm && (
+          <div className="card space-y-4">
+            <h3 className="font-bold text-ceiba-800">Datos genealógicos</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-ceiba-700 mb-1">Nombre <span className="text-red-500">*</span></label>
+                <input type="text" className="input-field"
+                  value={personForm.first_name}
+                  onChange={e => setPersonForm(f => f && ({ ...f, first_name: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-ceiba-700 mb-1">Segundo nombre</label>
+                <input type="text" className="input-field"
+                  value={personForm.middle_name}
+                  onChange={e => setPersonForm(f => f && ({ ...f, middle_name: e.target.value }))}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-ceiba-700 mb-1">Primer apellido <span className="text-red-500">*</span></label>
+                <input type="text" className="input-field"
+                  value={personForm.first_surname}
+                  onChange={e => setPersonForm(f => f && ({ ...f, first_surname: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-ceiba-700 mb-1">Segundo apellido</label>
+                <input type="text" className="input-field"
+                  value={personForm.second_surname}
+                  onChange={e => setPersonForm(f => f && ({ ...f, second_surname: e.target.value }))}
+                />
+              </div>
+            </div>
             <div>
               <label className="block text-sm font-medium text-ceiba-700 mb-1">Fecha de nacimiento</label>
               <input type="date" className="input-field"
-                value={form.birth_date}
-                onChange={e => setForm(f => ({ ...f, birth_date: e.target.value }))}
+                value={personForm.birth_date}
+                onChange={e => setPersonForm(f => f && ({ ...f, birth_date: e.target.value }))}
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-ceiba-700 mb-1">Teléfono</label>
-              <input type="tel" className="input-field" placeholder="+57 300..."
-                value={form.phone}
-                onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-ceiba-700 mb-1">Ciudad de nacimiento</label>
+                <input type="text" className="input-field"
+                  value={personForm.birth_city}
+                  onChange={e => setPersonForm(f => f && ({ ...f, birth_city: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-ceiba-700 mb-1">País de nacimiento</label>
+                <input type="text" className="input-field"
+                  value={personForm.birth_country}
+                  onChange={e => setPersonForm(f => f && ({ ...f, birth_country: e.target.value }))}
+                />
+              </div>
             </div>
           </div>
+        )}
 
-          <div>
-            <label className="block text-sm font-medium text-ceiba-700 mb-1">Sobre mí</label>
-            <textarea className="input-field resize-none" rows={3}
-              placeholder="Cuéntale algo a tu familia..."
-              value={form.bio}
-              onChange={e => setForm(f => ({ ...f, bio: e.target.value }))}
-            />
-          </div>
-
-          <button onClick={save} disabled={saving} className="btn-primary w-full flex items-center justify-center gap-2">
-            <Save size={16} />
-            {saving ? "Guardando..." : "Guardar cambios"}
-          </button>
-        </div>
+        <button onClick={save} disabled={saving} className="btn-primary w-full flex items-center justify-center gap-2">
+          <Save size={16} />
+          {saving ? "Guardando..." : "Guardar cambios"}
+        </button>
       </div>
     </main>
   );
