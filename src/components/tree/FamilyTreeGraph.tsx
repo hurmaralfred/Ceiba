@@ -1013,6 +1013,35 @@ export default function FamilyTreeGraph({
             <stop offset="0%"   stopColor="black" stopOpacity="0" />
             <stop offset="100%" stopColor="black" stopOpacity="0.40" />
           </linearGradient>
+
+          {/* Living trunk axis — vertical gradient behind the central bloodline */}
+          <linearGradient id="trunk-v-grad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stopColor="#22c55e" stopOpacity="0" />
+            <stop offset="18%"  stopColor="#16a34a" stopOpacity="0.9" />
+            <stop offset="50%"  stopColor="#15803d" stopOpacity="1" />
+            <stop offset="82%"  stopColor="#16a34a" stopOpacity="0.9" />
+            <stop offset="100%" stopColor="#22c55e" stopOpacity="0" />
+          </linearGradient>
+
+          {/* Generational zone gradients — horizontal ambient light bands */}
+          <linearGradient id="zone-anc-grad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%"   stopColor="#3b82f6" stopOpacity="0" />
+            <stop offset="28%"  stopColor="#3b82f6" stopOpacity="1" />
+            <stop offset="72%"  stopColor="#3b82f6" stopOpacity="1" />
+            <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
+          </linearGradient>
+          <linearGradient id="zone-root-grad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%"   stopColor="#22c55e" stopOpacity="0" />
+            <stop offset="28%"  stopColor="#22c55e" stopOpacity="1" />
+            <stop offset="72%"  stopColor="#22c55e" stopOpacity="1" />
+            <stop offset="100%" stopColor="#22c55e" stopOpacity="0" />
+          </linearGradient>
+          <linearGradient id="zone-desc-grad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%"   stopColor="#10b981" stopOpacity="0" />
+            <stop offset="28%"  stopColor="#10b981" stopOpacity="1" />
+            <stop offset="72%"  stopColor="#10b981" stopOpacity="1" />
+            <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
+          </linearGradient>
         </defs>
 
         {/* Background — clic aquí (fuera de cualquier nodo) vuelve a la raíz */}
@@ -1100,6 +1129,77 @@ export default function FamilyTreeGraph({
 
 
         <g ref={gRef}>
+          {/* ── Forest Integration Layer — trunk, roots, generational zones ── */}
+          {(() => {
+            const rootN = nodes.find(n => n.id === rootNodeId);
+            if (!rootN || nodes.length === 0) return null;
+
+            const minNodeY = nodes.reduce((m, n) => Math.min(m, n.cy), Infinity);
+            const maxNodeY = nodes.reduce((m, n) => Math.max(m, n.cy), -Infinity);
+
+            // Ancestor zone: top of layout → just above root row
+            const ancTop  = minNodeY - R - 10;
+            const ancBot  = rootN.cy  - ROOT_R - 8;
+            // Descendant zone: just below root row → bottom of layout
+            const descTop = rootN.cy  + ROOT_R + 8;
+            const descBot = maxNodeY  + R + 10;
+            // Root row zone: narrow band centered on root's Y
+            const rootZTop = rootN.cy - ROOT_R - 18;
+            const rootZBot = rootN.cy + ROOT_R + 18;
+            // Trunk spans the full vertical range
+            const trunkTop = minNodeY - 18;
+            const trunkBot = maxNodeY + 18;
+
+            return (
+              <g style={{ pointerEvents: "none" }}>
+                {/* Generational zones — faint horizontal light, not boxes */}
+                {ancBot > ancTop && (
+                  <rect x={0} y={ancTop} width={svgWidth} height={ancBot - ancTop}
+                    fill="url(#zone-anc-grad)" opacity={0.034} />
+                )}
+                <rect x={0} y={rootZTop} width={svgWidth} height={rootZBot - rootZTop}
+                  fill="url(#zone-root-grad)" opacity={0.048} />
+                {descBot > descTop && (
+                  <rect x={0} y={descTop} width={svgWidth} height={descBot - descTop}
+                    fill="url(#zone-desc-grad)" opacity={0.030} />
+                )}
+
+                {/* Living trunk column — planted axis behind the central bloodline */}
+                <rect
+                  x={rootN.cx - 10} y={trunkTop}
+                  width={20} height={trunkBot - trunkTop}
+                  fill="url(#trunk-v-grad)"
+                  opacity={0.062}
+                  rx={10}
+                />
+
+                {/* Ground haze — root is planted in the earth */}
+                <ellipse cx={rootN.cx} cy={rootN.cy + ROOT_R + 10}
+                  rx={50} ry={13}
+                  fill="#4ade80" opacity={0.08} />
+
+                {/* Decorative roots — lateral arcs from root base into the gap zone */}
+                {([
+                  { d: "M0,0 C-18,18 -46,22 -68,13",  w: 3.0 },
+                  { d: "M0,0 C-11,28 -30,40 -48,46",  w: 2.0 },
+                  { d: "M0,0 C18,18 46,22 68,13",     w: 3.0 },
+                  { d: "M0,0 C11,28 30,40 48,46",     w: 2.0 },
+                ] as { d: string; w: number }[]).map(({ d, w }, i) => (
+                  <path
+                    key={i}
+                    transform={`translate(${rootN.cx},${rootN.cy + ROOT_R})`}
+                    d={d}
+                    stroke="#4ade80"
+                    strokeWidth={w}
+                    fill="none"
+                    strokeLinecap="round"
+                    opacity={0.10}
+                  />
+                ))}
+              </g>
+            );
+          })()}
+
           {/* ── Couple halo — soft visual bond between root and partner ── */}
           {partnerNode && (() => {
             const rootN = nodes.find(n => n.id === rootNodeId);
