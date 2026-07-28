@@ -1226,8 +1226,13 @@ console.log("⑤ Datos cargados");
           .ceiba-fab {
             width: 70px;
             height: 70px;
-            bottom: 32px;
+            bottom: calc(80px + env(safe-area-inset-bottom));
             right: 28px;
+          }
+        }
+        @media (min-width: 1024px) {
+          .ceiba-fab {
+            bottom: 32px;
           }
         }
         @media (prefers-reduced-motion: reduce) {
