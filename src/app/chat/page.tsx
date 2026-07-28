@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { TreePine, ArrowLeft, Users, MessageCircle, Plus, ChevronRight } from "lucide-react";
+import { TreePine, ArrowLeft, Users, MessageCircle, Plus, ChevronRight, AlertCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 import BottomNav from "@/components/BottomNav";
@@ -42,6 +42,7 @@ export default function ChatListPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [familyMembers, setFamilyMembers] = useState<RosterMember[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [showNewDM, setShowNewDM] = useState(false);
   const [starting, setStarting] = useState(false);
 
@@ -56,7 +57,8 @@ export default function ChatListPage() {
 
   const loadConversations = async () => {
     const res = await fetch("/api/chat/rooms");
-    if (!res.ok) { toast.error("Error al cargar conversaciones"); return; }
+    if (!res.ok) { setLoadError(true); return; }
+    setLoadError(false);
     const { conversations } = await res.json();
     setConversations(conversations || []);
   };
@@ -174,11 +176,26 @@ export default function ChatListPage() {
           ))}
         </div>
 
-        {conversations.length === 0 && (
+        {loadError && (
+          <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+            <AlertCircle size={36} className="text-red-300 mb-3" />
+            <h3 className="font-bold text-gray-700 mb-1">No se pudieron cargar los mensajes</h3>
+            <p className="text-sm text-gray-400 mb-4">Revisa tu conexión e intenta de nuevo.</p>
+            <button onClick={loadConversations} className="btn-primary text-sm">Reintentar</button>
+          </div>
+        )}
+
+        {!loadError && conversations.length === 0 && (
           <div className="text-center py-20 px-6">
             <MessageCircle size={48} className="text-gray-300 mx-auto mb-4" />
-            <h3 className="font-bold text-ceiba-600 mb-2">Sin conversaciones</h3>
-            <p className="text-ceiba-400 text-sm">Comienza un mensaje directo con un familiar o únete al chat grupal.</p>
+            <h3 className="font-bold text-ceiba-600 mb-2">Sin conversaciones aún</h3>
+            <p className="text-ceiba-400 text-sm mb-6">Envía un mensaje a un familiar para comenzar.</p>
+            <button
+              onClick={() => setShowNewDM(true)}
+              className="btn-primary text-sm inline-flex items-center gap-1.5"
+            >
+              <Plus size={15} /> Nuevo mensaje
+            </button>
           </div>
         )}
       </div>

@@ -2,7 +2,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { TreePine, ArrowLeft, Camera, Upload, X, Trash2, ZoomIn, Tag, UserCheck } from "lucide-react";
+import { TreePine, ArrowLeft, Camera, Upload, X, Trash2, ZoomIn, Tag, UserCheck, AlertCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 import BottomNav from "@/components/BottomNav";
@@ -41,6 +41,7 @@ export default function PhotosPage() {
   const [members, setMembers] = useState<RosterMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
   const [caption, setCaption] = useState("");
@@ -67,8 +68,11 @@ export default function PhotosPage() {
   const loadPhotos = async () => {
     const res = await fetch("/api/photos");
     if (res.ok) {
+      setLoadError(false);
       const { photos } = await res.json();
       setPhotos(photos || []);
+    } else {
+      setLoadError(true);
     }
     setLoading(false);
   };
@@ -185,6 +189,16 @@ export default function PhotosPage() {
       </nav>
 
       <div className="max-w-2xl mx-auto px-4 py-4 pb-28 space-y-4">
+        {loadError && !pendingPreview && (
+          <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">
+            <AlertCircle size={18} className="text-red-400 shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-red-700">No se pudieron cargar las fotos</p>
+              <button onClick={loadPhotos} className="text-xs text-red-500 underline mt-0.5">Reintentar</button>
+            </div>
+          </div>
+        )}
+
         {pendingPreview && (
           <div className="card space-y-3">
             <div className="flex items-start gap-4">

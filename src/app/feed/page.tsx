@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { TreePine, Cake, Camera, Calendar, RefreshCw, Bell, Megaphone } from "lucide-react";
+import { TreePine, Cake, Camera, Calendar, RefreshCw, Bell, Megaphone, AlertCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import BottomNav from "@/components/BottomNav";
 
@@ -44,11 +44,13 @@ export default function FeedPage() {
   const supabase = createClient();
   const [items, setItems] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [feedError, setFeedError] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadFeed = useCallback(async () => {
     const res = await fetch("/api/feed");
-    if (!res.ok) { setItems([]); return; }
+    if (!res.ok) { setFeedError(true); return; }
+    setFeedError(false);
     const { birthdays, photos, broadcasts, events } = await res.json();
     const feedItems: FeedItem[] = [];
     const now = new Date();
@@ -155,6 +157,16 @@ export default function FeedPage() {
         {loading ? (
           <div className="space-y-3">
             {[1,2,3,4,5].map(i => <div key={i} className="bg-white rounded-2xl h-20 animate-pulse" />)}
+          </div>
+        ) : feedError ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center px-4">
+            <AlertCircle size={36} className="text-red-300 mb-3" />
+            <h3 className="font-bold text-gray-700 mb-1">No se pudo cargar la actividad</h3>
+            <p className="text-sm text-gray-400 mb-4">Revisa tu conexión e intenta de nuevo.</p>
+            <button onClick={handleRefresh} disabled={refreshing}
+              className="btn-primary text-sm inline-flex items-center gap-1.5">
+              <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} /> Reintentar
+            </button>
           </div>
         ) : items.length === 0 ? (
           <EmptyFeed />
