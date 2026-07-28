@@ -4,6 +4,12 @@ import Link from "next/link";
 import * as d3 from "d3";
 import { FamilyMember, Profile, RELATION_LABELS } from "@/lib/types";
 import ForestAmbientLayer from "./ForestAmbientLayer";
+import LivingTreeBackdrop from "./LivingTreeBackdrop";
+import OrganicTrunk from "./OrganicTrunk";
+import OrganicBranches from "./OrganicBranches";
+
+// ── Feature flag — set false to revert to previous silhouette ──────────────
+const LIVING_TREE_VISUAL_ENABLED = true;
 
 export interface ExtendedEntry {
   member: FamilyMember;
@@ -1136,14 +1142,12 @@ export default function FamilyTreeGraph({
 
 
         <g ref={gRef}>
-          {/* ── Tree Silhouette — canopy, trunk, roots ── */}
+          {/* ── Living Tree Visual — backdrop + trunk + canopy + roots ── */}
           {(() => {
             const rootN = nodes.find(n => n.id === rootNodeId);
             if (!rootN || nodes.length === 0) return null;
-
             const cx    = rootN.cx;
             const rootY = rootN.cy;
-
             const hasAnc   = nodes.some(n => n.generation <= -1 && !n.isExtended);
             const ancNodes = nodes.filter(n => n.generation <= -1 && !n.isExtended);
             const ancMinX  = ancNodes.reduce((m, n) => Math.min(m, n.cx), cx);
@@ -1154,26 +1158,42 @@ export default function FamilyTreeGraph({
               : rootY;
             const ancToRoot = rootY - ancY;
 
-            // Trunk: narrow at ancestor zone, widens toward root node
+            if (LIVING_TREE_VISUAL_ENABLED) {
+              return (
+                <>
+                  <LivingTreeBackdrop
+                    cx={cx}
+                    rootY={rootY}
+                    auraRx={Math.max(ancHalf * 1.1, 120)}
+                    auraRy={Math.max(ancToRoot * 0.40 + ROOT_R * 2, 80)}
+                  />
+                  <OrganicTrunk
+                    cx={cx}
+                    rootY={rootY}
+                    ancY={ancY}
+                    ancHalf={ancHalf}
+                    ancToRoot={ancToRoot}
+                    hasAnc={hasAnc}
+                    svgWidth={svgWidth}
+                    totalHeight={Math.max(380, totalHeight)}
+                  />
+                </>
+              );
+            }
+
+            // ── Fallback: legacy silhouette ────────────────────────────────
             const halfTop  = 9;
             const halfBot  = 36;
             const tTopY    = hasAnc ? ancY + 8 : rootY - ROOT_R;
             const tCtrlY   = tTopY + ancToRoot * 0.60;
             const trunkBot = rootY + ROOT_R + 6;
-
             const trunkPath =
               `M${cx - halfTop},${tTopY}` +
               `C${cx - halfTop - 5},${tCtrlY} ${cx - halfBot},${rootY - 12} ${cx - halfBot},${trunkBot}` +
               `L${cx + halfBot},${trunkBot}` +
-              `C${cx + halfBot},${rootY - 12} ${cx + halfTop + 5},${tCtrlY} ${cx + halfTop},${tTopY}` +
-              `Z`;
-
-            // Root base: just below root circle
+              `C${cx + halfBot},${rootY - 12} ${cx + halfTop + 5},${tCtrlY} ${cx + halfTop},${tTopY}Z`;
             const rb = rootY + ROOT_R + 2;
-
-            // Canopy is clipped below the parent generation to avoid bleed into trunk
             const canopyClipH = ancY + ancToRoot * 0.52 + 18;
-
             return (
               <g style={{ pointerEvents: "none" }}>
                 <defs>
@@ -1181,53 +1201,33 @@ export default function FamilyTreeGraph({
                     <rect x={0} y={-120} width={svgWidth} height={canopyClipH + 120} />
                   </clipPath>
                 </defs>
-
-                {/* ── Canopy — blurred ellipses clipped to ancestor zone ── */}
                 {hasAnc && (
                   <g filter="url(#canopy-blur)" opacity={0.38} clipPath="url(#canopy-clip)">
-                    {/* Main mass — horizontally bounded to ancestor spread */}
                     <ellipse cx={cx} cy={ancY - 6}
                       rx={Math.min(ancHalf * 1.08, svgWidth * 0.37)}
-                      ry={Math.max(44, ancToRoot * 0.50 + 14)}
-                      fill="#22c55e" />
-                    {/* Left lobe */}
+                      ry={Math.max(44, ancToRoot * 0.50 + 14)} fill="#22c55e" />
                     <ellipse cx={cx - ancHalf * 0.48} cy={ancY + 14}
                       rx={Math.min(ancHalf * 0.68, svgWidth * 0.22)}
-                      ry={Math.max(30, ancToRoot * 0.33 + 8)}
-                      fill="#22c55e" />
-                    {/* Right lobe */}
+                      ry={Math.max(30, ancToRoot * 0.33 + 8)} fill="#22c55e" />
                     <ellipse cx={cx + ancHalf * 0.54} cy={ancY + 8}
                       rx={Math.min(ancHalf * 0.62, svgWidth * 0.20)}
-                      ry={Math.max(28, ancToRoot * 0.30 + 8)}
-                      fill="#22c55e" />
-                    {/* Crown accent — off-center so it's irregular */}
+                      ry={Math.max(28, ancToRoot * 0.30 + 8)} fill="#22c55e" />
                     <ellipse cx={cx + ancHalf * 0.10} cy={ancY - 40}
                       rx={Math.min(ancHalf * 0.38, svgWidth * 0.12)}
-                      ry={Math.max(20, ancToRoot * 0.16 + 6)}
-                      fill="#4ade80" />
+                      ry={Math.max(20, ancToRoot * 0.16 + 6)} fill="#4ade80" />
                   </g>
                 )}
-
-                {/* ── Trunk — tapered organic column ── */}
                 <path d={trunkPath} fill="#15803d" filter="url(#trunk-blur)" opacity={0.45} />
-
-                {/* ── Roots — 5 downward curves, max ±62 px horizontal spread ── */}
                 {([
-                  { d: `M0,0 C-18,16 -48,38 -60,62`,  sw: 9, op: 0.25 },
-                  { d: `M0,0 C-9,22 -20,48 -24,68`,   sw: 6, op: 0.22 },
-                  { d: `M0,0 C1,28 0,56 0,72`,         sw: 7, op: 0.24 },
-                  { d: `M0,0 C10,22 22,48 26,68`,      sw: 6, op: 0.22 },
-                  { d: `M0,0 C20,16 50,38 62,62`,      sw: 9, op: 0.25 },
+                  { d: `M0,0 C-18,16 -48,38 -60,62`, sw: 9, op: 0.25 },
+                  { d: `M0,0 C-9,22 -20,48 -24,68`,  sw: 6, op: 0.22 },
+                  { d: `M0,0 C1,28 0,56 0,72`,        sw: 7, op: 0.24 },
+                  { d: `M0,0 C10,22 22,48 26,68`,     sw: 6, op: 0.22 },
+                  { d: `M0,0 C20,16 50,38 62,62`,     sw: 9, op: 0.25 },
                 ] as { d: string; sw: number; op: number }[]).map(({ d, sw, op }, i) => (
-                  <path key={i}
-                    transform={`translate(${cx},${rb})`}
-                    d={d}
-                    stroke="#22c55e"
-                    strokeWidth={sw}
-                    fill="none"
-                    strokeLinecap="round"
-                    opacity={op}
-                  />
+                  <path key={i} transform={`translate(${cx},${rb})`}
+                    d={d} stroke="#22c55e" strokeWidth={sw}
+                    fill="none" strokeLinecap="round" opacity={op} />
                 ))}
               </g>
             );
@@ -1244,6 +1244,21 @@ export default function FamilyTreeGraph({
                 fill="#c084fc" opacity={0.055} />
             );
           })()}
+
+          {/* ── Organic bark branches (behind colored edges) ── */}
+          {LIVING_TREE_VISUAL_ENABLED && (
+            <OrganicBranches
+              edgePaths={edgeGroups.map(eg => ({
+                d: eg.d,
+                kind: eg.kind,
+                isTrunk: eg.kind !== "peer" && (
+                  eg.fromId === rootNodeId ||
+                  eg.toIds.some(id => id === rootNodeId) ||
+                  eg.fromId.startsWith("__union:")
+                ),
+              }))}
+            />
+          )}
 
           {/* ── Edges ── */}
           {/* Bloque A1: líneas estáticas en reposo — sin flujo de guiones
