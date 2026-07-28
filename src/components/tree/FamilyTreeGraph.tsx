@@ -1042,6 +1042,13 @@ export default function FamilyTreeGraph({
             <stop offset="72%"  stopColor="#10b981" stopOpacity="1" />
             <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
           </linearGradient>
+          {/* Silhouette blur filters */}
+          <filter id="canopy-blur" x="-25%" y="-25%" width="150%" height="150%">
+            <feGaussianBlur stdDeviation="10" />
+          </filter>
+          <filter id="trunk-blur" x="-30%" y="-8%" width="160%" height="116%">
+            <feGaussianBlur stdDeviation="3" />
+          </filter>
         </defs>
 
         {/* Background — clic aquí (fuera de cualquier nodo) vuelve a la raíz */}
@@ -1134,76 +1141,83 @@ export default function FamilyTreeGraph({
             const rootN = nodes.find(n => n.id === rootNodeId);
             if (!rootN || nodes.length === 0) return null;
 
-            const cx      = rootN.cx;
-            const rootY   = rootN.cy;
-            const minNodeY = nodes.reduce((m, n) => Math.min(m, n.cy), Infinity);
+            const cx    = rootN.cx;
+            const rootY = rootN.cy;
 
-            const hasAnc  = nodes.some(n => n.generation <= -1 && !n.isExtended);
+            const hasAnc   = nodes.some(n => n.generation <= -1 && !n.isExtended);
+            const ancNodes = nodes.filter(n => n.generation <= -1 && !n.isExtended);
+            const ancMinX  = ancNodes.reduce((m, n) => Math.min(m, n.cx), cx);
+            const ancMaxX  = ancNodes.reduce((m, n) => Math.max(m, n.cx), cx);
+            const ancHalf  = Math.max(80, (ancMaxX - ancMinX) / 2 + R * 2.2);
+            const ancY     = hasAnc
+              ? ancNodes.reduce((m, n) => Math.min(m, n.cy), Infinity)
+              : rootY;
+            const ancToRoot = rootY - ancY;
 
-            // Ancestor horizontal spread (safe reduce — no spread syntax)
-            const ancNodes   = nodes.filter(n => n.generation <= -1 && !n.isExtended);
-            const ancMinX    = ancNodes.reduce((m, n) => Math.min(m, n.cx), cx);
-            const ancMaxX    = ancNodes.reduce((m, n) => Math.max(m, n.cx), cx);
-            const ancHalf    = Math.max(85, (ancMaxX - ancMinX) / 2 + R * 2.5);
-            const ancY       = hasAnc ? minNodeY : rootY;
-            const ancToRoot  = rootY - ancY;            // vertical dist ancestor→root
-
-            // Trunk: narrow at top, widens at root
-            const halfTop  = 13;
-            const halfMid  = 42;
-            const tTopY    = hasAnc ? ancY + 5 : rootY - ROOT_R;
-            const tMidY    = (tTopY + rootY) / 2;
+            // Trunk: narrow at ancestor zone, widens toward root node
+            const halfTop  = 9;
+            const halfBot  = 36;
+            const tTopY    = hasAnc ? ancY + 8 : rootY - ROOT_R;
+            const tCtrlY   = tTopY + ancToRoot * 0.60;
             const trunkBot = rootY + ROOT_R + 6;
 
             const trunkPath =
               `M${cx - halfTop},${tTopY}` +
-              `C${cx - halfTop - 4},${tMidY} ${cx - halfMid},${rootY - 18} ${cx - halfMid},${trunkBot}` +
-              `L${cx + halfMid},${trunkBot}` +
-              `C${cx + halfMid},${rootY - 18} ${cx + halfTop + 4},${tMidY} ${cx + halfTop},${tTopY}` +
+              `C${cx - halfTop - 5},${tCtrlY} ${cx - halfBot},${rootY - 12} ${cx - halfBot},${trunkBot}` +
+              `L${cx + halfBot},${trunkBot}` +
+              `C${cx + halfBot},${rootY - 12} ${cx + halfTop + 5},${tCtrlY} ${cx + halfTop},${tTopY}` +
               `Z`;
 
-            // Root base
-            const rb = rootY + ROOT_R;
+            // Root base: just below root circle
+            const rb = rootY + ROOT_R + 2;
+
+            // Canopy is clipped below the parent generation to avoid bleed into trunk
+            const canopyClipH = ancY + ancToRoot * 0.52 + 18;
 
             return (
               <g style={{ pointerEvents: "none" }}>
+                <defs>
+                  <clipPath id="canopy-clip">
+                    <rect x={0} y={-120} width={svgWidth} height={canopyClipH + 120} />
+                  </clipPath>
+                </defs>
 
-                {/* ── Canopy — diffuse organic mass behind ancestor rows ── */}
+                {/* ── Canopy — blurred ellipses clipped to ancestor zone ── */}
                 {hasAnc && (
-                  <g opacity={0.17}>
-                    {/* Primary canopy blob */}
-                    <ellipse cx={cx} cy={ancY - 10}
-                      rx={Math.min(ancHalf * 1.45, svgWidth * 0.42)}
-                      ry={Math.max(55, ancToRoot * 0.56 + 18)}
+                  <g filter="url(#canopy-blur)" opacity={0.38} clipPath="url(#canopy-clip)">
+                    {/* Main mass — horizontally bounded to ancestor spread */}
+                    <ellipse cx={cx} cy={ancY - 6}
+                      rx={Math.min(ancHalf * 1.08, svgWidth * 0.37)}
+                      ry={Math.max(44, ancToRoot * 0.50 + 14)}
                       fill="#22c55e" />
-                    {/* Left lobe — offset for organic feel */}
-                    <ellipse cx={cx - ancHalf * 0.55} cy={ancY + 12}
-                      rx={Math.min(ancHalf * 0.88, svgWidth * 0.29)}
-                      ry={Math.max(40, ancToRoot * 0.40 + 14)}
+                    {/* Left lobe */}
+                    <ellipse cx={cx - ancHalf * 0.48} cy={ancY + 14}
+                      rx={Math.min(ancHalf * 0.68, svgWidth * 0.22)}
+                      ry={Math.max(30, ancToRoot * 0.33 + 8)}
                       fill="#22c55e" />
                     {/* Right lobe */}
-                    <ellipse cx={cx + ancHalf * 0.60} cy={ancY + 7}
-                      rx={Math.min(ancHalf * 0.82, svgWidth * 0.27)}
-                      ry={Math.max(38, ancToRoot * 0.37 + 13)}
+                    <ellipse cx={cx + ancHalf * 0.54} cy={ancY + 8}
+                      rx={Math.min(ancHalf * 0.62, svgWidth * 0.20)}
+                      ry={Math.max(28, ancToRoot * 0.30 + 8)}
                       fill="#22c55e" />
-                    {/* Top crown highlight */}
-                    <ellipse cx={cx + ancHalf * 0.10} cy={ancY - 42}
-                      rx={Math.min(ancHalf * 0.52, svgWidth * 0.18)}
-                      ry={Math.max(26, ancToRoot * 0.22 + 10)}
-                      fill="#4ade80" opacity={0.70} />
+                    {/* Crown accent — off-center so it's irregular */}
+                    <ellipse cx={cx + ancHalf * 0.10} cy={ancY - 40}
+                      rx={Math.min(ancHalf * 0.38, svgWidth * 0.12)}
+                      ry={Math.max(20, ancToRoot * 0.16 + 6)}
+                      fill="#4ade80" />
                   </g>
                 )}
 
-                {/* ── Trunk — organic filled shape ── */}
-                <path d={trunkPath} fill="#22c55e" opacity={0.18} />
+                {/* ── Trunk — tapered organic column ── */}
+                <path d={trunkPath} fill="#15803d" filter="url(#trunk-blur)" opacity={0.45} />
 
-                {/* ── Roots — visible asymmetric curves from root base ── */}
+                {/* ── Roots — 5 downward curves, max ±62 px horizontal spread ── */}
                 {([
-                  { d: `M0,0 C-26,28 -74,46 -122,34`,  sw: 14, op: 0.17 },
-                  { d: `M0,0 C-16,44 -48,72 -78,84`,   sw:  9, op: 0.15 },
-                  { d: `M0,0 C2,38 1,70 0,98`,          sw: 11, op: 0.16 },
-                  { d: `M0,0 C16,44 48,72 78,84`,       sw:  9, op: 0.15 },
-                  { d: `M0,0 C26,28 74,46 122,34`,      sw: 14, op: 0.17 },
+                  { d: `M0,0 C-18,16 -48,38 -60,62`,  sw: 9, op: 0.25 },
+                  { d: `M0,0 C-9,22 -20,48 -24,68`,   sw: 6, op: 0.22 },
+                  { d: `M0,0 C1,28 0,56 0,72`,         sw: 7, op: 0.24 },
+                  { d: `M0,0 C10,22 22,48 26,68`,      sw: 6, op: 0.22 },
+                  { d: `M0,0 C20,16 50,38 62,62`,      sw: 9, op: 0.25 },
                 ] as { d: string; sw: number; op: number }[]).map(({ d, sw, op }, i) => (
                   <path key={i}
                     transform={`translate(${cx},${rb})`}
