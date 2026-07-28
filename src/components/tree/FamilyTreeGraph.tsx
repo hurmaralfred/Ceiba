@@ -27,9 +27,9 @@ interface Props {
 // ── Layout constants ──────────────────────────────────────────
 const R = 28;           // circle radius
 const ROOT_R = 34;      // root circle radius
-const LABEL_H = 38;     // height for name + relation labels below circle
-const HGAP = 22;        // horizontal gap between circles
-const VGAP = 64;        // vertical gap between bottom-of-label and top-of-next-circle
+const LABEL_H = 46;     // height for two-line name + relation (was 38)
+const HGAP = 32;        // horizontal gap between circles (was 22)
+const VGAP = 72;        // vertical gap between bottom-of-label and top-of-next-circle (was 64)
 const TOP_PAD = 48;
 
 // Slot width per node (for layout calculations)
@@ -642,6 +642,8 @@ export default function FamilyTreeGraph({
 }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const gRef   = useRef<SVGGElement>(null);
+  const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
+  const initialZoomApplied = useRef(false);
 
   // Expanded state — starts with ALL parent IDs so the full tree is visible by default
   const [expandedParents, setExpandedParents] = useState<Set<string>>(new Set());
@@ -697,12 +699,28 @@ export default function FamilyTreeGraph({
     if (!svgRef.current || !gRef.current) return;
     const svg = d3.select(svgRef.current);
     const g   = d3.select(gRef.current);
-    svg.call(
-      d3.zoom<SVGSVGElement, unknown>()
-        .scaleExtent([0.2, 3])
-        .on("zoom", e => g.attr("transform", e.transform)),
-    );
+    const zoom = d3.zoom<SVGSVGElement, unknown>()
+      .scaleExtent([0.12, 3])
+      .on("zoom", e => g.attr("transform", e.transform));
+    zoomRef.current = zoom;
+    svg.call(zoom);
   }, []);
+
+  // Initial viewport: center on root node at a readable scale
+  useEffect(() => {
+    if (initialZoomApplied.current || !svgRef.current || !zoomRef.current || nodes.length === 0) return;
+    initialZoomApplied.current = true;
+    const rootNode = nodes.find(n => n.relationType === "root");
+    if (!rootNode) return;
+    const containerW = svgRef.current.parentElement?.clientWidth ?? 360;
+    const initScale = containerW < 600 ? 0.65 : containerW < 1024 ? 0.85 : Math.min(1.0, containerW / svgWidth);
+    const tx = containerW / 2 - rootNode.cx * initScale;
+    const ty = 60 - rootNode.cy * initScale;
+    d3.select(svgRef.current).call(
+      zoomRef.current.transform,
+      d3.zoomIdentity.translate(tx, ty).scale(initScale),
+    );
+  }, [nodes, svgWidth]);
 
   // Bloque A2 (corrección): seleccionar y expandir/colapsar son AHORA dos
   // eventos separados — antes un solo onClick en todo el nodo hacía ambas
