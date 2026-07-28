@@ -125,6 +125,16 @@ function isRecentlyActive(lastSeenAt: string | null | undefined): boolean {
   return Date.now() - new Date(lastSeenAt).getTime() < 86400000; // 24h
 }
 
+// Compact display name: shows first name + last initial when it fits
+function makeDisplayName(firstName: string, lastName?: string | null): string {
+  const fn = (firstName || "").trim();
+  const ln = (lastName || "").trim();
+  if (!ln) return fn.length > 13 ? fn.slice(0, 12) + "." : fn;
+  const withInitial = `${fn} ${ln[0]}.`;
+  if (withInitial.length <= 14) return withInitial;
+  return fn.length > 13 ? fn.slice(0, 12) + "." : fn;
+}
+
 // ── Layout types ──────────────────────────────────────────────
 interface LayoutNode {
   id: string;
@@ -314,7 +324,7 @@ export function buildLayout(
     {
       id: "root",
       name: profile.first_name,
-      shortName: profile.first_name.slice(0, 10),
+      shortName: makeDisplayName(profile.first_name),
       relation: "Tú",
       relationType: "root",
       generation: 0, posHint: 0,
@@ -326,7 +336,7 @@ export function buildLayout(
     ...members.map(m => ({
       id: m.id,
       name: m.first_name + (m.last_name ? " " + m.last_name : ""),
-      shortName: m.first_name.slice(0, 10),
+      shortName: makeDisplayName(m.first_name, m.last_name),
       relation: RELATION_LABELS[m.relation_type as keyof typeof RELATION_LABELS] ?? m.relation_type,
       relationType: m.relation_type,
       generation: m.generation ?? GENERATION[m.relation_type] ?? 0,
@@ -368,7 +378,7 @@ export function buildLayout(
       return {
         id: m.id,
         name: m.first_name + (m.last_name ? " " + m.last_name : ""),
-        shortName: m.first_name.slice(0, 10),
+        shortName: makeDisplayName(m.first_name, m.last_name),
         relation: relLabel,
         relationType: finalRelType,
         generation: extGen,
@@ -656,6 +666,7 @@ export default function FamilyTreeGraph({
   // selección; clic en el fondo del lienzo vuelve a rootNodeId (regla
   // única y consistente, ver handleBackgroundClick).
   const [selectedId, setSelectedId] = useState<string>(rootNodeId);
+  const [focusedId, setFocusedId] = useState<string | null>(null);
 
   const immediateFamily = useMemo(
     () => computeImmediateFamily(selectedId, members, memberLinks),
@@ -1058,6 +1069,17 @@ export default function FamilyTreeGraph({
               <g
                 key={n.id}
                 onClick={canSelect ? () => handleSelect(n.memberId!) : undefined}
+                onKeyDown={canSelect ? (e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    handleSelect(n.memberId!);
+                  }
+                } : undefined}
+                onFocus={canSelect ? () => setFocusedId(n.id) : undefined}
+                onBlur={canSelect ? () => setFocusedId(null) : undefined}
+                tabIndex={canSelect ? 0 : undefined}
+                role={canSelect ? "button" : undefined}
+                aria-label={canSelect ? `${n.name}, ${n.relation}${n.isDeceased ? ", fallecido" : ""}` : undefined}
                 className={`node-focus-group${isSelected ? " is-selected" : ""}`}
                 style={{ cursor: canSelect ? "pointer" : "default", opacity: tierOpacity }}
               >
@@ -1073,12 +1095,21 @@ export default function FamilyTreeGraph({
                   </clipPath>
                 </defs>
 
+                {/* Tooltip nativo del navegador + accesibilidad lectores */}
+                <title>{n.name}{n.relation && n.relation !== "Tú" ? ` · ${n.relation}` : ""}{n.isDeceased ? " †" : ""}</title>
+
                 {/* Nivel 1 — anillo de selección: propio, siempre estático
                     (sin pulso). Distinto en color del anillo de raíz/activo
                     para no confundir "seleccionado" con "raíz"/"activo hoy". */}
                 {isSelected && (
                   <circle cx={n.cx} cy={n.cy} r={r + 5}
                     fill="none" stroke="#f59e0b" strokeWidth="2.5" opacity={0.9} />
+                )}
+
+                {/* Anillo de foco por teclado — distinto del de selección */}
+                {focusedId === n.id && !isSelected && (
+                  <circle cx={n.cx} cy={n.cy} r={r + 7}
+                    fill="none" stroke="#60a5fa" strokeWidth="2" strokeDasharray="3,2" opacity={0.85} />
                 )}
 
                 {/* Anillo distintivo de raíz / activo hoy — estático en
@@ -1266,10 +1297,10 @@ export default function FamilyTreeGraph({
                 {/* Name */}
                 <text
                   x={n.cx}
-                  y={n.cy + r + 14}
+                  y={n.cy + r + 15}
                   textAnchor="middle"
-                  fill={n.isExtended ? "#9ca3af" : "white"}
-                  fontSize={n.isExtended ? 9 : 11}
+                  fill={n.isExtended ? "#c4cdd8" : "white"}
+                  fontSize={n.isExtended ? 10 : 12}
                   fontWeight="600"
                   fontFamily="system-ui, -apple-system, sans-serif"
                   style={{ pointerEvents: "none", userSelect: "none" }}
@@ -1280,14 +1311,14 @@ export default function FamilyTreeGraph({
                 {/* Relation */}
                 <text
                   x={n.cx}
-                  y={n.cy + r + 27}
+                  y={n.cy + r + 29}
                   textAnchor="middle"
-                  fill={n.isExtended ? "#6b7280" : "rgba(255,255,255,0.55)"}
-                  fontSize={8.5}
+                  fill={n.isExtended ? "#8b98a8" : "rgba(255,255,255,0.65)"}
+                  fontSize={9}
                   fontFamily="system-ui, sans-serif"
                   style={{ pointerEvents: "none", userSelect: "none" }}
                 >
-                  {n.relation.length > 13 ? n.relation.slice(0, 12) + "…" : n.relation}
+                  {n.relation.length > 15 ? n.relation.slice(0, 14) + "…" : n.relation}
                 </text>
               </g>
             );
