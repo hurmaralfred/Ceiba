@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useMemo, useState, useCallback } from "react";
+import Link from "next/link";
 import * as d3 from "d3";
 import { FamilyMember, Profile, RELATION_LABELS } from "@/lib/types";
 import ForestAmbientLayer from "./ForestAmbientLayer";
@@ -707,6 +708,12 @@ export default function FamilyTreeGraph({
     [selectedId, members, memberLinks],
   );
 
+  // Info panel: selected node data (null when root or nothing selected)
+  const selectedNode = useMemo(
+    () => (selectedId && selectedId !== rootNodeId ? nodes.find(n => n.id === selectedId) ?? null : null),
+    [selectedId, rootNodeId, nodes],
+  );
+
   // Group downward edges by parent — combs for multi-child nodes, bezier for singles
   const edgeGroups = useMemo(() => {
     type EG = { d: string; kind: "blood" | "affinity" | "peer"; fromId: string; toIds: string[] };
@@ -900,6 +907,12 @@ export default function FamilyTreeGraph({
             }
             .node-focus-group.is-selected {
               transform: scale(1.05);
+            }
+            @media (hover: hover) and (pointer: fine) {
+              .node-focus-group[role="button"]:hover:not(.is-selected) {
+                filter: brightness(1.18);
+                transform: scale(1.04);
+              }
             }
             @media (prefers-reduced-motion: reduce) {
               .edge-line, .node-focus-group, .node-focus-group.is-selected {
@@ -1426,6 +1439,149 @@ export default function FamilyTreeGraph({
           })}
         </g>
       </svg>
+
+      {/* ── Info panel: slides up when a non-root node is selected ── */}
+      {selectedNode && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: "calc(60px + env(safe-area-inset-bottom))",
+            left: 0, right: 0, zIndex: 44,
+            padding: "0 12px",
+            animation: "panel-in 180ms ease both",
+          }}
+        >
+          <style>{`
+            @keyframes panel-in {
+              from { opacity: 0; transform: translateY(12px); }
+              to   { opacity: 1; transform: translateY(0); }
+            }
+            @media (min-width: 1024px) {
+              .node-info-panel { max-width: 340px; margin-left: auto !important; margin-right: 80px !important; }
+            }
+            @media (prefers-reduced-motion: reduce) {
+              @keyframes panel-in { from { opacity:1; transform:none; } }
+            }
+          `}</style>
+          <div
+            className="node-info-panel"
+            style={{
+              background: "rgba(10, 28, 13, 0.95)",
+              backdropFilter: "blur(14px)",
+              borderRadius: 16,
+              border: "1px solid rgba(74, 222, 128, 0.18)",
+              boxShadow: "0 -2px 20px rgba(0,0,0,0.4)",
+              padding: "12px 14px",
+              margin: "0 auto",
+              maxWidth: 520,
+            }}
+          >
+            {/* Row 1: avatar + name/relation + close */}
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
+              {/* Avatar */}
+              <div style={{
+                width: 44, height: 44, borderRadius: "50%", flexShrink: 0,
+                background: "linear-gradient(145deg,#7daa72,#5c7a52)",
+                overflow: "hidden",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                border: selectedNode.isDeceased ? "2px dashed #6b7280" : "2px solid rgba(74,222,128,0.4)",
+              }}>
+                {selectedNode.avatarUrl
+                  ? <img src={selectedNode.avatarUrl} alt={selectedNode.name}
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  : <span style={{ color: "white", fontWeight: 700, fontSize: 18 }}>
+                      {selectedNode.name[0]?.toUpperCase() ?? "?"}
+                    </span>
+                }
+              </div>
+
+              {/* Name + relation */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{
+                    color: "white", fontWeight: 700, fontSize: 14,
+                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                    fontFamily: "system-ui, -apple-system, sans-serif",
+                  }}>
+                    {selectedNode.name}
+                  </span>
+                  {selectedNode.isDeceased && (
+                    <span style={{ color: "#9ca3af", fontSize: 13, fontFamily: "Georgia, serif" }}>†</span>
+                  )}
+                </div>
+                <div style={{ color: "rgba(167,243,160,0.75)", fontSize: 12, marginTop: 1,
+                  fontFamily: "system-ui, sans-serif" }}>
+                  {selectedNode.relation}
+                </div>
+              </div>
+
+              {/* Close → reset to root */}
+              <button
+                onClick={handleBackgroundClick}
+                aria-label="Cerrar panel"
+                style={{
+                  background: "rgba(255,255,255,0.08)", border: "none", cursor: "pointer",
+                  color: "rgba(255,255,255,0.5)", borderRadius: 8,
+                  width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 16, flexShrink: 0,
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Row 2: action buttons */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+              {selectedNode.memberId && (
+                <Link
+                  href={`/member/${selectedNode.memberId}`}
+                  style={{
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    background: "rgba(94,138,80,0.28)", border: "1px solid rgba(74,222,128,0.22)",
+                    color: "#86efac", borderRadius: 10, padding: "7px 4px",
+                    fontSize: 12, fontWeight: 600, textDecoration: "none",
+                    fontFamily: "system-ui, sans-serif",
+                  }}
+                >
+                  Editar
+                </Link>
+              )}
+              <Link
+                href="/invitar"
+                style={{
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  background: "rgba(94,138,80,0.14)", border: "1px solid rgba(74,222,128,0.14)",
+                  color: "#86efac", borderRadius: 10, padding: "7px 4px",
+                  fontSize: 12, fontWeight: 600, textDecoration: "none",
+                  fontFamily: "system-ui, sans-serif",
+                  gridColumn: selectedNode.memberId ? undefined : "1 / 2",
+                }}
+              >
+                Invitar
+              </Link>
+              <button
+                onClick={() => {
+                  if (!selectedNode.memberId) return;
+                  const url = `${window.location.origin}/member/${selectedNode.memberId}`;
+                  if (typeof navigator !== "undefined" && navigator.share) {
+                    navigator.share({ title: selectedNode.name, url }).catch(() => {});
+                  } else {
+                    navigator.clipboard?.writeText(url).catch(() => {});
+                  }
+                }}
+                style={{
+                  background: "rgba(94,138,80,0.14)", border: "1px solid rgba(74,222,128,0.14)",
+                  color: "#86efac", borderRadius: 10, padding: "7px 4px",
+                  fontSize: 12, fontWeight: 600, cursor: "pointer",
+                  fontFamily: "system-ui, sans-serif",
+                }}
+              >
+                Compartir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
