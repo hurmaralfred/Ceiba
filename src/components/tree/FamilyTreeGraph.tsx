@@ -1111,9 +1111,8 @@ export default function FamilyTreeGraph({
                 pareja/unión (peer) → patrón propio (guion largo, existente)
                 afinidad/derivada  → guion corto, distinto de "peer" */}
           {edgeGroups.map((eg, i) => {
-            const isPeer = eg.kind === "peer";
+            const isPeer  = eg.kind === "peer";
             const isBlood = eg.kind === "blood";
-            // El punto de unión sintético cuenta como "root" para el foco.
             const effectiveFrom = eg.fromId.startsWith("__union:") ? "root" : eg.fromId;
             const endpointHighlighted = (id: string) => id === selectedId || immediateFamily.has(id);
             const isHighlighted = eg.toIds.length > 1
@@ -1121,18 +1120,60 @@ export default function FamilyTreeGraph({
               : endpointHighlighted(effectiveFrom) &&
                 endpointHighlighted(eg.toIds[0].startsWith("__union:") ? "root" : eg.toIds[0]);
 
+            // Trunk = blood edges that directly touch the root (parent→root or root→child)
+            const isTrunk = !isPeer && (
+              effectiveFrom === rootNodeId ||
+              eg.toIds.some(id => id === rootNodeId) ||
+              eg.fromId.startsWith("__union:")
+            );
+
+            // Fade secondary branches by distance from root
+            const fromNode = isTrunk ? null : nodes.find(n => n.id === effectiveFrom || n.id === eg.fromId);
+            const distFactor = fromNode ? Math.max(0.5, 1 - Math.abs(fromNode.generation ?? 0) * 0.13) : 1;
+
+            const mainColor = EDGE_COLORS[eg.kind];
+            const shadowW = isTrunk ? 6 : 4;
+            const mainW   = isTrunk ? 2.1 : isPeer ? 1.2 : 1.5;
+            const dashArray = isPeer ? "4,3" : isBlood ? undefined : "2,3";
+
+            const shadowOp = isHighlighted
+              ? (isTrunk ? 0.32 : 0.12)
+              : (isTrunk ? 0.14 : 0.04);
+            const mainOp = isHighlighted
+              ? (isPeer ? 0.68 : 0.88)
+              : (isPeer ? 0.17 : isTrunk ? 0.40 : 0.20 * distFactor);
+            const glowOp = isHighlighted ? 0.32 : 0.12;
+
             return (
-              <path
-                key={i}
-                d={eg.d}
-                fill="none"
-                stroke={EDGE_COLORS[eg.kind]}
-                strokeWidth={isPeer ? 1.2 : (isHighlighted ? 1.9 : 1.6)}
-                strokeDasharray={isPeer ? "4,3" : isBlood ? undefined : "2,3"}
-                strokeLinecap="round"
-                opacity={isHighlighted ? (isPeer ? 0.55 : 0.75) : (isPeer ? 0.15 : 0.2)}
-                className="edge-line"
-              />
+              <g key={i}>
+                {/* Shadow layer — dark base gives branch depth */}
+                {!isPeer && (
+                  <path d={eg.d} fill="none"
+                    stroke="#000"
+                    strokeWidth={shadowW}
+                    strokeLinecap="round"
+                    opacity={shadowOp}
+                  />
+                )}
+                {/* Main stroke */}
+                <path d={eg.d} fill="none"
+                  stroke={mainColor}
+                  strokeWidth={mainW}
+                  strokeDasharray={dashArray}
+                  strokeLinecap="round"
+                  opacity={mainOp}
+                  className="edge-line"
+                />
+                {/* Inner glow — trunk only, makes central axis alive */}
+                {isTrunk && (
+                  <path d={eg.d} fill="none"
+                    stroke="rgba(255,255,255,0.65)"
+                    strokeWidth={0.7}
+                    strokeLinecap="round"
+                    opacity={glowOp}
+                  />
+                )}
+              </g>
             );
           })}
 
