@@ -646,8 +646,11 @@ export function buildLayout(
 // ── Bezier path ───────────────────────────────────────────────
 function curvePath(x1: number, y1: number, x2: number, y2: number): string {
   if (Math.abs(y1 - y2) < 6) return `M${x1},${y1} L${x2},${y2}`;
-  const mid = (y1 + y2) / 2;
-  return `M${x1},${y1} C${x1},${mid} ${x2},${mid} ${x2},${y2}`;
+  const dy = y2 - y1;
+  // Control points weighted 65 % toward the starting node — the path leaves
+  // the parent going straight down (or up) for most of the distance, then
+  // bends to the child's position.  Reduces the S-curve / diagram look.
+  return `M${x1},${y1} C${x1},${y1 + dy * 0.65} ${x2},${y2 - dy * 0.35} ${x2},${y2}`;
 }
 
 // ── Main component ────────────────────────────────────────────
@@ -737,11 +740,15 @@ export default function FamilyTreeGraph({
         const sorted = [...grp].sort((a, b) => a.x2 - b.x2);
         const spineY = grp[0].y1 + (grp[0].y2 - grp[0].y1) * 0.4;
         const parentX = grp[0].x1;
-        const leftX = Math.min(sorted[0].x2, parentX);
-        const rightX = Math.max(sorted[sorted.length - 1].x2, parentX);
         const childY = grp[0].y2;
-        let d = `M${parentX},${grp[0].y1} V${spineY} M${leftX},${spineY} H${rightX}`;
-        for (const e of sorted) d += ` M${e.x2},${spineY} V${childY}`;
+        // Vertical stem from parent down to the branch point, then a smooth
+        // cubic-bezier branch to each child.  No horizontal bar → no org-chart
+        // comb; instead the paths fan out like branches of a real tree.
+        let d = `M${parentX},${grp[0].y1} L${parentX},${spineY}`;
+        for (const e of sorted) {
+          const mid = (spineY + childY) / 2;
+          d += ` M${parentX},${spineY} C${parentX},${mid} ${e.x2},${mid} ${e.x2},${childY}`;
+        }
         result.push({ d, kind: grp[0].kind, fromId, toIds: grp.map(e => e.toId) });
       } else {
         for (const e of grp) result.push({ d: curvePath(e.x1, e.y1, e.x2, e.y2), kind: e.kind, fromId: e.fromId, toIds: [e.toId] });
