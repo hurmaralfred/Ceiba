@@ -230,10 +230,11 @@ export async function resolveFamilyRoster(
 
 /**
  * Valida si el usuario actual puede editar una persona.
- * Reglas:
- * - No reclamada: el que la agregó (added_by)
- * - Reclamada por usuario actual: sí
- * - Reclamada por otro usuario: no
+ * Reglas (en orden):
+ * 1. Es el creator y la persona no está reclamada por otro → sí
+ * 2. Tiene un person_claim aprobado → sí
+ * 3. Tiene una collab_request de tipo 'edit' aprobada → sí
+ * 4. Cualquier otro caso → no
  */
 export async function canEditPerson(
   service: SupabaseLike,
@@ -250,7 +251,7 @@ export async function canEditPerson(
       .eq("claim_status", "approved")
       .is("revoked_at", null)
       .maybeSingle();
-    if (!claim) return true; // No reclamada, yo puedo editarla
+    if (!claim) return true;
   }
 
   // Si está reclamada por mí, puedo editarla
@@ -262,6 +263,18 @@ export async function canEditPerson(
     .eq("claim_status", "approved")
     .is("revoked_at", null)
     .maybeSingle();
+  if (myClaim) return true;
 
-  return !!myClaim;
+  // Collab request de tipo 'edit' aprobada
+  const { data: editGrant } = await service
+    .from("collab_requests")
+    .select("id")
+    .eq("person_id", personId)
+    .eq("requester_user_id", myUserId)
+    .eq("request_type", "edit")
+    .eq("status", "approved")
+    .maybeSingle();
+  if (editGrant) return true;
+
+  return false;
 }

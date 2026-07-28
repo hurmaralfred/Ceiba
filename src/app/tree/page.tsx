@@ -102,6 +102,8 @@ export default function TreePage() {
   const [growthStats, setGrowthStats] = useState<CeibaGrowthStats | null>(null);
   const [canEditMember, setCanEditMember] = useState(false);
   const [checkingEditPermission, setCheckingEditPermission] = useState(false);
+  const [pendingCollabRequests, setPendingCollabRequests] = useState<Array<{ id: string; request_type: string; requester_user_id: string }>>([]);
+  const [processingRequestId, setProcessingRequestId] = useState<string | null>(null);
 
   // El contador global es informativo: nunca debe impedir que el árbol
   // cargue. Si la RPC falla se registra en consola y se oculta la línea,
@@ -374,8 +376,8 @@ console.log("⑤ Datos cargados");
         const data = await res.json();
         setCanEditMember(data.can_edit === true);
         if (!data.can_edit) {
-          toast.error("No tienes permisos para editar a este familiar");
           setCheckingEditPermission(false);
+          router.push(`/collab/${member.id}`);
           return;
         }
       }
@@ -385,6 +387,18 @@ console.log("⑤ Datos cargados");
       setCheckingEditPermission(false);
       toast.error("Error al verificar permisos");
       return;
+    }
+
+    // Cargar solicitudes de colaboración pendientes (el usuario es el dueño)
+    try {
+      const { data: requests } = await supabase
+        .from("collab_requests")
+        .select("id, request_type, requester_user_id")
+        .eq("person_id", member.id)
+        .eq("status", "pending");
+      setPendingCollabRequests(requests || []);
+    } catch {
+      setPendingCollabRequests([]);
     }
 
     const nameParts = (member.first_name || "").split(" ");
@@ -414,30 +428,53 @@ console.log("⑤ Datos cargados");
     setSaving(true);
 
     try {
-      const { error } = await supabase.rpc("update_person", {
-        p_person_id: editingMember.id,
-        p_first_name: form.primer_nombre.trim(),
-        p_middle_name: form.segundo_nombre.trim() || undefined,
-        p_first_surname: form.primer_apellido.trim() || undefined,
-        p_second_surname: form.segundo_apellido.trim() || undefined,
-        p_birth_date: form.birth_date || undefined,
-        p_birth_city: form.birth_city.trim() || undefined,
-        p_birth_country: form.birth_country.trim() || undefined,
-        p_is_deceased: form.is_deceased,
+      const res = await fetch(`/api/members/${editingMember.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          first_name: form.primer_nombre.trim(),
+          middle_name: form.segundo_nombre.trim() || null,
+          first_surname: form.primer_apellido.trim() || null,
+          second_surname: form.segundo_apellido.trim() || null,
+          birth_date: form.birth_date || null,
+          birth_city: form.birth_city.trim() || null,
+          birth_country: form.birth_country.trim() || null,
+          is_deceased: form.is_deceased,
+        }),
       });
-
-      if (error) throw error;
+      if (!res.ok) {
+        const b = await res.json().catch(() => ({}));
+        throw new Error(b.error || "Error al guardar");
+      }
 
       toast.success("Familiar actualizado");
       setShowModal(false);
       setEditingMember(null);
       setForm(EMPTY_FORM);
+      setPendingCollabRequests([]);
       await loadData();
     } catch (err: any) {
       toast.error(err?.message || "Error al guardar");
     } finally {
       setSaving(false);
     }
+  };
+
+  const resolveCollabRequest = async (requestId: string, action: "approve" | "reject") => {
+    setProcessingRequestId(requestId);
+    const res = await fetch(`/api/collab/requests/${requestId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action }),
+    });
+    setProcessingRequestId(null);
+    if (!res.ok) {
+      const b = await res.json().catch(() => ({}));
+      toast.error(b.error || "Error al procesar la solicitud");
+      return;
+    }
+    toast.success(action === "approve" ? "Solicitud aprobada" : "Solicitud rechazada");
+    setPendingCollabRequests(prev => prev.filter(r => r.id !== requestId));
   };
 
   const deleteMember = async () => {
@@ -928,16 +965,40 @@ console.log("⑤ Datos cargados");
               <h2 className="text-lg font-bold text-ceiba-900">
                 {editingMember ? "Editar familiar" : "Agregar familiar"}
               </h2>
-              <button onClick={() => { setShowModal(false); setEditingMember(null); setForm(EMPTY_FORM); setDuplicateWarning(null); setModalPhotoFile(null); setModalPhotoPreview(null); }} className="text-ceiba-400 hover:text-ceiba-600">
+              <button onClick={() => { setShowModal(false); setEditingMember(null); setForm(EMPTY_FORM); setDuplicateWarning(null); setModalPhotoFile(null); setModalPhotoPreview(null); setPendingCollabRequests([]); }} className="text-ceiba-400 hover:text-ceiba-600">
                 <X size={20} />
               </button>
             </div>
             <div className="space-y-3">
-              {/* Permission denied message */}
-              {editingMember && !canEditMember && !checkingEditPermission && (
-                <div className="bg-red-50 border border-red-200 rounded-xl p-3">
-                  <p className="text-xs font-semibold text-red-800 mb-1">No tienes permisos para editar</p>
-                  <p className="text-xs text-red-700">Este familiar fue reclamado por otro usuario. Solo el propietario de la cuenta puede editarlo.</p>
+              {/* Solicitudes de colaboración pendientes (visible solo al dueño) */}
+              {editingMember && canEditMember && pendingCollabRequests.length > 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-2">
+                  <p className="text-xs font-semibold text-amber-800">
+                    {pendingCollabRequests.length === 1 ? "1 solicitud pendiente" : `${pendingCollabRequests.length} solicitudes pendientes`}
+                  </p>
+                  {pendingCollabRequests.map(req => (
+                    <div key={req.id} className="flex items-center justify-between gap-2">
+                      <span className="text-xs text-amber-700">
+                        {req.request_type === "edit" ? "Co-edición" : "Transferencia"}
+                      </span>
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => resolveCollabRequest(req.id, "approve")}
+                          disabled={processingRequestId === req.id}
+                          className="text-xs text-green-700 font-semibold px-2 py-1 bg-green-100 rounded-lg hover:bg-green-200 disabled:opacity-50"
+                        >
+                          Aprobar
+                        </button>
+                        <button
+                          onClick={() => resolveCollabRequest(req.id, "reject")}
+                          disabled={processingRequestId === req.id}
+                          className="text-xs text-red-600 font-semibold px-2 py-1 bg-red-50 rounded-lg hover:bg-red-100 disabled:opacity-50"
+                        >
+                          Rechazar
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
               {/* Foto del familiar */}
