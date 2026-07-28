@@ -141,13 +141,13 @@ export default function ChatRoomPage() {
   });
 
   if (loading) return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+    <div className="min-h-screen bg-cream-100 flex items-center justify-center">
       <TreePine size={36} className="text-ceiba-600 animate-pulse" />
     </div>
   );
 
   return (
-    <main className="h-screen flex flex-col bg-gray-50">
+    <main className="h-screen flex flex-col bg-cream-100">
       <nav className="bg-ceiba-800 text-white px-4 py-4 flex items-center gap-3 shadow-lg flex-shrink-0">
         <Link href="/chat" className="text-ceiba-300 hover:text-white">
           <ArrowLeft size={20} />
@@ -167,8 +167,8 @@ export default function ChatRoomPage() {
       <div className="flex-1 overflow-y-auto px-4 py-4">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center">
-            <Send size={40} className="text-gray-300 mb-3" />
-            <p className="text-gray-400 text-sm">
+            <Send size={40} className="text-ceiba-200 mb-3" />
+            <p className="text-ceiba-400 text-sm">
               {roomType === "group" ? "¡Sé el primero en escribir al grupo!" : "Envía tu primer mensaje"}
             </p>
           </div>
@@ -177,9 +177,9 @@ export default function ChatRoomPage() {
         {grouped.map(group => (
           <div key={group.date}>
             <div className="flex items-center gap-3 my-4">
-              <div className="h-px bg-gray-200 flex-1" />
-              <span className="text-xs text-gray-400 font-medium px-2">{group.date}</span>
-              <div className="h-px bg-gray-200 flex-1" />
+              <div className="h-px bg-cream-300 flex-1" />
+              <span className="text-xs text-ceiba-400 font-medium px-2">{group.date}</span>
+              <div className="h-px bg-cream-300 flex-1" />
             </div>
             <div className="space-y-3">
               {group.messages.map((m, i) => {
@@ -202,7 +202,7 @@ export default function ChatRoomPage() {
                     )}
                     <div className={`max-w-[72%] flex flex-col ${isMe ? "items-end" : "items-start"}`}>
                       {showAvatar && !isMe && (
-                        <span className="text-xs text-gray-500 mb-1 ml-1">
+                        <span className="text-xs text-ceiba-500 mb-1 ml-1">
                           {m.sender?.first_name} {m.sender?.last_name}
                         </span>
                       )}
@@ -211,7 +211,7 @@ export default function ChatRoomPage() {
                       }`}>
                         {m.body}
                       </div>
-                      <span className="text-[10px] text-gray-400 mt-1 mx-1">{formatTime(m.created_at)}</span>
+                      <span className="text-[10px] text-ceiba-400 mt-1 mx-1">{formatTime(m.created_at)}</span>
                     </div>
                   </div>
                 );
@@ -222,11 +222,11 @@ export default function ChatRoomPage() {
         <div ref={bottomRef} />
       </div>
 
-      <div className="bg-white border-t border-gray-200 px-4 py-3 flex-shrink-0">
+      <div className="bg-cream-50 border-t border-cream-300 px-4 py-3 flex-shrink-0">
         <div className="flex items-end gap-2 max-w-2xl mx-auto">
           <textarea
             ref={inputRef}
-            className="flex-1 border border-gray-200 rounded-2xl px-4 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ceiba-400 max-h-28"
+            className="flex-1 border border-cream-300 rounded-2xl px-4 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ceiba-400 max-h-28 bg-cream-50 text-ceiba-900 placeholder-ceiba-400"
             rows={1}
             placeholder={`Mensaje ${roomType === "group" ? "al grupo" : `a ${roomName.split(" ")[0]}`}...`}
             value={text}
@@ -241,7 +241,7 @@ export default function ChatRoomPage() {
             <Send size={16} />
           </button>
         </div>
-        <p className="text-center text-[10px] text-gray-300 mt-1">Enter para enviar · Shift+Enter para nueva línea</p>
+        <p className="text-center text-[10px] text-ceiba-400 mt-1">Enter para enviar · Shift+Enter para nueva línea</p>
       </div>
     </main>
   );

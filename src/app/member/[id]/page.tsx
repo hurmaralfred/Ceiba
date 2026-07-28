@@ -112,15 +112,15 @@ export default function MemberDetailPage() {
   };
 
   if (loading) return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+    <div className="min-h-screen bg-cream-100 flex items-center justify-center">
       <TreePine size={36} className="text-ceiba-600 animate-pulse" />
     </div>
   );
 
   if (notFound) return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-4">
-      <Users size={48} className="text-gray-300" />
-      <p className="text-gray-500">Familiar no encontrado</p>
+    <div className="min-h-screen bg-cream-100 flex flex-col items-center justify-center gap-4">
+      <Users size={48} className="text-ceiba-300" />
+      <p className="text-ceiba-500">Familiar no encontrado</p>
       <Link href="/tree" className="btn-primary">Volver al árbol</Link>
     </div>
   );
@@ -140,7 +140,7 @@ export default function MemberDetailPage() {
   const birthdayLabel = daysUntil === 0 ? "🎉 ¡Hoy!" : daysUntil === 1 ? "🎂 Mañana" : daysUntil !== null ? `En ${daysUntil} días` : null;
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screen bg-cream-100">
       {/* Nav */}
       <nav className="bg-ceiba-800 text-white px-4 py-4 flex items-center gap-3 shadow-lg">
         <Link href="/tree" className="text-ceiba-300 hover:text-white transition-colors">
@@ -162,7 +162,7 @@ export default function MemberDetailPage() {
             </div>
 
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">{displayName}</h1>
+              <h1 className="text-2xl font-bold text-ceiba-900">{displayName}</h1>
               <span className="inline-block mt-1 px-3 py-1 bg-ceiba-100 text-ceiba-800 text-sm font-semibold rounded-full">
                 {relation}
               </span>
@@ -175,7 +175,7 @@ export default function MemberDetailPage() {
               </div>
             ) : (
               <div className="flex flex-col items-center gap-2">
-                <div className="text-xs text-gray-400">Aún no se ha unido a Ceiba</div>
+                <div className="text-xs text-ceiba-400">Aún no se ha unido a Ceiba</div>
                 {member.invite_token && (
                   <a
                     href={`https://wa.me/?text=${encodeURIComponent(
@@ -206,8 +206,8 @@ export default function MemberDetailPage() {
         </div>
 
         {/* Info card */}
-        <div className="card divide-y divide-gray-100">
-          <h2 className="font-bold text-gray-800 pb-3">Información</h2>
+        <div className="card divide-y divide-cream-200">
+          <h2 className="font-bold text-ceiba-800 pb-3">Información</h2>
 
           {member.birth_date && (
             <div className="flex items-center gap-3 py-3">
@@ -215,8 +215,8 @@ export default function MemberDetailPage() {
                 <Cake size={16} />
               </div>
               <div className="flex-1">
-                <div className="text-sm font-medium text-gray-700">{formatBirthDate(member.birth_date)}</div>
-                <div className="text-xs text-gray-400">
+                <div className="text-sm font-medium text-ceiba-700">{formatBirthDate(member.birth_date)}</div>
+                <div className="text-xs text-ceiba-400">
                   {getAge(member.birth_date)} años
                   {birthdayLabel && <span className="ml-2 font-semibold text-amber-600">{birthdayLabel}</span>}
                 </div>
@@ -229,7 +229,7 @@ export default function MemberDetailPage() {
               <div className="w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 flex-shrink-0">
                 <MapPin size={16} />
               </div>
-              <div className="text-sm font-medium text-gray-700">
+              <div className="text-sm font-medium text-ceiba-700">
                 {[member.profile.city, member.profile.country].filter(Boolean).join(", ")}
               </div>
             </div>
@@ -252,10 +252,10 @@ export default function MemberDetailPage() {
           )}
 
           <div className="flex items-center gap-3 py-3">
-            <div className="w-8 h-8 rounded-xl bg-gray-50 flex items-center justify-center text-gray-500 flex-shrink-0">
+            <div className="w-8 h-8 rounded-xl bg-cream-200 flex items-center justify-center text-ceiba-500 flex-shrink-0">
               <Calendar size={16} />
             </div>
-            <div className="text-xs text-gray-400">
+            <div className="text-xs text-ceiba-400">
               Agregado el {new Date(member.added_at || "").toLocaleDateString("es", { day: "numeric", month: "long", year: "numeric" })}
             </div>
           </div>
@@ -264,8 +264,8 @@ export default function MemberDetailPage() {
         {/* Bio */}
         {member.profile?.bio && (
           <div className="card">
-            <h2 className="font-bold text-gray-800 mb-2">Sobre {member.profile.first_name}</h2>
-            <p className="text-sm text-gray-600 leading-relaxed">{member.profile.bio}</p>
+            <h2 className="font-bold text-ceiba-800 mb-2">Sobre {member.profile.first_name}</h2>
+            <p className="text-sm text-ceiba-600 leading-relaxed">{member.profile.bio}</p>
           </div>
         )}
 
@@ -277,7 +277,7 @@ export default function MemberDetailPage() {
             </div>
             <div>
               <div className="text-xs font-semibold text-ceiba-700">Miembro de Ceiba</div>
-              <div className="text-xs text-gray-400">
+              <div className="text-xs text-ceiba-400">
                 Desde {new Date(member.profile.created_at).toLocaleDateString("es", { month: "long", year: "numeric" })}
               </div>
             </div>

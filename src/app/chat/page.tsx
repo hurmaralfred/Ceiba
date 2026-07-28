@@ -86,13 +86,13 @@ export default function ChatListPage() {
   };
 
   if (loading) return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+    <div className="min-h-screen bg-cream-100 flex items-center justify-center">
       <TreePine size={36} className="text-ceiba-600 animate-pulse" />
     </div>
   );
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screen bg-cream-100">
       <nav className="bg-ceiba-800 text-white px-4 py-4 flex items-center gap-3 shadow-lg">
         <Link href="/tree" className="text-ceiba-300 hover:text-white">
           <ArrowLeft size={20} />
@@ -110,10 +110,10 @@ export default function ChatListPage() {
 
       <div className="max-w-lg mx-auto pb-20">
         {showNewDM && (
-          <div className="bg-white border-b border-gray-100 px-4 py-3">
-            <p className="text-xs font-semibold text-gray-500 mb-2">Enviar mensaje a:</p>
+          <div className="bg-cream-50 border-b border-cream-200 px-4 py-3">
+            <p className="text-xs font-semibold text-ceiba-600 mb-2">Enviar mensaje a:</p>
             {familyMembers.length === 0 ? (
-              <p className="text-sm text-gray-400">Ningún familiar tiene Ceiba aún.</p>
+              <p className="text-sm text-ceiba-400">Ningún familiar tiene Ceiba aún.</p>
             ) : (
               <div className="flex gap-2 flex-wrap">
                 {familyMembers.map(m => (
@@ -121,7 +121,7 @@ export default function ChatListPage() {
                     key={m.person_id}
                     disabled={starting}
                     onClick={() => { setShowNewDM(false); startDM(m.user_id); }}
-                    className="flex items-center gap-2 bg-gray-100 hover:bg-ceiba-50 rounded-full px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50"
+                    className="flex items-center gap-2 bg-cream-200 hover:bg-ceiba-50 rounded-full px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50"
                   >
                     <div className="w-6 h-6 rounded-full bg-ceiba-700 overflow-hidden flex items-center justify-center text-white text-xs font-bold">
                       {m.photo_path
@@ -136,12 +136,12 @@ export default function ChatListPage() {
           </div>
         )}
 
-        <div className="divide-y divide-gray-100">
+        <div className="divide-y divide-cream-200">
           {conversations.map(conv => (
             <Link
               key={conv.roomId}
               href={`/chat/${conv.roomId}`}
-              className="flex items-center gap-3 px-4 py-4 bg-white hover:bg-gray-50 transition-colors"
+              className="flex items-center gap-3 px-4 py-4 bg-cream-50 hover:bg-cream-200 transition-colors"
             >
               <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 overflow-hidden ${
                 conv.type === "group" ? "bg-ceiba-700" : "bg-blue-600"
@@ -155,21 +155,21 @@ export default function ChatListPage() {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
-                  <span className={`font-semibold text-gray-900 ${conv.unread ? "font-bold" : ""}`}>
+                  <span className={`font-semibold text-ceiba-900 ${conv.unread ? "font-bold" : ""}`}>
                     {conv.name}
                   </span>
                   {conv.lastAt && (
-                    <span className="text-xs text-gray-400 flex-shrink-0">{timeAgo(conv.lastAt)}</span>
+                    <span className="text-xs text-ceiba-400 flex-shrink-0">{timeAgo(conv.lastAt)}</span>
                   )}
                 </div>
                 <div className="flex items-center gap-2">
-                  <p className={`text-sm truncate ${conv.unread ? "text-gray-900 font-medium" : "text-gray-500"}`}>
+                  <p className={`text-sm truncate ${conv.unread ? "text-ceiba-900 font-medium" : "text-ceiba-500"}`}>
                     {conv.lastMessage || "Sin mensajes aún"}
                   </p>
                   {conv.unread && <div className="w-2 h-2 rounded-full bg-ceiba-600 flex-shrink-0" />}
                 </div>
               </div>
-              <ChevronRight size={16} className="text-gray-300 flex-shrink-0" />
+              <ChevronRight size={16} className="text-cream-400 flex-shrink-0" />
             </Link>
           ))}
         </div>
@@ -177,8 +177,8 @@ export default function ChatListPage() {
         {conversations.length === 0 && (
           <div className="text-center py-20 px-6">
             <MessageCircle size={48} className="text-gray-300 mx-auto mb-4" />
-            <h3 className="font-bold text-gray-600 mb-2">Sin conversaciones</h3>
-            <p className="text-gray-400 text-sm">Comienza un mensaje directo con un familiar o únete al chat grupal.</p>
+            <h3 className="font-bold text-ceiba-600 mb-2">Sin conversaciones</h3>
+            <p className="text-ceiba-400 text-sm">Comienza un mensaje directo con un familiar o únete al chat grupal.</p>
           </div>
         )}
       </div>

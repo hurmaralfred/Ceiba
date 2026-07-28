@@ -113,13 +113,13 @@ export default function EventsPage() {
   const years = Object.keys(byYear).map(Number).sort((a, b) => b - a);
 
   if (loading) return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+    <div className="min-h-screen bg-cream-100 flex items-center justify-center">
       <TreePine size={36} className="text-ceiba-600 animate-pulse" />
     </div>
   );
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screen bg-cream-100">
       <nav className="bg-ceiba-800 text-white px-4 py-4 flex items-center gap-3 shadow-lg sticky top-0 z-10">
         <Link href="/tree" className="text-ceiba-300 hover:text-white transition-colors">
           <ArrowLeft size={20} />
@@ -173,7 +173,7 @@ export default function EventsPage() {
                         <div className="flex-1 bg-white rounded-2xl shadow-sm border border-gray-100 p-3.5 mb-2">
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1 min-w-0">
-                              <h3 className="font-bold text-gray-900 text-sm leading-tight">{event.title}</h3>
+                              <h3 className="font-bold text-ceiba-900 text-sm leading-tight">{event.title}</h3>
                               <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1">
                                 <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${typeInfo.color}`}>
                                   {typeInfo.icon && <span className="[&>svg]:w-2.5 [&>svg]:h-2.5">{typeInfo.icon}</span>}
@@ -232,39 +232,39 @@ export default function EventsPage() {
 
       {showModal && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center px-4 pb-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+          <div className="bg-cream-50 rounded-2xl shadow-xl w-full max-w-md p-6">
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-bold">{editingId ? "Editar evento" : "Registrar evento familiar"}</h2>
-              <button onClick={() => { setShowModal(false); setForm(EMPTY_FORM); setEditingId(null); }} className="text-gray-400 hover:text-gray-600">
+              <h2 className="text-lg font-bold text-ceiba-900">{editingId ? "Editar evento" : "Registrar evento familiar"}</h2>
+              <button onClick={() => { setShowModal(false); setForm(EMPTY_FORM); setEditingId(null); }} className="text-ceiba-400 hover:text-ceiba-600">
                 <X size={20} />
               </button>
             </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Título <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-medium text-ceiba-700 mb-1">Título <span className="text-red-500">*</span></label>
                 <input type="text" className="input-field" placeholder="ej. Nació Valentina Hurtado"
                   value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
+                  <label className="block text-sm font-medium text-ceiba-700 mb-1">Tipo</label>
                   <select className="input-field" value={form.event_type} onChange={e => setForm(f => ({ ...f, event_type: e.target.value }))}>
                     {EVENT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Fecha <span className="text-red-500">*</span></label>
+                  <label className="block text-sm font-medium text-ceiba-700 mb-1">Fecha <span className="text-red-500">*</span></label>
                   <input type="date" className="input-field"
                     value={form.event_date} onChange={e => setForm(f => ({ ...f, event_date: e.target.value }))} />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Lugar (opcional)</label>
+                <label className="block text-sm font-medium text-ceiba-700 mb-1">Lugar (opcional)</label>
                 <input type="text" className="input-field" placeholder="ej. Bogotá, Colombia"
                   value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Descripción (opcional)</label>
+                <label className="block text-sm font-medium text-ceiba-700 mb-1">Descripción (opcional)</label>
                 <textarea className="input-field resize-none" rows={3}
                   placeholder="Cuenta algo sobre este momento..."
                   value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />

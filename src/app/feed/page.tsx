@@ -138,15 +138,15 @@ export default function FeedPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="sticky top-0 z-40 bg-white border-b border-gray-200">
+    <div className="min-h-screen bg-cream-100">
+      <header className="sticky top-0 z-40 bg-cream-50 border-b border-cream-300">
         <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Bell size={20} className="text-ceiba-700" />
-            <h1 className="text-lg font-bold text-gray-900">Actividad familiar</h1>
+            <h1 className="text-lg font-bold text-ceiba-900">Actividad familiar</h1>
           </div>
-          <button onClick={handleRefresh} disabled={refreshing} className="p-2 rounded-full hover:bg-gray-100 transition-colors">
-            <RefreshCw size={18} className={`text-gray-500 ${refreshing ? "animate-spin" : ""}`} />
+          <button onClick={handleRefresh} disabled={refreshing} className="p-2 rounded-full hover:bg-cream-200 transition-colors">
+            <RefreshCw size={18} className={`text-ceiba-500 ${refreshing ? "animate-spin" : ""}`} />
           </button>
         </div>
       </header>

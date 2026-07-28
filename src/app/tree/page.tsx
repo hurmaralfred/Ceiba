@@ -875,17 +875,17 @@ console.log("⑤ Datos cargados");
       {/* Broadcast Modal */}
       {showBroadcast && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+          <div className="bg-cream-50 rounded-2xl shadow-xl w-full max-w-sm p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <span className="text-2xl">📢</span>
-                <h2 className="text-lg font-bold text-gray-900">Mensaje familiar</h2>
+                <h2 className="text-lg font-bold text-ceiba-900">Mensaje familiar</h2>
               </div>
               <button onClick={() => { setShowBroadcast(false); setBroadcastMsg(""); }}>
-                <X size={20} className="text-gray-400 hover:text-gray-600" />
+                <X size={20} className="text-ceiba-400 hover:text-ceiba-600" />
               </button>
             </div>
-            <p className="text-sm text-gray-500 mb-4">
+            <p className="text-sm text-ceiba-500 mb-4">
               Todos los familiares en Ceiba recibirán una notificación con tu mensaje.
             </p>
             <textarea
@@ -923,12 +923,12 @@ console.log("⑤ Datos cargados");
       {/* Add / Edit Member Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
+          <div className="bg-cream-50 rounded-2xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-gray-900">
+              <h2 className="text-lg font-bold text-ceiba-900">
                 {editingMember ? "Editar familiar" : "Agregar familiar"}
               </h2>
-              <button onClick={() => { setShowModal(false); setEditingMember(null); setForm(EMPTY_FORM); setDuplicateWarning(null); setModalPhotoFile(null); setModalPhotoPreview(null); }} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => { setShowModal(false); setEditingMember(null); setForm(EMPTY_FORM); setDuplicateWarning(null); setModalPhotoFile(null); setModalPhotoPreview(null); }} className="text-ceiba-400 hover:text-ceiba-600">
                 <X size={20} />
               </button>
             </div>

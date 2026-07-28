@@ -149,7 +149,7 @@ export default function MapPage() {
   }, [busy, locationEnabled, enableLocation, disableLocation]);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-cream-100 flex flex-col">
       {/* Nav */}
       <nav className="bg-ceiba-800 text-white px-6 py-4 flex items-center justify-between shadow-lg">
         <div className="flex items-center gap-3">

@@ -165,13 +165,13 @@ export default function PhotosPage() {
     : photos;
 
   if (loading) return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+    <div className="min-h-screen bg-cream-100 flex items-center justify-center">
       <TreePine size={36} className="text-ceiba-600 animate-pulse" />
     </div>
   );
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screen bg-cream-100">
       <nav className="bg-ceiba-800 text-white px-4 py-4 flex items-center gap-3 shadow-lg sticky top-0 z-10">
         <Link href="/tree" className="text-ceiba-300 hover:text-white"><ArrowLeft size={20} /></Link>
         <div className="flex items-center gap-2 font-display text-lg font-bold flex-1">
@@ -212,17 +212,17 @@ export default function PhotosPage() {
             )}
 
             {showTagPicker && members.length > 0 && (
-              <div className="border border-gray-100 rounded-2xl overflow-hidden max-h-48 overflow-y-auto">
+              <div className="border border-cream-200 rounded-2xl overflow-hidden max-h-48 overflow-y-auto">
                 {members.map(m => {
                   const tagged = !!pendingTags.find(pt => pt.person_id === m.person_id);
                   return (
                     <button key={m.person_id} onClick={() => toggleTag(m)}
-                      className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${tagged ? "bg-ceiba-50" : "hover:bg-gray-50"}`}>
-                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold shrink-0 ${tagged ? "bg-ceiba-200 text-ceiba-800" : "bg-gray-100 text-gray-600"}`}>
+                      className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${tagged ? "bg-ceiba-50" : "hover:bg-cream-100"}`}>
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold shrink-0 ${tagged ? "bg-ceiba-200 text-ceiba-800" : "bg-cream-200 text-ceiba-600"}`}>
                         {m.first_name[0]}{m.last_name?.[0] || ""}
                       </div>
                       <div className="flex-1 text-left">
-                        <p className="font-semibold text-gray-900">{m.first_name} {m.last_name}</p>
+                        <p className="font-semibold text-ceiba-900">{m.first_name} {m.last_name}</p>
                       </div>
                       {tagged && <UserCheck size={15} className="text-ceiba-600 shrink-0" />}
                     </button>
@@ -244,12 +244,12 @@ export default function PhotosPage() {
         {allTaggedPeople.length > 0 && (
           <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4">
             <button onClick={() => setFilterMember(null)}
-              className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold border transition-colors ${!filterMember ? "bg-ceiba-700 text-white border-ceiba-700" : "bg-white text-gray-600 border-gray-200"}`}>
+              className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold border transition-colors ${!filterMember ? "bg-ceiba-700 text-white border-ceiba-700" : "bg-cream-50 text-ceiba-600 border-cream-300"}`}>
               Todas
             </button>
             {allTaggedPeople.map(t => (
               <button key={t.person_id} onClick={() => setFilterMember(t.person_id === filterMember ? null : t.person_id)}
-                className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold border transition-colors ${filterMember === t.person_id ? "bg-ceiba-700 text-white border-ceiba-700" : "bg-white text-gray-600 border-gray-200"}`}>
+                className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold border transition-colors ${filterMember === t.person_id ? "bg-ceiba-700 text-white border-ceiba-700" : "bg-cream-50 text-ceiba-600 border-cream-300"}`}>
                 {t.first_name}
               </button>
             ))}
@@ -258,8 +258,8 @@ export default function PhotosPage() {
 
         {visiblePhotos.length === 0 && !pendingPreview && (
           <div className="card text-center py-14">
-            <Camera size={48} className="text-gray-300 mx-auto mb-4" />
-            <h3 className="font-bold text-gray-700 mb-2">
+            <Camera size={48} className="text-ceiba-200 mx-auto mb-4" />
+            <h3 className="font-bold text-ceiba-700 mb-2">
               {filterMember ? "Sin fotos de este familiar" : "Sin fotos todavía"}
             </h3>
             {!filterMember && (
@@ -274,7 +274,7 @@ export default function PhotosPage() {
           <div className="grid grid-cols-3 gap-1.5">
             {visiblePhotos.map(photo => (
               <button key={photo.id} onClick={() => setSelectedPhoto(photo)}
-                className="aspect-square rounded-xl overflow-hidden bg-gray-200 relative group">
+                className="aspect-square rounded-xl overflow-hidden bg-cream-300 relative group">
                 <img src={photo.url} alt={photo.caption || "Foto familiar"} className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-1.5">
                   <ZoomIn size={16} className="text-white ml-auto" />
@@ -293,7 +293,7 @@ export default function PhotosPage() {
       {selectedPhoto && (
         <div className="fixed inset-0 bg-black/85 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
           onClick={() => setSelectedPhoto(null)}>
-          <div className="bg-white rounded-t-3xl sm:rounded-3xl overflow-hidden w-full sm:max-w-lg shadow-2xl"
+          <div className="bg-cream-50 rounded-t-3xl sm:rounded-3xl overflow-hidden w-full sm:max-w-lg shadow-2xl"
             onClick={e => e.stopPropagation()}>
             <div className="relative">
               <img src={selectedPhoto.url} alt={selectedPhoto.caption || ""} className="w-full object-cover max-h-[55vh]" />
@@ -303,7 +303,7 @@ export default function PhotosPage() {
               </button>
             </div>
             <div className="p-4 space-y-3">
-              {selectedPhoto.caption && <p className="text-gray-800 font-medium text-sm">{selectedPhoto.caption}</p>}
+              {selectedPhoto.caption && <p className="text-ceiba-800 font-medium text-sm">{selectedPhoto.caption}</p>}
 
               {(selectedPhoto.tags?.length ?? 0) > 0 && (
                 <div className="flex flex-wrap gap-1.5">
@@ -325,7 +325,7 @@ export default function PhotosPage() {
                       const tagged = selectedPhoto.tags?.some(t => t.person_id === m.person_id);
                       return (
                         <button key={m.person_id} onClick={() => addTagToSelected(m)}
-                          className={`text-xs font-semibold rounded-full px-2.5 py-1 border transition-colors ${tagged ? "bg-ceiba-700 text-white border-ceiba-700" : "bg-white text-gray-600 border-gray-200 hover:border-ceiba-400"}`}>
+                          className={`text-xs font-semibold rounded-full px-2.5 py-1 border transition-colors ${tagged ? "bg-ceiba-700 text-white border-ceiba-700" : "bg-cream-50 text-ceiba-600 border-cream-300 hover:border-ceiba-400"}`}>
                           {m.first_name}
                         </button>
                       );
@@ -341,7 +341,7 @@ export default function PhotosPage() {
                       ? <img src={selectedPhoto.uploader.photo_path} className="w-full h-full object-cover" alt="" />
                       : `${selectedPhoto.uploader?.first_name?.[0] ?? ""}${selectedPhoto.uploader?.last_name?.[0] ?? ""}`}
                   </div>
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-ceiba-500">
                     {selectedPhoto.uploader?.first_name} · {new Date(selectedPhoto.created_at).toLocaleDateString("es", { day: "numeric", month: "short", year: "numeric" })}
                   </span>
                 </div>

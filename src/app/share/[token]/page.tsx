@@ -64,7 +64,7 @@ export default function SharePage() {
   const affinityMembers = members.filter(m => !bloodMembers.includes(m));
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screen bg-cream-100">
       {/* Header */}
       <nav className="bg-ceiba-800 text-white px-4 py-4 flex items-center justify-between shadow-lg">
         <div className="flex items-center gap-2 font-display text-xl font-bold">
