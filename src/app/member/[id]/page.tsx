@@ -2,113 +2,103 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
-import {
-  ArrowLeft, TreePine, MapPin, Cake, Link as LinkIcon,
-  UserCheck, Calendar, Users, Share2,
-} from "lucide-react";
+import { TreePine, ArrowLeft, Save, AlertCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import BottomNav from "@/components/BottomNav";
 
-interface MemberDetail {
+interface PersonData {
   id: string;
   first_name: string;
-  last_name: string;
-  relation: string;
-  relation_type: string;
+  middle_name: string | null;
+  first_surname: string | null;
+  second_surname: string | null;
   birth_date: string | null;
-  email: string | null;
-  phone: string | null;
-  added_at: string;
-  profile_id: string | null;
-  invite_token: string | null;
-  profile?: {
-    id: string;
-    first_name: string;
-    last_name: string;
-    avatar_url: string | null;
-    social_link: string | null;
-    city: string | null;
-    country: string | null;
-    bio: string | null;
-    created_at: string;
-  } | null;
+  birth_city: string | null;
+  birth_country: string | null;
+  is_deceased: boolean;
 }
 
-const RELATION_LABELS: Record<string, string> = {
-  padre: "Padre", madre: "Madre", hijo: "Hijo", hija: "Hija",
-  hermano: "Hermano", hermana: "Hermana", abuelo: "Abuelo", abuela: "Abuela",
-  nieto: "Nieto", nieta: "Nieta", tío: "Tío", tía: "Tía",
-  primo: "Primo", prima: "Prima", esposo: "Esposo", esposa: "Esposa",
-  cónyuge: "Cónyuge", otro: "Familiar",
-};
-
-function getAge(birthDate: string): number {
-  const today = new Date();
-  const birth = new Date(birthDate);
-  let age = today.getFullYear() - birth.getFullYear();
-  const m = today.getMonth() - birth.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
-  return age;
-}
-
-function formatBirthDate(d: string) {
-  const date = new Date(d);
-  return date.toLocaleDateString("es", { day: "numeric", month: "long", year: "numeric" });
-}
-
-function getDaysUntilBirthday(birthDate: string): number {
-  const today = new Date();
-  const birth = new Date(birthDate);
-  const next = new Date(today.getFullYear(), birth.getMonth(), birth.getDate());
-  if (next < today) next.setFullYear(today.getFullYear() + 1);
-  return Math.ceil((next.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-}
-
-export default function MemberDetailPage() {
+export default function MemberEditPage() {
   const router = useRouter();
   const params = useParams();
-  const memberId = params.id as string;
+  const personId = params.id as string;
   const supabase = createClient();
 
-  const [member, setMember] = useState<MemberDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [myUserId, setMyUserId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [notFound, setNotFound] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [form, setForm] = useState({
+    first_name: "",
+    middle_name: "",
+    first_surname: "",
+    second_surname: "",
+    birth_date: "",
+    birth_city: "",
+    birth_country: "",
+    is_deceased: false,
+  });
 
-  useEffect(() => { init(); }, [memberId]);
+  useEffect(() => { load(); }, [personId]);
 
-  const init = async () => {
+  const load = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { router.push("/auth/login"); return; }
-    setMyUserId(user.id);
 
     const { data } = await supabase
-      .from("family_members")
-      .select("*")
-      .eq("id", memberId)
-      .eq("added_by", user.id)
+      .from("persons")
+      .select("id, first_name, middle_name, first_surname, second_surname, birth_date, birth_city, birth_country, is_deceased")
+      .eq("id", personId)
       .maybeSingle();
 
     if (!data) { setNotFound(true); setLoading(false); return; }
 
-    let profile = null;
-    if (data.profile_id) {
-      const { data: p } = await supabase
-        .from("profiles")
-        .select("id, first_name, last_name, avatar_url, social_link, city, country, bio, created_at")
-        .eq("id", data.profile_id)
-        .maybeSingle();
-      profile = p;
-    }
-
-    setMember({ ...data, profile });
+    setForm({
+      first_name: data.first_name ?? "",
+      middle_name: data.middle_name ?? "",
+      first_surname: data.first_surname ?? "",
+      second_surname: data.second_surname ?? "",
+      birth_date: data.birth_date ?? "",
+      birth_city: data.birth_city ?? "",
+      birth_country: data.birth_country ?? "",
+      is_deceased: data.is_deceased ?? false,
+    });
     setLoading(false);
   };
 
-  const whatsappUrl = (phone: string | null | undefined, name: string) => {
-    const clean = phone?.replace(/\D/g, "");
-    const text = encodeURIComponent(`Hola ${name}, te escribo desde Ceiba 🌳`);
-    return clean ? `https://wa.me/${clean}?text=${text}` : `https://wa.me/?text=${text}`;
+  const handleSave = async () => {
+    if (!form.first_name.trim()) { setError("El primer nombre es obligatorio"); return; }
+    if (!form.first_surname.trim()) { setError("El primer apellido es obligatorio"); return; }
+    setSaving(true);
+    setError(null);
+
+    const res = await fetch(`/api/members/${personId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        first_name: form.first_name.trim(),
+        middle_name: form.middle_name.trim() || null,
+        first_surname: form.first_surname.trim(),
+        second_surname: form.second_surname.trim() || null,
+        birth_date: form.birth_date || null,
+        birth_city: form.birth_city.trim() || null,
+        birth_country: form.birth_country.trim() || null,
+        is_deceased: form.is_deceased,
+      }),
+    });
+
+    setSaving(false);
+
+    if (!res.ok) {
+      if (res.status === 403) {
+        router.push(`/collab/${personId}`);
+        return;
+      }
+      const body = await res.json().catch(() => ({}));
+      setError(body.error || "Error al guardar");
+      return;
+    }
+
+    router.push("/tree");
   };
 
   if (loading) return (
@@ -119,174 +109,120 @@ export default function MemberDetailPage() {
 
   if (notFound) return (
     <div className="min-h-screen bg-cream-100 flex flex-col items-center justify-center gap-4">
-      <Users size={48} className="text-ceiba-300" />
+      <TreePine size={48} className="text-ceiba-300" />
       <p className="text-ceiba-500">Familiar no encontrado</p>
       <Link href="/tree" className="btn-primary">Volver al árbol</Link>
     </div>
   );
 
-  if (!member) return null;
-
-  const displayName = member.profile
-    ? `${member.profile.first_name} ${member.profile.last_name}`
-    : `${member.first_name} ${member.last_name}`;
-
-  const initials = displayName.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
-  const avatarUrl = member.profile?.avatar_url;
-  const isOnCeiba = !!member.profile_id;
-  const relation = RELATION_LABELS[member.relation] || member.relation;
-
-  const daysUntil = member.birth_date ? getDaysUntilBirthday(member.birth_date) : null;
-  const birthdayLabel = daysUntil === 0 ? "🎉 ¡Hoy!" : daysUntil === 1 ? "🎂 Mañana" : daysUntil !== null ? `En ${daysUntil} días` : null;
+  const displayName = [form.first_name, form.first_surname].filter(Boolean).join(" ") || "Familiar";
 
   return (
     <main className="min-h-screen bg-cream-100">
-      {/* Nav */}
       <nav className="bg-ceiba-800 text-white px-4 py-4 flex items-center gap-3 shadow-lg">
         <Link href="/tree" className="text-ceiba-300 hover:text-white transition-colors">
           <ArrowLeft size={20} />
         </Link>
-        <div className="font-display text-lg font-bold">Perfil familiar</div>
+        <div className="font-display text-lg font-bold truncate">Editar: {displayName}</div>
       </nav>
 
       <div className="max-w-lg mx-auto px-4 py-6 pb-24 space-y-4">
-
-        {/* Hero card */}
-        <div className="card text-center">
-          <div className="flex flex-col items-center gap-3">
-            {/* Avatar */}
-            <div className="w-24 h-24 rounded-full overflow-hidden bg-ceiba-700 flex items-center justify-center text-white text-3xl font-bold shadow-lg">
-              {avatarUrl
-                ? <img src={avatarUrl} alt={displayName} className="w-full h-full object-cover" />
-                : initials}
-            </div>
-
-            <div>
-              <h1 className="text-2xl font-bold text-ceiba-900">{displayName}</h1>
-              <span className="inline-block mt-1 px-3 py-1 bg-ceiba-100 text-ceiba-800 text-sm font-semibold rounded-full">
-                {relation}
-              </span>
-            </div>
-
-            {/* Ceiba badge */}
-            {isOnCeiba ? (
-              <div className="flex items-center gap-1.5 text-ceiba-700 text-sm font-medium">
-                <UserCheck size={16} /> En Ceiba
-              </div>
-            ) : (
-              <div className="flex flex-col items-center gap-2">
-                <div className="text-xs text-ceiba-400">Aún no se ha unido a Ceiba</div>
-                {member.invite_token && (
-                  <a
-                    href={`https://wa.me/?text=${encodeURIComponent(
-                      `${member.first_name}, te guardé un lugar en el árbol familiar de Ceiba. Entra aquí 🌳: https://ceiba.app/para/${member.invite_token}`
-                    )}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 bg-[#25D366] hover:bg-[#1ebe5d] text-white font-semibold px-5 py-2.5 rounded-xl transition-colors text-sm"
-                  >
-                    <Share2 size={15} /> Invitar por WhatsApp
-                  </a>
-                )}
-              </div>
-            )}
-
-            {/* Action buttons */}
-            {isOnCeiba && member.profile_id !== myUserId && (
-              <a
-                href={whatsappUrl(member.phone, member.profile?.first_name || member.first_name)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 bg-[#25D366] hover:bg-[#1ebe5d] text-white font-semibold px-5 py-2.5 rounded-xl transition-colors text-sm mt-1"
-              >
-                <Share2 size={15} /> Escribir por WhatsApp
-              </a>
-            )}
-          </div>
-        </div>
-
-        {/* Info card */}
-        <div className="card divide-y divide-cream-200">
-          <h2 className="font-bold text-ceiba-800 pb-3">Información</h2>
-
-          {member.birth_date && (
-            <div className="flex items-center gap-3 py-3">
-              <div className="w-8 h-8 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 flex-shrink-0">
-                <Cake size={16} />
-              </div>
-              <div className="flex-1">
-                <div className="text-sm font-medium text-ceiba-700">{formatBirthDate(member.birth_date)}</div>
-                <div className="text-xs text-ceiba-400">
-                  {getAge(member.birth_date)} años
-                  {birthdayLabel && <span className="ml-2 font-semibold text-amber-600">{birthdayLabel}</span>}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {(member.profile?.city || member.profile?.country) && (
-            <div className="flex items-center gap-3 py-3">
-              <div className="w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 flex-shrink-0">
-                <MapPin size={16} />
-              </div>
-              <div className="text-sm font-medium text-ceiba-700">
-                {[member.profile.city, member.profile.country].filter(Boolean).join(", ")}
-              </div>
-            </div>
-          )}
-
-          {member.profile?.social_link && (
-            <div className="flex items-center gap-3 py-3">
-              <div className="w-8 h-8 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600 flex-shrink-0">
-                <LinkIcon size={16} />
-              </div>
-              <a
-                href={member.profile.social_link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-blue-500 hover:underline truncate"
-              >
-                {member.profile.social_link.replace(/^https?:\/\/(www\.)?/, "").split("/")[0]}
-              </a>
-            </div>
-          )}
-
-          <div className="flex items-center gap-3 py-3">
-            <div className="w-8 h-8 rounded-xl bg-cream-200 flex items-center justify-center text-ceiba-500 flex-shrink-0">
-              <Calendar size={16} />
-            </div>
-            <div className="text-xs text-ceiba-400">
-              Agregado el {new Date(member.added_at || "").toLocaleDateString("es", { day: "numeric", month: "long", year: "numeric" })}
-            </div>
-          </div>
-        </div>
-
-        {/* Bio */}
-        {member.profile?.bio && (
-          <div className="card">
-            <h2 className="font-bold text-ceiba-800 mb-2">Sobre {member.profile.first_name}</h2>
-            <p className="text-sm text-ceiba-600 leading-relaxed">{member.profile.bio}</p>
+        {error && (
+          <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">
+            <AlertCircle size={16} className="text-red-400 shrink-0" />
+            <p className="text-sm text-red-700">{error}</p>
           </div>
         )}
 
-        {/* Member since */}
-        {member.profile?.created_at && (
-          <div className="card flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-ceiba-50 flex items-center justify-center text-ceiba-700 flex-shrink-0">
-              <TreePine size={16} />
+        <div className="card space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-ceiba-600 mb-1">Primer nombre *</label>
+              <input
+                className="input-field w-full"
+                value={form.first_name}
+                onChange={e => setForm(f => ({ ...f, first_name: e.target.value }))}
+              />
             </div>
             <div>
-              <div className="text-xs font-semibold text-ceiba-700">Miembro de Ceiba</div>
-              <div className="text-xs text-ceiba-400">
-                Desde {new Date(member.profile.created_at).toLocaleDateString("es", { month: "long", year: "numeric" })}
-              </div>
+              <label className="block text-xs font-medium text-ceiba-600 mb-1">Segundo nombre</label>
+              <input
+                className="input-field w-full"
+                value={form.middle_name}
+                onChange={e => setForm(f => ({ ...f, middle_name: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-ceiba-600 mb-1">Primer apellido *</label>
+              <input
+                className="input-field w-full"
+                value={form.first_surname}
+                onChange={e => setForm(f => ({ ...f, first_surname: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-ceiba-600 mb-1">Segundo apellido</label>
+              <input
+                className="input-field w-full"
+                value={form.second_surname}
+                onChange={e => setForm(f => ({ ...f, second_surname: e.target.value }))}
+              />
             </div>
           </div>
-        )}
 
+          <div>
+            <label className="block text-xs font-medium text-ceiba-600 mb-1">Fecha de nacimiento</label>
+            <input
+              type="date"
+              className="input-field w-full"
+              value={form.birth_date}
+              onChange={e => setForm(f => ({ ...f, birth_date: e.target.value }))}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-ceiba-600 mb-1">Ciudad de nacimiento</label>
+              <input
+                className="input-field w-full"
+                value={form.birth_city}
+                onChange={e => setForm(f => ({ ...f, birth_city: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-ceiba-600 mb-1">País de nacimiento</label>
+              <input
+                className="input-field w-full"
+                value={form.birth_country}
+                onChange={e => setForm(f => ({ ...f, birth_country: e.target.value }))}
+              />
+            </div>
+          </div>
+
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={form.is_deceased}
+              onChange={e => setForm(f => ({ ...f, is_deceased: e.target.checked }))}
+              className="w-4 h-4 accent-ceiba-700"
+            />
+            <span className="text-sm text-ceiba-700">Fallecido/a</span>
+          </label>
+        </div>
+
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-60"
+        >
+          <Save size={16} />
+          {saving ? "Guardando..." : "Guardar cambios"}
+        </button>
+
+        <Link href="/tree" className="w-full text-center text-ceiba-400 hover:text-ceiba-600 text-sm py-2 block">
+          Cancelar
+        </Link>
       </div>
-
-      <BottomNav />
     </main>
   );
 }

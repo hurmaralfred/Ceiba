@@ -702,6 +702,7 @@ export default function FamilyTreeGraph({
   // única y consistente, ver handleBackgroundClick).
   const [selectedId, setSelectedId] = useState<string>(rootNodeId);
   const [focusedId, setFocusedId] = useState<string | null>(null);
+  const [shareCopied, setShareCopied] = useState(false);
 
   const immediateFamily = useMemo(
     () => computeImmediateFamily(selectedId, members, memberLinks),
@@ -1547,7 +1548,7 @@ export default function FamilyTreeGraph({
                 </Link>
               )}
               <Link
-                href="/invitar"
+                href={selectedNode.memberId ? `/invitar?person=${selectedNode.memberId}` : "/invitar"}
                 style={{
                   display: "flex", alignItems: "center", justifyContent: "center",
                   background: "rgba(94,138,80,0.14)", border: "1px solid rgba(74,222,128,0.14)",
@@ -1566,7 +1567,10 @@ export default function FamilyTreeGraph({
                   if (typeof navigator !== "undefined" && navigator.share) {
                     navigator.share({ title: selectedNode.name, url }).catch(() => {});
                   } else {
-                    navigator.clipboard?.writeText(url).catch(() => {});
+                    navigator.clipboard?.writeText(url).then(() => {
+                      setShareCopied(true);
+                      setTimeout(() => setShareCopied(false), 2000);
+                    }).catch(() => {});
                   }
                 }}
                 style={{
@@ -1576,7 +1580,7 @@ export default function FamilyTreeGraph({
                   fontFamily: "system-ui, sans-serif",
                 }}
               >
-                Compartir
+                {shareCopied ? "Copiado ✓" : "Compartir"}
               </button>
             </div>
           </div>

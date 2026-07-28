@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, useCallback, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -313,9 +313,11 @@ function MemberCard({
 // Página principal
 // ============================================================
 
-export default function InvitarPage() {
+function InvitarPageInner() {
   const supabase = createClient();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const highlightPersonId = searchParams.get("person") ?? null;
 
   const [members, setMembers] = useState<FamilyMember[]>([]);
   const [meFirstName, setMeFirstName] = useState("");
@@ -466,6 +468,15 @@ export default function InvitarPage() {
         .filter(Boolean);
 
       setPreviewNames(active);
+      // Put the person from ?person= param first if they appear in the list
+      const highlightId = searchParams.get("person");
+      if (highlightId) {
+        const idx = pending.findIndex(m => m.id === highlightId);
+        if (idx > 0) {
+          const [hit] = pending.splice(idx, 1);
+          pending.unshift(hit);
+        }
+      }
       setMembers(pending);
     } catch (error) {
       console.error("Error cargando familiares para invitar:", error);
@@ -666,18 +677,24 @@ export default function InvitarPage() {
             ? Array.from({ length: 3 }).map((_, i) => (
                 <div key={i} className="bg-cream-50 rounded-2xl h-28 animate-pulse" />
               ))
-            : members.map((m) => (
-                <MemberCard
-                  key={m.id}
-                  member={m}
-                  batchMode={batchMode}
-                  isSelected={selected.has(m.id)}
-                  inviterFirstName={meFirstName}
-                  previewNames={previewNames}
-                  template={template}
-                  onSent={handleSent}
-                  onToggleSelect={toggleSelect}
-                />
+            : members.map((m, i) => (
+                <div key={m.id}>
+                  {i === 0 && highlightPersonId && m.id === highlightPersonId && (
+                    <p className="text-xs font-semibold text-ceiba-600 mb-1 px-1">
+                      Seleccionado desde el árbol
+                    </p>
+                  )}
+                  <MemberCard
+                    member={m}
+                    batchMode={batchMode}
+                    isSelected={selected.has(m.id)}
+                    inviterFirstName={meFirstName}
+                    previewNames={previewNames}
+                    template={template}
+                    onSent={handleSent}
+                    onToggleSelect={toggleSelect}
+                  />
+                </div>
               ))}
         </div>
 
@@ -714,5 +731,13 @@ export default function InvitarPage() {
         </div>
       </div>
     </>
+  );
+}
+
+export default function InvitarPage() {
+  return (
+    <Suspense>
+      <InvitarPageInner />
+    </Suspense>
   );
 }

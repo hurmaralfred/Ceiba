@@ -88,8 +88,8 @@ export default function TreePage() {
   // Error real de add_relative, visible en el propio modal (no solo en toast).
   const [saveError, setSaveError] = useState<string | null>(null);
   const [duplicateWarning, setDuplicateWarning] = useState<{
-    candidate_id: string;
-    matchedName: string;       // nombre de la persona ya existente
+    candidates: Array<{ person_id: string; first_name: string; first_surname: string; confidence: number }>;
+    matchedName: string;
     score: number;
   } | null>(null);
   const modalPhotoRef = useRef<HTMLInputElement>(null);
@@ -205,17 +205,33 @@ console.log("⑤ Datos cargados");
   // -- LEGACY: funciones que solo usaba el flujo antiguo (family_members) --
   // Vincula persona existente detectada como coincidencia (flujo de confirmación)
   const saveLinkedMember = async () => {
-    if (!duplicateWarning) return;
+    if (!duplicateWarning?.candidates?.[0]) return;
     setSaving(true);
     try {
-      // Si el warning tiene un candidate_id, confirmar vía RPC; si no, solo cerrar
-      if ((duplicateWarning as any).candidate_id) {
-        const { error } = await supabase.rpc("resolve_match_candidate", {
-          p_candidate_id: (duplicateWarning as any).candidate_id,
-          p_resolution: "confirm",
-        });
-        if (error) throw error;
-      }
+      const top = duplicateWarning.candidates[0];
+      const relRequest = buildAddRelativeRequest(
+        form.relation_type as RelationType,
+        form.parent_member_id || null
+      );
+      const { error } = await supabase.rpc("add_relative", {
+        p_payload: {
+          first_name: form.primer_nombre.trim(),
+          middle_name: form.segundo_nombre.trim() || null,
+          first_surname: form.primer_apellido.trim(),
+          second_surname: form.segundo_apellido.trim() || null,
+          birth_date: form.birth_date || null,
+          birth_city: form.birth_city.trim() || null,
+          birth_country: form.birth_country.trim() || null,
+          is_deceased: form.is_deceased,
+          related_person_id: relRequest.relatedPersonId || null,
+          relation_key: relRequest.backendRelationKey,
+          parent_kind: relRequest.parentKind,
+          gender: relRequest.gender,
+          link_person_id: top.person_id,
+        },
+        p_relationship: relRequest.primitive,
+      });
+      if (error) throw error;
       toast.success("Familiar vinculado correctamente");
       setShowModal(false);
       setForm(EMPTY_FORM);
@@ -229,7 +245,7 @@ console.log("⑤ Datos cargados");
     }
   };
 
-  const saveMember = async (_force = false) => {
+  const saveMember = async (force = false) => {
     if (!form.primer_nombre.trim()) { toast.error("El primer nombre es obligatorio"); return; }
     if (!form.primer_apellido.trim()) { toast.error("El primer apellido es obligatorio"); return; }    if (!form.birth_date) { toast.error("La fecha de nacimiento es obligatoria"); return; }
     // Catálogo genealógico v1: abuelos/bisabuelos/nietos/bisnietos exigen el
@@ -270,6 +286,7 @@ console.log("⑤ Datos cargados");
           relation_key: relRequest.backendRelationKey,
           parent_kind: relRequest.parentKind,
           gender: relRequest.gender,
+          confirm_create_duplicate: force || undefined,
         },
         p_relationship: relRequest.primitive,
       });
@@ -277,14 +294,16 @@ console.log("⑤ Datos cargados");
 
       // Si el RPC encontró duplicado fuerte → pedir confirmación al usuario
       if ((result as any)?.needs_confirmation) {
-        const mp = (result as any)?.match?.matched_person;
-        const matchedName = mp
-          ? `${mp.first_names || ""} ${mp.last_names || ""}`.trim()
+        const candidates: Array<{ person_id: string; first_name: string; first_surname: string; confidence: number }> =
+          (result as any).candidates || [];
+        const top = candidates[0];
+        const matchedName = top
+          ? `${top.first_name || ""} ${top.first_surname || ""}`.trim()
           : "Persona desconocida";
         setDuplicateWarning({
-          candidate_id: (result as any).candidate_id,
+          candidates,
           matchedName,
-          score: (result as any)?.match?.score ?? 0,
+          score: top?.confidence ?? 0,
         });
         setSaving(false);
         return;
