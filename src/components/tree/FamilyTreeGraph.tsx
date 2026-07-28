@@ -647,10 +647,10 @@ export function buildLayout(
 function curvePath(x1: number, y1: number, x2: number, y2: number): string {
   if (Math.abs(y1 - y2) < 6) return `M${x1},${y1} L${x2},${y2}`;
   const dy = y2 - y1;
-  // Control points weighted 65 % toward the starting node — the path leaves
-  // the parent going straight down (or up) for most of the distance, then
-  // bends to the child's position.  Reduces the S-curve / diagram look.
-  return `M${x1},${y1} C${x1},${y1 + dy * 0.65} ${x2},${y2 - dy * 0.35} ${x2},${y2}`;
+  // Control points at 30 % and 70 % of the vertical span.
+  // Tangent at both ends is purely vertical; the horizontal sweep happens
+  // gradually in the middle 40 % — no S-curve elbow, no 90° corner.
+  return `M${x1},${y1} C${x1},${y1 + dy * 0.3} ${x2},${y1 + dy * 0.7} ${x2},${y2}`;
 }
 
 // ── Main component ────────────────────────────────────────────
@@ -738,17 +738,17 @@ export default function FamilyTreeGraph({
       const sameGenY = grp.every(e => Math.abs(e.y2 - grp[0].y2) < 5);
       if (grp.length > 1 && sameKind && sameGenY) {
         const sorted = [...grp].sort((a, b) => a.x2 - b.x2);
-        const spineY = grp[0].y1 + (grp[0].y2 - grp[0].y1) * 0.4;
-        const parentX = grp[0].x1;
-        const childY = grp[0].y2;
-        // Vertical stem from parent down to the branch point, then a smooth
-        // cubic-bezier branch to each child.  No horizontal bar → no org-chart
-        // comb; instead the paths fan out like branches of a real tree.
-        let d = `M${parentX},${grp[0].y1} L${parentX},${spineY}`;
-        for (const e of sorted) {
-          const mid = (spineY + childY) / 2;
-          d += ` M${parentX},${spineY} C${parentX},${mid} ${e.x2},${mid} ${e.x2},${childY}`;
-        }
+        const px = grp[0].x1;   // parent centre X
+        const py = grp[0].y1;   // parent bottom edge Y
+        const cy = grp[0].y2;   // children top edge Y (same for all siblings)
+        const dy = cy - py;
+        // Each child is its own unbroken bezier from the parent's bottom edge.
+        // No explicit stem or branch-point node — the paths naturally overlap
+        // near the parent and fan outward, giving the organic "branches growing
+        // from a trunk" look with zero T/Y junctions or horizontal bars.
+        const d = sorted
+          .map(e => `M${px},${py} C${px},${py + dy * 0.3} ${e.x2},${py + dy * 0.7} ${e.x2},${cy}`)
+          .join(" ");
         result.push({ d, kind: grp[0].kind, fromId, toIds: grp.map(e => e.toId) });
       } else {
         for (const e of grp) result.push({ d: curvePath(e.x1, e.y1, e.x2, e.y2), kind: e.kind, fromId: e.fromId, toIds: [e.toId] });
