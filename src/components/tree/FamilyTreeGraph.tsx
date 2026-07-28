@@ -135,11 +135,22 @@ function makeDisplayName(firstName: string, lastName?: string | null): string {
   return fn.length > 13 ? fn.slice(0, 12) + "." : fn;
 }
 
+// Split into two display lines: line1 = first word of first_name,
+// line2 = second word of first_name OR first word of last_name
+function getNameLines(firstName: string, lastName?: string | null): [string, string] {
+  const fnParts = (firstName || "").trim().split(/\s+/).filter(Boolean);
+  const line1 = fnParts[0] ?? "";
+  const line2 = fnParts[1] ?? (lastName || "").trim().split(/\s+/).filter(Boolean)[0] ?? "";
+  return [line1, line2];
+}
+
 // ── Layout types ──────────────────────────────────────────────
 interface LayoutNode {
   id: string;
   name: string;
   shortName: string;
+  nameLine1: string;
+  nameLine2: string;
   relation: string;
   relationType: string;
   generation: number;
@@ -325,6 +336,8 @@ export function buildLayout(
       id: "root",
       name: profile.first_name,
       shortName: makeDisplayName(profile.first_name),
+      nameLine1: getNameLines(profile.first_name, profile.last_name)[0],
+      nameLine2: getNameLines(profile.first_name, profile.last_name)[1],
       relation: "Tú",
       relationType: "root",
       generation: 0, posHint: 0,
@@ -337,6 +350,8 @@ export function buildLayout(
       id: m.id,
       name: m.first_name + (m.last_name ? " " + m.last_name : ""),
       shortName: makeDisplayName(m.first_name, m.last_name),
+      nameLine1: getNameLines(m.first_name, m.last_name)[0],
+      nameLine2: getNameLines(m.first_name, m.last_name)[1],
       relation: RELATION_LABELS[m.relation_type as keyof typeof RELATION_LABELS] ?? m.relation_type,
       relationType: m.relation_type,
       generation: m.generation ?? GENERATION[m.relation_type] ?? 0,
@@ -379,6 +394,8 @@ export function buildLayout(
         id: m.id,
         name: m.first_name + (m.last_name ? " " + m.last_name : ""),
         shortName: makeDisplayName(m.first_name, m.last_name),
+        nameLine1: getNameLines(m.first_name, m.last_name)[0],
+        nameLine2: getNameLines(m.first_name, m.last_name)[1],
         relation: relLabel,
         relationType: finalRelType,
         generation: extGen,
@@ -491,6 +508,8 @@ export function buildLayout(
         id: UNION_POINT_ID,
         name: "",
         shortName: "",
+        nameLine1: "",
+        nameLine2: "",
         relation: "",
         relationType: "union",
         generation: 0,
@@ -1294,24 +1313,39 @@ export default function FamilyTreeGraph({
                   </text>
                 )}
 
-                {/* Name */}
-                <text
-                  x={n.cx}
-                  y={n.cy + r + 15}
-                  textAnchor="middle"
-                  fill={n.isExtended ? "#c4cdd8" : "white"}
-                  fontSize={n.isExtended ? 10 : 12}
-                  fontWeight="600"
-                  fontFamily="system-ui, -apple-system, sans-serif"
-                  style={{ pointerEvents: "none", userSelect: "none" }}
-                >
-                  {n.shortName}
-                </text>
+                {/* Name — up to two lines, no mid-word cuts */}
+                {n.nameLine1 && (
+                  <text
+                    textAnchor="middle"
+                    fontWeight="600"
+                    fontFamily="system-ui, -apple-system, sans-serif"
+                    style={{ pointerEvents: "none", userSelect: "none" }}
+                  >
+                    <tspan
+                      x={n.cx}
+                      y={n.cy + r + (n.nameLine2 ? 11 : 15)}
+                      fill={n.isExtended ? "#c4cdd8" : "white"}
+                      fontSize={n.isExtended ? 10 : 11}
+                    >
+                      {n.nameLine1}
+                    </tspan>
+                    {n.nameLine2 && (
+                      <tspan
+                        x={n.cx}
+                        y={n.cy + r + 23}
+                        fill={n.isExtended ? "#b8c5cf" : "rgba(255,255,255,0.90)"}
+                        fontSize={n.isExtended ? 9.5 : 10}
+                      >
+                        {n.nameLine2}
+                      </tspan>
+                    )}
+                  </text>
+                )}
 
                 {/* Relation */}
                 <text
                   x={n.cx}
-                  y={n.cy + r + 29}
+                  y={n.cy + r + (n.nameLine2 ? 35 : 26)}
                   textAnchor="middle"
                   fill={n.isExtended ? "#8b98a8" : "rgba(255,255,255,0.65)"}
                   fontSize={9}
