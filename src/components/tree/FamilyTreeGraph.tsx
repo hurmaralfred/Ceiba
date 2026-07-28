@@ -757,6 +757,16 @@ export default function FamilyTreeGraph({
     return result;
   }, [edges]);
 
+  const partnerNode = useMemo(() => {
+    const peerGroup = edgeGroups.find(eg =>
+      eg.kind === "peer" &&
+      (eg.fromId === rootNodeId || eg.toIds.includes(rootNodeId))
+    );
+    if (!peerGroup) return null;
+    const partnerId = peerGroup.fromId === rootNodeId ? peerGroup.toIds[0] : peerGroup.fromId;
+    return nodes.find(n => n.id === partnerId) ?? null;
+  }, [edgeGroups, rootNodeId, nodes]);
+
   // D3 zoom
   useEffect(() => {
     if (!svgRef.current || !gRef.current) return;
@@ -1078,6 +1088,18 @@ export default function FamilyTreeGraph({
 
 
         <g ref={gRef}>
+          {/* ── Couple halo — soft visual bond between root and partner ── */}
+          {partnerNode && (() => {
+            const rootN = nodes.find(n => n.id === rootNodeId);
+            if (!rootN) return null;
+            const mx = (rootN.cx + partnerNode.cx) / 2;
+            const halfW = Math.abs(rootN.cx - partnerNode.cx) / 2 + ROOT_R + 8;
+            return (
+              <ellipse key="couple-halo" cx={mx} cy={rootN.cy} rx={halfW} ry={ROOT_R + 12}
+                fill="#c084fc" opacity={0.055} />
+            );
+          })()}
+
           {/* ── Edges ── */}
           {/* Bloque A1: líneas estáticas en reposo — sin flujo de guiones
               animado. Bloque A2: jerarquía de foco — las aristas que tocan
@@ -1170,7 +1192,9 @@ export default function FamilyTreeGraph({
             //   Nivel 3 — resto: opacidad reducida, nunca por debajo de 0.35.
             const isSelected  = n.id === selectedId;
             const isImmediate = immediateFamily.has(n.id);
-            const tierOpacity = isSelected ? 1 : isImmediate ? 0.92 : 0.4;
+            const baseOpacity = isRoot ? 1
+              : relGen <= -2 ? 0.30 : relGen === -1 ? 0.35 : relGen === 0 ? 0.40 : 0.48;
+            const tierOpacity = isSelected ? 1 : isImmediate ? 0.92 : baseOpacity;
 
             return (
               <g
@@ -1230,14 +1254,23 @@ export default function FamilyTreeGraph({
                     fill="none" stroke="#4ade80" strokeWidth="2" opacity={0.65} />
                 )}
 
-                {/* Glow backdrop */}
+                {/* Soft branch ring — illuminates immediate family of selected person */}
+                {isImmediate && !isSelected && (
+                  <circle cx={n.cx} cy={n.cy} r={r + 4}
+                    fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="1.2" opacity={0.38} />
+                )}
+
+                {/* Glow backdrop — size and intensity scaled by generation */}
                 {!n.isExtended && !isDeceased && (
-                  <circle cx={n.cx} cy={n.cy} r={r}
+                  <circle cx={n.cx} cy={n.cy}
+                    r={isRoot ? r : relGen >= 2 ? r * 1.20 : relGen === 1 ? r * 1.10 : relGen <= -2 ? r * 0.85 : r}
                     fill={`url(#${gradId})`}
                     stroke={ring}
                     strokeWidth={isRoot ? 2.5 : 2}
                     filter={glowFilter}
-                    opacity={isRoot ? 0.85 : 0.45}
+                    opacity={isRoot ? 0.95
+                      : isImmediate ? 0.72
+                      : relGen >= 1 ? 0.62 : relGen === 0 ? 0.45 : relGen === -1 ? 0.30 : 0.18}
                   />
                 )}
 
