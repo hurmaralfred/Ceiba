@@ -1192,8 +1192,8 @@ console.log("⑤ Datos cargados");
         }
         .ceiba-fab {
           position: fixed;
-          right: 18px;
-          bottom: calc(88px + env(safe-area-inset-bottom));
+          right: 20px;
+          bottom: calc(112px + env(safe-area-inset-bottom));
           width: 62px;
           height: 62px;
           border-radius: 50%;
