@@ -984,13 +984,13 @@ export default function FamilyTreeGraph({
             <feDropShadow dx="0" dy="2" stdDeviation="4" floodColor="#000" floodOpacity="0.5" />
           </filter>
 
-          {/* Desaturate + darken filter for deceased nodes */}
+          {/* Warm sepia treatment for deceased nodes — elegant, not flat gray */}
           <filter id="deceased" x="-10%" y="-10%" width="120%" height="120%">
-            <feColorMatrix type="saturate" values="0.08" />
-            <feComponentTransfer>
-              <feFuncR type="linear" slope="0.65" />
-              <feFuncG type="linear" slope="0.65" />
-              <feFuncB type="linear" slope="0.65" />
+            <feColorMatrix type="saturate" values="0.14" result="desat" />
+            <feComponentTransfer in="desat">
+              <feFuncR type="linear" slope="0.76" intercept="0.07" />
+              <feFuncG type="linear" slope="0.69" intercept="0.02" />
+              <feFuncB type="linear" slope="0.56" />
             </feComponentTransfer>
           </filter>
 
@@ -1001,6 +1001,18 @@ export default function FamilyTreeGraph({
             <feOffset dx="0" dy="3" result="offset" />
             <feComposite in="SourceGraphic" in2="offset" operator="over" />
           </filter>
+
+          {/* Photo vignette — edge-darkening integrates photos as organic fruits */}
+          <radialGradient id="photo-vignette" cx="50%" cy="50%" r="50%">
+            <stop offset="52%" stopColor="black" stopOpacity="0" />
+            <stop offset="100%" stopColor="black" stopOpacity="0.52" />
+          </radialGradient>
+
+          {/* Bottom depth — volumetric underside shadow */}
+          <linearGradient id="bottom-depth" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stopColor="black" stopOpacity="0" />
+            <stop offset="100%" stopColor="black" stopOpacity="0.40" />
+          </linearGradient>
         </defs>
 
         {/* Background — clic aquí (fuera de cualquier nodo) vuelve a la raíz */}
@@ -1257,9 +1269,12 @@ export default function FamilyTreeGraph({
               >
                 {/* Per-node 3D sphere gradient + clip */}
                 <defs>
-                  <radialGradient id={gradId} cx="33%" cy="28%" r="72%" gradientUnits="objectBoundingBox">
+                  <radialGradient id={gradId}
+                    cx={isRoot ? "30%" : relGen >= 1 ? "35%" : "33%"}
+                    cy={isRoot ? "22%" : "28%"}
+                    r="72%" gradientUnits="objectBoundingBox">
                     <stop offset="0%"   stopColor={hi}     />
-                    <stop offset="45%"  stopColor={mid}    />
+                    <stop offset="42%"  stopColor={mid}    />
                     <stop offset="100%" stopColor={shadow} />
                   </radialGradient>
                   <clipPath id={clipId}>
@@ -1270,12 +1285,26 @@ export default function FamilyTreeGraph({
                 {/* Tooltip nativo del navegador + accesibilidad lectores */}
                 <title>{n.name}{n.relation && n.relation !== "Tú" ? ` · ${n.relation}` : ""}{n.isDeceased ? " †" : ""}</title>
 
+                {/* Ground shadow — lifts node off background, adds spatial depth */}
+                <ellipse cx={n.cx + 2} cy={n.cy + r * 0.90}
+                  rx={r * 0.62} ry={r * 0.16}
+                  fill="#000"
+                  opacity={isRoot ? 0.30 : isDeceased ? 0.10 : 0.17}
+                  style={{ pointerEvents: "none" }}
+                />
+
                 {/* Nivel 1 — anillo de selección: propio, siempre estático
                     (sin pulso). Distinto en color del anillo de raíz/activo
                     para no confundir "seleccionado" con "raíz"/"activo hoy". */}
                 {isSelected && (
-                  <circle cx={n.cx} cy={n.cy} r={r + 5}
-                    fill="none" stroke="#f59e0b" strokeWidth="2.5" opacity={0.9} />
+                  <>
+                    <circle cx={n.cx} cy={n.cy} r={r + 5}
+                      fill="none" stroke="#f59e0b" strokeWidth="2.5" opacity={0.9} />
+                    {/* Inner depth ring — selected nodes feel lit from inside */}
+                    <circle cx={n.cx} cy={n.cy} r={r - 4}
+                      fill="none" stroke="rgba(255,255,255,0.28)" strokeWidth="1.5" opacity={0.9}
+                      style={{ pointerEvents: "none" }} />
+                  </>
                 )}
 
                 {/* Anillo de foco por teclado — distinto del de selección */}
@@ -1318,11 +1347,22 @@ export default function FamilyTreeGraph({
                 {/* ── 3D Sphere base ── */}
                 <circle cx={n.cx} cy={n.cy} r={r}
                   fill={`url(#${gradId})`}
-                  stroke={isDeceased ? "#4b5563" : isJoined || isActive ? "#4ade80" : ring}
+                  stroke={isDeceased ? "#7a5c3a" : isJoined || isActive ? "#4ade80" : ring}
                   strokeWidth={isRoot ? 2.5 : isJoined && !isDeceased ? 2.5 : 1.8}
                   filter={isDeceased ? nodeFilter : n.isExtended ? "url(#shadow-soft)" : undefined}
                   strokeDasharray={isDeceased ? "4,3" : undefined}
                 />
+
+                {/* Organic inner ring — seed/fruit texture, not a technical border */}
+                {!isDeceased && !n.isExtended && (
+                  <circle cx={n.cx} cy={n.cy} r={r - 2.5}
+                    fill="none"
+                    stroke={ring}
+                    strokeWidth={0.9}
+                    opacity={isSelected ? 0.30 : isRoot ? 0.20 : 0.12}
+                    style={{ pointerEvents: "none" }}
+                  />
+                )}
 
                 {/* Photo over sphere */}
                 {hasPhoto && (
@@ -1333,12 +1373,12 @@ export default function FamilyTreeGraph({
                       width={r * 2} height={r * 2}
                       clipPath={`url(#${clipId})`}
                       preserveAspectRatio="xMidYMid slice"
-                      opacity={isDeceased ? 0.5 : 0.82}
+                      opacity={isDeceased ? 0.48 : 0.84}
                       filter={isDeceased ? nodeFilter : undefined}
                     />
-                    {/* Darken bottom of photo for sphere depth */}
-                    <circle cx={n.cx} cy={n.cy} r={r - 1}
-                      fill="rgba(0,0,0,0.18)"
+                    {/* Vignette edge — integrates photo as organic fruit, not pasted circle */}
+                    <circle cx={n.cx} cy={n.cy} r={r}
+                      fill="url(#photo-vignette)"
                       clipPath={`url(#${clipId})`}
                       style={{ pointerEvents: "none" }}
                     />
@@ -1348,6 +1388,15 @@ export default function FamilyTreeGraph({
                 {/* Specular highlight — creates glassy 3D look */}
                 <circle cx={n.cx} cy={n.cy} r={r}
                   fill="url(#specular)"
+                  style={{ pointerEvents: "none" }}
+                />
+
+                {/* Bottom volumetric shadow — makes sphere feel heavy, not flat */}
+                <rect
+                  x={n.cx - r} y={n.cy + r * 0.18}
+                  width={r * 2} height={r * 0.82}
+                  fill="url(#bottom-depth)"
+                  clipPath={`url(#${clipId})`}
                   style={{ pointerEvents: "none" }}
                 />
 
@@ -1370,20 +1419,26 @@ export default function FamilyTreeGraph({
                   </g>
                 )}
 
-                {/* Initial letter if no photo */}
+                {/* Initial letter if no photo — shadow + main for legible depth */}
                 {!hasPhoto && (
-                  <text
-                    x={n.cx} y={n.cy + 1}
-                    textAnchor="middle"
-                    dominantBaseline="middle"
-                    fill="rgba(255,255,255,0.92)"
-                    fontSize={r * 0.78}
-                    fontWeight="700"
-                    fontFamily="system-ui, -apple-system, sans-serif"
-                    style={{ pointerEvents: "none", userSelect: "none" }}
-                  >
-                    {n.name[0]?.toUpperCase() ?? "?"}
-                  </text>
+                  <>
+                    <text
+                      x={n.cx + 1} y={n.cy + 2}
+                      textAnchor="middle" dominantBaseline="middle"
+                      fill="rgba(0,0,0,0.50)"
+                      fontSize={r * 0.78} fontWeight="700"
+                      fontFamily="system-ui, -apple-system, sans-serif"
+                      style={{ pointerEvents: "none", userSelect: "none" }}
+                    >{n.name[0]?.toUpperCase() ?? "?"}</text>
+                    <text
+                      x={n.cx} y={n.cy + 1}
+                      textAnchor="middle" dominantBaseline="middle"
+                      fill="rgba(255,255,255,0.95)"
+                      fontSize={r * 0.78} fontWeight="700"
+                      fontFamily="system-ui, -apple-system, sans-serif"
+                      style={{ pointerEvents: "none", userSelect: "none" }}
+                    >{n.name[0]?.toUpperCase() ?? "?"}</text>
+                  </>
                 )}
 
                 {/* Green dot for joined (not active) — hidden for deceased */}
@@ -1396,25 +1451,23 @@ export default function FamilyTreeGraph({
                   </>
                 )}
 
-                {/* † Cross badge for deceased members */}
+                {/* † Cross badge for deceased members — warm sepia, elegant */}
                 {isDeceased && (
                   <g style={{ pointerEvents: "none" }}>
-                    {/* Background circle */}
                     <circle
                       cx={n.cx + r * 0.68}
                       cy={n.cy + r * 0.68}
                       r={8}
-                      fill="#1c1c1c"
-                      stroke="#6b7280"
+                      fill="#2a1a0a"
+                      stroke="#9a7040"
                       strokeWidth={1}
                     />
-                    {/* Dagger symbol */}
                     <text
                       x={n.cx + r * 0.68}
                       y={n.cy + r * 0.68 + 1}
                       textAnchor="middle"
                       dominantBaseline="middle"
-                      fill="#9ca3af"
+                      fill="#d4a060"
                       fontSize={10}
                       fontWeight="500"
                       fontFamily="Georgia, serif"
@@ -1473,6 +1526,20 @@ export default function FamilyTreeGraph({
                   >
                     ★
                   </text>
+                )}
+
+                {/* Organic leaf — only on root; marks the living center of the tree */}
+                {isRoot && (
+                  <g
+                    transform={`translate(${n.cx - ROOT_R * 0.54},${n.cy - ROOT_R * 0.88})`}
+                    style={{ pointerEvents: "none" }}
+                    opacity={0.52}
+                  >
+                    <path d="M0,8 C-4,3 -4,-5 0,-12 C4,-5 4,3 0,8"
+                      fill="#4ade80" />
+                    <line x1="0" y1="7" x2="0" y2="-11"
+                      stroke="rgba(255,255,255,0.35)" strokeWidth="0.6" />
+                  </g>
                 )}
 
                 {/* Name — up to two lines, no mid-word cuts */}
