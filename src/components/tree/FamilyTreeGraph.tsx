@@ -1129,71 +1129,90 @@ export default function FamilyTreeGraph({
 
 
         <g ref={gRef}>
-          {/* ── Forest Integration Layer — trunk, roots, generational zones ── */}
+          {/* ── Tree Silhouette — canopy, trunk, roots ── */}
           {(() => {
             const rootN = nodes.find(n => n.id === rootNodeId);
             if (!rootN || nodes.length === 0) return null;
 
+            const cx      = rootN.cx;
+            const rootY   = rootN.cy;
             const minNodeY = nodes.reduce((m, n) => Math.min(m, n.cy), Infinity);
-            const maxNodeY = nodes.reduce((m, n) => Math.max(m, n.cy), -Infinity);
 
-            // Ancestor zone: top of layout → just above root row
-            const ancTop  = minNodeY - R - 10;
-            const ancBot  = rootN.cy  - ROOT_R - 8;
-            // Descendant zone: just below root row → bottom of layout
-            const descTop = rootN.cy  + ROOT_R + 8;
-            const descBot = maxNodeY  + R + 10;
-            // Root row zone: narrow band centered on root's Y
-            const rootZTop = rootN.cy - ROOT_R - 18;
-            const rootZBot = rootN.cy + ROOT_R + 18;
-            // Trunk spans the full vertical range
-            const trunkTop = minNodeY - 18;
-            const trunkBot = maxNodeY + 18;
+            const hasAnc  = nodes.some(n => n.generation <= -1 && !n.isExtended);
+
+            // Ancestor horizontal spread (safe reduce — no spread syntax)
+            const ancNodes   = nodes.filter(n => n.generation <= -1 && !n.isExtended);
+            const ancMinX    = ancNodes.reduce((m, n) => Math.min(m, n.cx), cx);
+            const ancMaxX    = ancNodes.reduce((m, n) => Math.max(m, n.cx), cx);
+            const ancHalf    = Math.max(85, (ancMaxX - ancMinX) / 2 + R * 2.5);
+            const ancY       = hasAnc ? minNodeY : rootY;
+            const ancToRoot  = rootY - ancY;            // vertical dist ancestor→root
+
+            // Trunk: narrow at top, widens at root
+            const halfTop  = 13;
+            const halfMid  = 42;
+            const tTopY    = hasAnc ? ancY + 5 : rootY - ROOT_R;
+            const tMidY    = (tTopY + rootY) / 2;
+            const trunkBot = rootY + ROOT_R + 6;
+
+            const trunkPath =
+              `M${cx - halfTop},${tTopY}` +
+              `C${cx - halfTop - 4},${tMidY} ${cx - halfMid},${rootY - 18} ${cx - halfMid},${trunkBot}` +
+              `L${cx + halfMid},${trunkBot}` +
+              `C${cx + halfMid},${rootY - 18} ${cx + halfTop + 4},${tMidY} ${cx + halfTop},${tTopY}` +
+              `Z`;
+
+            // Root base
+            const rb = rootY + ROOT_R;
 
             return (
               <g style={{ pointerEvents: "none" }}>
-                {/* Generational zones — faint horizontal light, not boxes */}
-                {ancBot > ancTop && (
-                  <rect x={0} y={ancTop} width={svgWidth} height={ancBot - ancTop}
-                    fill="url(#zone-anc-grad)" opacity={0.034} />
+
+                {/* ── Canopy — diffuse organic mass behind ancestor rows ── */}
+                {hasAnc && (
+                  <g opacity={0.17}>
+                    {/* Primary canopy blob */}
+                    <ellipse cx={cx} cy={ancY - 10}
+                      rx={Math.min(ancHalf * 1.45, svgWidth * 0.42)}
+                      ry={Math.max(55, ancToRoot * 0.56 + 18)}
+                      fill="#22c55e" />
+                    {/* Left lobe — offset for organic feel */}
+                    <ellipse cx={cx - ancHalf * 0.55} cy={ancY + 12}
+                      rx={Math.min(ancHalf * 0.88, svgWidth * 0.29)}
+                      ry={Math.max(40, ancToRoot * 0.40 + 14)}
+                      fill="#22c55e" />
+                    {/* Right lobe */}
+                    <ellipse cx={cx + ancHalf * 0.60} cy={ancY + 7}
+                      rx={Math.min(ancHalf * 0.82, svgWidth * 0.27)}
+                      ry={Math.max(38, ancToRoot * 0.37 + 13)}
+                      fill="#22c55e" />
+                    {/* Top crown highlight */}
+                    <ellipse cx={cx + ancHalf * 0.10} cy={ancY - 42}
+                      rx={Math.min(ancHalf * 0.52, svgWidth * 0.18)}
+                      ry={Math.max(26, ancToRoot * 0.22 + 10)}
+                      fill="#4ade80" opacity={0.70} />
+                  </g>
                 )}
-                <rect x={0} y={rootZTop} width={svgWidth} height={rootZBot - rootZTop}
-                  fill="url(#zone-root-grad)" opacity={0.048} />
-                {descBot > descTop && (
-                  <rect x={0} y={descTop} width={svgWidth} height={descBot - descTop}
-                    fill="url(#zone-desc-grad)" opacity={0.030} />
-                )}
 
-                {/* Living trunk column — planted axis behind the central bloodline */}
-                <rect
-                  x={rootN.cx - 10} y={trunkTop}
-                  width={20} height={trunkBot - trunkTop}
-                  fill="url(#trunk-v-grad)"
-                  opacity={0.062}
-                  rx={10}
-                />
+                {/* ── Trunk — organic filled shape ── */}
+                <path d={trunkPath} fill="#22c55e" opacity={0.18} />
 
-                {/* Ground haze — root is planted in the earth */}
-                <ellipse cx={rootN.cx} cy={rootN.cy + ROOT_R + 10}
-                  rx={50} ry={13}
-                  fill="#4ade80" opacity={0.08} />
-
-                {/* Decorative roots — lateral arcs from root base into the gap zone */}
+                {/* ── Roots — visible asymmetric curves from root base ── */}
                 {([
-                  { d: "M0,0 C-18,18 -46,22 -68,13",  w: 3.0 },
-                  { d: "M0,0 C-11,28 -30,40 -48,46",  w: 2.0 },
-                  { d: "M0,0 C18,18 46,22 68,13",     w: 3.0 },
-                  { d: "M0,0 C11,28 30,40 48,46",     w: 2.0 },
-                ] as { d: string; w: number }[]).map(({ d, w }, i) => (
-                  <path
-                    key={i}
-                    transform={`translate(${rootN.cx},${rootN.cy + ROOT_R})`}
+                  { d: `M0,0 C-26,28 -74,46 -122,34`,  sw: 14, op: 0.17 },
+                  { d: `M0,0 C-16,44 -48,72 -78,84`,   sw:  9, op: 0.15 },
+                  { d: `M0,0 C2,38 1,70 0,98`,          sw: 11, op: 0.16 },
+                  { d: `M0,0 C16,44 48,72 78,84`,       sw:  9, op: 0.15 },
+                  { d: `M0,0 C26,28 74,46 122,34`,      sw: 14, op: 0.17 },
+                ] as { d: string; sw: number; op: number }[]).map(({ d, sw, op }, i) => (
+                  <path key={i}
+                    transform={`translate(${cx},${rb})`}
                     d={d}
-                    stroke="#4ade80"
-                    strokeWidth={w}
+                    stroke="#22c55e"
+                    strokeWidth={sw}
                     fill="none"
                     strokeLinecap="round"
-                    opacity={0.10}
+                    opacity={op}
                   />
                 ))}
               </g>
