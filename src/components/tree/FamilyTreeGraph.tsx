@@ -450,6 +450,19 @@ export function buildLayout(
     });
   }
 
+  // Suppress direct-to-root for ancestors that already connect via a memberLink
+  // chain (e.g. grandfather → father → root). Without this, both
+  // grandfather → root AND grandfather → father are drawn, creating a long
+  // crossing diagonal on top of the shorter chained connection.
+  const hasAncestorChain = new Set<string>();
+  memberLinks.forEach(l => {
+    if ((l.relation === "son" || l.relation === "daughter") &&
+        posMap.has(l.fromMemberId) && posMap.has(l.toMemberId) &&
+        l.toMemberId !== "root") {
+      hasAncestorChain.add(l.fromMemberId);
+    }
+  });
+
   // ── Edges ─────────────────────────────────────────────────────
   const edges: LayoutEdge[] = [];
 
@@ -563,7 +576,7 @@ export function buildLayout(
   members.forEach(m => {
     const gen = m.generation ?? GENERATION[m.relation_type] ?? 0;
     if (gen < 0) {
-      if (DIRECT_ANCESTORS.has(m.relation_type)) addVertEdge(m.id, "root", m.relation_kind as "blood" | "affinity");
+      if (DIRECT_ANCESTORS.has(m.relation_type) && !hasAncestorChain.has(m.id)) addVertEdge(m.id, "root", m.relation_kind as "blood" | "affinity");
       else if (["father_in_law","mother_in_law"].includes(m.relation_type)) addVertEdge(m.id, "root", "peer");
     } else if (gen > 0) {
       if (NEPHEW_NIECE.has(m.relation_type)) {
@@ -693,6 +706,41 @@ export default function FamilyTreeGraph({
     () => computeImmediateFamily(selectedId, members, memberLinks),
     [selectedId, members, memberLinks],
   );
+
+  // Group downward edges by parent — combs for multi-child nodes, bezier for singles
+  const edgeGroups = useMemo(() => {
+    type EG = { d: string; kind: "blood" | "affinity" | "peer"; fromId: string; toIds: string[] };
+    const downByParent = new Map<string, typeof edges>();
+    const result: EG[] = [];
+
+    for (const e of edges) {
+      if (e.y2 > e.y1 + 20 && e.kind !== "peer") {
+        if (!downByParent.has(e.fromId)) downByParent.set(e.fromId, []);
+        downByParent.get(e.fromId)!.push(e);
+      } else {
+        result.push({ d: curvePath(e.x1, e.y1, e.x2, e.y2), kind: e.kind, fromId: e.fromId, toIds: [e.toId] });
+      }
+    }
+
+    for (const [fromId, grp] of downByParent) {
+      const sameKind = grp.every(e => e.kind === grp[0].kind);
+      const sameGenY = grp.every(e => Math.abs(e.y2 - grp[0].y2) < 5);
+      if (grp.length > 1 && sameKind && sameGenY) {
+        const sorted = [...grp].sort((a, b) => a.x2 - b.x2);
+        const spineY = grp[0].y1 + (grp[0].y2 - grp[0].y1) * 0.4;
+        const parentX = grp[0].x1;
+        const leftX = Math.min(sorted[0].x2, parentX);
+        const rightX = Math.max(sorted[sorted.length - 1].x2, parentX);
+        const childY = grp[0].y2;
+        let d = `M${parentX},${grp[0].y1} V${spineY} M${leftX},${spineY} H${rightX}`;
+        for (const e of sorted) d += ` M${e.x2},${spineY} V${childY}`;
+        result.push({ d, kind: grp[0].kind, fromId, toIds: grp.map(e => e.toId) });
+      } else {
+        for (const e of grp) result.push({ d: curvePath(e.x1, e.y1, e.x2, e.y2), kind: e.kind, fromId: e.fromId, toIds: [e.toId] });
+      }
+    }
+    return result;
+  }, [edges]);
 
   // D3 zoom
   useEffect(() => {
@@ -1019,22 +1067,23 @@ export default function FamilyTreeGraph({
                 sangre (blood)    → línea sólida
                 pareja/unión (peer) → patrón propio (guion largo, existente)
                 afinidad/derivada  → guion corto, distinto de "peer" */}
-          {edges.map((e, i) => {
-            const isPeer = e.kind === "peer";
-            const isBlood = e.kind === "blood";
-            // El punto de unión sintético (pareja de root) cuenta como
-            // "root" para la jerarquía de foco — nunca es una persona real.
-            const effectiveFrom = e.fromId.startsWith("__union:") ? "root" : e.fromId;
-            const effectiveTo   = e.toId.startsWith("__union:") ? "root" : e.toId;
+          {edgeGroups.map((eg, i) => {
+            const isPeer = eg.kind === "peer";
+            const isBlood = eg.kind === "blood";
+            // El punto de unión sintético cuenta como "root" para el foco.
+            const effectiveFrom = eg.fromId.startsWith("__union:") ? "root" : eg.fromId;
             const endpointHighlighted = (id: string) => id === selectedId || immediateFamily.has(id);
-            const isHighlighted = endpointHighlighted(effectiveFrom) && endpointHighlighted(effectiveTo);
+            const isHighlighted = eg.toIds.length > 1
+              ? endpointHighlighted(effectiveFrom)
+              : endpointHighlighted(effectiveFrom) &&
+                endpointHighlighted(eg.toIds[0].startsWith("__union:") ? "root" : eg.toIds[0]);
 
             return (
               <path
                 key={i}
-                d={curvePath(e.x1, e.y1, e.x2, e.y2)}
+                d={eg.d}
                 fill="none"
-                stroke={EDGE_COLORS[e.kind]}
+                stroke={EDGE_COLORS[eg.kind]}
                 strokeWidth={isPeer ? 1.2 : (isHighlighted ? 1.9 : 1.6)}
                 strokeDasharray={isPeer ? "4,3" : isBlood ? undefined : "2,3"}
                 strokeLinecap="round"
