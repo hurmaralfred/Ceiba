@@ -4,8 +4,7 @@ import Link from "next/link";
 import * as d3 from "d3";
 import { FamilyMember, Profile, RELATION_LABELS } from "@/lib/types";
 import ForestAmbientLayer from "./ForestAmbientLayer";
-import LivingTreeBackdrop from "./LivingTreeBackdrop";
-import OrganicTrunk from "./OrganicTrunk";
+import LivingTreeScene from "./LivingTreeScene";
 import OrganicBranches from "./OrganicBranches";
 
 // ── Feature flag — set false to revert to previous silhouette ──────────────
@@ -341,7 +340,7 @@ export function buildLayout(
   const raw: Omit<LayoutNode, "cx" | "cy" | "r">[] = [
     {
       id: "root",
-      name: profile.first_name,
+      name: profile.first_name + (profile.last_name ? " " + profile.last_name : ""),
       shortName: makeDisplayName(profile.first_name),
       nameLine1: getNameLines(profile.first_name, profile.last_name)[0],
       nameLine2: getNameLines(profile.first_name, profile.last_name)[1],
@@ -1001,7 +1000,7 @@ export default function FamilyTreeGraph({
           </filter>
 
           {/* Inner shadow to darken bottom of sphere */}
-          <filter id="inner-shadow" x="-50%" y="-50%" width="200%" height="200%" color-interpolation-filters="sRGB">
+          <filter id="inner-shadow" x="-50%" y="-50%" width="200%" height="200%" colorInterpolationFilters="sRGB">
             <feFlood floodColor="black" floodOpacity="0.4" result="flood" />
             <feComposite in="flood" in2="SourceGraphic" operator="in" result="shadow" />
             <feOffset dx="0" dy="3" result="offset" />
@@ -1117,11 +1116,6 @@ export default function FamilyTreeGraph({
                 />
               ))}
 
-              {/* Foreground large trees — dramatic dark silhouettes */}
-              <path d={tropicalPath(fgLeft.cx, fgLeft.base, fgLeft.h, fgLeft.w)}
-                fill="#020603" opacity="0.95" />
-              <path d={tropicalPath(fgRight.cx, fgRight.base, fgRight.h, fgRight.w)}
-                fill="#020603" opacity="0.95" />
 
               {/* Ground mist */}
               <rect x={0} y={H * 0.80} width={W} height={H * 0.20}
@@ -1160,24 +1154,16 @@ export default function FamilyTreeGraph({
 
             if (LIVING_TREE_VISUAL_ENABLED) {
               return (
-                <>
-                  <LivingTreeBackdrop
-                    cx={cx}
-                    rootY={rootY}
-                    auraRx={Math.max(ancHalf * 1.1, 120)}
-                    auraRy={Math.max(ancToRoot * 0.40 + ROOT_R * 2, 80)}
-                  />
-                  <OrganicTrunk
-                    cx={cx}
-                    rootY={rootY}
-                    ancY={ancY}
-                    ancHalf={ancHalf}
-                    ancToRoot={ancToRoot}
-                    hasAnc={hasAnc}
-                    svgWidth={svgWidth}
-                    totalHeight={Math.max(380, totalHeight)}
-                  />
-                </>
+                <LivingTreeScene
+                  cx={cx}
+                  rootY={rootY}
+                  ancY={ancY}
+                  ancHalf={ancHalf}
+                  ancToRoot={ancToRoot}
+                  hasAnc={hasAnc}
+                  svgWidth={svgWidth}
+                  totalHeight={Math.max(380, totalHeight)}
+                />
               );
             }
 
