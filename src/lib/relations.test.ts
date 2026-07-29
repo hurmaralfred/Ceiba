@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 
 import { inferRelation } from "./relations";
 import { applyGenderToRelation, classifyGender } from "./graphAdapter";
+import type { RelationType } from "./types";
 
 // Genealogy Engine — parentescos derivados y familia política.
 // inferRelation(parentRelation, childRelation): dado que el CONECTOR tiene
@@ -116,5 +117,29 @@ describe("applyGenderToRelation — el género real fija la etiqueta", () => {
     expect(classifyGender("male")).toBe("male");
     expect(classifyGender("unknown")).toBe(null);
     expect(classifyGender(null)).toBe(null);
+  });
+
+  // Regression: pareja femenina del hijo → Nuera, no Yerno
+  // La pareja de hijo se infiere como son_in_law (base masculina);
+  // applyGenderToRelation la convierte a daughter_in_law cuando gender="female".
+  // Si gender es null (p.ej. Valeria, cuyo gender no está en la BD),
+  // la relación queda como son_in_law → se muestra "Yerno" hasta que se corrija el dato.
+  it("pareja femenina del hijo: inferRelation → son_in_law, applyGender(female) → daughter_in_law", () => {
+    const base = inferRelation("son", "partner") as RelationType;
+    expect(base).toBe("son_in_law");
+    expect(applyGenderToRelation(base, "female")).toBe("daughter_in_law");
+    expect(applyGenderToRelation(base, "femenina")).toBe("daughter_in_law");
+    expect(applyGenderToRelation(base, "F")).toBe("daughter_in_law");
+  });
+
+  it("pareja masculina del hijo: inferRelation → son_in_law, applyGender(male) → son_in_law", () => {
+    const base = inferRelation("son", "partner") as RelationType;
+    expect(applyGenderToRelation(base, "male")).toBe("son_in_law");
+  });
+
+  it("gender null en la BD → relación base sin cambiar (sin crash, sin inferencia errónea)", () => {
+    const base = inferRelation("son", "partner") as RelationType;
+    expect(applyGenderToRelation(base, null)).toBe("son_in_law");
+    expect(applyGenderToRelation(base, undefined)).toBe("son_in_law");
   });
 });

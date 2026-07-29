@@ -54,6 +54,7 @@ const GENERATION: Record<string, number> = {
   brother: 0, sister: 0, half_brother: 0, half_sister: 0,
   spouse: 0, partner: 0, cousin: 0, brother_in_law: 0, sister_in_law: 0,
   son: 1, daughter: 1, stepchild: 1, nephew: 1, niece: 1,
+  son_in_law: 1, daughter_in_law: 1,
   grandson: 2, granddaughter: 2,
   great_grandson: 3, great_granddaughter: 3,
 };
@@ -79,6 +80,7 @@ const POS_HINT: Record<string, number> = {
 
   // ── Gen 1: hijos centro, sobrinos lados ───────────────────
   daughter: -2, son: -1, stepchild: 0, niece: 1, nephew: 2,
+  daughter_in_law: 2, son_in_law: 3,
 
   // ── Gen 2: nietos ─────────────────────────────────────────
   granddaughter: -1, grandson: 1,
@@ -341,7 +343,7 @@ export function buildLayout(
     {
       id: "root",
       name: profile.first_name + (profile.last_name ? " " + profile.last_name : ""),
-      shortName: makeDisplayName(profile.first_name),
+      shortName: makeDisplayName(profile.first_name, profile.last_name ?? undefined),
       nameLine1: getNameLines(profile.first_name, profile.last_name)[0],
       nameLine2: getNameLines(profile.first_name, profile.last_name)[1],
       relation: "Tú",
