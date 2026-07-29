@@ -30,6 +30,13 @@ const FamilyTreeGraph = dynamic(
   { ssr: false, loading: () => <div className="w-full h-[520px] rounded-2xl bg-gray-100 animate-pulse" /> }
 );
 
+const PremiumFamilyTree = dynamic(
+  () => import("@/components/tree/premium/PremiumFamilyTree"),
+  { ssr: false, loading: () => <div className="w-full rounded-2xl animate-pulse" style={{ height: "calc(100vh - 120px)", background: "#07111c" }} /> }
+);
+
+const PREMIUM_TREE_RENDERER_ENABLED = true;
+
 const MapView = dynamic(
   () => import("@/components/map/MapView"),
   { ssr: false, loading: () => <div className="w-full h-[520px] rounded-2xl bg-gray-100 animate-pulse" /> }
@@ -850,13 +857,36 @@ console.log("⑤ Datos cargados");
 
             {view === "graph" && profile && (
               <TreeErrorBoundary>
-                <FamilyTreeGraph
-                  profile={profile}
-                  members={members}
-                  extendedMembers={extendedMembers}
-                  memberLinks={memberLinks}
-                  onNodeClick={(memberId) => router.push(`/member/${memberId}`)}
-                />
+                {PREMIUM_TREE_RENDERER_ENABLED ? (
+                  <PremiumFamilyTree
+                    profile={profile}
+                    members={members}
+                    extendedMembers={extendedMembers}
+                    memberLinks={memberLinks}
+                    onNodeClick={(memberId) => router.push(`/member/${memberId}`)}
+                    onEditMember={(memberId) => {
+                      const member =
+                        members.find((m) => m.id === memberId) ??
+                        extendedMembers.find((e) => e.member.id === memberId)?.member;
+                      if (member) openEdit(member);
+                    }}
+                    onInviteMember={(memberId) => {
+                      const member =
+                        members.find((m) => m.id === memberId) ??
+                        extendedMembers.find((e) => e.member.id === memberId)?.member;
+                      if (member) sendInvite(member);
+                    }}
+                    onShareTree={shareTree}
+                  />
+                ) : (
+                  <FamilyTreeGraph
+                    profile={profile}
+                    members={members}
+                    extendedMembers={extendedMembers}
+                    memberLinks={memberLinks}
+                    onNodeClick={(memberId) => router.push(`/member/${memberId}`)}
+                  />
+                )}
               </TreeErrorBoundary>
             )}
 
