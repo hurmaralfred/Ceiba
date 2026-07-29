@@ -1698,7 +1698,7 @@ export default function FamilyTreeGraph({
                     {n.nameLine2 && (
                       <tspan
                         x={n.cx}
-                        y={n.cy + r + 23}
+                        y={n.cy + r + 27}
                         fill={n.isExtended ? "#b8c5cf" : "rgba(255,255,255,0.90)"}
                         fontSize={n.isExtended ? 9.5 : 10}
                       >
@@ -1711,7 +1711,7 @@ export default function FamilyTreeGraph({
                 {/* Relation */}
                 <text
                   x={n.cx}
-                  y={n.cy + r + (n.nameLine2 ? 35 : 26)}
+                  y={n.cy + r + (n.nameLine2 ? 39 : 26)}
                   textAnchor="middle"
                   fill={n.isExtended ? "#8b98a8" : "rgba(255,255,255,0.65)"}
                   fontSize={9}
