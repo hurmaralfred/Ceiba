@@ -1,10 +1,10 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { TreePine, Bell, Send, Camera, Settings } from "lucide-react";
+import { Home, Bell, Send, Camera, Settings } from "lucide-react";
 
 const TABS = [
-  { href: "/tree",     icon: TreePine,  label: "Árbol",   pulse: false, highlight: false },
+  { href: "/home",     icon: Home,      label: "Inicio",  pulse: false, highlight: false },
   { href: "/feed",     icon: Bell,      label: "Feed",    pulse: false, highlight: false },
   { href: "/invitar",  icon: Send,      label: "Invitar", pulse: false, highlight: true  },
   { href: "/photos",   icon: Camera,    label: "Fotos",   pulse: false, highlight: false },

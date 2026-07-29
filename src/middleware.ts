@@ -33,10 +33,12 @@ export async function middleware(request: NextRequest) {
   // /invite/[token] debe quedar público: es el enlace que recibe un familiar
   // sin cuenta todavía; get_invitation_by_token() ya está diseñada para
   // funcionar sin sesión y la propia página resuelve el registro/login.
-  const protectedPaths = ['/tree', '/map', '/profile', '/onboarding']
+  const protectedPaths = ['/home', '/tree', '/map', '/profile', '/onboarding']
+  const devPreviews = ['/home/preview', '/dev/']
   const isProtected =
-    protectedPaths.some(p => request.nextUrl.pathname.startsWith(p)) ||
-    request.nextUrl.pathname === '/invite'
+    !devPreviews.some(p => request.nextUrl.pathname.startsWith(p)) &&
+    (protectedPaths.some(p => request.nextUrl.pathname.startsWith(p)) ||
+    request.nextUrl.pathname === '/invite')
 
   if (!user && isProtected) {
     const url = request.nextUrl.clone()
