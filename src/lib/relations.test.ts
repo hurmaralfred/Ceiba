@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 
 import { inferRelation } from "./relations";
 import { applyGenderToRelation, classifyGender } from "./graphAdapter";
+import { RELATION_LABELS } from "./types";
 import type { RelationType } from "./types";
 
 // Genealogy Engine — parentescos derivados y familia política.
@@ -141,5 +142,17 @@ describe("applyGenderToRelation — el género real fija la etiqueta", () => {
     const base = inferRelation("son", "partner") as RelationType;
     expect(applyGenderToRelation(base, null)).toBe("son_in_law");
     expect(applyGenderToRelation(base, undefined)).toBe("son_in_law");
+  });
+
+  // Caso real: Valeria Inés Pertuz Urueta (person_b_id de la relación
+  // c5cc47b6-72bb-44a9-abd6-97f1da8566ea, pareja del hijo 51d9086e-...).
+  // Antes de la migración 20260729000000_fix_valeria_gender.sql, gender=null
+  // causaba que resolveRelationsFromRoot mantuviera "son_in_law" → "Yerno".
+  // Después de la migración, gender="female" → "daughter_in_law" → "Nuera".
+  it("Valeria (caso real): female gender → daughter_in_law → etiqueta 'Nuera'", () => {
+    const base = inferRelation("son", "partner") as RelationType;
+    const withGender = applyGenderToRelation(base, "female");
+    expect(withGender).toBe("daughter_in_law");
+    expect(RELATION_LABELS[withGender]).toBe("Nuera");
   });
 });
