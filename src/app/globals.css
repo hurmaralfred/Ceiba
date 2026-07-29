@@ -4,47 +4,146 @@
 
 @layer base {
   :root {
+    /* ── Tokens semánticos ─────────────────────────────────── */
+    --color-bg:            #f7edd9;
+    --color-surface:       #fdfaf3;
+    --color-surface-warm:  #f0e2cb;
+    --color-terra:         #c1603a;
+    --color-terra-hover:   #a84f2f;
+    --color-terra-light:   #fae5d8;
+    --color-green:         #5c7a52;
+    --color-green-light:   #e4eed9;
+    --color-gold:          #c4922a;
+    --color-gold-light:    #fbf0d8;
+    --color-text-primary:  #2e1c0e;
+    --color-text-body:     #5c3c22;
+    --color-text-secondary:#9a7b5f;
+    --color-text-muted:    #b8a090;
+    --color-border:        #e3ceb0;
+    --color-border-strong: #d4b890;
+    --color-divider:       #eedfc6;
+
+    /* ── Superficies oscuras (árbol / perfil) ─────────────── */
+    --color-dark-bg:      #0d1320;
+    --color-dark-surface: #1a0f05;
+    --color-dark-glass:   rgba(40,25,12,0.88);
+    --color-dark-border:  rgba(255,255,255,0.10);
+    --color-dark-text:    rgba(255,255,255,0.92);
+    --color-dark-muted:   rgba(255,255,255,0.55);
+
+    /* ── Sombras ───────────────────────────────────────────── */
+    --shadow-xs: 0 1px 2px rgba(193,96,58,0.08);
+    --shadow-sm: 0 1px 4px rgba(193,96,58,0.10), 0 1px 2px rgba(193,96,58,0.06);
+    --shadow:    0 4px 12px rgba(193,96,58,0.12), 0 2px 4px rgba(193,96,58,0.08);
+    --shadow-md: 0 6px 18px rgba(193,96,58,0.14), 0 3px 6px rgba(193,96,58,0.08);
+    --shadow-lg: 0 10px 28px rgba(193,96,58,0.16), 0 4px 8px rgba(193,96,58,0.10);
+
+    /* ── Radios ────────────────────────────────────────────── */
+    --radius-sm:   0.5rem;
+    --radius:      0.75rem;
+    --radius-md:   1rem;
+    --radius-lg:   1.25rem;
+    --radius-xl:   1.5rem;
+    --radius-2xl:  2rem;
+    --radius-full: 9999px;
+
+    /* backward-compat */
     --ceiba-green: #5c7a52;
     --ceiba-light: #e4eed9;
     --earth-brown: #c1603a;
-    --cream-bg:   #fdf8f1;
+    --cream-bg:    #fdf8f1;
     --warm-border: #e8ddd0;
   }
-  * {
-    box-sizing: border-box;
-  }
+
+  * { box-sizing: border-box; }
+
   body {
     @apply antialiased;
-    background-color: #fdf8f1;
+    background-color: var(--color-bg);
+    color: var(--color-text-primary);
+  }
+
+  html { scroll-behavior: smooth; }
+
+  :focus-visible {
+    outline: 2px solid var(--color-terra);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
 
 @layer components {
-  /* Botón principal: terracota */
+  /* ── Botón principal: terracota ─────────────────────────── */
   .btn-primary {
-    @apply bg-earth-500 hover:bg-earth-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 shadow-sm hover:shadow-md active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply bg-earth-500 hover:bg-earth-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+    box-shadow: var(--shadow-sm);
   }
-  /* Botón secundario: crema cálida */
+  .btn-primary:hover:not(:disabled) { box-shadow: var(--shadow); }
+  /* ── Botón secundario ───────────────────────────────────── */
   .btn-secondary {
-    @apply bg-cream-50 hover:bg-cream-200 text-ceiba-800 font-semibold py-3 px-6 rounded-xl border border-cream-300 transition-all duration-200 shadow-sm hover:shadow-md active:scale-95;
+    @apply bg-cream-100 hover:bg-cream-200 text-ceiba-800 font-semibold py-3 px-6 rounded-xl border border-cream-400 transition-all duration-200 active:scale-95;
+    box-shadow: var(--shadow-xs);
   }
-  /* Campo de entrada */
+  .btn-secondary:hover { box-shadow: var(--shadow-sm); }
+  /* ── Campo de entrada ───────────────────────────────────── */
   .input-field {
-    @apply w-full px-4 py-3 rounded-xl border border-cream-300 focus:border-ceiba-500 focus:ring-2 focus:ring-ceiba-100 outline-none transition-all bg-cream-50 text-ceiba-900 placeholder-ceiba-400;
+    @apply w-full px-4 py-3 rounded-xl border border-cream-400 focus:border-earth-500 focus:ring-2 focus:ring-earth-100 outline-none transition-all bg-cream-50 text-ceiba-900;
   }
-  /* Card base: fondo blanco cálido */
+  /* ── Card base ──────────────────────────────────────────── */
   .card {
-    @apply bg-cream-50 rounded-2xl shadow-sm border border-cream-300 p-6;
+    @apply bg-cream-100 rounded-2xl border border-cream-400 p-6;
+    box-shadow: var(--shadow-sm);
   }
+  /* ── Glassmorphism claro ────────────────────────────────── */
+  .glass-warm {
+    background: rgba(253,248,241,0.82);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(255,255,255,0.65);
+  }
+  /* ── Glassmorphism oscuro (perfil / árbol) ──────────────── */
+  .glass-dark {
+    background: var(--color-dark-glass);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--color-dark-border);
+  }
+  /* ── Badges de relación ─────────────────────────────────── */
   .relation-badge-blood {
     @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-ceiba-100 text-ceiba-800;
   }
   .relation-badge-affinity {
     @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-earth-100 text-earth-700;
   }
+  /* ── Safe area ──────────────────────────────────────────── */
+  .safe-area-pb     { padding-bottom: max(env(safe-area-inset-bottom), 0px); }
+  .safe-area-pt     { padding-top:    max(env(safe-area-inset-top),    0px); }
+  .safe-area-pb-nav { padding-bottom: max(calc(env(safe-area-inset-bottom) + 4rem), 4rem); }
 }
 
-/* Leaflet map */
+@layer utilities {
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+/* ── Leaflet map ────────────────────────────────────────────── */
 .leaflet-container {
   height: 100%;
   width: 100%;
