@@ -791,9 +791,10 @@ export default function FamilyTreeGraph({
     const rootNode = nodes.find(n => n.relationType === "root");
     if (!rootNode) return;
     const containerW = svgRef.current.parentElement?.clientWidth ?? 360;
-    const initScale = containerW < 600 ? 0.65 : containerW < 1024 ? 0.85 : Math.min(1.0, containerW / svgWidth);
+    const containerH = svgRef.current.parentElement?.clientHeight ?? 600;
+    const initScale = containerW < 600 ? 0.70 : containerW < 1024 ? 0.80 : Math.min(0.88, containerW / svgWidth);
     const tx = containerW / 2 - rootNode.cx * initScale;
-    const ty = 60 - rootNode.cy * initScale;
+    const ty = containerH * 0.55 - rootNode.cy * initScale;
     d3.select(svgRef.current).call(
       zoomRef.current.transform,
       d3.zoomIdentity.translate(tx, ty).scale(initScale),

@@ -108,7 +108,7 @@ function renderTree(
         const hue   = 110 + rng() * 36;
         const sat   = 44 + rng() * 26;
         const light = 11 + rng() * 20;
-        const alpha = 0.28 + rng() * 0.40;
+        const alpha = 0.42 + rng() * 0.45;
         const lg = ctx.createRadialGradient(
           lx - leafR * 0.22, ly - leafR * 0.22, 0,
           lx, ly, leafR,
@@ -195,7 +195,7 @@ function renderTree(
     const mainN = 5;
     for (let i = 0; i < mainN; i++) {
       const t  = i / (mainN - 1);
-      const a  = -Math.PI / 2 + (t - 0.5) * Math.PI * 0.88;
+      const a  = (t - 0.5) * Math.PI * 0.88;
       const l  = ancToRoot * (0.28 + rng() * 0.18);
       const sw = 4.2 + (1 - Math.abs(t - 0.5) * 2) * 2.8;
       branch(cx, tTopY, a, l, sw, 5);
