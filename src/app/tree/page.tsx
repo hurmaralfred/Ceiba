@@ -1,6 +1,6 @@
 "use client";
-import { useEffect, useState, useRef, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import lazyLoad from "next/dynamic";
 import { TreePine, MapPin, Users, Share2, LogOut, User, Send, List, GitFork, Plus, X, Pencil, Map as MapIcon, Image, Calendar, MessageCircle, Megaphone, Camera, AlertTriangle } from "lucide-react";
@@ -37,6 +37,7 @@ const PremiumFamilyTree = lazyLoad(
 );
 
 const PREMIUM_TREE_RENDERER_ENABLED = true;
+const UNIVERSE_RENDERER_ENABLED = false;
 
 const MapView = lazyLoad(
   () => import("@/components/map/MapView"),
@@ -72,11 +73,7 @@ const UNSUPPORTED_SUFFIX = " — próximamente";
 
 const EMPTY_FORM = { primer_nombre: "", segundo_nombre: "", primer_apellido: "", segundo_apellido: "", first_name: "", last_name: "", email: "", birth_date: "", birth_city: "", birth_country: "", relation_type: "father" as RelationType, is_deceased: false, parent_member_id: "" };
 export default function TreePage() {
-  return (
-    <Suspense fallback={<LoadingScreen />}>
-      <TreePageContent />
-    </Suspense>
-  );
+  return <TreePageContent />;
 }
 
 function TreePageContent() {
@@ -91,8 +88,6 @@ function TreePageContent() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [view, setView] = useState<"graph" | "list" | "map">("graph");
-  const searchParams = useSearchParams();
-  const universePreview = searchParams.get("view") === "universe";
   const [myLocation, setMyLocation] = useState<[number, number] | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [showBroadcast, setShowBroadcast] = useState(false);
@@ -871,7 +866,7 @@ console.log("⑤ Datos cargados");
             {view === "graph" && profile && (
               <>
                 <TreeErrorBoundary>
-                  {universePreview ? (
+                  {UNIVERSE_RENDERER_ENABLED ? (
                     <div style={{ height: "calc(100vh - 140px)", borderRadius: 16, overflow: "hidden", background: "#07111c" }}>
                       <FamilyUniverseComponent
                         profile={profile}
