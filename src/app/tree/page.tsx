@@ -770,9 +770,9 @@ console.log("⑤ Datos cargados");
         </div>
       )}
 
-      <div className="max-w-4xl mx-auto px-3 py-3 pb-24">
-        {/* SLIM profile strip */}
-        {profile && (
+      <div className={`max-w-4xl mx-auto px-3 py-3 ${view === "graph" ? "pb-4" : "pb-24"}`}>
+        {/* SLIM profile strip — hidden in graph view (canvas has its own top bar) */}
+        {view !== "graph" && profile && (
           <div className="mb-3">
             <div className="flex items-center gap-2.5">
               <div className="w-9 h-9 rounded-xl bg-ceiba-700 flex-shrink-0 overflow-hidden flex items-center justify-center text-white font-bold text-sm">
@@ -800,11 +800,13 @@ console.log("⑤ Datos cargados");
           </div>
         )}
 
-        {/* Red familiar progress — stays compact */}
-        <NetworkBanner
-          totalMembers={visibleMembers.length}
-          joinedMembers={visibleMembers.filter(m => m.profile_id).length}
-        />
+        {/* Red familiar progress — hidden in graph view */}
+        {view !== "graph" && (
+          <NetworkBanner
+            totalMembers={visibleMembers.length}
+            joinedMembers={visibleMembers.filter(m => m.profile_id).length}
+          />
+        )}
 
         {/* Family list / graph */}
         {visibleMembers.length === 0 ? (
@@ -823,8 +825,8 @@ console.log("⑤ Datos cargados");
           </div>
         ) : (
           <div className="space-y-3">
-            {/* Action bar — 1 CTA dominante */}
-            <div className="flex items-center gap-2">
+            {/* Action bar — hidden in graph view (view switcher lives inside the canvas) */}
+            {view !== "graph" && <div className="flex items-center gap-2">
               {/* SECONDARY: Anunciar — icono only */}
               {joinedMembers.length > 0 && (
                 <button
@@ -839,7 +841,7 @@ console.log("⑤ Datos cargados");
               <div className="flex items-center bg-gray-100 rounded-xl p-0.5 gap-0.5 flex-shrink-0">
                 <button
                   onClick={() => setView("graph")}
-                  className={`p-1.5 rounded-lg transition-colors ${view === "graph" ? "bg-white shadow text-ceiba-700" : "text-gray-400 hover:text-gray-600"}`}
+                  className="p-1.5 rounded-lg transition-colors text-gray-400 hover:text-gray-600"
                   title="Árbol"
                 ><GitFork size={15} /></button>
                 <button
@@ -853,31 +855,36 @@ console.log("⑤ Datos cargados");
                   title="Mapa"
                 ><MapIcon size={15} /></button>
               </div>
-            </div>
+            </div>}
 
             {view === "graph" && profile && (
               <TreeErrorBoundary>
                 {PREMIUM_TREE_RENDERER_ENABLED ? (
-                  <PremiumFamilyTree
-                    profile={profile}
-                    members={members}
-                    extendedMembers={extendedMembers}
-                    memberLinks={memberLinks}
-                    onNodeClick={(memberId) => router.push(`/member/${memberId}`)}
-                    onEditMember={(memberId) => {
-                      const member =
-                        members.find((m) => m.id === memberId) ??
-                        extendedMembers.find((e) => e.member.id === memberId)?.member;
-                      if (member) openEdit(member);
-                    }}
-                    onInviteMember={(memberId) => {
-                      const member =
-                        members.find((m) => m.id === memberId) ??
-                        extendedMembers.find((e) => e.member.id === memberId)?.member;
-                      if (member) sendInvite(member);
-                    }}
-                    onShareTree={shareTree}
-                  />
+                  <div style={{ margin: "0 -0.75rem" }}>
+                    <PremiumFamilyTree
+                      profile={profile}
+                      members={members}
+                      extendedMembers={extendedMembers}
+                      memberLinks={memberLinks}
+                      onNodeClick={(memberId) => router.push(`/member/${memberId}`)}
+                      onEditMember={(memberId) => {
+                        const member =
+                          members.find((m) => m.id === memberId) ??
+                          extendedMembers.find((e) => e.member.id === memberId)?.member;
+                        if (member) openEdit(member);
+                      }}
+                      onInviteMember={(memberId) => {
+                        const member =
+                          members.find((m) => m.id === memberId) ??
+                          extendedMembers.find((e) => e.member.id === memberId)?.member;
+                        if (member) sendInvite(member);
+                      }}
+                      onShareTree={shareTree}
+                      onSwitchToList={() => setView("list")}
+                      onSwitchToMap={activateMap}
+                      familyCount={visibleMembers.length}
+                    />
+                  </div>
                 ) : (
                   <FamilyTreeGraph
                     profile={profile}
@@ -949,11 +956,13 @@ console.log("⑤ Datos cargados");
               );
             })()}
 
-          {/* Engagement widgets — BELOW the tree so el árbol es el héroe */}
-          <div className="space-y-3 mt-4">
-            {profile && <TodayWidget userId={profile.id} />}
-            {profile && <BirthdayWidget userId={profile.id} />}
-          </div>
+          {/* Engagement widgets — only in list/map views */}
+          {view !== "graph" && (
+            <div className="space-y-3 mt-4">
+              {profile && <TodayWidget userId={profile.id} />}
+              {profile && <BirthdayWidget userId={profile.id} />}
+            </div>
+          )}
           </div>
         )}
       </div>
