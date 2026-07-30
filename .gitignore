@@ -27,3 +27,6 @@ next-env.d.ts
 ceiba-audit/
 ceiba-audit.zip
 .vercel
+
+# Local IDE / tooling configuration
+.claude/
