@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useMemo } from 'react'
 import type { Profile, FamilyMember } from '@/lib/types'
 import type { ExtendedEntry, MemberLink } from '@/components/tree/FamilyTreeGraph'
 import { useUniverseLayout } from './useUniverseLayout'
@@ -114,6 +114,14 @@ export function FamilyUniverse({
   const [selectedNode,  setSelectedNode]  = useState<UniverseNode | null>(null)
   const [containerSize, setContainerSize] = useState({ w: 375, h: 812 })
 
+  // D3: scale down the viewport so orbit-2 avatars (radius 210) clear the edges on narrow screens.
+  // 240 = orbit-2 radius (210) + half of a scaled avatar (~30). Never scale above 1.0.
+  const viewScale = useMemo(() => {
+    if (containerSize.w <= 0) return 1
+    const halfWidth = containerSize.w / 2
+    return halfWidth >= 240 ? 1 : Math.max(0.72, halfWidth / 240)
+  }, [containerSize.w])
+
   const nodes = useUniverseLayout(
     focalId, profile, members, extendedMembers, memberLinks,
   )
@@ -149,7 +157,7 @@ export function FamilyUniverse({
         ref={containerRef}
         style={{ position: 'relative', width: '100%', height: '100%' }}
       >
-        <UniverseViewport nodes={nodes} onFocusChange={handleRefocus}>
+        <UniverseViewport nodes={nodes} onFocusChange={handleRefocus} viewScale={viewScale}>
           {/* Orbit guide rings (sit behind avatars) */}
           <OrbitRings width={containerSize.w} height={containerSize.h} />
 
@@ -160,6 +168,7 @@ export function FamilyUniverse({
               node={node}
               selected={selectedNode?.id === node.id}
               onClick={() => handleAvatarClick(node)}
+              viewScale={viewScale}
             />
           ))}
         </UniverseViewport>
@@ -180,27 +189,24 @@ export function FamilyUniverse({
 // ─── Avatar slot: positioned absolutely in viewport ───────────────────────────
 
 function AvatarSlot({
-  node, selected, onClick,
+  node, selected, onClick, viewScale = 1,
 }: {
   node: UniverseNode
   selected: boolean
   onClick: () => void
+  viewScale?: number
 }) {
-  // The slot is positioned so that (50% + cx, 50% + cy) is the center of the figure.
-  // The figure itself is 40px wide; label adds ~20px below.
-  // We translate(-50%, -50%) to center the wrapper on that point.
   return (
     <div
       style={{
         position: 'absolute',
         left: '50%',
         top:  '50%',
-        // Shift by orbital offsets + center the 40px element
         transform: `translate(calc(-50% + ${node.cx}px), calc(-50% + ${node.cy}px)) scale(${node.scale})`,
         transformOrigin: 'center center',
         opacity: node.opacity,
-        zIndex: node.zIndex,
-        // Smooth transition when focal changes
+        // D2: selected node rises above all peers except the focal (focal=400)
+        zIndex: selected ? 350 : node.zIndex,
         transition: [
           'transform 0.65s cubic-bezier(0.34,1.22,0.64,1)',
           'opacity  0.45s ease',
@@ -211,7 +217,8 @@ function AvatarSlot({
         node={node}
         onClick={node.isFocal ? undefined : onClick}
         highlighted={selected}
-        hitAreaScale={node.scale}
+        // D3: compensate for viewScale so tap targets stay ≥44px
+        hitAreaScale={node.scale * viewScale}
       />
     </div>
   )

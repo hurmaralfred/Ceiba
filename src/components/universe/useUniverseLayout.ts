@@ -95,6 +95,54 @@ const RELATION_LABELS: Record<string, string> = {
   other: 'Familiar',
 }
 
+// ─── Pure helpers (exported for tests) ──────────────────────────────────────
+
+/**
+ * Resolves a human-readable Spanish label for a relation.
+ *
+ * Priority:
+ *   1. Catalog lookup on inferredRelation (handles raw keys like "brother")
+ *   2. inferredRelation as-is if already localized (starts uppercase, no underscores)
+ *   3. Catalog lookup on relationType
+ *   4. Safe fallback "Familiar"
+ */
+export function resolveRelationLabel(
+  inferredRelation: string | null | undefined,
+  relationType: string | null | undefined,
+): string {
+  if (inferredRelation) {
+    const fromCatalog = RELATION_LABELS[inferredRelation]
+    if (fromCatalog) return fromCatalog
+    // Already a human label: starts with uppercase, no underscores
+    if (!/[_]/.test(inferredRelation) && /^[A-ZÁÉÍÓÚÜÑ]/.test(inferredRelation)) {
+      return inferredRelation
+    }
+  }
+  if (relationType) {
+    const fromCatalog = RELATION_LABELS[relationType]
+    if (fromCatalog) return fromCatalog
+  }
+  return 'Familiar'
+}
+
+// z-index bands: focal > selected (handled at render) > orbit 1 > orbit 2 > orbit 3+
+// Gaps between adjacent bands must exceed 49 (the max cy bonus) so bands never overlap.
+// Orbit 1: [200, 249] | Orbit 2: [130, 179] | Orbit 3+: [60, 109]
+const Z_FOCAL   = 400
+const Z_BANDS   = [200, 130, 60] as const  // indexed by (hopDistance - 1)
+
+/**
+ * Deterministic z-index: deeper orbits are behind; within the same orbit,
+ * nodes with a higher cy (lower on screen) appear in front (pseudo-3D depth).
+ */
+export function computeNodeZIndex(hopDistance: number, cy: number, isFocal: boolean): number {
+  if (isFocal) return Z_FOCAL
+  const band     = Z_BANDS[Math.min(hopDistance - 1, Z_BANDS.length - 1)]
+  // cy ∈ [-300, +300] → bonus ∈ [0, 49]
+  const cyBonus  = Math.round(Math.min(49, Math.max(0, (cy + 300) / 600 * 49)))
+  return band + cyBonus
+}
+
 const ELDER_RELS = new Set(['grandfather', 'grandmother', 'grandfather_paternal',
   'grandmother_paternal', 'grandfather_maternal', 'grandmother_maternal',
   'great_grandfather', 'great_grandmother'])
@@ -257,7 +305,7 @@ export function useUniverseLayout(
         memberId: m.id,
         name: [m.first_name, m.last_name].filter(Boolean).join(' '),
         shortName: m.first_name,
-        relation: RELATION_LABELS[m.relation_type] ?? 'Familiar',
+        relation: resolveRelationLabel(null, m.relation_type),
         relationType: m.relation_type,
         gender: m.profile?.gender,
         avatarUrl: m.profile?.avatar_url,
@@ -269,7 +317,7 @@ export function useUniverseLayout(
         cx: 0, cy: 0,
         scale: ORBIT_SCALES[Math.min(hop, MAX_HOP)],
         opacity: ORBIT_OPACITY[Math.min(hop, MAX_HOP)],
-        zIndex: 10 - hop,
+        zIndex: 10 - hop,  // recomputed after positions are set
         ageGroup: ageGroup(m),
         isDeceased: m.is_deceased,
         isJoined: !!m.profile_id,
@@ -287,7 +335,7 @@ export function useUniverseLayout(
         memberId: m.id,
         name: [m.first_name, m.last_name].filter(Boolean).join(' '),
         shortName: m.first_name,
-        relation: e.inferredRelation ?? RELATION_LABELS[m.relation_type] ?? 'Familiar',
+        relation: resolveRelationLabel(e.inferredRelation, m.relation_type),
         relationType: m.relation_type,
         gender: m.profile?.gender,
         avatarUrl: m.profile?.avatar_url,
@@ -372,6 +420,11 @@ export function useUniverseLayout(
     // Focal always at center
     focal.cx = 0
     focal.cy = 0
+
+    // D2: recompute zIndex now that cx/cy are set — ensures deterministic depth ordering
+    for (const n of nodes) {
+      n.zIndex = computeNodeZIndex(n.hopDistance, n.cy, n.isFocal)
+    }
 
     // Sort back-to-front
     nodes.sort((a, b) => a.zIndex - b.zIndex)

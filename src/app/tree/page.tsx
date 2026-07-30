@@ -1,14 +1,15 @@
 "use client";
-import { useEffect, useState, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, useRef, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import dynamic from "next/dynamic";
+import lazyLoad from "next/dynamic";
 import { TreePine, MapPin, Users, Share2, LogOut, User, Send, List, GitFork, Plus, X, Pencil, Map as MapIcon, Image, Calendar, MessageCircle, Megaphone, Camera, AlertTriangle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Profile, FamilyMember, RelationType, RELATION_LABELS } from "@/lib/types";
 import { adaptGraph, buildAddRelativeRequest, isAddRelativeSupported, relationRequiresConnector, type FamilyGraph } from "@/lib/graphAdapter";
 import { KINSHIP_CATALOG, type KinshipKey } from "@/domain/relationships";
 import type { ExtendedEntry, MemberLink } from "@/components/tree/FamilyTreeGraph";
+import { FamilyUniverse as FamilyUniverseComponent } from "@/components/universe/FamilyUniverse";
 import { buildVisibleMembers } from "@/lib/visibleMembers";
 import InstallBanner from "@/components/InstallBanner";
 import TreeErrorBoundary from "@/components/TreeErrorBoundary";
@@ -25,19 +26,19 @@ import BottomNav from "@/components/BottomNav";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import toast from "react-hot-toast";
 
-const FamilyTreeGraph = dynamic(
+const FamilyTreeGraph = lazyLoad(
   () => import("@/components/tree/FamilyTreeGraph"),
   { ssr: false, loading: () => <div className="w-full h-[520px] rounded-2xl bg-gray-100 animate-pulse" /> }
 );
 
-const PremiumFamilyTree = dynamic(
+const PremiumFamilyTree = lazyLoad(
   () => import("@/components/tree/premium/PremiumFamilyTree"),
   { ssr: false, loading: () => <div className="w-full rounded-2xl animate-pulse" style={{ height: "calc(100vh - 120px)", background: "#07111c" }} /> }
 );
 
 const PREMIUM_TREE_RENDERER_ENABLED = true;
 
-const MapView = dynamic(
+const MapView = lazyLoad(
   () => import("@/components/map/MapView"),
   { ssr: false, loading: () => <div className="w-full h-[520px] rounded-2xl bg-gray-100 animate-pulse" /> }
 );
@@ -71,6 +72,14 @@ const UNSUPPORTED_SUFFIX = " — próximamente";
 
 const EMPTY_FORM = { primer_nombre: "", segundo_nombre: "", primer_apellido: "", segundo_apellido: "", first_name: "", last_name: "", email: "", birth_date: "", birth_city: "", birth_country: "", relation_type: "father" as RelationType, is_deceased: false, parent_member_id: "" };
 export default function TreePage() {
+  return (
+    <Suspense fallback={<LoadingScreen />}>
+      <TreePageContent />
+    </Suspense>
+  );
+}
+
+function TreePageContent() {
   const router = useRouter();
   const supabase = createClient();
   usePushNotifications(); // Registra FCM token si el usuario da permiso
@@ -82,6 +91,8 @@ export default function TreePage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [view, setView] = useState<"graph" | "list" | "map">("graph");
+  const searchParams = useSearchParams();
+  const universePreview = searchParams.get("view") === "universe";
   const [myLocation, setMyLocation] = useState<[number, number] | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [showBroadcast, setShowBroadcast] = useState(false);
@@ -858,43 +869,66 @@ console.log("⑤ Datos cargados");
             </div>}
 
             {view === "graph" && profile && (
-              <TreeErrorBoundary>
-                {PREMIUM_TREE_RENDERER_ENABLED ? (
-                  <div style={{ margin: "0 -0.75rem" }}>
-                    <PremiumFamilyTree
+              <>
+                <TreeErrorBoundary>
+                  {universePreview ? (
+                    <div style={{ height: "calc(100vh - 140px)", borderRadius: 16, overflow: "hidden", background: "#07111c" }}>
+                      <FamilyUniverseComponent
+                        profile={profile}
+                        members={members}
+                        extendedMembers={extendedMembers}
+                        memberLinks={memberLinks}
+                        onEditMember={(memberId) => {
+                          const member =
+                            members.find((m) => m.id === memberId) ??
+                            extendedMembers.find((e) => e.member.id === memberId)?.member;
+                          if (member) openEdit(member);
+                        }}
+                        onInviteMember={(memberId) => {
+                          const member =
+                            members.find((m) => m.id === memberId) ??
+                            extendedMembers.find((e) => e.member.id === memberId)?.member;
+                          if (member) sendInvite(member);
+                        }}
+                      />
+                    </div>
+                  ) : PREMIUM_TREE_RENDERER_ENABLED ? (
+                    <div style={{ margin: "0 -0.75rem" }}>
+                      <PremiumFamilyTree
+                        profile={profile}
+                        members={members}
+                        extendedMembers={extendedMembers}
+                        memberLinks={memberLinks}
+                        onNodeClick={(memberId) => router.push(`/member/${memberId}`)}
+                        onEditMember={(memberId) => {
+                          const member =
+                            members.find((m) => m.id === memberId) ??
+                            extendedMembers.find((e) => e.member.id === memberId)?.member;
+                          if (member) openEdit(member);
+                        }}
+                        onInviteMember={(memberId) => {
+                          const member =
+                            members.find((m) => m.id === memberId) ??
+                            extendedMembers.find((e) => e.member.id === memberId)?.member;
+                          if (member) sendInvite(member);
+                        }}
+                        onShareTree={shareTree}
+                        onSwitchToList={() => setView("list")}
+                        onSwitchToMap={activateMap}
+                        familyCount={visibleMembers.length}
+                      />
+                    </div>
+                  ) : (
+                    <FamilyTreeGraph
                       profile={profile}
                       members={members}
                       extendedMembers={extendedMembers}
                       memberLinks={memberLinks}
                       onNodeClick={(memberId) => router.push(`/member/${memberId}`)}
-                      onEditMember={(memberId) => {
-                        const member =
-                          members.find((m) => m.id === memberId) ??
-                          extendedMembers.find((e) => e.member.id === memberId)?.member;
-                        if (member) openEdit(member);
-                      }}
-                      onInviteMember={(memberId) => {
-                        const member =
-                          members.find((m) => m.id === memberId) ??
-                          extendedMembers.find((e) => e.member.id === memberId)?.member;
-                        if (member) sendInvite(member);
-                      }}
-                      onShareTree={shareTree}
-                      onSwitchToList={() => setView("list")}
-                      onSwitchToMap={activateMap}
-                      familyCount={visibleMembers.length}
                     />
-                  </div>
-                ) : (
-                  <FamilyTreeGraph
-                    profile={profile}
-                    members={members}
-                    extendedMembers={extendedMembers}
-                    memberLinks={memberLinks}
-                    onNodeClick={(memberId) => router.push(`/member/${memberId}`)}
-                  />
-                )}
-              </TreeErrorBoundary>
+                  )}
+                </TreeErrorBoundary>
+              </>
             )}
 
             {view === "list" && (

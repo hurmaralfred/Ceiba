@@ -175,6 +175,19 @@ export function UniverseViewport({ nodes, onFocusChange, children, viewScale = 1
       >
         {children}
       </div>
+
+      {/* D3: subtle left/right fade — signals avatars extend beyond viewport edges */}
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          inset: 0,
+          pointerEvents: 'none',
+          zIndex: 500,
+          background:
+            'linear-gradient(to right, rgba(16,12,8,0.6) 0%, transparent 12%, transparent 88%, rgba(16,12,8,0.6) 100%)',
+        }}
+      />
     </div>
   )
 }
