@@ -37,7 +37,7 @@ const PremiumFamilyTree = lazyLoad(
 );
 
 const PREMIUM_TREE_RENDERER_ENABLED = true;
-const UNIVERSE_RENDERER_ENABLED = false;
+const UNIVERSE_RENDERER_ENABLED = true;
 
 const MapView = lazyLoad(
   () => import("@/components/map/MapView"),
