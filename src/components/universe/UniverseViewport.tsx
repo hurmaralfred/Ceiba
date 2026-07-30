@@ -84,8 +84,8 @@ function ConnectionLines({
   const cx = width  / 2
   const cy = height / 2
 
-  // Draw connections from focal to orbit-1 nodes only
-  const orbit1 = nodes.filter(n => n.hopDistance === 1)
+  // Draw connections only to Tier 1 (intimate circle) — keeps the scene uncluttered
+  const orbit1 = nodes.filter(n => n.relevanceTier === 1)
 
   return (
     <svg

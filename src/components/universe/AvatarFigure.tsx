@@ -135,9 +135,11 @@ interface Props {
   onClick?: () => void
   highlighted?: boolean
   hitAreaScale?: number
+  /** When false (Tier 2 nodes), name and relation are hidden until hover/focus. */
+  labelVisible?: boolean
 }
 
-export function AvatarFigure({ node, onClick, highlighted, hitAreaScale }: Props) {
+export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVisible = true }: Props) {
   const rawUid  = useId()
   const uid     = rawUid.replace(/:/g, '_')
   const [hovered, setHovered] = useState(false)
@@ -479,41 +481,48 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale }: Props
       </div>
 
       {/* ── Text label ── */}
-      <div
-        style={{
-          marginTop: 3,
-          lineHeight: 1.2,
-          pointerEvents: 'none',
-          userSelect: 'none',
-        }}
-      >
-        <div
-          style={{
-            fontSize: 10,
-            fontWeight: 600,
-            color: node.isFocal ? glowColor : 'rgba(255,255,255,0.92)',
-            letterSpacing: '0.01em',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            maxWidth: 72,
-            margin: '0 auto',
-            textShadow: node.isFocal ? `0 0 8px ${glowColor}80` : undefined,
-          }}
-        >
-          {node.shortName}
-        </div>
-        <div
-          style={{
-            fontSize: 8.5,
-            color: node.isFocal ? glowColor : 'rgba(255,255,255,0.48)',
-            letterSpacing: '0.02em',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {node.isFocal ? '·' : node.relation}
-        </div>
-      </div>
+      {(() => {
+        const showLabel = labelVisible || hovered || focused || highlighted
+        return (
+          <div
+            style={{
+              marginTop: 3,
+              lineHeight: 1.2,
+              pointerEvents: 'none',
+              userSelect: 'none',
+              opacity: showLabel ? 1 : 0,
+              transition: 'opacity 0.2s ease',
+            }}
+          >
+            <div
+              style={{
+                fontSize: 10,
+                fontWeight: 600,
+                color: node.isFocal ? glowColor : 'rgba(255,255,255,0.92)',
+                letterSpacing: '0.01em',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                maxWidth: 72,
+                margin: '0 auto',
+                textShadow: node.isFocal ? `0 0 8px ${glowColor}80` : undefined,
+              }}
+            >
+              {node.shortName}
+            </div>
+            <div
+              style={{
+                fontSize: 8.5,
+                color: node.isFocal ? glowColor : 'rgba(255,255,255,0.48)',
+                letterSpacing: '0.02em',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {node.isFocal ? '·' : node.relation}
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }

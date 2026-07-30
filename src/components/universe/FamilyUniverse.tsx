@@ -2,7 +2,7 @@
 import React, { useState, useCallback, useMemo } from 'react'
 import type { Profile, FamilyMember } from '@/lib/types'
 import type { ExtendedEntry, MemberLink } from '@/components/tree/FamilyTreeGraph'
-import { useUniverseLayout } from './useUniverseLayout'
+import { useUniverseLayout, selectVisibleUniverseNodes } from './useUniverseLayout'
 import { AvatarFigure } from './AvatarFigure'
 import { UniverseViewport } from './UniverseViewport'
 import { UniversePersonPanel } from './UniversePersonPanel'
@@ -110,9 +110,10 @@ export function FamilyUniverse({
   onEditMember,
   onInviteMember,
 }: Props) {
-  const [focalId,       setFocalId]       = useState<string>('root')
-  const [selectedNode,  setSelectedNode]  = useState<UniverseNode | null>(null)
-  const [containerSize, setContainerSize] = useState({ w: 375, h: 812 })
+  const [focalId,        setFocalId]        = useState<string>('root')
+  const [selectedNode,   setSelectedNode]   = useState<UniverseNode | null>(null)
+  const [containerSize,  setContainerSize]  = useState({ w: 375, h: 812 })
+  const [showMorePanel,  setShowMorePanel]  = useState(false)
 
   // D3: scale down the viewport so orbit-2 avatars (radius 210) clear the edges on narrow screens.
   // 240 = orbit-2 radius (210) + half of a scaled avatar (~30). Never scale above 1.0.
@@ -122,8 +123,13 @@ export function FamilyUniverse({
     return halfWidth >= 240 ? 1 : Math.max(0.72, halfWidth / 240)
   }, [containerSize.w])
 
-  const nodes = useUniverseLayout(
+  const allNodes = useUniverseLayout(
     focalId, profile, members, extendedMembers, memberLinks,
+  )
+
+  const { visible: nodes, hiddenCount, hiddenNodes } = useMemo(
+    () => selectVisibleUniverseNodes(allNodes, containerSize.w),
+    [allNodes, containerSize.w],
   )
 
   // Track container size for orbit rings
@@ -145,6 +151,7 @@ export function FamilyUniverse({
   const handleRefocus = useCallback((id: string) => {
     setFocalId(id)
     setSelectedNode(null)
+    setShowMorePanel(false)
   }, [])
 
   const handleClose = useCallback(() => setSelectedNode(null), [])
@@ -181,6 +188,153 @@ export function FamilyUniverse({
           onEdit={onEditMember}
           onInvite={onInviteMember}
         />
+
+        {/* Hidden family indicator — hide when info panel or more panel is open */}
+        {hiddenCount > 0 && !showMorePanel && !selectedNode && (
+          <HiddenFamilyBadge
+            count={hiddenCount}
+            onOpen={() => setShowMorePanel(true)}
+          />
+        )}
+
+        {/* Hidden family panel */}
+        {showMorePanel && (
+          <HiddenFamilyPanel
+            nodes={hiddenNodes}
+            onClose={() => setShowMorePanel(false)}
+            onRefocus={handleRefocus}
+          />
+        )}
+      </div>
+    </>
+  )
+}
+
+// ─── Hidden family badge ──────────────────────────────────────────────────────
+
+function HiddenFamilyBadge({ count, onOpen }: { count: number; onOpen: () => void }) {
+  return (
+    <button
+      onClick={onOpen}
+      aria-label={`Ver ${count} familiares más`}
+      style={{
+        position: 'absolute',
+        bottom: 24,
+        left: '50%',
+        transform: 'translateX(-50%)',
+        background: 'rgba(16,12,8,0.88)',
+        border: '1px solid rgba(242,180,60,0.32)',
+        borderRadius: 24,
+        color: 'rgba(242,180,60,0.88)',
+        fontSize: 12,
+        fontWeight: 500,
+        padding: '7px 18px',
+        cursor: 'pointer',
+        zIndex: 600,
+        backdropFilter: 'blur(12px)',
+        letterSpacing: '0.025em',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      Ver {count} familiares más
+    </button>
+  )
+}
+
+// ─── Hidden family panel ──────────────────────────────────────────────────────
+
+function HiddenFamilyPanel({
+  nodes, onClose, onRefocus,
+}: {
+  nodes: UniverseNode[]
+  onClose: () => void
+  onRefocus: (id: string) => void
+}) {
+  return (
+    <>
+      <div
+        onClick={onClose}
+        aria-hidden
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'rgba(0,0,0,0.48)',
+          zIndex: 700,
+        }}
+      />
+      <div
+        role="dialog"
+        aria-label="Más familia"
+        style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          maxHeight: '60%',
+          background: '#1C1510',
+          borderTop: '1px solid rgba(242,180,60,0.18)',
+          borderRadius: '16px 16px 0 0',
+          zIndex: 800,
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '16px 20px 12px',
+          borderBottom: '1px solid rgba(255,255,255,0.06)',
+        }}>
+          <span style={{ color: 'rgba(242,180,60,0.88)', fontSize: 14, fontWeight: 600 }}>
+            Más familia ({nodes.length})
+          </span>
+          <button
+            onClick={onClose}
+            aria-label="Cerrar"
+            style={{
+              background: 'none', border: 'none',
+              color: 'rgba(255,255,255,0.45)', fontSize: 22,
+              cursor: 'pointer', lineHeight: 1, padding: '0 4px',
+            }}
+          >
+            ×
+          </button>
+        </div>
+        <div style={{ overflowY: 'auto', flex: 1, padding: '6px 0 16px' }}>
+          {nodes.map(node => (
+            <button
+              key={node.id}
+              onClick={() => node.memberId && onRefocus(node.memberId)}
+              disabled={!node.memberId}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                width: '100%',
+                padding: '10px 20px',
+                background: 'none',
+                border: 'none',
+                cursor: node.memberId ? 'pointer' : 'default',
+                textAlign: 'left',
+              }}
+            >
+              <div style={{
+                width: 7, height: 7, borderRadius: '50%',
+                background: 'rgba(242,180,60,0.45)',
+                flexShrink: 0,
+              }} />
+              <div>
+                <div style={{ color: 'rgba(255,255,255,0.82)', fontSize: 14, fontWeight: 500 }}>
+                  {node.name}
+                </div>
+                <div style={{ color: 'rgba(255,255,255,0.38)', fontSize: 12 }}>
+                  {node.relation}
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
       </div>
     </>
   )
@@ -217,8 +371,8 @@ function AvatarSlot({
         node={node}
         onClick={node.isFocal ? undefined : onClick}
         highlighted={selected}
-        // D3: compensate for viewScale so tap targets stay ≥44px
         hitAreaScale={node.scale * viewScale}
+        labelVisible={node.relevanceTier <= 1}
       />
     </div>
   )
