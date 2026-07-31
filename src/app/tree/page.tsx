@@ -11,6 +11,7 @@ import { KINSHIP_CATALOG, type KinshipKey } from "@/domain/relationships";
 import type { ExtendedEntry, MemberLink } from "@/components/tree/FamilyTreeGraph";
 import { FamilyUniverse as FamilyUniverseComponent } from "@/components/universe/FamilyUniverse";
 import { buildVisibleMembers } from "@/lib/visibleMembers";
+import { resolveMemberForEdit } from "@/lib/resolveMemberForEdit";
 import InstallBanner from "@/components/InstallBanner";
 import TreeErrorBoundary from "@/components/TreeErrorBoundary";
 import BirthdayWidget from "@/components/BirthdayWidget";
@@ -874,15 +875,18 @@ console.log("⑤ Datos cargados");
                         extendedMembers={extendedMembers}
                         memberLinks={memberLinks}
                         onEditMember={(memberId) => {
-                          const member =
-                            members.find((m) => m.id === memberId) ??
-                            extendedMembers.find((e) => e.member.id === memberId)?.member;
-                          if (member) openEdit(member);
+                          const member = resolveMemberForEdit(memberId, members, extendedMembers);
+                          if (member) {
+                            openEdit(member);
+                          } else {
+                            if (process.env.NODE_ENV === 'development') {
+                              console.error('[Universe] onEditMember: member not found for id', memberId);
+                            }
+                            toast.error('No pudimos abrir este familiar para editarlo');
+                          }
                         }}
                         onInviteMember={(memberId) => {
-                          const member =
-                            members.find((m) => m.id === memberId) ??
-                            extendedMembers.find((e) => e.member.id === memberId)?.member;
+                          const member = resolveMemberForEdit(memberId, members, extendedMembers);
                           if (member) sendInvite(member);
                         }}
                       />
@@ -896,15 +900,11 @@ console.log("⑤ Datos cargados");
                         memberLinks={memberLinks}
                         onNodeClick={(memberId) => router.push(`/member/${memberId}`)}
                         onEditMember={(memberId) => {
-                          const member =
-                            members.find((m) => m.id === memberId) ??
-                            extendedMembers.find((e) => e.member.id === memberId)?.member;
+                          const member = resolveMemberForEdit(memberId, members, extendedMembers);
                           if (member) openEdit(member);
                         }}
                         onInviteMember={(memberId) => {
-                          const member =
-                            members.find((m) => m.id === memberId) ??
-                            extendedMembers.find((e) => e.member.id === memberId)?.member;
+                          const member = resolveMemberForEdit(memberId, members, extendedMembers);
                           if (member) sendInvite(member);
                         }}
                         onShareTree={shareTree}

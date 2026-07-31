@@ -83,10 +83,12 @@ function isFemale(node: UniverseNode): boolean {
 
 // ─── Hair ────────────────────────────────────────────────────────────────────
 
-function Hair({ uid, color, female, elder, child }: {
-  uid: string; color: string; female: boolean; elder: boolean; child: boolean
+function Hair({ uid, color, female, elder, child, style }: {
+  uid: string; color: string; female: boolean; elder: boolean; child: boolean; style: number
 }) {
   const clip = `url(#${uid}hc)`
+
+  // Elder male: thin receding hair
   if (elder && !female) {
     return (
       <path
@@ -95,35 +97,105 @@ function Hair({ uid, color, female, elder, child }: {
       />
     )
   }
+
   if (female) {
-    return (
-      <>
-        <rect x="7" y="7" width="46" height="26" rx="9" fill={color} clipPath={clip} />
-        <path
-          d={elder
-            ? 'M9 38 C3 50 2 64 6 78 C8 70 9 57 13 50 Z'
-            : 'M9 38 C2 56 1 80 6 102 C8 90 10 68 14 56 Z'
-          }
-          fill={color}
-        />
-        <path
-          d={elder
-            ? 'M51 38 C57 50 58 64 54 78 C52 70 51 57 47 50 Z'
-            : 'M51 38 C58 56 59 80 54 102 C52 90 50 68 46 56 Z'
-          }
-          fill={color}
-        />
-      </>
-    )
+    switch (style % 4) {
+      case 0: // Long with side flows
+        return (
+          <>
+            <rect x="7" y="7" width="46" height="26" rx="9" fill={color} clipPath={clip} />
+            <path d={elder ? 'M9 38 C3 50 2 64 6 78 C8 70 9 57 13 50 Z' : 'M9 38 C2 56 1 80 6 102 C8 90 10 68 14 56 Z'} fill={color} />
+            <path d={elder ? 'M51 38 C57 50 58 64 54 78 C52 70 51 57 47 50 Z' : 'M51 38 C58 56 59 80 54 102 C52 90 50 68 46 56 Z'} fill={color} />
+          </>
+        )
+      case 1: // Short bob
+        return (
+          <>
+            <rect x="7" y="7" width="46" height="26" rx="9" fill={color} clipPath={clip} />
+            <path d="M9 38 C4 44 5 52 9 54 C10 48 11 43 13 40 Z" fill={color} />
+            <path d="M51 38 C56 44 55 52 51 54 C50 48 49 43 47 40 Z" fill={color} />
+          </>
+        )
+      case 2: // Medium wavy
+        return (
+          <>
+            <rect x="7" y="7" width="46" height="22" rx="9" fill={color} clipPath={clip} />
+            <path d="M9 35 C2 52 3 68 7 82 C9 72 10 58 13 50 C11 45 10 40 9 35 Z" fill={color} />
+            <path d="M51 35 C58 52 57 68 53 82 C51 72 50 58 47 50 C49 45 50 40 51 35 Z" fill={color} />
+          </>
+        )
+      case 3: // Bun
+        return (
+          <>
+            <rect x="7" y="7" width="46" height="22" rx="9" fill={color} clipPath={clip} />
+            <circle cx="30" cy="7" r="9" fill={color} />
+            <path d="M9 34 C6 40 7 48 9 50 C10 44 11 39 12 35 Z" fill={color} />
+            <path d="M51 34 C54 40 53 48 51 50 C50 44 49 39 48 35 Z" fill={color} />
+          </>
+        )
+    }
   }
-  // Male / child
+
+  // Male / child — 5 styles
+  switch (style % 5) {
+    case 0: // Classic short
+      return (
+        <rect x="7" y="7" width="46" height={child ? 24 : 26} rx="9" fill={color} clipPath={clip} />
+      )
+    case 1: // Buzz cut (very cropped)
+      return (
+        <rect x="7" y="7" width="46" height={child ? 14 : 16} rx="9" fill={color} clipPath={clip} />
+      )
+    case 2: // Curly / textured
+      return (
+        <>
+          <rect x="7" y="9" width="46" height={child ? 22 : 24} rx="9" fill={color} clipPath={clip} />
+          <path d="M8 16 C12 8 18 6 22 10 C22 5 28 3 30 8 C30 3 36 5 38 10 C42 6 48 8 52 16" fill={color} clipPath={clip} />
+        </>
+      )
+    case 3: // Side-swept
+      return (
+        <>
+          <rect x="7" y="7" width="46" height={child ? 22 : 24} rx="9" fill={color} clipPath={clip} />
+          <path d="M7 15 C16 9 26 8 38 12" fill="none" stroke={color} strokeWidth="4" strokeLinecap="round" clipPath={clip} />
+        </>
+      )
+    case 4: // Undercut / fade sides
+      return (
+        <>
+          <rect x="13" y="7" width="34" height={child ? 20 : 22} rx="7" fill={color} clipPath={clip} />
+        </>
+      )
+    default:
+      return (
+        <rect x="7" y="7" width="46" height={child ? 24 : 26} rx="9" fill={color} clipPath={clip} />
+      )
+  }
+}
+
+// ─── Glasses ─────────────────────────────────────────────────────────────────
+
+function Glasses({ frameColor }: { frameColor: string }) {
   return (
-    <rect
-      x="7" y="7"
-      width="46" height={child ? 24 : 26}
-      rx="9"
-      fill={color}
-      clipPath={clip}
+    <g opacity="0.80">
+      <circle cx="19" cy="28" r="6.5" fill="none" stroke={frameColor} strokeWidth="1.6" />
+      <circle cx="41" cy="28" r="6.5" fill="none" stroke={frameColor} strokeWidth="1.6" />
+      <path d="M25.5 28 L34.5 28" stroke={frameColor} strokeWidth="1.6" />
+      <path d="M12.5 27 L9 26" stroke={frameColor} strokeWidth="1.4" />
+      <path d="M47.5 27 L51 26" stroke={frameColor} strokeWidth="1.4" />
+    </g>
+  )
+}
+
+// ─── Beard ───────────────────────────────────────────────────────────────────
+
+function Beard({ hairColor }: { hairColor: string }) {
+  const beardColor = darken(hairColor, 0.1)
+  return (
+    <path
+      d="M16 46 Q22 56 30 58 Q38 56 44 46 Q37 50 30 51 Q23 50 16 46 Z"
+      fill={beardColor}
+      opacity="0.78"
     />
   )
 }
@@ -145,11 +217,18 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
   const [hovered, setHovered] = useState(false)
   const [focused, setFocused] = useState(false)
 
-  const seed   = hashId(node.id)
-  const female = isFemale(node)
-  const elder  = node.ageGroup === 'elder'
-  const child  = node.ageGroup === 'child'
-  const oKey   = getOutfitKey(node)
+  const seed       = hashId(node.id)
+  const female     = isFemale(node)
+  const elder      = node.ageGroup === 'elder'
+  const child      = node.ageGroup === 'child'
+  const oKey       = getOutfitKey(node)
+  const [photoError, setPhotoError] = useState(false)
+  const hasPhoto   = !!node.avatarUrl && !photoError
+
+  // Accessory flags — only shown when there's no photo
+  const hairStyle  = (seed >> 2)  % (female ? 4 : 5)
+  const hasGlasses = !child && !hasPhoto && (seed >> 12) % 5 === 0
+  const hasBeard   = !female && !child && !hasPhoto && (seed >> 16) % 4 === 0
 
   const skin       = SKIN_TONES[seed % 6]
   const hairColor  = elder ? '#A8A8A8' : HAIR_COLORS[(seed >> 4) % 6]
@@ -187,7 +266,7 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
   const glowCY     = footY + 12
   const shadowCY   = footY + 15
 
-  // Minimum 44px tap target after parent CSS scale. outerWidth * scale >= 44.
+  // Minimum 44px tap target after parent CSS scale
   const outerWidth = hitAreaScale ? Math.max(60, Math.ceil(44 / hitAreaScale)) : 60
 
   const isClickable = !node.isFocal && !!onClick
@@ -224,7 +303,7 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
       tabIndex={isClickable ? 0 : -1}
       aria-label={isClickable ? `${node.shortName}, ${node.relation}, seleccionar` : undefined}
     >
-      {/* Float wrapper: all non-focal characters gently float up/down */}
+      {/* Float wrapper */}
       <div
         style={{
           animation: !node.isFocal
@@ -244,32 +323,28 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
           aria-hidden
         >
           <defs>
-            {/* Sphere-shaded head (top-left highlight → simulates depth) */}
             <radialGradient id={`${uid}hg`} cx="33%" cy="27%" r="68%">
               <stop offset="0%"   stopColor={skinLight} />
               <stop offset="52%"  stopColor={skin} />
               <stop offset="100%" stopColor={skinDark} />
             </radialGradient>
 
-            {/* Shirt gradient */}
             <radialGradient id={`${uid}sg`} cx="35%" cy="22%" r="82%">
               <stop offset="0%"   stopColor={shirtLight} />
               <stop offset="100%" stopColor={shirt} />
             </radialGradient>
 
-            {/* Glow ring gradient */}
             <radialGradient id={`${uid}gg`} cx="50%" cy="50%" r="50%">
               <stop offset="0%"   stopColor={glowColor} stopOpacity="0.72" />
               <stop offset="55%"  stopColor={glowColor} stopOpacity="0.22" />
               <stop offset="100%" stopColor={glowColor} stopOpacity="0" />
             </radialGradient>
 
-            {/* Hair clip path (clips to head circle) */}
+            {/* Circular clip for hair and profile photo */}
             <clipPath id={`${uid}hc`}>
               <circle cx="30" cy="30" r="23.5" />
             </clipPath>
 
-            {/* Desaturate filter for deceased */}
             {node.isDeceased && (
               <filter id={`${uid}ds`}>
                 <feColorMatrix type="saturate" values="0.1" />
@@ -281,13 +356,12 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
           </defs>
 
           <g filter={deceasedFilter}>
-            {/* ── Glow orbital ring (ground platform) ──────────────────── */}
+            {/* ── Glow orbital ring ────────────────────────────────────── */}
             <ellipse
               cx="30" cy={glowCY} rx="27" ry="9"
               fill={`url(#${uid}gg)`}
               style={{ animation: `universeGlowPulse 2.8s ease-in-out ${glowDelay} infinite` }}
             />
-            {/* Ring outline line */}
             <ellipse
               cx="30" cy={glowCY + 0.5} rx="19" ry="4.5"
               fill="none"
@@ -299,7 +373,7 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
             {/* Ground shadow */}
             <ellipse cx="30" cy={shadowCY} rx="13" ry="3.2" fill="rgba(0,0,0,0.20)" />
 
-            {/* ── Focal ground ring: spins at foot level, not head ─────── */}
+            {/* ── Focal ground ring ────────────────────────────────────── */}
             {node.isFocal && (
               <ellipse
                 cx="30" cy={glowCY}
@@ -316,7 +390,7 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
               />
             )}
 
-            {/* ── Sway group: full body rocks from foot pivot ───────────── */}
+            {/* ── Sway group: full body ────────────────────────────────── */}
             <g
               style={{
                 transformOrigin: `30px ${swayOrigin}px`,
@@ -347,7 +421,7 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
                   fill={`url(#${uid}sg)`}
                 />
 
-                {/* V-neck collar (skin visible between collar opening) */}
+                {/* V-neck collar */}
                 <path
                   d={isChild ? 'M23 62 L30 70 L37 62' : 'M24 64 L30 73 L36 64'}
                   fill="none"
@@ -377,7 +451,7 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
                 fill={skin}
               />
 
-              {/* ── HEAD + FACE (look-around animation) ──────────────────── */}
+              {/* ── HEAD + FACE ──────────────────────────────────────────── */}
               <g
                 style={{
                   transformOrigin: '30px 30px',
@@ -390,89 +464,68 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
                 <ellipse cx="51.5" cy="30" rx="3.5" ry="4.5" fill={skin} />
                 <ellipse cx="51.5" cy="30" rx="2"   ry="2.8" fill={skinDark} opacity="0.2" />
 
-                {/* Head sphere with shading gradient */}
+                {/* Head sphere */}
                 <circle cx="30" cy="30" r="22" fill={`url(#${uid}hg)`} />
 
-                {/* Hair (clipped to head) */}
-                <Hair uid={uid} color={hairColor} female={female} elder={elder} child={child} />
+                {hasPhoto ? (
+                  /* ── Profile photo — circular crop ── */
+                  <image
+                    href={node.avatarUrl!}
+                    x="7" y="7"
+                    width="46" height="46"
+                    clipPath={`url(#${uid}hc)`}
+                    preserveAspectRatio="xMidYMid slice"
+                    onError={() => setPhotoError(true)}
+                  />
+                ) : (
+                  /* ── Generated face ── */
+                  <>
+                    <Hair uid={uid} color={hairColor} female={female} elder={elder} child={child} style={hairStyle} />
 
-                {/* Eyebrows */}
-                <path
-                  d="M14.5 22 Q19.5 19 24.5 22"
-                  fill="none" stroke={browColor}
-                  strokeWidth="1.9" strokeLinecap="round"
-                />
-                <path
-                  d="M35.5 22 Q40.5 19 45.5 22"
-                  fill="none" stroke={browColor}
-                  strokeWidth="1.9" strokeLinecap="round"
-                />
+                    {/* Eyebrows */}
+                    <path d="M14.5 22 Q19.5 19 24.5 22" fill="none" stroke={browColor} strokeWidth="1.9" strokeLinecap="round" />
+                    <path d="M35.5 22 Q40.5 19 45.5 22" fill="none" stroke={browColor} strokeWidth="1.9" strokeLinecap="round" />
 
-                {/* ── LEFT EYE ── */}
-                {/* Sclera (white of eye) */}
-                <circle cx="19" cy="28" r="6"   fill="white" />
-                {/* Iris (colored) */}
-                <circle cx="19.5" cy="28.5" r="4.2" fill={eyeColor} />
-                {/* Pupil */}
-                <circle cx="19.8" cy="28.8" r="2.5" fill="#080200" />
-                {/* Catchlight (upper-left highlight = Pixar signature) */}
-                <circle cx="17.6" cy="26.8" r="1.3" fill="white" opacity="0.9" />
-                {/* Upper eyelid line */}
-                <path
-                  d="M13.5 27.5 Q19 24 24.5 27.5"
-                  fill="none" stroke="#0A0200"
-                  strokeWidth="1.4" strokeLinecap="round"
-                />
+                    {/* LEFT EYE */}
+                    <circle cx="19" cy="28" r="6"   fill="white" />
+                    <circle cx="19.5" cy="28.5" r="4.2" fill={eyeColor} />
+                    <circle cx="19.8" cy="28.8" r="2.5" fill="#080200" />
+                    <circle cx="17.6" cy="26.8" r="1.3" fill="white" opacity="0.9" />
+                    <path d="M13.5 27.5 Q19 24 24.5 27.5" fill="none" stroke="#0A0200" strokeWidth="1.4" strokeLinecap="round" />
 
-                {/* ── RIGHT EYE ── */}
-                <circle cx="41" cy="28" r="6"   fill="white" />
-                <circle cx="40.5" cy="28.5" r="4.2" fill={eyeColor} />
-                <circle cx="40.2" cy="28.8" r="2.5" fill="#080200" />
-                <circle cx="38.4" cy="26.8" r="1.3" fill="white" opacity="0.9" />
-                <path
-                  d="M35.5 27.5 Q41 24 46.5 27.5"
-                  fill="none" stroke="#0A0200"
-                  strokeWidth="1.4" strokeLinecap="round"
-                />
+                    {/* RIGHT EYE */}
+                    <circle cx="41" cy="28" r="6"   fill="white" />
+                    <circle cx="40.5" cy="28.5" r="4.2" fill={eyeColor} />
+                    <circle cx="40.2" cy="28.8" r="2.5" fill="#080200" />
+                    <circle cx="38.4" cy="26.8" r="1.3" fill="white" opacity="0.9" />
+                    <path d="M35.5 27.5 Q41 24 46.5 27.5" fill="none" stroke="#0A0200" strokeWidth="1.4" strokeLinecap="round" />
 
-                {/* Nose (gentle suggestion) */}
-                <path
-                  d="M27.5 37.5 Q30 41 32.5 37.5"
-                  fill="none" stroke={skinDark}
-                  strokeWidth="1.1" strokeLinecap="round"
-                />
+                    {/* Nose */}
+                    <path d="M27.5 37.5 Q30 41 32.5 37.5" fill="none" stroke={skinDark} strokeWidth="1.1" strokeLinecap="round" />
 
-                {/* Smile / mouth */}
-                <path
-                  d="M22 44 Q30 51.5 38 44"
-                  fill="none" stroke="#6A2818"
-                  strokeWidth="1.9" strokeLinecap="round"
-                />
+                    {/* Mouth */}
+                    <path d="M22 44 Q30 51.5 38 44" fill="none" stroke="#6A2818" strokeWidth="1.9" strokeLinecap="round" />
 
-                {/* Cheek blush */}
-                <circle cx="12.5" cy="37" r="5.5" fill="rgba(255,130,110,0.17)" />
-                <circle cx="47.5" cy="37" r="5.5" fill="rgba(255,130,110,0.17)" />
+                    {/* Cheek blush */}
+                    <circle cx="12.5" cy="37" r="5.5" fill="rgba(255,130,110,0.17)" />
+                    <circle cx="47.5" cy="37" r="5.5" fill="rgba(255,130,110,0.17)" />
+
+                    {/* Optional: beard */}
+                    {hasBeard && <Beard hairColor={hairColor} />}
+
+                    {/* Optional: glasses */}
+                    {hasGlasses && <Glasses frameColor={eyeColor} />}
+                  </>
+                )}
 
                 {/* Highlight ring when selected */}
                 {highlighted && !node.isFocal && (
-                  <circle
-                    cx="30" cy="30" r="25.5"
-                    fill="none"
-                    stroke={glowColor}
-                    strokeWidth="1.8"
-                    opacity="0.6"
-                  />
+                  <circle cx="30" cy="30" r="25.5" fill="none" stroke={glowColor} strokeWidth="1.8" opacity="0.6" />
                 )}
 
                 {/* Hover ring */}
                 {hovered && !node.isFocal && !highlighted && (
-                  <circle
-                    cx="30" cy="30" r="25.5"
-                    fill="none"
-                    stroke={glowColor}
-                    strokeWidth="1.2"
-                    opacity="0.35"
-                  />
+                  <circle cx="30" cy="30" r="25.5" fill="none" stroke={glowColor} strokeWidth="1.2" opacity="0.35" />
                 )}
               </g>
             </g>

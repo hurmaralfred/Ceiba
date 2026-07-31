@@ -2,6 +2,55 @@
 import React from 'react'
 import type { UniverseNode } from './useUniverseLayout'
 
+const PANEL_CSS = `
+.unv-panel {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, #1A1208 0%, rgba(20,14,6,0.97) 100%);
+  border-top: 1px solid rgba(242,180,60,0.18);
+  border-radius: 16px 16px 0 0;
+  z-index: 50;
+  box-shadow: 0 -8px 32px rgba(0,0,0,0.5);
+  display: flex;
+  flex-direction: column;
+  max-height: min(70dvh, 600px);
+  overflow: hidden;
+  transform: translateY(100%);
+  transition: transform 0.35s cubic-bezier(0.34,1.22,0.64,1);
+}
+.unv-panel--visible {
+  transform: translateY(0);
+}
+.unv-panel__header {
+  flex-shrink: 0;
+  padding: 20px 24px 0;
+}
+.unv-panel__body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 0 24px;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  -webkit-overflow-scrolling: touch;
+}
+@media (min-width: 768px) {
+  .unv-panel {
+    left: auto;
+    right: 24px;
+    bottom: 24px;
+    width: clamp(340px, 26vw, 400px);
+    max-height: 80vh;
+    border-radius: 16px;
+    border-top: 1px solid rgba(242,180,60,0.18);
+    transform: translateY(calc(100% + 32px));
+  }
+  .unv-panel--visible {
+    transform: translateY(0);
+  }
+}
+`
+
 interface Props {
   node: UniverseNode | null
   onClose?: () => void
@@ -15,44 +64,73 @@ export function UniversePersonPanel({ node, onClose, onRefocus, onEdit, onInvite
 
   return (
     <>
-      {/* Mobile: bottom sheet */}
+      <style dangerouslySetInnerHTML={{ __html: PANEL_CSS }} />
+
       <div
         role="dialog"
         aria-label={node ? `Perfil de ${node.shortName}` : undefined}
         aria-modal="false"
-        style={{
-          position: 'fixed',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          background: 'linear-gradient(to top, #1A1208 0%, rgba(20,14,6,0.97) 100%)',
-          borderTop: '1px solid rgba(242,180,60,0.18)',
-          borderRadius: '16px 16px 0 0',
-          padding: '20px 24px 32px',
-          transform: visible ? 'translateY(0)' : 'translateY(100%)',
-          transition: 'transform 0.35s cubic-bezier(0.34,1.22,0.64,1)',
-          zIndex: 50,
-          maxWidth: 480,
-          margin: '0 auto',
-          boxShadow: '0 -8px 32px rgba(0,0,0,0.5)',
-        }}
+        className={`unv-panel${visible ? ' unv-panel--visible' : ''}`}
       >
-        {/* Drag handle */}
-        <div style={{
-          width: 36, height: 4, borderRadius: 2,
-          background: 'rgba(255,255,255,0.18)',
-          margin: '0 auto 16px',
-        }} />
+        {/* Fixed header: drag handle + name/close */}
+        <div className="unv-panel__header">
+          <div style={{
+            width: 36, height: 4, borderRadius: 2,
+            background: 'rgba(255,255,255,0.18)',
+            margin: '0 auto 16px',
+          }} />
 
-        {node && (
-          <PanelContent
-            node={node}
-            onClose={onClose}
-            onRefocus={onRefocus}
-            onEdit={onEdit}
-            onInvite={onInvite}
-          />
-        )}
+          {node && (
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 14 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{
+                  fontSize: 18, fontWeight: 700,
+                  color: '#F2E8D0',
+                  lineHeight: 1.2,
+                }}>
+                  {node.name}
+                </div>
+                <div style={{
+                  fontSize: 13,
+                  color: '#F2B43C',
+                  marginTop: 3,
+                  letterSpacing: '0.03em',
+                }}>
+                  {node.relation}
+                </div>
+              </div>
+
+              <button
+                onClick={onClose}
+                aria-label="Cerrar panel"
+                style={{
+                  background: 'none', border: 'none',
+                  color: 'rgba(255,255,255,0.4)',
+                  fontSize: 20, cursor: 'pointer',
+                  minWidth: 44, minHeight: 44,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0,
+                  padding: 0,
+                }}
+              >
+                ×
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Scrollable body: chips + actions */}
+        <div className="unv-panel__body">
+          {node && (
+            <PanelBody
+              node={node}
+              onClose={onClose}
+              onRefocus={onRefocus}
+              onEdit={onEdit}
+              onInvite={onInvite}
+            />
+          )}
+        </div>
       </div>
 
       {/* Backdrop tap to close */}
@@ -63,50 +141,16 @@ export function UniversePersonPanel({ node, onClose, onRefocus, onEdit, onInvite
             background: 'rgba(0,0,0,0.0)',
           }}
           onClick={onClose}
-          aria-hidden
+          aria-hidden="true"
         />
       )}
     </>
   )
 }
 
-function PanelContent({ node, onClose, onRefocus, onEdit, onInvite }: { node: UniverseNode } & Omit<Props, 'node'>) {
+function PanelBody({ node, onClose, onRefocus, onEdit, onInvite }: { node: UniverseNode } & Omit<Props, 'node'>) {
   return (
     <div>
-      {/* Header row */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 14 }}>
-        <div style={{ flex: 1 }}>
-          <div style={{
-            fontSize: 18, fontWeight: 700,
-            color: '#F2E8D0',
-            lineHeight: 1.2,
-          }}>
-            {node.name}
-          </div>
-          <div style={{
-            fontSize: 13,
-            color: '#F2B43C',
-            marginTop: 3,
-            letterSpacing: '0.03em',
-          }}>
-            {node.relation}
-          </div>
-        </div>
-
-        <button
-          onClick={onClose}
-          aria-label="Cerrar panel"
-          style={{
-            background: 'none', border: 'none',
-            color: 'rgba(255,255,255,0.4)',
-            fontSize: 20, cursor: 'pointer',
-            padding: '0 4px', lineHeight: 1,
-          }}
-        >
-          ×
-        </button>
-      </div>
-
       {/* Status chips */}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
         {node.isJoined && (
@@ -123,9 +167,8 @@ function PanelContent({ node, onClose, onRefocus, onEdit, onInvite }: { node: Un
         )}
       </div>
 
-      {/* Actions */}
-      <div style={{ display: 'flex', gap: 10 }}>
-        {/* Re-focus on this person */}
+      {/* Actions — always reachable */}
+      <div style={{ display: 'flex', gap: 10, paddingBottom: 4 }}>
         <ActionButton
           onClick={() => { onRefocus?.(node.id); onClose?.() }}
           label="Centrar aquí"
@@ -135,7 +178,7 @@ function PanelContent({ node, onClose, onRefocus, onEdit, onInvite }: { node: Un
 
         {node.memberId && onEdit && (
           <ActionButton
-            onClick={() => onEdit(node.memberId!)}
+            onClick={() => { onClose?.(); onEdit(node.memberId!) }}
             label="Editar"
             icon="✎"
           />
@@ -185,6 +228,7 @@ function ActionButton({
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         gap: 6,
         padding: '10px 16px',
+        minHeight: 44,
         borderRadius: 12,
         border: primary
           ? '1px solid rgba(242,180,60,0.5)'

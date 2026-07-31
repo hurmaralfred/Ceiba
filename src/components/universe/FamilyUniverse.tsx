@@ -276,7 +276,7 @@ function AvatarSlot({
       const id = requestAnimationFrame(() => setAppeared(true))
       return () => cancelAnimationFrame(id)
     }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps — intentionally mount-only
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div
