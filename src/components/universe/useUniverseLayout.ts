@@ -2,15 +2,17 @@ import { useMemo } from 'react'
 import type { Profile, FamilyMember } from '@/lib/types'
 import type { ExtendedEntry, MemberLink } from '@/components/tree/FamilyTreeGraph'
 
-// ─── Orbital geometry (kept for interface compatibility) ─────────────────────
+// ─── Orbital geometry ───────────────────────────────────────────────────────
 const ORBIT_RADII  = [0, 115, 210, 295] as const
 const MAX_HOP      = 3
-// Scale and opacity are tier-based.
+// Scale and opacity are tier-based, not orbit-based.
 // Tier 0 = focal, 1 = intimate circle, 2 = close family, 3 = not rendered.
 const TIER_SCALES  = [1.35, 0.90, 0.68, 0.0] as const
 const TIER_OPACITY = [1.0,  1.0,  0.55, 0.0] as const
 
-// REL_ANGLE kept for reference; no longer used for positioning.
+// Preferred angle (°) per relation type, measured from 3 o'clock, clockwise positive.
+// Layout principle: ancestors = upper half, descendants = lower half,
+//                   spouse = right, siblings = left.
 const REL_ANGLE: Record<string, number> = {
   father: -120, mother: -60,
   grandfather: -130, grandmother: -55,
@@ -19,22 +21,25 @@ const REL_ANGLE: Record<string, number> = {
   great_grandfather: -143,    great_grandmother: -37,
   uncle: -152,  aunt: -28,
   stepfather: -116, stepmother: -64,
+  // Descendants – lower half
   son: 78,  daughter: 102,
   grandson: 84, granddaughter: 96,
   great_grandson: 82, great_granddaughter: 98,
   nephew: 128,  niece: 52,
   stepson: 88,  stepdaughter: 92, stepchild: 90,
+  // Spouse – right side
   spouse: -6, partner: 6, husband: -6, wife: 6,
+  // Siblings – left side
   brother: 167,  sister: -167,
   half_brother: 158, half_sister: -158,
   cousin: 155,
+  // In-laws
   father_in_law: -106, mother_in_law: -74,
   brother_in_law: 177, sister_in_law: -177,
   son_in_law: 73, daughter_in_law: 107,
+  // Fallback
   other: 45,
 }
-// suppress "declared but not read" — REL_ANGLE is kept as documentation of preferred angles
-void REL_ANGLE
 
 export interface UniverseNode {
   id: string
@@ -95,11 +100,13 @@ const RELATION_LABELS: Record<string, string> = {
 }
 
 // ─── Relevance tier sets ─────────────────────────────────────────────────────
+// Tier 1: intimate circle — the people you see every day
 const TIER1_RELS = new Set([
   'father', 'mother', 'son', 'daughter',
   'spouse', 'husband', 'wife', 'partner',
   'stepfather', 'stepmother', 'stepson', 'stepdaughter', 'stepchild',
 ])
+// Tier 2: close family — meaningful but secondary in this context
 const TIER2_RELS = new Set([
   'brother', 'sister', 'half_brother', 'half_sister',
   'grandfather', 'grandmother',
@@ -110,11 +117,18 @@ const TIER2_RELS = new Set([
   'son_in_law', 'daughter_in_law',
   'brother_in_law', 'sister_in_law',
 ])
+// Tier 3 (not rendered): uncle, aunt, nephew, niece, cousin, great_*, other
 
 // ─── Pure helpers (exported for tests) ──────────────────────────────────────
 
 /**
  * Resolves a human-readable Spanish label for a relation.
+ *
+ * Priority:
+ *   1. Catalog lookup on inferredRelation (handles raw keys like "brother")
+ *   2. inferredRelation as-is if already localized (starts uppercase, no underscores)
+ *   3. Catalog lookup on relationType
+ *   4. Safe fallback "Familiar"
  */
 export function resolveRelationLabel(
   inferredRelation: string | null | undefined,
@@ -123,6 +137,7 @@ export function resolveRelationLabel(
   if (inferredRelation) {
     const fromCatalog = RELATION_LABELS[inferredRelation]
     if (fromCatalog) return fromCatalog
+    // Already a human label: starts with uppercase, no underscores
     if (!/[_]/.test(inferredRelation) && /^[A-ZÁÉÍÓÚÜÑ]/.test(inferredRelation)) {
       return inferredRelation
     }
@@ -135,22 +150,29 @@ export function resolveRelationLabel(
 }
 
 // z-index bands: focal > selected (handled at render) > orbit 1 > orbit 2 > orbit 3+
+// Gaps between adjacent bands must exceed 49 (the max cy bonus) so bands never overlap.
+// Orbit 1: [200, 249] | Orbit 2: [130, 179] | Orbit 3+: [60, 109]
 const Z_FOCAL   = 400
-const Z_BANDS   = [200, 130, 60] as const
+const Z_BANDS   = [200, 130, 60] as const  // indexed by (hopDistance - 1)
 
 /**
- * Deterministic z-index: deeper generations are behind; within the same level,
+ * Deterministic z-index: deeper orbits are behind; within the same orbit,
  * nodes with a higher cy (lower on screen) appear in front (pseudo-3D depth).
  */
 export function computeNodeZIndex(hopDistance: number, cy: number, isFocal: boolean): number {
   if (isFocal) return Z_FOCAL
-  const band    = Z_BANDS[Math.min(hopDistance - 1, Z_BANDS.length - 1)]
-  const cyBonus = Math.round(Math.min(49, Math.max(0, (cy + 300) / 600 * 49)))
+  const band     = Z_BANDS[Math.min(hopDistance - 1, Z_BANDS.length - 1)]
+  // cy ∈ [-300, +300] → bonus ∈ [0, 49]
+  const cyBonus  = Math.round(Math.min(49, Math.max(0, (cy + 300) / 600 * 49)))
   return band + cyBonus
 }
 
 /**
  * Assigns a relevance tier relative to the current focal person.
+ * 0 = focal, 1 = intimate circle, 2 = close family, 3 = extended (not rendered).
+ *
+ * Uses both relationType and hopDistance: a 'father'-typed member at hop=2 is a
+ * grandparent from the focal's perspective → floor to Tier 2, not Tier 1.
  */
 export function resolveRelevanceTier(
   relationType: string | null | undefined,
@@ -158,11 +180,13 @@ export function resolveRelevanceTier(
   isFocal: boolean,
 ): 0 | 1 | 2 | 3 {
   if (isFocal) return 0
+  // profile owner is always prominent when not focal
   if (!relationType || relationType === 'root') {
     return (hopDistance >= 2 ? 2 : 1) as 1 | 2
   }
   const typeTier: 1 | 2 | 3 = TIER1_RELS.has(relationType) ? 1
     : TIER2_RELS.has(relationType) ? 2 : 3
+  // hop floor: at hop=2+ a 'father'-typed node is actually a grandparent → bump to ≥Tier 2
   const hopFloor: 0 | 2 | 3 = hopDistance >= 3 ? 3 : hopDistance >= 2 ? 2 : 0
   return Math.max(typeTier, hopFloor) as 0 | 1 | 2 | 3
 }
@@ -184,6 +208,8 @@ export const MAX_EXPANDED_DESKTOP = 29
 const EXPANDED_SCALE   = 0.55
 const EXPANDED_OPACITY = 0.40
 
+// Priority within Tier 1 when total cap forces truncation:
+// spouse/partner > parents > children > rest (deterministic by index)
 const TIER1_PRIORITY_RELS = [
   'spouse', 'husband', 'wife', 'partner',
   'father', 'mother', 'stepfather', 'stepmother',
@@ -192,6 +218,9 @@ const TIER1_PRIORITY_RELS = [
 
 /**
  * Filters nodes to the subset rendered in the active scene.
+ * Enforces a hard total cap (11 mobile / 17 desktop) across all tiers.
+ * Tier 3 is excluded entirely. Tier 1 is priority-truncated if needed;
+ * excluded Tier 1 nodes appear in hiddenNodes for "Ver más".
  */
 export function selectVisibleUniverseNodes(
   nodes: UniverseNode[],
@@ -206,6 +235,7 @@ export function selectVisibleUniverseNodes(
   const t2All = nodes.filter(n => n.relevanceTier === 2)
   const t3   = nodes.filter(n => n.relevanceTier === 3)
 
+  // Tier 1: sort by priority, then truncate to remaining capacity after focal
   const t1Sorted = [...t1All].sort((a, b) => {
     const pa = TIER1_PRIORITY_RELS.indexOf(a.relationType)
     const pb = TIER1_PRIORITY_RELS.indexOf(b.relationType)
@@ -218,6 +248,7 @@ export function selectVisibleUniverseNodes(
   const t1Visible  = t1Sorted.slice(0, t1Capacity)
   const t1Hidden   = t1Sorted.slice(t1Capacity)
 
+  // Tier 2: fill remaining capacity after focal + visible T1
   const t2Capacity = Math.max(0, maxVisible - t0.length - t1Visible.length)
   const t2Sorted = [...t2All].sort((a, b) => {
     if (a.hopDistance !== b.hopDistance) return a.hopDistance - b.hopDistance
@@ -228,6 +259,7 @@ export function selectVisibleUniverseNodes(
   const t2Visible = t2Sorted.slice(0, t2Capacity)
   const t2Hidden  = t2Sorted.slice(t2Capacity)
 
+  // T3 sorted deterministically: by hop distance, then relation type, then stable id
   const t3Sorted = [...t3].sort((a, b) => {
     if (a.hopDistance !== b.hopDistance) return a.hopDistance - b.hopDistance
     if (a.relationType < b.relationType) return -1
@@ -259,6 +291,7 @@ export function selectVisibleUniverseNodes(
 
 // ─── D2: Perspective-correct relation resolution ──────────────────────────────
 
+// Normalize focal-relation for composition (step/half variants → base)
 function normFocalRel(rel: string): string {
   switch (rel) {
     case 'stepson': case 'stepchild': return 'son'
@@ -271,6 +304,8 @@ function normFocalRel(rel: string): string {
   }
 }
 
+// Given focal's and target's relation-to-root keys, return the relation key
+// from focal's perspective (or undefined if unknown).
 function composedRelKey(focalRelToRoot: string, targetRelToRoot: string): string | undefined {
   const fr = normFocalRel(focalRelToRoot)
 
@@ -343,6 +378,8 @@ function composedRelKey(focalRelToRoot: string, targetRelToRoot: string): string
   return undefined
 }
 
+// Given focal's relation to root, return the relation key from focal's perspective
+// for the root node itself.
 function invertRelKeyForRoot(
   focalRelToRoot: string,
   rootGender: string | null | undefined,
@@ -367,6 +404,8 @@ function invertRelKeyForRoot(
   }
 }
 
+/** Graph passed to resolveRelationFromPerspective. Contains the node list and
+ *  optionally the adjacency map for future multi-hop resolution. */
 export interface UniverseRelationGraph {
   nodes: UniverseNode[]
   adj?: Map<string, Set<string>>
@@ -374,7 +413,17 @@ export interface UniverseRelationGraph {
 
 /**
  * Returns the Spanish relation label from `focal`'s perspective toward `target`,
- * or null when the composition is unknown.
+ * or null when the composition is unknown (caller keeps the original label).
+ *
+ * All `relationType` fields in nodes are stored relative to `root` (the profile
+ * owner). This function derives the focal's perspective through inversion and
+ * composition — entirely based on relation keys, never on member identity.
+ *
+ * Returns null when:
+ *   - focal IS root (labels already correct from root's perspective)
+ *   - focal and target are the same node
+ *   - focal's relationType is unknown or unresolvable
+ *   - no composition rule exists for the given pair
  */
 export function resolveRelationFromPerspective(
   focal: UniverseNode,
@@ -399,6 +448,7 @@ export function resolveRelationFromPerspective(
 
 /**
  * Thin adapter over resolveRelationFromPerspective using string IDs.
+ * Kept for backward compatibility with existing callers.
  */
 export function resolveRelationFromFocal({
   focalId,
@@ -430,356 +480,61 @@ function ageGroup(m: FamilyMember): 'child' | 'adult' | 'elder' {
   return 'adult'
 }
 
-// ─── Hierarchical layout ─────────────────────────────────────────────────────
-
-/**
- * Generation offset from root (negative = ancestors, positive = descendants).
- * Formula: generationFromFocal = GENERATION_MAP[relType] - GENERATION_MAP[focalRelType]
- */
-export const GENERATION_MAP: Record<string, number> = {
-  root: 0,
-  great_grandfather: -3, great_grandmother: -3,
-  grandfather: -2, grandmother: -2,
-  grandfather_paternal: -2, grandmother_paternal: -2,
-  grandfather_maternal: -2, grandmother_maternal: -2,
-  uncle: -1, aunt: -1,
-  uncle_by_marriage: -1, aunt_by_marriage: -1,
-  father: -1, mother: -1,
-  stepfather: -1, stepmother: -1,
-  father_in_law: -1, mother_in_law: -1,
-  spouse: 0, husband: 0, wife: 0, partner: 0,
-  brother: 0, sister: 0, half_brother: 0, half_sister: 0,
-  cousin: 0,
-  brother_in_law: 0, sister_in_law: 0,
-  son: 1, daughter: 1,
-  stepson: 1, stepdaughter: 1, stepchild: 1,
-  son_in_law: 1, daughter_in_law: 1,
-  nephew: 1, niece: 1,
-  grandson: 2, granddaughter: 2,
-  great_grandson: 3, great_granddaughter: 3,
-  other: 0,
+// Normalize angle to (-180, 180]
+function norm(a: number): number {
+  while (a >  180) a -= 360
+  while (a <= -180) a += 360
+  return a
 }
 
-/**
- * Left-to-right sort preference within a generation row.
- * Lower value = more to the left. Groups family units together:
- * ancestors: paternal-left / maternal-right, descendants: sons-center-left / daughters-center-right.
- */
-export const X_ORDER: Record<string, number> = {
-  // Gen -3
-  great_grandfather: -30, great_grandmother: -10,
-  // Gen -2
-  grandfather_paternal: -25, grandmother_paternal: -15,
-  grandfather_maternal:  15, grandmother_maternal:  25,
-  grandfather: -20,          grandmother:            10,
-  // Gen -1
-  uncle: -60, aunt: -55, uncle_by_marriage: -45, aunt_by_marriage: -40,
-  father: -20,     mother:      10,
-  stepfather: -25, stepmother:  15,
-  father_in_law:  60, mother_in_law: 70,
-  // Gen 0
-  cousin: -80,
-  half_brother: -55, brother: -45,
-  half_sister:  -35, sister:  -25,
-  brother_in_law: -15, sister_in_law: 85,
-  root: 0,
-  spouse: 35, husband: 35, wife: 35, partner: 35,
-  // Gen +1
-  son_in_law:     -50, daughter_in_law: 50,
-  son:             -10, daughter:        10,
-  stepson:         -15, stepdaughter:    15, stepchild: 0,
-  nephew: 65, niece: 75,
-  // Gen +2
-  grandson: -10, granddaughter: 10,
-  // Gen +3
-  great_grandson: -10, great_granddaughter: 10,
-  other: 0,
-}
+// ─── Angle distribution ──────────────────────────────────────────────────────
 
-/** Vertical distance in px between adjacent generation levels. */
-export const VERT_STRIDE = 165
-/** Base horizontal slot width in px per node (initial even spacing). */
-const SLOT_W = 115
-/** Minimum gap in px between adjacent bounding-box edges after anti-collision. */
-const MIN_SEP = 20
+// Group by relation base angle, spread same-type members around that base,
+// then do a single forward sweep to enforce minimum separation.
+function distributeOrbit(
+  items: Array<{ id: string; relationType: string; preferredAngle: number }>,
+  minSepDeg: number,
+): Map<string, number> {
+  if (items.length === 0) return new Map()
 
-/**
- * Approximate half-width of a node's bounding box (avatar + label) at its scale.
- * Used exclusively for collision detection; does not affect node rendering.
- */
-export function nodeHalfBBox(scale: number): number {
-  return (scale * 72 + 28) / 2
-}
-
-/**
- * Places every node in `nodes` on a generational grid.
- * Y-axis: generation × VERT_STRIDE (ancestors above, descendants below focal).
- * X-axis: sorted by X_ORDER preference, then placed with collision-free outward propagation.
- *
- * Rows containing the focal node use outward propagation from cx=0 (O(N), zero iterations).
- * Other rows use bidirectional sweeps (safe because SLOT_W > minDist for all non-focal tiers).
- * Modifies node.cx and node.cy in-place.
- */
-export function hierarchicalLayout(nodes: UniverseNode[], focalRelType: string): void {
-  const focalGen = GENERATION_MAP[focalRelType] ?? 0
-
-  const nodeGen = (n: UniverseNode): number => {
-    if (n.isFocal) return 0
-    return (GENERATION_MAP[n.relationType] ?? 0) - focalGen
+  // Group by relation type; spread within group
+  const byRel = new Map<string, typeof items>()
+  for (const it of items) {
+    const k = it.relationType
+    if (!byRel.has(k)) byRel.set(k, [])
+    byRel.get(k)!.push(it)
   }
 
-  // Group by generation level relative to focal
-  const byGen = new Map<number, UniverseNode[]>()
-  for (const n of nodes) {
-    const g = nodeGen(n)
-    if (!byGen.has(g)) byGen.set(g, [])
-    byGen.get(g)!.push(n)
-  }
-
-  byGen.forEach((row, genLevel) => {
-    const genY = genLevel * VERT_STRIDE
-
-    // Sort within row: left-to-right by preference, then stable by id
-    row.sort((a, b) => {
-      const oa = X_ORDER[a.relationType] ?? 0
-      const ob = X_ORDER[b.relationType] ?? 0
-      if (oa !== ob) return oa - ob
-      return a.id < b.id ? -1 : 1
+  const assigned: Array<{ id: string; angle: number }> = []
+  byRel.forEach((group) => {
+    const base = group[0].preferredAngle
+    const n = group.length
+    const spread = n === 1 ? 0 : Math.min(30, (n - 1) * 18)
+    group.forEach((it, i) => {
+      const offset = n === 1 ? 0 : (i / (n - 1) - 0.5) * spread * 2
+      assigned.push({ id: it.id, angle: norm(base + offset) })
     })
-
-    // Initial placement: evenly spaced, centered at x=0
-    const N = row.length
-    row.forEach((n, i) => {
-      n.cx = N === 1 ? 0 : (i - (N - 1) / 2) * SLOT_W
-      n.cy = genY
-    })
-
-    const focalIdx = row.findIndex(n => n.isFocal)
-
-    if (focalIdx >= 0) {
-      // ── Focal row: pin focal at cx=0 and propagate outward in O(N) ──────────
-      // This guarantees zero collisions without iterative sweeps, because the focal
-      // node (scale=1.35) is larger than SLOT_W allows for; sweeps would need many
-      // passes to converge and are invalidated by the later `focal.cx = 0` override.
-      row[focalIdx].cx = 0
-
-      // Rightward propagation: each right-side node must clear the one to its left
-      for (let i = focalIdx + 1; i < row.length; i++) {
-        const prev = row[i - 1]; const curr = row[i]
-        const minCx = prev.cx + nodeHalfBBox(prev.scale) + nodeHalfBBox(curr.scale) + MIN_SEP
-        if (curr.cx < minCx) curr.cx = minCx
-      }
-
-      // Leftward propagation: each left-side node must clear the one to its right
-      for (let i = focalIdx - 1; i >= 0; i--) {
-        const next = row[i + 1]; const curr = row[i]
-        const maxCx = next.cx - nodeHalfBBox(next.scale) - nodeHalfBBox(curr.scale) - MIN_SEP
-        if (curr.cx > maxCx) curr.cx = maxCx
-      }
-    } else {
-      // ── Non-focal rows: SLOT_W already satisfies minDist for same-tier nodes; ─
-      // bidirectional sweeps handle any mixed-tier edge cases.
-      for (let pass = 0; pass < 4; pass++) {
-        for (let i = 1; i < row.length; i++) {
-          const a = row[i - 1]; const b = row[i]
-          const minDist = nodeHalfBBox(a.scale) + nodeHalfBBox(b.scale) + MIN_SEP
-          const gap = b.cx - a.cx
-          if (gap < minDist) { const push = (minDist - gap) / 2; a.cx -= push; b.cx += push }
-        }
-        for (let i = row.length - 2; i >= 0; i--) {
-          const a = row[i]; const b = row[i + 1]
-          const minDist = nodeHalfBBox(a.scale) + nodeHalfBBox(b.scale) + MIN_SEP
-          const gap = b.cx - a.cx
-          if (gap < minDist) { const push = (minDist - gap) / 2; a.cx -= push; b.cx += push }
-        }
-      }
-    }
   })
-}
 
-// ─── Main layout computation (pure, exported for testing) ─────────────────────
+  // Sort by angle for the sweep
+  assigned.sort((a, b) => a.angle - b.angle)
 
-export function computeUniverseLayout(
-  focalId: string,
-  profile: Profile,
-  members: FamilyMember[],
-  extendedMembers: ExtendedEntry[],
-  memberLinks: MemberLink[],
-): UniverseNode[] {
-  // 1. Adjacency map (bidirectional)
-  const adj = new Map<string, Set<string>>()
-  const edge = (a: string, b: string) => {
-    if (!a || !b || a === b) return
-    if (!adj.has(a)) adj.set(a, new Set())
-    if (!adj.has(b)) adj.set(b, new Set())
-    adj.get(a)!.add(b)
-    adj.get(b)!.add(a)
-  }
-
-  for (const m of members) edge('root', m.id)
-  for (const e of extendedMembers) edge(e.member.id, e.parentMemberId)
-  for (const l of memberLinks) edge(l.fromMemberId, l.toMemberId)
-  for (const m of members) {
-    if (m.parent_member_id) edge(m.id, m.parent_member_id)
-  }
-
-  // 2. BFS from focalId
-  const dist = new Map<string, number>()
-  const queue: string[] = [focalId]
-  dist.set(focalId, 0)
-  while (queue.length > 0) {
-    const cur = queue.shift()!
-    const d = dist.get(cur)!
-    for (const nb of (adj.get(cur) ?? [])) {
-      if (!dist.has(nb)) {
-        dist.set(nb, d + 1)
-        queue.push(nb)
+  // Forward sweep: push apart pairs that are too close
+  for (let pass = 0; pass < 4; pass++) {
+    for (let i = 1; i < assigned.length; i++) {
+      const gap = norm(assigned[i].angle - assigned[i - 1].angle)
+      if (gap < minSepDeg) {
+        const push = (minSepDeg - gap) / 2
+        assigned[i - 1].angle = norm(assigned[i - 1].angle - push)
+        assigned[i].angle     = norm(assigned[i].angle     + push)
       }
     }
   }
 
-  // 3. Build node list
-  const seen = new Set<string>()
-  const nodes: UniverseNode[] = []
-
-  const addNode = (node: UniverseNode) => {
-    if (seen.has(node.id)) return
-    seen.add(node.id)
-    nodes.push(node)
-  }
-
-  // Root (profile owner)
-  const rootHop = dist.get('root') ?? 999
-  if (rootHop <= MAX_HOP) {
-    const rootTier = resolveRelevanceTier('root', rootHop, focalId === 'root')
-    addNode({
-      id: 'root',
-      memberId: undefined,
-      name: [profile.first_name, profile.last_name].filter(Boolean).join(' '),
-      shortName: profile.first_name,
-      relation: 'Tú',
-      relationType: 'root',
-      gender: profile.gender,
-      avatarUrl: profile.avatar_url,
-      isRoot: true,
-      isFocal: focalId === 'root',
-      hopDistance: rootHop,
-      orbitRadius: ORBIT_RADII[Math.min(rootHop, MAX_HOP)],
-      angleDeg: 0,
-      cx: 0, cy: 0,
-      relevanceTier: rootTier,
-      scale: TIER_SCALES[rootTier] as number,
-      opacity: TIER_OPACITY[rootTier] as number,
-      zIndex: 10 - rootHop,
-      ageGroup: 'adult',
-      isDeceased: false,
-      isJoined: true,
-    })
-  }
-
-  // Direct members
-  for (const m of members) {
-    const hop = dist.get(m.id) ?? 999
-    if (hop > MAX_HOP) continue
-    const tier = resolveRelevanceTier(m.relation_type, hop, m.id === focalId)
-    addNode({
-      id: m.id,
-      memberId: m.id,
-      name: [m.first_name, m.last_name].filter(Boolean).join(' '),
-      shortName: m.first_name,
-      relation: resolveRelationLabel(null, m.relation_type),
-      relationType: m.relation_type,
-      gender: m.profile?.gender,
-      avatarUrl: m.profile?.avatar_url,
-      isRoot: false,
-      isFocal: m.id === focalId,
-      hopDistance: hop,
-      orbitRadius: ORBIT_RADII[Math.min(hop, MAX_HOP)],
-      angleDeg: 0,
-      cx: 0, cy: 0,
-      relevanceTier: tier,
-      scale: TIER_SCALES[tier] as number,
-      opacity: TIER_OPACITY[tier] as number,
-      zIndex: 10 - hop,
-      ageGroup: ageGroup(m),
-      isDeceased: m.is_deceased,
-      isJoined: !!m.profile_id,
-      parentMemberId: m.parent_member_id,
-    })
-  }
-
-  // Extended members
-  for (const e of extendedMembers) {
-    const m = e.member
-    const hop = dist.get(m.id) ?? 999
-    if (hop > MAX_HOP) continue
-    const tier = resolveRelevanceTier(m.relation_type, hop, m.id === focalId)
-    addNode({
-      id: m.id,
-      memberId: m.id,
-      name: [m.first_name, m.last_name].filter(Boolean).join(' '),
-      shortName: m.first_name,
-      relation: resolveRelationLabel(e.inferredRelation, m.relation_type),
-      relationType: m.relation_type,
-      gender: m.profile?.gender,
-      avatarUrl: m.profile?.avatar_url,
-      isRoot: false,
-      isFocal: m.id === focalId,
-      hopDistance: hop,
-      orbitRadius: ORBIT_RADII[Math.min(hop, MAX_HOP)],
-      angleDeg: 0,
-      cx: 0, cy: 0,
-      relevanceTier: tier,
-      scale: TIER_SCALES[tier] as number,
-      opacity: TIER_OPACITY[tier] as number,
-      zIndex: 10 - hop,
-      ageGroup: ageGroup(m),
-      isDeceased: m.is_deceased,
-      isJoined: !!m.profile_id,
-      parentMemberId: e.parentMemberId,
-    })
-  }
-
-  // D2: recompute relation labels from focal's perspective when focal is not root
-  if (focalId !== 'root') {
-    const focalNode = nodes.find(n => n.id === focalId)
-    const rootNode  = nodes.find(n => n.isRoot)
-    if (focalNode && focalNode.relationType && focalNode.relationType !== 'root' && rootNode) {
-      const graph: UniverseRelationGraph = { nodes, adj }
-      for (const n of nodes) {
-        if (n.isFocal) continue
-        const label = resolveRelationFromPerspective(focalNode, n, rootNode, graph)
-        if (label !== null) n.relation = label
-      }
-    }
-  }
-
-  // 4. Assign positions (hierarchical layout)
-  const focal = nodes.find(n => n.isFocal)
-  if (!focal) return nodes
-
-  // angleDeg is zeroed; positions are fully determined by hierarchicalLayout
-  for (const n of nodes) { n.angleDeg = 0 }
-
-  const focalRelType = focal.isRoot ? 'root' : (focal.relationType ?? 'root')
-  hierarchicalLayout(nodes, focalRelType)
-
-  // Focal is always exactly at center
-  focal.cx = 0
-  focal.cy = 0
-
-  // Recompute zIndex now that cy values are set
-  for (const n of nodes) {
-    n.zIndex = computeNodeZIndex(n.hopDistance, n.cy, n.isFocal)
-  }
-
-  // Sort back-to-front for rendering
-  nodes.sort((a, b) => a.zIndex - b.zIndex)
-
-  return nodes
+  return new Map(assigned.map(a => [a.id, a.angle]))
 }
 
-// ─── Main hook ────────────────────────────────────────────────────────────────
+// ─── Main hook ───────────────────────────────────────────────────────────────
 
 export function useUniverseLayout(
   focalId: string,
@@ -788,11 +543,236 @@ export function useUniverseLayout(
   extendedMembers: ExtendedEntry[],
   memberLinks: MemberLink[],
 ): UniverseNode[] {
-  return useMemo(
-    () => computeUniverseLayout(focalId, profile, members, extendedMembers, memberLinks),
-    [focalId, profile, members, extendedMembers, memberLinks],
-  )
-}
+  return useMemo(() => {
+    // 1. Adjacency map (bidirectional)
+    const adj = new Map<string, Set<string>>()
+    const edge = (a: string, b: string) => {
+      if (!a || !b || a === b) return
+      if (!adj.has(a)) adj.set(a, new Set())
+      if (!adj.has(b)) adj.set(b, new Set())
+      adj.get(a)!.add(b)
+      adj.get(b)!.add(a)
+    }
 
-// hashId is used by AvatarFigure for deterministic avatar appearance
-export { hashId }
+    // root ↔ every direct member
+    for (const m of members) edge('root', m.id)
+
+    // each extended member ↔ its connector member
+    for (const e of extendedMembers) edge(e.member.id, e.parentMemberId)
+
+    // cross-member links (e.g. sibling-to-sibling edges)
+    for (const l of memberLinks) edge(l.fromMemberId, l.toMemberId)
+
+    // parent_member_id links within members array
+    for (const m of members) {
+      if (m.parent_member_id) edge(m.id, m.parent_member_id)
+    }
+
+    // 2. BFS from focalId
+    const dist = new Map<string, number>()
+    const queue: string[] = [focalId]
+    dist.set(focalId, 0)
+    while (queue.length > 0) {
+      const cur = queue.shift()!
+      const d = dist.get(cur)!
+      for (const nb of (adj.get(cur) ?? [])) {
+        if (!dist.has(nb)) {
+          dist.set(nb, d + 1)
+          queue.push(nb)
+        }
+      }
+    }
+
+    // 3. Build node list
+    const seen = new Set<string>()
+    const nodes: UniverseNode[] = []
+
+    const addNode = (node: UniverseNode) => {
+      if (seen.has(node.id)) return
+      seen.add(node.id)
+      nodes.push(node)
+    }
+
+    // Root (profile)
+    const rootHop = dist.get('root') ?? 999
+    if (rootHop <= MAX_HOP) {
+      const rootTier = resolveRelevanceTier('root', rootHop, focalId === 'root')
+      addNode({
+        id: 'root',
+        memberId: undefined,
+        name: [profile.first_name, profile.last_name].filter(Boolean).join(' '),
+        shortName: profile.first_name,
+        relation: 'Tú',
+        relationType: 'root',
+        gender: profile.gender,
+        avatarUrl: profile.avatar_url,
+        isRoot: true,
+        isFocal: focalId === 'root',
+        hopDistance: rootHop,
+        orbitRadius: ORBIT_RADII[Math.min(rootHop, MAX_HOP)],
+        angleDeg: 0,
+        cx: 0, cy: 0,
+        relevanceTier: rootTier,
+        scale: TIER_SCALES[rootTier] as number,
+        opacity: TIER_OPACITY[rootTier] as number,
+        zIndex: 10 - rootHop,
+        ageGroup: 'adult',
+        isDeceased: false,
+        isJoined: true,
+      })
+    }
+
+    // Direct members
+    for (const m of members) {
+      const hop = dist.get(m.id) ?? 999
+      if (hop > MAX_HOP) continue
+      const tier = resolveRelevanceTier(m.relation_type, hop, m.id === focalId)
+      addNode({
+        id: m.id,
+        memberId: m.id,
+        name: [m.first_name, m.last_name].filter(Boolean).join(' '),
+        shortName: m.first_name,
+        relation: resolveRelationLabel(null, m.relation_type),
+        relationType: m.relation_type,
+        gender: m.profile?.gender,
+        avatarUrl: m.profile?.avatar_url,
+        isRoot: false,
+        isFocal: m.id === focalId,
+        hopDistance: hop,
+        orbitRadius: ORBIT_RADII[Math.min(hop, MAX_HOP)],
+        angleDeg: 0,
+        cx: 0, cy: 0,
+        relevanceTier: tier,
+        scale: TIER_SCALES[tier] as number,
+        opacity: TIER_OPACITY[tier] as number,
+        zIndex: 10 - hop,  // recomputed after positions are set
+        ageGroup: ageGroup(m),
+        isDeceased: m.is_deceased,
+        isJoined: !!m.profile_id,
+        parentMemberId: m.parent_member_id,
+      })
+    }
+
+    // Extended members
+    for (const e of extendedMembers) {
+      const m = e.member
+      const hop = dist.get(m.id) ?? 999
+      if (hop > MAX_HOP) continue
+      const tier = resolveRelevanceTier(m.relation_type, hop, m.id === focalId)
+      addNode({
+        id: m.id,
+        memberId: m.id,
+        name: [m.first_name, m.last_name].filter(Boolean).join(' '),
+        shortName: m.first_name,
+        relation: resolveRelationLabel(e.inferredRelation, m.relation_type),
+        relationType: m.relation_type,
+        gender: m.profile?.gender,
+        avatarUrl: m.profile?.avatar_url,
+        isRoot: false,
+        isFocal: m.id === focalId,
+        hopDistance: hop,
+        orbitRadius: ORBIT_RADII[Math.min(hop, MAX_HOP)],
+        angleDeg: 0,
+        cx: 0, cy: 0,
+        relevanceTier: tier,
+        scale: TIER_SCALES[tier] as number,
+        opacity: TIER_OPACITY[tier] as number,
+        zIndex: 10 - hop,
+        ageGroup: ageGroup(m),
+        isDeceased: m.is_deceased,
+        isJoined: !!m.profile_id,
+        parentMemberId: e.parentMemberId,
+      })
+    }
+
+    // D2: recompute relation labels from focal's perspective when focal is not root
+    if (focalId !== 'root') {
+      const focalNode = nodes.find(n => n.id === focalId)
+      const rootNode  = nodes.find(n => n.isRoot)
+      if (focalNode && focalNode.relationType && focalNode.relationType !== 'root' && rootNode) {
+        const graph: UniverseRelationGraph = { nodes, adj }
+        for (const n of nodes) {
+          if (n.isFocal) continue
+          const label = resolveRelationFromPerspective(focalNode, n, rootNode, graph)
+          if (label !== null) n.relation = label
+        }
+      }
+    }
+
+    // 4. Assign angles
+    const focal = nodes.find(n => n.isFocal)
+    if (!focal) return nodes
+
+    // Build angle-to-orbit-1-parent map for hop-2+ nodes
+    const orbit1AngleById = new Map<string, number>()
+
+    // ── Orbit 1 ──────────────────────────────────────────────────────────────
+    const orbit1 = nodes.filter(n => n.hopDistance === 1)
+    if (orbit1.length > 0) {
+      const items = orbit1.map(n => ({
+        id: n.id,
+        relationType: n.relationType,
+        preferredAngle: REL_ANGLE[n.relationType] ?? (hashId(n.id) % 360) - 180,
+      }))
+      const angles = distributeOrbit(items, 32)
+      for (const n of orbit1) {
+        const a = angles.get(n.id) ?? 0
+        n.angleDeg = a
+        const rad = a * Math.PI / 180
+        n.cx = n.orbitRadius * Math.cos(rad)
+        n.cy = n.orbitRadius * Math.sin(rad)
+        orbit1AngleById.set(n.id, a)
+      }
+    }
+
+    // ── Orbit 2+ ─────────────────────────────────────────────────────────────
+    for (let hop = 2; hop <= MAX_HOP; hop++) {
+      const orbitN = nodes.filter(n => n.hopDistance === hop)
+      if (orbitN.length === 0) continue
+
+      // Map each hop-N node to its parent hop-(N-1) angle
+      const parentAngleOf = (n: UniverseNode): number => {
+        // Try parentMemberId first, then adjacency
+        if (n.parentMemberId) {
+          const pa = orbit1AngleById.get(n.parentMemberId)
+          if (pa !== undefined) return pa
+        }
+        for (const nb of (adj.get(n.id) ?? [])) {
+          const pa = orbit1AngleById.get(nb)
+          if (pa !== undefined) return pa
+        }
+        return REL_ANGLE[n.relationType] ?? (hashId(n.id) % 360) - 180
+      }
+
+      const items = orbitN.map(n => ({
+        id: n.id,
+        relationType: n.relationType,
+        preferredAngle: norm(parentAngleOf(n) + ((hashId(n.id) % 40) - 20)),
+      }))
+      const angles = distributeOrbit(items, 22)
+
+      for (const n of orbitN) {
+        const a = angles.get(n.id) ?? 0
+        n.angleDeg = a
+        const rad = a * Math.PI / 180
+        n.cx = n.orbitRadius * Math.cos(rad)
+        n.cy = n.orbitRadius * Math.sin(rad)
+        orbit1AngleById.set(n.id, a) // expose to next orbit
+      }
+    }
+
+    // Focal always at center
+    focal.cx = 0
+    focal.cy = 0
+
+    // D2: recompute zIndex now that cx/cy are set — ensures deterministic depth ordering
+    for (const n of nodes) {
+      n.zIndex = computeNodeZIndex(n.hopDistance, n.cy, n.isFocal)
+    }
+
+    // Sort back-to-front
+    nodes.sort((a, b) => a.zIndex - b.zIndex)
+
+    return nodes
+  }, [focalId, profile, members, extendedMembers, memberLinks])
+}

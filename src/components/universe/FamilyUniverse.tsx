@@ -126,25 +126,16 @@ export function FamilyUniverse({
   const isMobile  = containerSize.w < 768
   const batchSize = isMobile ? BATCH_MOBILE : BATCH_DESKTOP
 
+  // D3: scale down the viewport so orbit-2 avatars (radius 210) clear the edges on narrow screens.
+  const viewScale = useMemo(() => {
+    if (containerSize.w <= 0) return 1
+    const halfWidth = containerSize.w / 2
+    return halfWidth >= 240 ? 1 : Math.max(0.72, halfWidth / 240)
+  }, [containerSize.w])
+
   const allNodes = useUniverseLayout(
     focalId, profile, members, extendedMembers, memberLinks,
   )
-
-  // D3: viewScale derived from the actual bounding box of the hierarchical layout.
-  // Ensures all tier-0/1/2 nodes fit in the viewport with comfortable margins.
-  const viewScale = useMemo(() => {
-    if (containerSize.w <= 0) return 1
-    const relevant = allNodes.filter(n => n.relevanceTier <= 2)
-    if (relevant.length === 0) return 1
-    const maxCx = Math.max(...relevant.map(n => Math.abs(n.cx)), 80)
-    const maxCy = Math.max(...relevant.map(n => Math.abs(n.cy)), 80)
-    // Add approximate half-bounding-box so the outermost node edge clears the viewport edge
-    const halfNodeW = 75
-    const halfNodeH = 90
-    const scaleX = (containerSize.w  / 2) / (maxCx + halfNodeW)
-    const scaleY = (containerSize.h / 2) / (maxCy + halfNodeH)
-    return Math.min(1.0, Math.max(0.40, Math.min(scaleX, scaleY) * 0.88))
-  }, [containerSize.w, containerSize.h, allNodes])
 
   const { visible: nodes, hiddenCount, maxExpansionReached } = useMemo(
     () => selectVisibleUniverseNodes(allNodes, containerSize.w, additionalCount),
