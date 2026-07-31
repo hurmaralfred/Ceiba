@@ -203,26 +203,23 @@ describe('UniversePersonPanel — invite button', () => {
   })
 })
 
-// ─── Centrar aquí ─────────────────────────────────────────────────────────────
+// ─── Refocus hint ─────────────────────────────────────────────────────────────
 
-describe('UniversePersonPanel — refocus button', () => {
-  it('"Centrar aquí" calls onRefocus with node id then onClose', () => {
-    const calls: string[] = []
-    const onRefocus = vi.fn((id: string) => calls.push(`refocus:${id}`))
-    const onClose   = vi.fn(() => calls.push('close'))
-
+describe('UniversePersonPanel — refocus hint', () => {
+  it('shows the double-tap hint text', () => {
     const { container } = render(
-      <UniversePersonPanel
-        node={makeNode({ id: 'node-42' })}
-        onRefocus={onRefocus}
-        onClose={onClose}
-      />,
+      <UniversePersonPanel node={makeNode()} />,
+    )
+    const hint = container.querySelector('p')
+    expect(hint?.textContent).toMatch(/toca nuevamente/i)
+  })
+
+  it('does not render a "Centrar aquí" button', () => {
+    const { container } = render(
+      <UniversePersonPanel node={makeNode()} onRefocus={vi.fn()} />,
     )
     const centrarBtn = Array.from(container.querySelectorAll('button'))
-      .find(b => /centrar/i.test(b.textContent ?? ''))!
-    fireEvent.click(centrarBtn)
-
-    expect(calls[0]).toBe('refocus:node-42')
-    expect(calls[1]).toBe('close')
+      .find(b => /centrar/i.test(b.textContent ?? ''))
+    expect(centrarBtn).toBeUndefined()
   })
 })

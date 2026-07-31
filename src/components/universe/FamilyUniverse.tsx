@@ -167,7 +167,14 @@ export function FamilyUniverse({
 
   const handleAvatarClick = useCallback((node: UniverseNode) => {
     if (node.isFocal) return
-    setSelectedNode(prev => prev?.id === node.id ? null : node)
+    setSelectedNode(prev => {
+      if (prev?.id === node.id) {
+        // Second tap on same avatar → refocus
+        setFocalId(node.id)
+        return null
+      }
+      return node
+    })
   }, [])
 
   const handleRefocus = useCallback((id: string) => {

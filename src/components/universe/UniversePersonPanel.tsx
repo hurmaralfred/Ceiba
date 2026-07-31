@@ -15,7 +15,7 @@ const PANEL_CSS = `
   box-shadow: 0 -8px 32px rgba(0,0,0,0.5);
   display: flex;
   flex-direction: column;
-  max-height: min(70dvh, 600px);
+  max-height: min(55dvh, 460px);
   overflow: hidden;
   transform: translateY(100%);
   transition: transform 0.35s cubic-bezier(0.34,1.22,0.64,1);
@@ -25,13 +25,13 @@ const PANEL_CSS = `
 }
 .unv-panel__header {
   flex-shrink: 0;
-  padding: 20px 24px 0;
+  padding: 16px 20px 0;
 }
 .unv-panel__body {
   flex: 1 1 auto;
   overflow-y: auto;
-  padding: 0 24px;
-  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  padding: 0 20px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   -webkit-overflow-scrolling: touch;
 }
 @media (min-width: 768px) {
@@ -39,8 +39,8 @@ const PANEL_CSS = `
     left: auto;
     right: 24px;
     bottom: 24px;
-    width: clamp(340px, 26vw, 400px);
-    max-height: 80vh;
+    width: clamp(280px, 22vw, 360px);
+    max-height: 70vh;
     border-radius: 16px;
     border-top: 1px solid rgba(242,180,60,0.18);
     transform: translateY(calc(100% + 32px));
@@ -125,7 +125,6 @@ export function UniversePersonPanel({ node, onClose, onRefocus, onEdit, onInvite
             <PanelBody
               node={node}
               onClose={onClose}
-              onRefocus={onRefocus}
               onEdit={onEdit}
               onInvite={onInvite}
             />
@@ -148,11 +147,11 @@ export function UniversePersonPanel({ node, onClose, onRefocus, onEdit, onInvite
   )
 }
 
-function PanelBody({ node, onClose, onRefocus, onEdit, onInvite }: { node: UniverseNode } & Omit<Props, 'node'>) {
+function PanelBody({ node, onClose, onEdit, onInvite }: { node: UniverseNode } & Omit<Props, 'node'>) {
   return (
     <div>
       {/* Status chips */}
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
         {node.isJoined && (
           <StatusChip color="#2A6B3A" text="En Ceiba" />
         )}
@@ -167,20 +166,14 @@ function PanelBody({ node, onClose, onRefocus, onEdit, onInvite }: { node: Unive
         )}
       </div>
 
-      {/* Actions — always reachable */}
+      {/* Actions */}
       <div style={{ display: 'flex', gap: 10, paddingBottom: 4 }}>
-        <ActionButton
-          onClick={() => { onRefocus?.(node.id); onClose?.() }}
-          label="Centrar aquí"
-          icon="◎"
-          primary
-        />
-
         {node.memberId && onEdit && (
           <ActionButton
             onClick={() => { onClose?.(); onEdit(node.memberId!) }}
             label="Editar"
             icon="✎"
+            primary
           />
         )}
 
@@ -192,6 +185,17 @@ function PanelBody({ node, onClose, onRefocus, onEdit, onInvite }: { node: Unive
           />
         )}
       </div>
+
+      {/* Refocus hint */}
+      <p style={{
+        marginTop: 12,
+        fontSize: 11,
+        color: 'rgba(242,180,60,0.45)',
+        letterSpacing: '0.02em',
+        textAlign: 'center',
+      }}>
+        Toca nuevamente para explorar su familia
+      </p>
     </div>
   )
 }
