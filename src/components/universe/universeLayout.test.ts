@@ -6,6 +6,10 @@ import {
   selectVisibleUniverseNodes,
   resolveRelationFromFocal,
   resolveRelationFromPerspective,
+  BATCH_MOBILE,
+  BATCH_DESKTOP,
+  MAX_EXPANDED_MOBILE,
+  MAX_EXPANDED_DESKTOP,
 } from './useUniverseLayout'
 import type { UniverseNode } from './useUniverseLayout'
 
@@ -364,6 +368,121 @@ describe('selectVisibleUniverseNodes', () => {
     // 2 lowest-priority children go to hiddenNodes
     const hiddenT1 = hiddenNodes.filter(n => n.relevanceTier === 1)
     expect(hiddenT1.length).toBe(2)
+  })
+})
+
+// ─── expansion — additionalCount ─────────────────────────────────────────────
+
+describe('expansion — additionalCount', () => {
+  it('exports have the expected values', () => {
+    expect(BATCH_MOBILE).toBe(4)
+    expect(BATCH_DESKTOP).toBe(6)
+    expect(MAX_EXPANDED_MOBILE).toBe(19)
+    expect(MAX_EXPANDED_DESKTOP).toBe(29)
+  })
+
+  it('additionalCount=0 returns same base set, maxExpansionReached=false when hidden exist', () => {
+    const nodes = [
+      makeNode({ id: 'focal', relevanceTier: 0, isFocal: true }),
+      ...Array.from({ length: 15 }, (_, i) => makeNode({ id: `t2-${i}`, relevanceTier: 2 })),
+    ]
+    const { visible, hiddenCount, maxExpansionReached } = selectVisibleUniverseNodes(nodes, 375, 0)
+    expect(visible.length).toBe(11)   // base mobile cap unchanged
+    expect(hiddenCount).toBe(5)
+    expect(maxExpansionReached).toBe(false)
+  })
+
+  it('additionalCount=4 on mobile reveals 4 more hidden nodes', () => {
+    const nodes = [
+      makeNode({ id: 'focal', relevanceTier: 0, isFocal: true }),
+      ...Array.from({ length: 15 }, (_, i) => makeNode({ id: `t2-${i}`, relevanceTier: 2 })),
+    ]
+    const { visible, hiddenCount } = selectVisibleUniverseNodes(nodes, 375, 4)
+    expect(visible.length).toBe(15)   // 11 base + 4 expanded
+    expect(hiddenCount).toBe(1)
+  })
+
+  it('additionalCount=6 on desktop reveals 6 more hidden nodes', () => {
+    const nodes = [
+      makeNode({ id: 'focal', relevanceTier: 0, isFocal: true }),
+      ...Array.from({ length: 25 }, (_, i) => makeNode({ id: `t2-${i}`, relevanceTier: 2 })),
+    ]
+    const { visible, hiddenCount } = selectVisibleUniverseNodes(nodes, 1280, 6)
+    expect(visible.length).toBe(23)   // 17 base + 6 expanded
+    expect(hiddenCount).toBe(3)       // 25 - 16 base - 6 expanded = 3
+  })
+
+  it('T3 nodes receive scale/opacity override when expanded', () => {
+    const nodes = [
+      makeNode({ id: 'focal', relevanceTier: 0, isFocal: true }),
+      makeNode({ id: 'uncle', relevanceTier: 3, scale: 0, opacity: 0 }),
+    ]
+    const { visible } = selectVisibleUniverseNodes(nodes, 375, 1)
+    const uncle = visible.find(n => n.id === 'uncle')
+    expect(uncle).toBeDefined()
+    expect(uncle!.scale).toBeGreaterThan(0)
+    expect(uncle!.opacity).toBeGreaterThan(0)
+  })
+
+  it('T2 nodes keep their own scale/opacity when expanded (no override)', () => {
+    const nodes = [
+      makeNode({ id: 'focal', relevanceTier: 0, isFocal: true }),
+      ...Array.from({ length: 12 }, (_, i) => makeNode({ id: `t2-${i}`, relevanceTier: 2, scale: 0.68, opacity: 0.55 })),
+    ]
+    const { visible } = selectVisibleUniverseNodes(nodes, 375, 1)
+    const expanded = visible.find(n => n.id === 't2-10')!
+    expect(expanded.scale).toBe(0.68)
+    expect(expanded.opacity).toBe(0.55)
+  })
+
+  it('maxExpansionReached when total visible hits mobile cap and hidden remain', () => {
+    const nodes = [
+      makeNode({ id: 'focal', relevanceTier: 0, isFocal: true }),
+      ...Array.from({ length: 30 }, (_, i) => makeNode({ id: `t2-${i}`, relevanceTier: 2 })),
+    ]
+    // base=11, expansionCap=19-11=8 → ask for 8
+    const { visible, hiddenCount, maxExpansionReached } = selectVisibleUniverseNodes(nodes, 375, 8)
+    expect(visible.length).toBe(MAX_EXPANDED_MOBILE)
+    expect(hiddenCount).toBeGreaterThan(0)
+    expect(maxExpansionReached).toBe(true)
+  })
+
+  it('maxExpansionReached=false when there are no hidden after expansion', () => {
+    const nodes = [
+      makeNode({ id: 'focal', relevanceTier: 0, isFocal: true }),
+      makeNode({ id: 't3a', relevanceTier: 3 }),
+    ]
+    // Expand to reveal the only hidden node
+    const { hiddenCount, maxExpansionReached } = selectVisibleUniverseNodes(nodes, 375, 1)
+    expect(hiddenCount).toBe(0)
+    expect(maxExpansionReached).toBe(false)
+  })
+
+  it('T3 expansion order: by hopDistance asc, then relationType asc, then id asc', () => {
+    const nodes = [
+      makeNode({ id: 'focal',    relevanceTier: 0, isFocal: true }),
+      makeNode({ id: 'c-uncle',  relevanceTier: 3, relationType: 'uncle',  hopDistance: 2 }),
+      makeNode({ id: 'b-niece',  relevanceTier: 3, relationType: 'niece',  hopDistance: 1 }),
+      makeNode({ id: 'a-nephew', relevanceTier: 3, relationType: 'nephew', hopDistance: 1 }),
+    ]
+    // First expanded = hop=1, relType 'nephew' < 'niece' → 'a-nephew'
+    const { visible } = selectVisibleUniverseNodes(nodes, 375, 1)
+    expect(visible.find(n => n.id === 'a-nephew')).toBeDefined()
+    expect(visible.find(n => n.id === 'b-niece')).toBeUndefined()
+    expect(visible.find(n => n.id === 'c-uncle')).toBeUndefined()
+  })
+
+  it('asking for more than available reveals all hidden without error', () => {
+    const nodes = [
+      makeNode({ id: 'focal', relevanceTier: 0, isFocal: true }),
+      makeNode({ id: 't3a', relevanceTier: 3 }),
+      makeNode({ id: 't3b', relevanceTier: 3 }),
+    ]
+    const { visible, hiddenCount } = selectVisibleUniverseNodes(nodes, 375, 999)
+    // Both T3 revealed, within expansionCap
+    expect(visible.find(n => n.id === 't3a')).toBeDefined()
+    expect(visible.find(n => n.id === 't3b')).toBeDefined()
+    expect(hiddenCount).toBe(0)
   })
 })
 

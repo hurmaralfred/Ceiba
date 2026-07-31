@@ -1,8 +1,13 @@
 'use client'
-import React, { useState, useCallback, useMemo } from 'react'
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import type { Profile, FamilyMember } from '@/lib/types'
 import type { ExtendedEntry, MemberLink } from '@/components/tree/FamilyTreeGraph'
-import { useUniverseLayout, selectVisibleUniverseNodes } from './useUniverseLayout'
+import {
+  useUniverseLayout,
+  selectVisibleUniverseNodes,
+  BATCH_MOBILE,
+  BATCH_DESKTOP,
+} from './useUniverseLayout'
 import { AvatarFigure } from './AvatarFigure'
 import { UniverseViewport } from './UniverseViewport'
 import { UniversePersonPanel } from './UniversePersonPanel'
@@ -110,13 +115,18 @@ export function FamilyUniverse({
   onEditMember,
   onInviteMember,
 }: Props) {
-  const [focalId,        setFocalId]        = useState<string>('root')
-  const [selectedNode,   setSelectedNode]   = useState<UniverseNode | null>(null)
-  const [containerSize,  setContainerSize]  = useState({ w: 375, h: 812 })
-  const [showMorePanel,  setShowMorePanel]  = useState(false)
+  const [focalId,       setFocalId]       = useState<string>('root')
+  const [selectedNode,  setSelectedNode]  = useState<UniverseNode | null>(null)
+  const [containerSize, setContainerSize] = useState({ w: 375, h: 812 })
+  const [additionalCount, setAdditionalCount] = useState(0)
+
+  // Reset expansion whenever the focal person changes
+  useEffect(() => { setAdditionalCount(0) }, [focalId])
+
+  const isMobile  = containerSize.w < 768
+  const batchSize = isMobile ? BATCH_MOBILE : BATCH_DESKTOP
 
   // D3: scale down the viewport so orbit-2 avatars (radius 210) clear the edges on narrow screens.
-  // 240 = orbit-2 radius (210) + half of a scaled avatar (~30). Never scale above 1.0.
   const viewScale = useMemo(() => {
     if (containerSize.w <= 0) return 1
     const halfWidth = containerSize.w / 2
@@ -127,10 +137,23 @@ export function FamilyUniverse({
     focalId, profile, members, extendedMembers, memberLinks,
   )
 
-  const { visible: nodes, hiddenCount, hiddenNodes } = useMemo(
-    () => selectVisibleUniverseNodes(allNodes, containerSize.w),
-    [allNodes, containerSize.w],
+  const { visible: nodes, hiddenCount, maxExpansionReached } = useMemo(
+    () => selectVisibleUniverseNodes(allNodes, containerSize.w, additionalCount),
+    [allNodes, containerSize.w, additionalCount],
   )
+
+  // Track which node IDs are newly entering the visible set (for reveal animation)
+  const prevVisibleIds = useRef(new Set<string>())
+  const newNodeIds = useMemo(() => {
+    const ids = new Set<string>()
+    for (const n of nodes) {
+      if (!prevVisibleIds.current.has(n.id)) ids.add(n.id)
+    }
+    return ids
+  }, [nodes])
+  useEffect(() => {
+    prevVisibleIds.current = new Set(nodes.map(n => n.id))
+  }, [nodes])
 
   // Track container size for orbit rings
   const containerRef = useCallback((el: HTMLDivElement | null) => {
@@ -144,17 +167,21 @@ export function FamilyUniverse({
 
   const handleAvatarClick = useCallback((node: UniverseNode) => {
     if (node.isFocal) return
-    // Single tap: open info panel
     setSelectedNode(prev => prev?.id === node.id ? null : node)
   }, [])
 
   const handleRefocus = useCallback((id: string) => {
     setFocalId(id)
     setSelectedNode(null)
-    setShowMorePanel(false)
   }, [])
 
   const handleClose = useCallback(() => setSelectedNode(null), [])
+
+  const handleExpand = useCallback(() => {
+    setAdditionalCount(c => c + batchSize)
+  }, [batchSize])
+
+  const showExpandButton = (hiddenCount > 0 || maxExpansionReached) && !selectedNode
 
   return (
     <>
@@ -176,6 +203,7 @@ export function FamilyUniverse({
               selected={selectedNode?.id === node.id}
               onClick={() => handleAvatarClick(node)}
               viewScale={viewScale}
+              isNew={newNodeIds.has(node.id)}
             />
           ))}
         </UniverseViewport>
@@ -189,152 +217,42 @@ export function FamilyUniverse({
           onInvite={onInviteMember}
         />
 
-        {/* Hidden family indicator — hide when info panel or more panel is open */}
-        {hiddenCount > 0 && !showMorePanel && !selectedNode && (
-          <HiddenFamilyBadge
-            count={hiddenCount}
-            onOpen={() => setShowMorePanel(true)}
-          />
-        )}
-
-        {/* Hidden family panel */}
-        {showMorePanel && (
-          <HiddenFamilyPanel
-            nodes={hiddenNodes}
-            onClose={() => setShowMorePanel(false)}
-            onRefocus={handleRefocus}
-          />
-        )}
-      </div>
-    </>
-  )
-}
-
-// ─── Hidden family badge ──────────────────────────────────────────────────────
-
-function HiddenFamilyBadge({ count, onOpen }: { count: number; onOpen: () => void }) {
-  return (
-    <button
-      onClick={onOpen}
-      aria-label={`Ver ${count} familiares más`}
-      style={{
-        position: 'absolute',
-        bottom: 24,
-        left: '50%',
-        transform: 'translateX(-50%)',
-        background: 'rgba(16,12,8,0.88)',
-        border: '1px solid rgba(242,180,60,0.32)',
-        borderRadius: 24,
-        color: 'rgba(242,180,60,0.88)',
-        fontSize: 12,
-        fontWeight: 500,
-        padding: '7px 18px',
-        cursor: 'pointer',
-        zIndex: 600,
-        backdropFilter: 'blur(12px)',
-        letterSpacing: '0.025em',
-        whiteSpace: 'nowrap',
-      }}
-    >
-      Ver {count} familiares más
-    </button>
-  )
-}
-
-// ─── Hidden family panel ──────────────────────────────────────────────────────
-
-function HiddenFamilyPanel({
-  nodes, onClose, onRefocus,
-}: {
-  nodes: UniverseNode[]
-  onClose: () => void
-  onRefocus: (id: string) => void
-}) {
-  return (
-    <>
-      <div
-        onClick={onClose}
-        aria-hidden
-        style={{
-          position: 'absolute',
-          inset: 0,
-          background: 'rgba(0,0,0,0.48)',
-          zIndex: 700,
-        }}
-      />
-      <div
-        role="dialog"
-        aria-label="Más familia"
-        style={{
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          maxHeight: '60%',
-          background: '#1C1510',
-          borderTop: '1px solid rgba(242,180,60,0.18)',
-          borderRadius: '16px 16px 0 0',
-          zIndex: 800,
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-      >
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '16px 20px 12px',
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
-        }}>
-          <span style={{ color: 'rgba(242,180,60,0.88)', fontSize: 14, fontWeight: 600 }}>
-            Más familia ({nodes.length})
-          </span>
+        {/* Expand button */}
+        {showExpandButton && (
           <button
-            onClick={onClose}
-            aria-label="Cerrar"
+            onClick={maxExpansionReached ? undefined : handleExpand}
+            disabled={maxExpansionReached}
+            aria-label={
+              maxExpansionReached
+                ? 'Has alcanzado el límite de avatares visibles'
+                : `Ver ${hiddenCount} familiares más`
+            }
             style={{
-              background: 'none', border: 'none',
-              color: 'rgba(255,255,255,0.45)', fontSize: 22,
-              cursor: 'pointer', lineHeight: 1, padding: '0 4px',
+              position: 'absolute',
+              bottom: 24,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              background: maxExpansionReached
+                ? 'rgba(16,12,8,0.60)'
+                : 'rgba(16,12,8,0.88)',
+              border: '1px solid rgba(242,180,60,0.32)',
+              borderRadius: 24,
+              color: maxExpansionReached
+                ? 'rgba(242,180,60,0.42)'
+                : 'rgba(242,180,60,0.88)',
+              fontSize: 12,
+              fontWeight: 500,
+              padding: '7px 18px',
+              cursor: maxExpansionReached ? 'default' : 'pointer',
+              zIndex: 600,
+              backdropFilter: 'blur(12px)',
+              letterSpacing: '0.025em',
+              whiteSpace: 'nowrap',
             }}
           >
-            ×
+            {maxExpansionReached ? 'Explorar familia completa' : `Ver ${hiddenCount} familiares más`}
           </button>
-        </div>
-        <div style={{ overflowY: 'auto', flex: 1, padding: '6px 0 16px' }}>
-          {nodes.map(node => (
-            <button
-              key={node.id}
-              onClick={() => node.memberId && onRefocus(node.memberId)}
-              disabled={!node.memberId}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                width: '100%',
-                padding: '10px 20px',
-                background: 'none',
-                border: 'none',
-                cursor: node.memberId ? 'pointer' : 'default',
-                textAlign: 'left',
-              }}
-            >
-              <div style={{
-                width: 7, height: 7, borderRadius: '50%',
-                background: 'rgba(242,180,60,0.45)',
-                flexShrink: 0,
-              }} />
-              <div>
-                <div style={{ color: 'rgba(255,255,255,0.82)', fontSize: 14, fontWeight: 500 }}>
-                  {node.name}
-                </div>
-                <div style={{ color: 'rgba(255,255,255,0.38)', fontSize: 12 }}>
-                  {node.relation}
-                </div>
-              </div>
-            </button>
-          ))}
-        </div>
+        )}
       </div>
     </>
   )
@@ -343,23 +261,32 @@ function HiddenFamilyPanel({
 // ─── Avatar slot: positioned absolutely in viewport ───────────────────────────
 
 function AvatarSlot({
-  node, selected, onClick, viewScale = 1,
+  node, selected, onClick, viewScale = 1, isNew = false,
 }: {
   node: UniverseNode
   selected: boolean
   onClick: () => void
   viewScale?: number
+  isNew?: boolean
 }) {
+  // New nodes enter with fade + scale animation
+  const [appeared, setAppeared] = useState(!isNew)
+  useEffect(() => {
+    if (!appeared) {
+      const id = requestAnimationFrame(() => setAppeared(true))
+      return () => cancelAnimationFrame(id)
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps — intentionally mount-only
+
   return (
     <div
       style={{
         position: 'absolute',
         left: '50%',
         top:  '50%',
-        transform: `translate(calc(-50% + ${node.cx}px), calc(-50% + ${node.cy}px)) scale(${node.scale})`,
+        transform: `translate(calc(-50% + ${node.cx}px), calc(-50% + ${node.cy}px)) scale(${appeared ? node.scale : node.scale * 0.35})`,
         transformOrigin: 'center center',
-        opacity: node.opacity,
-        // D2: selected node rises above all peers except the focal (focal=400)
+        opacity: appeared ? node.opacity : 0,
         zIndex: selected ? 350 : node.zIndex,
         transition: [
           'transform 0.65s cubic-bezier(0.34,1.22,0.64,1)',

@@ -195,10 +195,18 @@ export interface VisibleUniverseSet {
   visible: UniverseNode[]
   hiddenCount: number
   hiddenNodes: UniverseNode[]
+  maxExpansionReached: boolean
 }
 
 const MAX_TOTAL_MOBILE  = 11
 const MAX_TOTAL_DESKTOP = 17
+
+export const BATCH_MOBILE  = 4
+export const BATCH_DESKTOP = 6
+export const MAX_EXPANDED_MOBILE  = 19
+export const MAX_EXPANDED_DESKTOP = 29
+const EXPANDED_SCALE   = 0.55
+const EXPANDED_OPACITY = 0.40
 
 // Priority within Tier 1 when total cap forces truncation:
 // spouse/partner > parents > children > rest (deterministic by index)
@@ -217,6 +225,7 @@ const TIER1_PRIORITY_RELS = [
 export function selectVisibleUniverseNodes(
   nodes: UniverseNode[],
   viewportWidth: number,
+  additionalCount = 0,
 ): VisibleUniverseSet {
   const isMobile   = viewportWidth < 768
   const maxVisible = isMobile ? MAX_TOTAL_MOBILE : MAX_TOTAL_DESKTOP
@@ -250,10 +259,33 @@ export function selectVisibleUniverseNodes(
   const t2Visible = t2Sorted.slice(0, t2Capacity)
   const t2Hidden  = t2Sorted.slice(t2Capacity)
 
+  // T3 sorted deterministically: by hop distance, then relation type, then stable id
+  const t3Sorted = [...t3].sort((a, b) => {
+    if (a.hopDistance !== b.hopDistance) return a.hopDistance - b.hopDistance
+    if (a.relationType < b.relationType) return -1
+    if (a.relationType > b.relationType) return 1
+    return a.id < b.id ? -1 : 1
+  })
+
+  const allHidden = [...t1Hidden, ...t2Hidden, ...t3Sorted]
+
+  const maxExpanded    = isMobile ? MAX_EXPANDED_MOBILE : MAX_EXPANDED_DESKTOP
+  const baseCount      = t0.length + t1Visible.length + t2Visible.length
+  const expansionCap   = Math.max(0, maxExpanded - baseCount)
+  const expansionCount = Math.min(additionalCount, expansionCap, allHidden.length)
+  const stillHidden    = allHidden.slice(expansionCount)
+
+  const expandedNodes: UniverseNode[] = allHidden.slice(0, expansionCount).map(n =>
+    n.relevanceTier === 3
+      ? { ...n, scale: EXPANDED_SCALE, opacity: EXPANDED_OPACITY }
+      : n,
+  )
+
   return {
-    visible:     [...t0, ...t1Visible, ...t2Visible],
-    hiddenCount: t1Hidden.length + t2Hidden.length + t3.length,
-    hiddenNodes: [...t1Hidden, ...t2Hidden, ...t3],
+    visible:             [...t0, ...t1Visible, ...t2Visible, ...expandedNodes],
+    hiddenCount:         stillHidden.length,
+    hiddenNodes:         stillHidden,
+    maxExpansionReached: baseCount + expansionCount >= maxExpanded && stillHidden.length > 0,
   }
 }
 
