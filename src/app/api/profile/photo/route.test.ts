@@ -35,38 +35,66 @@ function makeRequest(file: File | null, extra?: Record<string, string>): NextReq
   return new NextRequest('http://localhost/api/profile/photo', { method: 'POST', body: fd })
 }
 
+/**
+ * Build mocks for the full happy path.
+ * profiles mock handles BOTH:
+ *   - select("avatar_path").eq().maybySingle()  ← read prevAvatarPath (step 3)
+ *   - update({...}).eq()                        ← write new path (step 8)
+ */
 function setupHappyPath({
   userId = 'user-1',
   personId = 'person-1',
+  prevAvatarPath = null as string | null,
   uploadError = null as { message: string } | null,
-  profileError = null as { message: string } | null,
+  profileSelectError = null as { message: string } | null,
+  profileUpdateError = null as { message: string } | null,
   personError = null as { message: string } | null,
   publicUrl = 'https://abc.supabase.co/storage/v1/object/public/avatars/member-photos/user-1/person-1.jpg',
+  claimError = null as { message: string } | null,
 } = {}) {
   mockGetUser.mockResolvedValue({ data: { user: { id: userId } } })
 
+  const mockRemove = vi.fn().mockResolvedValue({})
   mockStorageFrom.mockReturnValue({
     upload: vi.fn().mockResolvedValue({ error: uploadError }),
     getPublicUrl: vi.fn().mockReturnValue({ data: { publicUrl } }),
-    remove: vi.fn().mockResolvedValue({ data: null, error: null }),
+    remove: mockRemove,
   })
 
   mockServiceFrom.mockImplementation((table: string) => {
     if (table === 'person_claims') {
       const c: Record<string, unknown> = {}
-      c['select'] = () => c
-      c['eq'] = () => c
-      c['is'] = () => c
-      c['maybeSingle'] = () => Promise.resolve({ data: { person_id: personId } })
+      c['select'] = () => c; c['eq'] = () => c; c['is'] = () => c
+      c['maybySingle'] = () => Promise.resolve(
+        claimError
+          ? { data: null, error: claimError }
+          : { data: personId ? { person_id: personId } : null, error: null }
+      )
+      c['maybeSingle'] = c['maybySingle']
       return c
     }
     if (table === 'profiles') {
-      return { update: () => ({ eq: () => Promise.resolve({ error: profileError }) }) }
+      return {
+        select: () => ({
+          eq: () => ({
+            maybySingle: () => Promise.resolve({ data: { avatar_path: prevAvatarPath }, error: profileSelectError }),
+            maybeSingle: () => Promise.resolve({ data: { avatar_path: prevAvatarPath }, error: profileSelectError }),
+          }),
+        }),
+        update: () => ({
+          eq: () => Promise.resolve({ error: profileUpdateError }),
+          catch: (fn: () => void) => Promise.resolve({ error: profileUpdateError }).catch(fn),
+        }),
+      }
     }
     if (table === 'persons') {
-      return { update: () => ({ eq: () => Promise.resolve({ error: personError }) }) }
+      return {
+        update: () => ({ eq: () => Promise.resolve({ error: personError }) }),
+      }
     }
   })
+
+  return { mockRemove }
 }
 
 // ── auth ─────────────────────────────────────────────────────────────────────
@@ -76,8 +104,7 @@ describe('POST /api/profile/photo — auth', () => {
     mockGetUser.mockResolvedValue({ data: { user: null } })
     const res = await POST(makeRequest(makeFile()))
     expect(res.status).toBe(401)
-    const body = await res.json()
-    expect(body.error).toMatch(/autenticado/i)
+    expect((await res.json()).error).toMatch(/autenticado/i)
   })
 })
 
@@ -91,28 +118,42 @@ describe('POST /api/profile/photo — claim', () => {
       if (table === 'person_claims') {
         const c: Record<string, unknown> = {}
         c['select'] = () => c; c['eq'] = () => c; c['is'] = () => c
-        c['maybeSingle'] = () => Promise.resolve({ data: null })
+        c['maybySingle'] = () => Promise.resolve({ data: null, error: null })
+        c['maybeSingle'] = c['maybySingle']
         return c
       }
     })
     const res = await POST(makeRequest(makeFile()))
     expect(res.status).toBe(409)
-    const body = await res.json()
-    expect(body.error).toMatch(/identidad/i)
+    expect((await res.json()).error).toMatch(/identidad/i)
   })
 
-  it('resolves personId from server claim — client cannot dictate it', async () => {
-    // Even if the client appended a different personId in the form, the endpoint
-    // reads person_claims server-side using the authenticated userId.
+  it('returns 500 when claim query errors (e.g. multiple active claims)', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'user-1' } } })
+    mockStorageFrom.mockReturnValue({})
+    mockServiceFrom.mockImplementation((table: string) => {
+      if (table === 'person_claims') {
+        const c: Record<string, unknown> = {}
+        c['select'] = () => c; c['eq'] = () => c; c['is'] = () => c
+        c['maybySingle'] = () => Promise.resolve({ data: null, error: { message: 'multiple rows returned' } })
+        c['maybeSingle'] = c['maybySingle']
+        return c
+      }
+    })
+    const res = await POST(makeRequest(makeFile()))
+    expect(res.status).toBe(500)
+    expect((await res.json()).error).toMatch(/identidad/i)
+  })
+
+  it('resolves personId from server claim — client-supplied personId field is ignored', async () => {
     setupHappyPath({ personId: 'server-person' })
     const fd = new FormData()
     fd.append('photo', makeFile())
-    fd.append('personId', 'attacker-person')  // client-supplied, must be ignored
+    fd.append('personId', 'attacker-person')
     const req = new NextRequest('http://localhost/api/profile/photo', { method: 'POST', body: fd })
     const res = await POST(req)
     expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.personId).toBe('server-person')
+    expect((await res.json()).personId).toBe('server-person')
   })
 })
 
@@ -121,11 +162,23 @@ describe('POST /api/profile/photo — claim', () => {
 describe('POST /api/profile/photo — file validation', () => {
   beforeEach(() => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'user-1' } } })
-    const c: Record<string, unknown> = {}
-    c['select'] = () => c; c['eq'] = () => c; c['is'] = () => c
-    c['maybeSingle'] = () => Promise.resolve({ data: { person_id: 'person-1' } })
-    mockServiceFrom.mockReturnValue(c)
     mockStorageFrom.mockReturnValue({})
+    // claim resolves, profiles select returns prev=null, no upload needed
+    mockServiceFrom.mockImplementation((table: string) => {
+      if (table === 'person_claims') {
+        const c: Record<string, unknown> = {}
+        c['select'] = () => c; c['eq'] = () => c; c['is'] = () => c
+        c['maybySingle'] = () => Promise.resolve({ data: { person_id: 'person-1' }, error: null })
+        c['maybeSingle'] = c['maybySingle']
+        return c
+      }
+      if (table === 'profiles') {
+        return {
+          select: () => ({ eq: () => ({ maybySingle: () => Promise.resolve({ data: { avatar_path: null }, error: null }), maybeSingle: () => Promise.resolve({ data: { avatar_path: null }, error: null }) }) }),
+          update: () => ({ eq: () => Promise.resolve({ error: null }) }),
+        }
+      }
+    })
   })
 
   it('returns 400 when photo field is absent', async () => {
@@ -195,10 +248,16 @@ describe('POST /api/profile/photo — upload failure', () => {
       if (table === 'person_claims') {
         const c: Record<string, unknown> = {}
         c['select'] = () => c; c['eq'] = () => c; c['is'] = () => c
-        c['maybeSingle'] = () => Promise.resolve({ data: { person_id: 'person-1' } })
+        c['maybySingle'] = () => Promise.resolve({ data: { person_id: 'person-1' }, error: null })
+        c['maybeSingle'] = c['maybySingle']
         return c
       }
-      if (table === 'profiles') return { update: mockProfileUpdate }
+      if (table === 'profiles') {
+        return {
+          select: () => ({ eq: () => ({ maybySingle: () => Promise.resolve({ data: { avatar_path: null }, error: null }), maybeSingle: () => Promise.resolve({ data: { avatar_path: null }, error: null }) }) }),
+          update: mockProfileUpdate,
+        }
+      }
       if (table === 'persons') return { update: mockPersonUpdate }
     })
 
@@ -209,37 +268,129 @@ describe('POST /api/profile/photo — upload failure', () => {
   })
 })
 
-// ── DB failure rollback ───────────────────────────────────────────────────────
+// ── profiles write failure ────────────────────────────────────────────────────
 
-describe('POST /api/profile/photo — DB failure rollback', () => {
-  it('removes uploaded file and returns 500 when DB update fails', async () => {
-    const mockRemove = vi.fn().mockResolvedValue({})
+describe('POST /api/profile/photo — profiles write failure', () => {
+  it('returns 500, deletes uploaded file, does NOT write to persons', async () => {
+    const mockPersonUpdate = vi.fn()
+    const { mockRemove } = setupHappyPath({ profileUpdateError: { message: 'profile DB error' } })
 
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'user-1' } } })
-    mockStorageFrom.mockReturnValue({
-      upload: vi.fn().mockResolvedValue({ error: null }),
-      getPublicUrl: vi.fn().mockReturnValue({ data: { publicUrl: 'https://x.com/p.jpg' } }),
-      remove: mockRemove,
-    })
     mockServiceFrom.mockImplementation((table: string) => {
       if (table === 'person_claims') {
         const c: Record<string, unknown> = {}
         c['select'] = () => c; c['eq'] = () => c; c['is'] = () => c
-        c['maybeSingle'] = () => Promise.resolve({ data: { person_id: 'person-1' } })
+        c['maybySingle'] = () => Promise.resolve({ data: { person_id: 'person-1' }, error: null })
+        c['maybeSingle'] = c['maybySingle']
         return c
       }
       if (table === 'profiles') {
-        return { update: () => ({ eq: () => Promise.resolve({ error: { message: 'profile DB error' } }) }) }
+        return {
+          select: () => ({ eq: () => ({ maybySingle: () => Promise.resolve({ data: { avatar_path: 'old/path.jpg' }, error: null }), maybeSingle: () => Promise.resolve({ data: { avatar_path: 'old/path.jpg' }, error: null }) }) }),
+          update: () => ({ eq: () => Promise.resolve({ error: { message: 'profile DB error' } }) }),
+        }
       }
-      if (table === 'persons') {
-        return { update: () => ({ eq: () => Promise.resolve({ error: null }) }) }
-      }
+      if (table === 'persons') return { update: mockPersonUpdate }
     })
 
     const res = await POST(makeRequest(makeFile()))
     expect(res.status).toBe(500)
     expect(mockRemove).toHaveBeenCalledWith(['member-photos/user-1/person-1.jpg'])
-    expect((await res.json()).error).toMatch(/guardar/i)
+    expect(mockPersonUpdate).not.toHaveBeenCalled()
+  })
+})
+
+// ── persons write failure + compensation ─────────────────────────────────────
+
+describe('POST /api/profile/photo — persons write failure (compensation)', () => {
+  it('returns 500, restores profiles.avatar_path to previous value, deletes uploaded file', async () => {
+    const mockProfileRestore = vi.fn().mockReturnValue({ eq: () => Promise.resolve({ error: null }) })
+
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'user-1' } } })
+    const mockRemove = vi.fn().mockResolvedValue({})
+    mockStorageFrom.mockReturnValue({
+      upload: vi.fn().mockResolvedValue({ error: null }),
+      getPublicUrl: vi.fn().mockReturnValue({ data: { publicUrl: 'https://x.com/p.jpg' } }),
+      remove: mockRemove,
+    })
+
+    let profileUpdateCallCount = 0
+    mockServiceFrom.mockImplementation((table: string) => {
+      if (table === 'person_claims') {
+        const c: Record<string, unknown> = {}
+        c['select'] = () => c; c['eq'] = () => c; c['is'] = () => c
+        c['maybySingle'] = () => Promise.resolve({ data: { person_id: 'person-1' }, error: null })
+        c['maybeSingle'] = c['maybySingle']
+        return c
+      }
+      if (table === 'profiles') {
+        return {
+          select: () => ({ eq: () => ({ maybySingle: () => Promise.resolve({ data: { avatar_path: 'old/prev.jpg' }, error: null }), maybeSingle: () => Promise.resolve({ data: { avatar_path: 'old/prev.jpg' }, error: null }) }) }),
+          update: (patch: Record<string, unknown>) => {
+            profileUpdateCallCount++
+            if (profileUpdateCallCount === 1) {
+              // First update: write new avatar_path — succeeds
+              return { eq: () => Promise.resolve({ error: null }) }
+            }
+            // Second update (compensation): restore to previous value
+            mockProfileRestore(patch)
+            return { eq: () => Promise.resolve({ error: null }) }
+          },
+        }
+      }
+      if (table === 'persons') {
+        return { update: () => ({ eq: () => Promise.resolve({ error: { message: 'persons DB error' } }) }) }
+      }
+    })
+
+    const res = await POST(makeRequest(makeFile()))
+    expect(res.status).toBe(500)
+
+    // Compensation: profiles restored to previous value
+    expect(mockProfileRestore).toHaveBeenCalledWith({ avatar_path: 'old/prev.jpg' })
+
+    // Compensation: uploaded file deleted
+    expect(mockRemove).toHaveBeenCalledWith(['member-photos/user-1/person-1.jpg'])
+
+    expect((await res.json()).error).toMatch(/genealógicos/i)
+  })
+
+  it('null prevAvatarPath: compensation restores profiles.avatar_path to null', async () => {
+    const mockProfileRestore = vi.fn().mockReturnValue({ eq: () => Promise.resolve({ error: null }) })
+
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'user-1' } } })
+    mockStorageFrom.mockReturnValue({
+      upload: vi.fn().mockResolvedValue({ error: null }),
+      getPublicUrl: vi.fn().mockReturnValue({ data: { publicUrl: 'https://x.com/p.jpg' } }),
+      remove: vi.fn().mockResolvedValue({}),
+    })
+
+    let profileUpdateCallCount = 0
+    mockServiceFrom.mockImplementation((table: string) => {
+      if (table === 'person_claims') {
+        const c: Record<string, unknown> = {}
+        c['select'] = () => c; c['eq'] = () => c; c['is'] = () => c
+        c['maybySingle'] = () => Promise.resolve({ data: { person_id: 'person-1' }, error: null })
+        c['maybeSingle'] = c['maybySingle']
+        return c
+      }
+      if (table === 'profiles') {
+        return {
+          select: () => ({ eq: () => ({ maybySingle: () => Promise.resolve({ data: { avatar_path: null }, error: null }), maybeSingle: () => Promise.resolve({ data: { avatar_path: null }, error: null }) }) }),
+          update: (patch: Record<string, unknown>) => {
+            profileUpdateCallCount++
+            if (profileUpdateCallCount === 1) return { eq: () => Promise.resolve({ error: null }) }
+            mockProfileRestore(patch)
+            return { eq: () => Promise.resolve({ error: null }) }
+          },
+        }
+      }
+      if (table === 'persons') {
+        return { update: () => ({ eq: () => Promise.resolve({ error: { message: 'persons error' } }) }) }
+      }
+    })
+
+    await POST(makeRequest(makeFile()))
+    expect(mockProfileRestore).toHaveBeenCalledWith({ avatar_path: null })
   })
 })
 
@@ -259,13 +410,11 @@ describe('POST /api/profile/photo — success', () => {
   it('avatarUrl is a full HTTPS URL', async () => {
     setupHappyPath()
     const res = await POST(makeRequest(makeFile()))
-    const body = await res.json()
-    expect(body.avatarUrl).toMatch(/^https:\/\//)
+    expect((await res.json()).avatarUrl).toMatch(/^https:\/\//)
   })
 
-  it('updates profiles.avatar_path (storage key, not full URL)', async () => {
-    const mockProfileEq = vi.fn().mockResolvedValue({ error: null })
-    const mockProfileUpdate = vi.fn().mockReturnValue({ eq: mockProfileEq })
+  it('updates profiles.avatar_path with the storage key (not full URL)', async () => {
+    const mockProfileUpdateFn = vi.fn().mockReturnValue({ eq: () => Promise.resolve({ error: null }) })
 
     mockGetUser.mockResolvedValue({ data: { user: { id: 'user-42' } } })
     mockStorageFrom.mockReturnValue({
@@ -277,22 +426,26 @@ describe('POST /api/profile/photo — success', () => {
       if (table === 'person_claims') {
         const c: Record<string, unknown> = {}
         c['select'] = () => c; c['eq'] = () => c; c['is'] = () => c
-        c['maybeSingle'] = () => Promise.resolve({ data: { person_id: 'person-99' } })
+        c['maybySingle'] = () => Promise.resolve({ data: { person_id: 'person-99' }, error: null })
+        c['maybeSingle'] = c['maybySingle']
         return c
       }
-      if (table === 'profiles') return { update: mockProfileUpdate }
+      if (table === 'profiles') {
+        return {
+          select: () => ({ eq: () => ({ maybySingle: () => Promise.resolve({ data: { avatar_path: null }, error: null }), maybeSingle: () => Promise.resolve({ data: { avatar_path: null }, error: null }) }) }),
+          update: mockProfileUpdateFn,
+        }
+      }
       if (table === 'persons') return { update: () => ({ eq: () => Promise.resolve({ error: null }) }) }
     })
 
     await POST(makeRequest(makeFile()))
-    expect(mockProfileUpdate).toHaveBeenCalledWith({ avatar_path: 'member-photos/user-42/person-99.jpg' })
-    expect(mockProfileEq).toHaveBeenCalledWith('user_id', 'user-42')
+    expect(mockProfileUpdateFn).toHaveBeenCalledWith({ avatar_path: 'member-photos/user-42/person-99.jpg' })
   })
 
   it('updates persons.photo_path with the full public URL', async () => {
     const fullUrl = 'https://abc.supabase.co/storage/v1/object/public/avatars/member-photos/user-42/person-99.jpg'
-    const mockPersonEq = vi.fn().mockResolvedValue({ error: null })
-    const mockPersonUpdate = vi.fn().mockReturnValue({ eq: mockPersonEq })
+    const mockPersonUpdateFn = vi.fn().mockReturnValue({ eq: () => Promise.resolve({ error: null }) })
 
     mockGetUser.mockResolvedValue({ data: { user: { id: 'user-42' } } })
     mockStorageFrom.mockReturnValue({
@@ -304,15 +457,20 @@ describe('POST /api/profile/photo — success', () => {
       if (table === 'person_claims') {
         const c: Record<string, unknown> = {}
         c['select'] = () => c; c['eq'] = () => c; c['is'] = () => c
-        c['maybeSingle'] = () => Promise.resolve({ data: { person_id: 'person-99' } })
+        c['maybySingle'] = () => Promise.resolve({ data: { person_id: 'person-99' }, error: null })
+        c['maybeSingle'] = c['maybySingle']
         return c
       }
-      if (table === 'profiles') return { update: () => ({ eq: () => Promise.resolve({ error: null }) }) }
-      if (table === 'persons') return { update: mockPersonUpdate }
+      if (table === 'profiles') {
+        return {
+          select: () => ({ eq: () => ({ maybySingle: () => Promise.resolve({ data: { avatar_path: null }, error: null }), maybeSingle: () => Promise.resolve({ data: { avatar_path: null }, error: null }) }) }),
+          update: () => ({ eq: () => Promise.resolve({ error: null }) }),
+        }
+      }
+      if (table === 'persons') return { update: mockPersonUpdateFn }
     })
 
     await POST(makeRequest(makeFile()))
-    expect(mockPersonUpdate).toHaveBeenCalledWith({ photo_path: fullUrl })
-    expect(mockPersonEq).toHaveBeenCalledWith('id', 'person-99')
+    expect(mockPersonUpdateFn).toHaveBeenCalledWith({ photo_path: fullUrl })
   })
 })

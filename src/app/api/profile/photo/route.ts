@@ -8,12 +8,19 @@ import { getServiceClient } from "@/lib/server/family";
  * Receives multipart/form-data with a 'photo' field.
  * All work runs server-side with service role:
  *   1. Resolve the caller's approved person_claim
- *   2. Validate and upload the file to Storage
- *   3. Update profiles.avatar_path (storage key)
- *   4. Update persons.photo_path (full public URL)
+ *   2. Read the current profiles.avatar_path for compensation
+ *   3. Validate and upload the file to Storage
+ *   4. Update profiles.avatar_path (storage key)
+ *   5. Update persons.photo_path (full public URL)
+ *      → If step 5 fails, restore profiles.avatar_path and delete the uploaded file
  *
  * The client never provides a personId — it is resolved exclusively from
  * the authenticated user's approved claim to prevent updating foreign persons.
+ *
+ * NOTE: steps 4 and 5 are NOT a single SQL transaction; they are sequential
+ * writes with explicit compensation. If step 5 fails, step 4 is reversed by
+ * restoring the previous avatar_path. A Storage remove failure on compensation
+ * is swallowed (the file becomes an orphan); the response is still 500.
  */
 
 const ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -34,13 +41,25 @@ export async function POST(req: NextRequest) {
   const service = getServiceClient();
 
   // ── 2. Resolve claimed person (service role bypasses RLS) ─────────────────
-  const { data: claim } = await service
+  // Canonical claim_status enum: 'pending' | 'approved' | 'rejected' | 'revoked'
+  // Double-filter: claim_status = 'approved' AND revoked_at IS NULL
+  // (defense in depth against partially-revoked rows).
+  // Multiple active claims for one user is a data integrity violation; maybySingle()
+  // surfaces that as an error rather than silently picking one.
+  const { data: claim, error: claimError } = await service
     .from("person_claims")
     .select("person_id")
     .eq("user_id", user.id)
     .eq("claim_status", "approved")
     .is("revoked_at", null)
     .maybeSingle();
+
+  if (claimError) {
+    return NextResponse.json(
+      { error: "Error al verificar identidad: " + claimError.message },
+      { status: 500 }
+    );
+  }
 
   if (!claim?.person_id) {
     return NextResponse.json(
@@ -51,7 +70,16 @@ export async function POST(req: NextRequest) {
 
   const personId: string = claim.person_id;
 
-  // ── 3. Parse multipart file ────────────────────────────────────────────────
+  // ── 3. Read current avatar_path for compensation ───────────────────────────
+  // Needed to restore profiles.avatar_path if the persons update fails.
+  const { data: existingProfile } = await service
+    .from("profiles")
+    .select("avatar_path")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  const prevAvatarPath: string | null = existingProfile?.avatar_path ?? null;
+
+  // ── 4. Parse multipart file ────────────────────────────────────────────────
   let file: File | null = null;
   try {
     const formData = await req.formData();
@@ -65,7 +93,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Archivo requerido" }, { status: 400 });
   }
 
-  // ── 4. Validate file ───────────────────────────────────────────────────────
+  // ── 5. Validate file ───────────────────────────────────────────────────────
   if (!ALLOWED_MIME.has(file.type)) {
     return NextResponse.json(
       { error: "Tipo no permitido. Usa JPEG, PNG o WebP" },
@@ -80,7 +108,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // ── 5. Upload ──────────────────────────────────────────────────────────────
+  // ── 6. Upload ──────────────────────────────────────────────────────────────
   const ext = EXT[file.type];
   const storagePath = `member-photos/${user.id}/${personId}.${ext}`;
 
@@ -96,22 +124,44 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // ── 6. Get canonical public URL ────────────────────────────────────────────
+  // ── 7. Get canonical public URL ────────────────────────────────────────────
   const { data: urlData } = service.storage.from("avatars").getPublicUrl(storagePath);
   const avatarUrl: string = urlData.publicUrl;
 
-  // ── 7. Update both tables (best-effort rollback on DB failure) ────────────
-  const [profileResult, personResult] = await Promise.all([
-    service.from("profiles").update({ avatar_path: storagePath }).eq("user_id", user.id),
-    service.from("persons").update({ photo_path: avatarUrl }).eq("id", personId),
-  ]);
+  // ── 8. Update profiles.avatar_path ────────────────────────────────────────
+  const { error: profileError } = await service
+    .from("profiles")
+    .update({ avatar_path: storagePath })
+    .eq("user_id", user.id);
 
-  if (profileResult.error || personResult.error) {
+  if (profileError) {
     await service.storage.from("avatars").remove([storagePath]).catch(() => {});
-    const msg = [profileResult.error?.message, personResult.error?.message]
-      .filter(Boolean)
-      .join("; ");
-    return NextResponse.json({ error: "Error al guardar: " + msg }, { status: 500 });
+    return NextResponse.json(
+      { error: "Error al guardar perfil: " + profileError.message },
+      { status: 500 }
+    );
+  }
+
+  // ── 9. Update persons.photo_path; compensate profiles on failure ──────────
+  // If this write fails, restore profiles.avatar_path to its previous value
+  // and delete the uploaded file so no partial state is committed.
+  const { error: personError } = await service
+    .from("persons")
+    .update({ photo_path: avatarUrl })
+    .eq("id", personId);
+
+  if (personError) {
+    try {
+      await service
+        .from("profiles")
+        .update({ avatar_path: prevAvatarPath })
+        .eq("user_id", user.id);
+    } catch { /* ignore compensation error */ }
+    await service.storage.from("avatars").remove([storagePath]).catch(() => {});
+    return NextResponse.json(
+      { error: "Error al guardar datos genealógicos: " + personError.message },
+      { status: 500 }
+    );
   }
 
   return NextResponse.json({ personId, avatarUrl });
