@@ -66,7 +66,6 @@ export async function PATCH(
     .single();
 
   if (updateError) {
-    console.error("member PATCH error:", updateError);
     return NextResponse.json({ error: "Error al guardar" }, { status: 500 });
   }
 
