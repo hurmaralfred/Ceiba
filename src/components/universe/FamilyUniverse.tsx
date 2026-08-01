@@ -115,9 +115,9 @@ export function FamilyUniverse({
   onEditMember,
   onInviteMember,
 }: Props) {
-  const [focalId,       setFocalId]       = useState<string>('root')
-  const [selectedNode,  setSelectedNode]  = useState<UniverseNode | null>(null)
-  const [containerSize, setContainerSize] = useState({ w: 375, h: 812 })
+  const [focalId,        setFocalId]       = useState<string>('root')
+  const [selectedId,     setSelectedId]    = useState<string | null>(null)
+  const [containerSize,  setContainerSize] = useState({ w: 375, h: 812 })
   const [additionalCount, setAdditionalCount] = useState(0)
 
   // Reset expansion whenever the focal person changes
@@ -140,6 +140,12 @@ export function FamilyUniverse({
   const { visible: nodes, hiddenCount, maxExpansionReached } = useMemo(
     () => selectVisibleUniverseNodes(allNodes, containerSize.w, additionalCount),
     [allNodes, containerSize.w, additionalCount],
+  )
+
+  // Derive selected node from id so state is a plain string, not a stale object reference
+  const selectedNode = useMemo(
+    () => (selectedId ? nodes.find(n => n.id === selectedId) ?? null : null),
+    [selectedId, nodes],
   )
 
   // Track which node IDs are newly entering the visible set (for reveal animation)
@@ -167,28 +173,28 @@ export function FamilyUniverse({
 
   const handleAvatarClick = useCallback((node: UniverseNode) => {
     if (node.isFocal) return
-    setSelectedNode(prev => {
-      if (prev?.id === node.id) {
-        // Second tap on same avatar → refocus
+    setSelectedId(prev => {
+      if (prev === node.id) {
+        // Second tap on the same avatar → refocus
         setFocalId(node.id)
         return null
       }
-      return node
+      return node.id
     })
   }, [])
 
   const handleRefocus = useCallback((id: string) => {
     setFocalId(id)
-    setSelectedNode(null)
+    setSelectedId(null)
   }, [])
 
-  const handleClose = useCallback(() => setSelectedNode(null), [])
+  const handleClose = useCallback(() => setSelectedId(null), [])
 
   const handleExpand = useCallback(() => {
     setAdditionalCount(c => c + batchSize)
   }, [batchSize])
 
-  const showExpandButton = (hiddenCount > 0 || maxExpansionReached) && !selectedNode
+  const showExpandButton = (hiddenCount > 0 || maxExpansionReached) && !selectedId
 
   return (
     <>
@@ -197,6 +203,7 @@ export function FamilyUniverse({
       <div
         ref={containerRef}
         style={{ position: 'relative', width: '100%', height: '100%' }}
+        onClick={handleClose}
       >
         <UniverseViewport nodes={nodes} onFocusChange={handleRefocus} viewScale={viewScale}>
           {/* Orbit guide rings (sit behind avatars) */}
@@ -207,7 +214,7 @@ export function FamilyUniverse({
             <AvatarSlot
               key={node.id}
               node={node}
-              selected={selectedNode?.id === node.id}
+              selected={selectedId === node.id}
               onClick={() => handleAvatarClick(node)}
               viewScale={viewScale}
               isNew={newNodeIds.has(node.id)}
@@ -287,6 +294,7 @@ function AvatarSlot({
 
   return (
     <div
+      onClick={e => e.stopPropagation()}
       style={{
         position: 'absolute',
         left: '50%',

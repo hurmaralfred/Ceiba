@@ -162,16 +162,13 @@ describe('UniversePersonPanel — close button', () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
-  it('backdrop click calls onClose', () => {
-    const onClose = vi.fn()
+  it('panel has no backdrop overlay (close-on-outside handled by parent container)', () => {
     const { container } = render(
-      <UniversePersonPanel node={makeNode()} onClose={onClose} />,
+      <UniversePersonPanel node={makeNode()} onClose={vi.fn()} />,
     )
-    // The backdrop is the div with aria-hidden="true" and fixed inset-0
+    // Backdrop was removed — outside-tap is handled by FamilyUniverse container onClick
     const backdrop = container.querySelector('div[aria-hidden="true"]')
-    expect(backdrop).not.toBeNull()
-    fireEvent.click(backdrop!)
-    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(backdrop).toBeNull()
   })
 })
 

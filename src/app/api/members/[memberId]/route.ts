@@ -34,10 +34,13 @@ export async function PATCH(
   const body = await req.json().catch(() => ({}));
   const {
     first_name, middle_name, first_surname, second_surname,
-    birth_date, birth_city, birth_country, is_deceased,
+    birth_date, birth_city, birth_country, is_deceased, photo_path,
   } = body as Record<string, string | boolean | undefined>;
 
-  if (!first_name) return NextResponse.json({ error: "Nombre requerido" }, { status: 400 });
+  // photo_path-only updates (from profile page) don't require first_name
+  if (!first_name && !photo_path) {
+    return NextResponse.json({ error: "Nombre requerido" }, { status: 400 });
+  }
 
   const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if (first_name !== undefined) patch.first_name = first_name;
@@ -48,6 +51,7 @@ export async function PATCH(
   if (birth_city !== undefined) patch.birth_city = birth_city || null;
   if (birth_country !== undefined) patch.birth_country = birth_country || null;
   if (is_deceased !== undefined) patch.is_deceased = is_deceased;
+  if (photo_path !== undefined) patch.photo_path = photo_path || null;
 
   const { data: updated, error: updateError } = await service
     .from("persons")

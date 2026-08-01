@@ -66,11 +66,13 @@ export function UniversePersonPanel({ node, onClose, onRefocus, onEdit, onInvite
     <>
       <style dangerouslySetInnerHTML={{ __html: PANEL_CSS }} />
 
+      {/* stopPropagation so container's onClick-to-close doesn't fire for panel clicks */}
       <div
         role="dialog"
         aria-label={node ? `Perfil de ${node.shortName}` : undefined}
         aria-modal="false"
         className={`unv-panel${visible ? ' unv-panel--visible' : ''}`}
+        onClick={e => e.stopPropagation()}
       >
         {/* Fixed header: drag handle + name/close */}
         <div className="unv-panel__header">
@@ -132,17 +134,6 @@ export function UniversePersonPanel({ node, onClose, onRefocus, onEdit, onInvite
         </div>
       </div>
 
-      {/* Backdrop tap to close */}
-      {visible && (
-        <div
-          style={{
-            position: 'fixed', inset: 0, zIndex: 49,
-            background: 'rgba(0,0,0,0.0)',
-          }}
-          onClick={onClose}
-          aria-hidden="true"
-        />
-      )}
     </>
   )
 }

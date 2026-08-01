@@ -120,7 +120,6 @@ export default function ProfilePage() {
     setSaving(true);
 
     let nextAvatarPath = avatarPath;
-    let personPhotoPublicUrl: string | null = null;
     if (photoFile) {
       const ext = photoFile.name.split(".").pop();
       const profilePath = `${userId}/avatar.${ext}`;
@@ -134,8 +133,8 @@ export default function ProfilePage() {
       }
       nextAvatarPath = profilePath;
 
-      // Also write to persons.photo_path so the Universo reads the updated photo.
-      // The Universe resolves avatars from persons.photo_path, not profiles.avatar_path.
+      // Sync to persons.photo_path via the API route (bypasses RLS using service role).
+      // The Universe and /home read avatar_url from persons.photo_path, not profiles.avatar_path.
       if (personId) {
         const personPath = `member-photos/${userId}/${personId}.${ext}`;
         const { error: personUploadError } = await supabase.storage
@@ -143,7 +142,11 @@ export default function ProfilePage() {
           .upload(personPath, photoFile, { upsert: true });
         if (!personUploadError) {
           const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(personPath);
-          personPhotoPublicUrl = urlData.publicUrl;
+          await fetch(`/api/members/${personId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ photo_path: urlData.publicUrl }),
+          });
         }
       }
     }
@@ -162,11 +165,6 @@ export default function ProfilePage() {
       setSaving(false);
       toast.error("Error al guardar el perfil: " + profileError.message);
       return;
-    }
-
-    // Sync photo to persons.photo_path so the Universo picks it up
-    if (personPhotoPublicUrl && personId) {
-      await supabase.from("persons").update({ photo_path: personPhotoPublicUrl }).eq("id", personId);
     }
 
     if (personId && personForm) {
