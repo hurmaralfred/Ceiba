@@ -51,7 +51,12 @@ export async function PATCH(
   if (birth_city !== undefined) patch.birth_city = birth_city || null;
   if (birth_country !== undefined) patch.birth_country = birth_country || null;
   if (is_deceased !== undefined) patch.is_deceased = is_deceased;
-  if (photo_path !== undefined) patch.photo_path = photo_path || null;
+  if (photo_path !== undefined) {
+    if (photo_path && !String(photo_path).startsWith("https://")) {
+      return NextResponse.json({ error: "photo_path debe ser una URL https válida" }, { status: 400 });
+    }
+    patch.photo_path = photo_path || null;
+  }
 
   const { data: updated, error: updateError } = await service
     .from("persons")
