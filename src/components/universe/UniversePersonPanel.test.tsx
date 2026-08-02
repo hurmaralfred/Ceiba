@@ -162,16 +162,13 @@ describe('UniversePersonPanel — close button', () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
-  it('backdrop click calls onClose', () => {
-    const onClose = vi.fn()
+  it('panel has no backdrop overlay — clicking canvas area closes nothing', () => {
+    // The panel no longer renders a backdrop div[aria-hidden="true"].
+    // Instead, the panel itself stops propagation and the canvas handles its own clicks.
     const { container } = render(
-      <UniversePersonPanel node={makeNode()} onClose={onClose} />,
+      <UniversePersonPanel node={makeNode()} onClose={vi.fn()} />,
     )
-    // The backdrop is the div with aria-hidden="true" and fixed inset-0
-    const backdrop = container.querySelector('div[aria-hidden="true"]')
-    expect(backdrop).not.toBeNull()
-    fireEvent.click(backdrop!)
-    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(container.querySelector('div[aria-hidden="true"]')).toBeNull()
   })
 })
 

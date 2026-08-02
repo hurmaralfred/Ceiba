@@ -1,5 +1,6 @@
 'use client'
 import React, { useId, useState } from 'react'
+// avatarUrl is intentionally unused here — photos render in the profile panel, not on the SVG avatar
 import type { UniverseNode } from './useUniverseLayout'
 
 // ─── Color helpers ────────────────────────────────────────────────────────────
@@ -222,8 +223,7 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
   const elder      = node.ageGroup === 'elder'
   const child      = node.ageGroup === 'child'
   const oKey       = getOutfitKey(node)
-  const [photoError, setPhotoError] = useState(false)
-  const hasPhoto   = !!node.avatarUrl && !photoError
+  const hasPhoto   = false
 
   // Accessory flags — only shown when there's no photo
   const hairStyle  = (seed >> 2)  % (female ? 4 : 5)
@@ -467,18 +467,6 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
                 {/* Head sphere */}
                 <circle cx="30" cy="30" r="22" fill={`url(#${uid}hg)`} />
 
-                {hasPhoto ? (
-                  /* ── Profile photo — circular crop ── */
-                  <image
-                    href={node.avatarUrl!}
-                    x="7" y="7"
-                    width="46" height="46"
-                    clipPath={`url(#${uid}hc)`}
-                    preserveAspectRatio="xMidYMid slice"
-                    onError={() => setPhotoError(true)}
-                  />
-                ) : (
-                  /* ── Generated face ── */
                   <>
                     <Hair uid={uid} color={hairColor} female={female} elder={elder} child={child} style={hairStyle} />
 
@@ -516,7 +504,6 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
                     {/* Optional: glasses */}
                     {hasGlasses && <Glasses frameColor={eyeColor} />}
                   </>
-                )}
 
                 {/* Highlight ring when selected */}
                 {highlighted && !node.isFocal && (

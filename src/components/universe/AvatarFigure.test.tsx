@@ -40,60 +40,39 @@ function makeNode(overrides: Partial<UniverseNode> = {}): UniverseNode {
 
 // ─── Photo vs SVG face ────────────────────────────────────────────────────────
 
-describe('AvatarFigure — photo rendering', () => {
-  it('renders SVG <image> when avatarUrl is set', () => {
+describe('AvatarFigure — avatar rendering (photos never shown on SVG)', () => {
+  it('always renders the generated SVG face — never an <image> element', () => {
     const { container } = render(
       <AvatarFigure node={makeNode({ avatarUrl: 'https://example.com/photo.jpg' })} />,
     )
-    const img = container.querySelector('image[href]')
-    expect(img).not.toBeNull()
-    expect(img!.getAttribute('href')).toBe('https://example.com/photo.jpg')
+    // Profile photos are intentionally NOT rendered inside the SVG avatar
+    expect(container.querySelector('image[href]')).toBeNull()
+    // The generated face is always present (eye sclera circles)
+    const whites = Array.from(container.querySelectorAll('circle')).filter(
+      c => c.getAttribute('fill') === 'white',
+    )
+    expect(whites.length).toBeGreaterThan(0)
   })
 
-  it('photo presence hides SVG eyelid paths (face not rendered)', () => {
-    const { container } = render(
-      <AvatarFigure node={makeNode({ avatarUrl: 'https://example.com/photo.jpg' })} />,
-    )
-    // Eyelid lines use stroke="#0A0200" — only present in the generated face
-    const eyelids = Array.from(container.querySelectorAll('path')).filter(
-      p => p.getAttribute('stroke') === '#0A0200',
-    )
-    expect(eyelids).toHaveLength(0)
-  })
-
-  it('renders SVG face (eye sclera circles) when avatarUrl is null', () => {
+  it('renders SVG face when avatarUrl is null', () => {
     const { container } = render(
       <AvatarFigure node={makeNode({ avatarUrl: null })} />,
     )
-    // No SVG image element
     expect(container.querySelector('image[href]')).toBeNull()
-    // Sclera: circles with fill="white"
     const whites = Array.from(container.querySelectorAll('circle')).filter(
       c => c.getAttribute('fill') === 'white',
     )
     expect(whites.length).toBeGreaterThan(0)
   })
 
-  it('falls back to SVG face after image onError', async () => {
+  it('eyelid paths (stroke #0A0200) are always present', () => {
     const { container } = render(
-      <AvatarFigure node={makeNode({ avatarUrl: 'https://example.com/broken.jpg' })} />,
+      <AvatarFigure node={makeNode({ avatarUrl: 'https://example.com/photo.jpg' })} />,
     )
-
-    const imgEl = container.querySelector('image[href]')
-    expect(imgEl).not.toBeNull()
-
-    // Trigger the error → photoError state flips → face renders
-    await act(async () => {
-      fireEvent.error(imgEl!)
-    })
-
-    // <image> element removed
-    expect(container.querySelector('image[href]')).toBeNull()
-    // Eye sclera circles now present
-    const whites = Array.from(container.querySelectorAll('circle')).filter(
-      c => c.getAttribute('fill') === 'white',
+    const eyelids = Array.from(container.querySelectorAll('path')).filter(
+      p => p.getAttribute('stroke') === '#0A0200',
     )
-    expect(whites.length).toBeGreaterThan(0)
+    expect(eyelids.length).toBeGreaterThan(0)
   })
 })
 

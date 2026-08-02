@@ -2,51 +2,66 @@
 import React from 'react'
 import type { UniverseNode } from './useUniverseLayout'
 
+/* NAV_H: approximate BottomNav height. Panel must sit above it on mobile. */
+const NAV_H = 64
+
 const PANEL_CSS = `
+/* ── Mobile: bottom sheet ── */
 .unv-panel {
   position: fixed;
-  bottom: 0;
   left: 0;
   right: 0;
+  bottom: calc(${NAV_H}px + env(safe-area-inset-bottom, 0px));
+  max-height: 65dvh;
   background: linear-gradient(to top, #1A1208 0%, rgba(20,14,6,0.97) 100%);
   border-top: 1px solid rgba(242,180,60,0.18);
   border-radius: 16px 16px 0 0;
-  z-index: 50;
+  z-index: 600;
   box-shadow: 0 -8px 32px rgba(0,0,0,0.5);
   display: flex;
   flex-direction: column;
-  max-height: min(70dvh, 600px);
   overflow: hidden;
-  transform: translateY(100%);
-  transition: transform 0.35s cubic-bezier(0.34,1.22,0.64,1);
+  transform: translateY(calc(100% + ${NAV_H}px + env(safe-area-inset-bottom, 0px)));
+  transition: transform 0.32s cubic-bezier(0.34,1.22,0.64,1);
+  pointer-events: auto;
 }
 .unv-panel--visible {
   transform: translateY(0);
 }
+
+/* ── Panel sections ── */
 .unv-panel__header {
   flex-shrink: 0;
-  padding: 20px 24px 0;
+  padding: 16px 20px 0;
 }
 .unv-panel__body {
   flex: 1 1 auto;
   overflow-y: auto;
-  padding: 0 24px;
-  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  padding: 0 20px 12px;
   -webkit-overflow-scrolling: touch;
 }
+.unv-panel__actions {
+  flex-shrink: 0;
+  padding: 8px 20px 16px;
+}
+
+/* ── Desktop: fixed right sidebar ── */
 @media (min-width: 768px) {
   .unv-panel {
     left: auto;
-    right: 24px;
-    bottom: 24px;
-    width: clamp(340px, 26vw, 400px);
-    max-height: 80vh;
-    border-radius: 16px;
-    border-top: 1px solid rgba(242,180,60,0.18);
-    transform: translateY(calc(100% + 32px));
+    right: 0;
+    top: 64px;
+    bottom: ${NAV_H}px;
+    max-height: none;
+    width: min(360px, 100vw);
+    border-radius: 16px 0 0 16px;
+    border-top: none;
+    border-left: 1px solid rgba(242,180,60,0.18);
+    box-shadow: -8px 0 32px rgba(0,0,0,0.5);
+    transform: translateX(calc(100% + 8px));
   }
   .unv-panel--visible {
-    transform: translateY(0);
+    transform: translateX(0);
   }
 }
 `
@@ -71,22 +86,27 @@ export function UniversePersonPanel({ node, onClose, onRefocus, onEdit, onInvite
         aria-label={node ? `Perfil de ${node.shortName}` : undefined}
         aria-modal="false"
         className={`unv-panel${visible ? ' unv-panel--visible' : ''}`}
+        onPointerDown={e => e.stopPropagation()}
+        onClick={e => e.stopPropagation()}
       >
-        {/* Fixed header: drag handle + name/close */}
+        {/* Header: handle + name + close button */}
         <div className="unv-panel__header">
           <div style={{
             width: 36, height: 4, borderRadius: 2,
             background: 'rgba(255,255,255,0.18)',
-            margin: '0 auto 16px',
+            margin: '0 auto 14px',
           }} />
 
           {node && (
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 14 }}>
-              <div style={{ flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 12 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{
                   fontSize: 18, fontWeight: 700,
                   color: '#F2E8D0',
                   lineHeight: 1.2,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
                 }}>
                   {node.name}
                 </div>
@@ -105,8 +125,8 @@ export function UniversePersonPanel({ node, onClose, onRefocus, onEdit, onInvite
                 aria-label="Cerrar panel"
                 style={{
                   background: 'none', border: 'none',
-                  color: 'rgba(255,255,255,0.4)',
-                  fontSize: 20, cursor: 'pointer',
+                  color: 'rgba(255,255,255,0.5)',
+                  fontSize: 22, lineHeight: 1, cursor: 'pointer',
                   minWidth: 44, minHeight: 44,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   flexShrink: 0,
@@ -119,10 +139,15 @@ export function UniversePersonPanel({ node, onClose, onRefocus, onEdit, onInvite
           )}
         </div>
 
-        {/* Scrollable body: chips + actions */}
+        {/* Scrollable body: status chips */}
         <div className="unv-panel__body">
+          {node && <PanelChips node={node} />}
+        </div>
+
+        {/* Actions — always visible, never scrolled away */}
+        <div className="unv-panel__actions">
           {node && (
-            <PanelBody
+            <PanelActions
               node={node}
               onClose={onClose}
               onRefocus={onRefocus}
@@ -133,65 +158,44 @@ export function UniversePersonPanel({ node, onClose, onRefocus, onEdit, onInvite
         </div>
       </div>
 
-      {/* Backdrop tap to close */}
-      {visible && (
-        <div
-          style={{
-            position: 'fixed', inset: 0, zIndex: 49,
-            background: 'rgba(0,0,0,0.0)',
-          }}
-          onClick={onClose}
-          aria-hidden="true"
-        />
-      )}
     </>
   )
 }
 
-function PanelBody({ node, onClose, onRefocus, onEdit, onInvite }: { node: UniverseNode } & Omit<Props, 'node'>) {
+function PanelChips({ node }: { node: UniverseNode }) {
   return (
-    <div>
-      {/* Status chips */}
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
-        {node.isJoined && (
-          <StatusChip color="#2A6B3A" text="En Ceiba" />
-        )}
-        {!node.isJoined && (
-          <StatusChip color="#5C4A20" text="Sin cuenta" />
-        )}
-        {node.isDeceased && (
-          <StatusChip color="#4A4A4A" text="Fallecido/a" />
-        )}
-        {node.isRoot && (
-          <StatusChip color="#2A4A7A" text="Tú" />
-        )}
-      </div>
+    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', paddingTop: 4, paddingBottom: 8 }}>
+      {node.isJoined && <StatusChip color="#2A6B3A" text="En Ceiba" />}
+      {!node.isJoined && <StatusChip color="#5C4A20" text="Sin cuenta" />}
+      {node.isDeceased && <StatusChip color="#4A4A4A" text="Fallecido/a" />}
+      {node.isRoot && <StatusChip color="#2A4A7A" text="Tú" />}
+    </div>
+  )
+}
 
-      {/* Actions — always reachable */}
-      <div style={{ display: 'flex', gap: 10, paddingBottom: 4 }}>
+function PanelActions({ node, onClose, onRefocus, onEdit, onInvite }: { node: UniverseNode } & Omit<Props, 'node'>) {
+  return (
+    <div style={{ display: 'flex', gap: 10 }}>
+      <ActionButton
+        onClick={() => { onRefocus?.(node.id); onClose?.() }}
+        label="Centrar aquí"
+        icon="◎"
+        primary
+      />
+      {node.memberId && onEdit && (
         <ActionButton
-          onClick={() => { onRefocus?.(node.id); onClose?.() }}
-          label="Centrar aquí"
-          icon="◎"
-          primary
+          onClick={() => { onClose?.(); onEdit(node.memberId!) }}
+          label="Editar"
+          icon="✎"
         />
-
-        {node.memberId && onEdit && (
-          <ActionButton
-            onClick={() => { onClose?.(); onEdit(node.memberId!) }}
-            label="Editar"
-            icon="✎"
-          />
-        )}
-
-        {node.memberId && !node.isJoined && onInvite && (
-          <ActionButton
-            onClick={() => onInvite(node.memberId!)}
-            label="Invitar"
-            icon="✉"
-          />
-        )}
-      </div>
+      )}
+      {node.memberId && !node.isJoined && onInvite && (
+        <ActionButton
+          onClick={() => onInvite(node.memberId!)}
+          label="Invitar"
+          icon="✉"
+        />
+      )}
     </div>
   )
 }

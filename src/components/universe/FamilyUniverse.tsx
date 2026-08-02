@@ -181,7 +181,8 @@ export function FamilyUniverse({
     setAdditionalCount(c => c + batchSize)
   }, [batchSize])
 
-  const showExpandButton = (hiddenCount > 0 || maxExpansionReached) && !selectedNode
+  // Only show when there are more family members to reveal
+  const showExpandButton = hiddenCount > 0 && !selectedNode
 
   return (
     <>
@@ -220,37 +221,28 @@ export function FamilyUniverse({
         {/* Expand button */}
         {showExpandButton && (
           <button
-            onClick={maxExpansionReached ? undefined : handleExpand}
-            disabled={maxExpansionReached}
-            aria-label={
-              maxExpansionReached
-                ? 'Has alcanzado el límite de avatares visibles'
-                : `Ver ${hiddenCount} familiares más`
-            }
+            onClick={handleExpand}
+            aria-label={`Ver ${hiddenCount} familiares más`}
             style={{
               position: 'absolute',
               bottom: 24,
               left: '50%',
               transform: 'translateX(-50%)',
-              background: maxExpansionReached
-                ? 'rgba(16,12,8,0.60)'
-                : 'rgba(16,12,8,0.88)',
+              background: 'rgba(16,12,8,0.88)',
               border: '1px solid rgba(242,180,60,0.32)',
               borderRadius: 24,
-              color: maxExpansionReached
-                ? 'rgba(242,180,60,0.42)'
-                : 'rgba(242,180,60,0.88)',
+              color: 'rgba(242,180,60,0.88)',
               fontSize: 12,
               fontWeight: 500,
               padding: '7px 18px',
-              cursor: maxExpansionReached ? 'default' : 'pointer',
+              cursor: 'pointer',
               zIndex: 600,
               backdropFilter: 'blur(12px)',
               letterSpacing: '0.025em',
               whiteSpace: 'nowrap',
             }}
           >
-            {maxExpansionReached ? 'Explorar familia completa' : `Ver ${hiddenCount} familiares más`}
+            {`Ver ${hiddenCount} familiares más`}
           </button>
         )}
       </div>
@@ -280,6 +272,7 @@ function AvatarSlot({
 
   return (
     <div
+      data-avatar="true"
       style={{
         position: 'absolute',
         left: '50%',
