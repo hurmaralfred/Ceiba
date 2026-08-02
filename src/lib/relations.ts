@@ -246,6 +246,26 @@ export function inferRelation(parentRelation: RelationType | string, childRelati
       if (childRelation === "mother")         return "great_grandmother";
       break;
 
+    // ── Mis bisabuelos ───────────────────────────────────────
+    case "great_grandfather":
+    case "great_grandmother":
+      if (childRelation === "son")       return "uncle";
+      if (childRelation === "daughter")  return "aunt";
+      if (childRelation === "father")    return "great_great_grandfather";
+      if (childRelation === "mother")    return "great_great_grandmother";
+      if (["brother","half_brother"].includes(childRelation)) return "uncle";
+      if (["sister","half_sister"].includes(childRelation))   return "aunt";
+      break;
+
+    // ── Mis tatarabuelos ─────────────────────────────────────
+    case "great_great_grandfather":
+    case "great_great_grandmother":
+      if (childRelation === "son")       return "uncle";
+      if (childRelation === "daughter")  return "aunt";
+      if (["brother","half_brother"].includes(childRelation)) return "uncle";
+      if (["sister","half_sister"].includes(childRelation))   return "aunt";
+      break;
+
     // ── Mis sobrinos ─────────────────────────────────────────
     case "nephew": case "niece":
       if (childRelation === "son")            return "nephew";
