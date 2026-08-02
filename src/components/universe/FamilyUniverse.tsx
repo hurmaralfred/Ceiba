@@ -423,7 +423,7 @@ function AvatarSlot({
           'opacity  0.45s ease',
         ].join(', '),
       }}
-      onClick={e => { e.stopPropagation(); handleClick() }}
+      onClick={e => e.stopPropagation()}
     >
       <AvatarFigure
         node={node}
