@@ -7,36 +7,49 @@ const ORBIT_RADII  = [0, 115, 210, 295] as const
 const MAX_HOP      = 3
 // Scale and opacity are tier-based, not orbit-based.
 // Tier 0 = focal, 1 = intimate circle, 2 = close family, 3 = not rendered.
-const TIER_SCALES  = [1.35, 0.90, 0.68, 0.0] as const
-const TIER_OPACITY = [1.0,  1.0,  0.55, 0.0] as const
+// Sizes follow the 3-channel design system: r≈28 / 18 / 12 / 8
+// SVG head radius ≈ 22px → scale = target_r / 22
+const TIER_SCALES  = [1.30, 0.82, 0.55, 0.0] as const
+const TIER_OPACITY = [1.0,  1.0,  0.60, 0.0] as const
 
 // Preferred angle (°) per relation type, measured from 3 o'clock, clockwise positive.
-// Layout principle: ancestors = upper half, descendants = lower half,
-//                   spouse = right, siblings = left.
+//
+// Semantic sectors (3-channel design system):
+//   −90°          → Cónyuge (top / honor position)
+//   −160° … −100° → Paternal line (upper-left)
+//   −80°  …  −20° → Maternal line (upper-right)
+//   ±165° … ±180° → Siblings (lateral)
+//   +60°  … +120° → Descendants (bottom arc)
+//
+// In-laws (orbit 2) cluster automatically near spouse via orbitParentId inheritance.
 const REL_ANGLE: Record<string, number> = {
-  father: -120, mother: -60,
-  grandfather: -130, grandmother: -55,
-  grandfather_paternal: -137, grandmother_paternal: -124,
-  grandfather_maternal: -56,  grandmother_maternal: -43,
-  great_grandfather: -143,    great_grandmother: -37,
-  uncle: -152,  aunt: -28,
-  stepfather: -116, stepmother: -64,
-  // Descendants – lower half
-  son: 78,  daughter: 102,
-  grandson: 84, granddaughter: 96,
-  great_grandson: 82, great_granddaughter: 98,
-  nephew: 128,  niece: 52,
-  stepson: 88,  stepdaughter: 92, stepchild: 90,
-  // Spouse – right side
-  spouse: -6, partner: 6, husband: -6, wife: 6,
-  // Siblings – left side
-  brother: 167,  sister: -167,
-  half_brother: 158, half_sister: -158,
-  cousin: 155,
-  // In-laws
-  father_in_law: -106, mother_in_law: -74,
-  brother_in_law: 177, sister_in_law: -177,
-  son_in_law: 73, daughter_in_law: 107,
+  // Cónyuge — top (honor position, separates paternal / maternal sectors)
+  spouse: -90, partner: -90, husband: -90, wife: -90,
+  // Paternal line — upper-left quadrant
+  father: -138,  stepfather: -128,
+  grandfather_paternal: -155, grandmother_paternal: -148,
+  grandfather: -150, grandmother: -145,
+  great_grandfather: -160,  great_grandmother: -155,
+  uncle: -165,
+  // Maternal line — upper-right quadrant
+  mother: -42,  stepmother: -52,
+  grandfather_maternal: -28, grandmother_maternal: -22,
+  aunt: -15,
+  // Descendants — bottom arc (centered at 90°)
+  son: 68,      daughter: 112,
+  stepson: 78,  stepdaughter: 102, stepchild: 90,
+  grandson: 74, granddaughter: 106,
+  great_grandson: 78, great_granddaughter: 102,
+  nephew: 132,  niece: 48,
+  son_in_law: 62, daughter_in_law: 118,
+  // Siblings — lateral (near ±180°)
+  brother: -165,  sister: 165,
+  half_brother: -158, half_sister: 158,
+  cousin: 150,
+  // In-laws — orbit-2 nodes inherit spouse angle via orbitParentId;
+  // these angles are fallbacks for when no orbit-1 parent is found
+  father_in_law: -110, mother_in_law: -70,
+  brother_in_law: -175, sister_in_law: 175,
   // Fallback
   other: 45,
 }
@@ -211,8 +224,8 @@ export const BATCH_MOBILE  = 4
 export const BATCH_DESKTOP = 6
 export const MAX_EXPANDED_MOBILE  = 19
 export const MAX_EXPANDED_DESKTOP = 29
-const EXPANDED_SCALE   = 0.55
-const EXPANDED_OPACITY = 0.40
+const EXPANDED_SCALE   = 0.38   // orbit-3 target r≈8 → 8/22 ≈ 0.36
+const EXPANDED_OPACITY = 0.42
 
 // Priority within Tier 1 when total cap forces truncation:
 // spouse/partner > parents > children > rest (deterministic by index)
