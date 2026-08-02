@@ -89,7 +89,17 @@ function setupHappyPath({
     }
     if (table === 'persons') {
       return {
-        update: () => ({ eq: () => Promise.resolve({ error: personError }) }),
+        update: () => ({
+          eq: () => ({
+            select: () => ({
+              single: () => Promise.resolve(
+                personError
+                  ? { data: null, error: personError }
+                  : { data: { id: personId, photo_path: publicUrl }, error: null }
+              ),
+            }),
+          }),
+        }),
       }
     }
   })
@@ -263,7 +273,7 @@ describe('POST /api/profile/photo — upload failure', () => {
 
     const res = await POST(makeRequest(makeFile()))
     expect(res.status).toBe(500)
-    expect(mockProfileUpdate).not.toHaveBeenCalled()
+    expect(mockProfileUpdate).not.toHaveBeenCalledWith(expect.objectContaining({ avatar_path: expect.anything() }))
     expect(mockPersonUpdate).not.toHaveBeenCalled()
   })
 })
@@ -338,7 +348,15 @@ describe('POST /api/profile/photo — persons write failure (compensation)', () 
         }
       }
       if (table === 'persons') {
-        return { update: () => ({ eq: () => Promise.resolve({ error: { message: 'persons DB error' } }) }) }
+        return {
+          update: () => ({
+            eq: () => ({
+              select: () => ({
+                single: () => Promise.resolve({ data: null, error: { message: 'persons DB error' } }),
+              }),
+            }),
+          }),
+        }
       }
     })
 
@@ -351,7 +369,7 @@ describe('POST /api/profile/photo — persons write failure (compensation)', () 
     // Compensation: uploaded file deleted
     expect(mockRemove).toHaveBeenCalledWith(['member-photos/user-1/person-1.jpg'])
 
-    expect((await res.json()).error).toMatch(/genealógicos/i)
+    expect((await res.json()).error).toMatch(/persistirse/i)
   })
 
   it('null prevAvatarPath: compensation restores profiles.avatar_path to null', async () => {
@@ -385,7 +403,15 @@ describe('POST /api/profile/photo — persons write failure (compensation)', () 
         }
       }
       if (table === 'persons') {
-        return { update: () => ({ eq: () => Promise.resolve({ error: { message: 'persons error' } }) }) }
+        return {
+          update: () => ({
+            eq: () => ({
+              select: () => ({
+                single: () => Promise.resolve({ data: null, error: { message: 'persons error' } }),
+              }),
+            }),
+          }),
+        }
       }
     })
 
@@ -436,7 +462,17 @@ describe('POST /api/profile/photo — success', () => {
           update: mockProfileUpdateFn,
         }
       }
-      if (table === 'persons') return { update: () => ({ eq: () => Promise.resolve({ error: null }) }) }
+      if (table === 'persons') {
+        return {
+          update: () => ({
+            eq: () => ({
+              select: () => ({
+                single: () => Promise.resolve({ data: { id: 'person-99', photo_path: 'https://x.com/photo.jpg' }, error: null }),
+              }),
+            }),
+          }),
+        }
+      }
     })
 
     await POST(makeRequest(makeFile()))
@@ -467,10 +503,186 @@ describe('POST /api/profile/photo — success', () => {
           update: () => ({ eq: () => Promise.resolve({ error: null }) }),
         }
       }
-      if (table === 'persons') return { update: mockPersonUpdateFn }
+      if (table === 'persons') {
+        return {
+          update: mockPersonUpdateFn.mockReturnValue({
+            eq: () => ({
+              select: () => ({
+                single: () => Promise.resolve({ data: { id: 'person-99', photo_path: fullUrl }, error: null }),
+              }),
+            }),
+          }),
+        }
+      }
     })
 
     await POST(makeRequest(makeFile()))
     expect(mockPersonUpdateFn).toHaveBeenCalledWith({ photo_path: fullUrl })
+  })
+})
+
+// ── read-back verification (new tests) ───────────────────────────────────────
+
+function setupWithPersonsReadBack({
+  userId = 'user-1',
+  personId = 'person-1',
+  prevAvatarPath = null as string | null,
+  publicUrl = 'https://abc.supabase.co/storage/v1/object/public/avatars/member-photos/user-1/person-1.jpg',
+  personsSingleResult = null as { data: { id: string; photo_path: string | null } | null; error: { message: string } | null } | null,
+  mockProfileUpdate = null as ReturnType<typeof vi.fn> | null,
+} = {}) {
+  const removeFn = vi.fn().mockResolvedValue({})
+  const profileRestoreFn = vi.fn().mockReturnValue({ eq: () => Promise.resolve({ error: null }) })
+  let profileUpdateCallCount = 0
+
+  mockGetUser.mockResolvedValue({ data: { user: { id: userId } } })
+  mockStorageFrom.mockReturnValue({
+    upload: vi.fn().mockResolvedValue({ error: null }),
+    getPublicUrl: vi.fn().mockReturnValue({ data: { publicUrl } }),
+    remove: removeFn,
+  })
+
+  mockServiceFrom.mockImplementation((table: string) => {
+    if (table === 'person_claims') {
+      const c: Record<string, unknown> = {}
+      c['select'] = () => c; c['eq'] = () => c; c['is'] = () => c
+      c['maybySingle'] = () => Promise.resolve({ data: { person_id: personId }, error: null })
+      c['maybeSingle'] = c['maybySingle']
+      return c
+    }
+    if (table === 'profiles') {
+      return {
+        select: () => ({
+          eq: () => ({
+            maybySingle: () => Promise.resolve({ data: { avatar_path: prevAvatarPath }, error: null }),
+            maybeSingle: () => Promise.resolve({ data: { avatar_path: prevAvatarPath }, error: null }),
+          }),
+        }),
+        update: mockProfileUpdate
+          ? mockProfileUpdate
+          : (patch: Record<string, unknown>) => {
+              profileUpdateCallCount++
+              if (profileUpdateCallCount === 1) return { eq: () => Promise.resolve({ error: null }) }
+              profileRestoreFn(patch)
+              return { eq: () => Promise.resolve({ error: null }) }
+            },
+      }
+    }
+    if (table === 'persons') {
+      const defaultResult = personsSingleResult ?? { data: { id: personId, photo_path: publicUrl }, error: null }
+      return {
+        update: () => ({
+          eq: () => ({
+            select: () => ({
+              single: () => Promise.resolve(defaultResult),
+            }),
+          }),
+        }),
+      }
+    }
+  })
+
+  return { removeFn, profileRestoreFn }
+}
+
+describe('POST /api/profile/photo — read-back verification', () => {
+  it('returns 500 when single() errors (0 rows matched — PGRST116)', async () => {
+    setupWithPersonsReadBack({
+      personsSingleResult: { data: null, error: { message: 'JSON object requested, multiple (or no) rows returned' } },
+    })
+    const res = await POST(makeRequest(makeFile()))
+    expect(res.status).toBe(500)
+    expect((await res.json()).error).toMatch(/persistirse/i)
+  })
+
+  it('returns 500 when read-back returns data but photo_path is null', async () => {
+    const url = 'https://abc.supabase.co/storage/v1/object/public/avatars/member-photos/user-1/person-1.jpg'
+    setupWithPersonsReadBack({
+      publicUrl: url,
+      personsSingleResult: { data: { id: 'person-1', photo_path: null }, error: null },
+    })
+    const res = await POST(makeRequest(makeFile()))
+    expect(res.status).toBe(500)
+    expect((await res.json()).error).toMatch(/persistirse/i)
+  })
+
+  it('returns 500 when read-back photo_path mismatches avatarUrl', async () => {
+    const url = 'https://abc.supabase.co/storage/v1/object/public/avatars/member-photos/user-1/person-1.jpg'
+    setupWithPersonsReadBack({
+      publicUrl: url,
+      personsSingleResult: { data: { id: 'person-1', photo_path: 'https://other.com/stale.jpg' }, error: null },
+    })
+    const res = await POST(makeRequest(makeFile()))
+    expect(res.status).toBe(500)
+    expect((await res.json()).error).toMatch(/persistirse/i)
+  })
+
+  it('compensates profiles when read-back fails (restores prevAvatarPath)', async () => {
+    const { profileRestoreFn } = setupWithPersonsReadBack({
+      prevAvatarPath: 'member-photos/user-1/old.jpg',
+      personsSingleResult: { data: null, error: { message: 'PGRST116' } },
+    })
+    await POST(makeRequest(makeFile()))
+    expect(profileRestoreFn).toHaveBeenCalledWith({ avatar_path: 'member-photos/user-1/old.jpg' })
+  })
+
+  it('compensates profiles to null when prevAvatarPath was null and read-back fails', async () => {
+    const { profileRestoreFn } = setupWithPersonsReadBack({
+      prevAvatarPath: null,
+      personsSingleResult: { data: null, error: { message: 'PGRST116' } },
+    })
+    await POST(makeRequest(makeFile()))
+    expect(profileRestoreFn).toHaveBeenCalledWith({ avatar_path: null })
+  })
+
+  it('deletes uploaded file when read-back fails', async () => {
+    const { removeFn } = setupWithPersonsReadBack({
+      personsSingleResult: { data: null, error: { message: 'PGRST116' } },
+    })
+    await POST(makeRequest(makeFile()))
+    expect(removeFn).toHaveBeenCalledWith(['member-photos/user-1/person-1.jpg'])
+  })
+
+  it('returns 200 when read-back confirms photo_path exactly matches avatarUrl', async () => {
+    const url = 'https://abc.supabase.co/storage/v1/object/public/avatars/member-photos/user-1/person-1.jpg'
+    setupWithPersonsReadBack({
+      publicUrl: url,
+      personsSingleResult: { data: { id: 'person-1', photo_path: url }, error: null },
+    })
+    const res = await POST(makeRequest(makeFile()))
+    expect(res.status).toBe(200)
+  })
+
+  it('200 response includes personId resolved from person_claims (not null)', async () => {
+    const url = 'https://abc.supabase.co/storage/v1/object/public/avatars/member-photos/user-1/person-1.jpg'
+    setupWithPersonsReadBack({ publicUrl: url, personsSingleResult: { data: { id: 'person-1', photo_path: url }, error: null } })
+    const body = await (await POST(makeRequest(makeFile()))).json()
+    expect(body.personId).toBe('person-1')
+  })
+
+  it('200 response avatarUrl matches the value written to persons.photo_path', async () => {
+    const url = 'https://abc.supabase.co/storage/v1/object/public/avatars/member-photos/user-1/person-1.jpg'
+    setupWithPersonsReadBack({ publicUrl: url, personsSingleResult: { data: { id: 'person-1', photo_path: url }, error: null } })
+    const body = await (await POST(makeRequest(makeFile()))).json()
+    expect(body.avatarUrl).toBe(url)
+  })
+
+  it('does not call profiles.remove when read-back succeeds', async () => {
+    const url = 'https://abc.supabase.co/storage/v1/object/public/avatars/member-photos/user-1/person-1.jpg'
+    const { removeFn } = setupWithPersonsReadBack({
+      publicUrl: url,
+      personsSingleResult: { data: { id: 'person-1', photo_path: url }, error: null },
+    })
+    await POST(makeRequest(makeFile()))
+    expect(removeFn).not.toHaveBeenCalled()
+  })
+
+  it('read-back failure error message mentions persistirse (not raw DB message)', async () => {
+    setupWithPersonsReadBack({
+      personsSingleResult: { data: null, error: { message: 'internal pg error: relation does not exist' } },
+    })
+    const body = await (await POST(makeRequest(makeFile()))).json()
+    expect(body.error).not.toMatch(/internal pg error/i)
+    expect(body.error).toMatch(/persistirse/i)
   })
 })

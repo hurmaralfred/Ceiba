@@ -143,14 +143,23 @@ export async function POST(req: NextRequest) {
   }
 
   // ── 9. Update persons.photo_path; compensate profiles on failure ──────────
-  // If this write fails, restore profiles.avatar_path to its previous value
-  // and delete the uploaded file so no partial state is committed.
-  const { error: personError } = await service
+  // Chain .select().single() so PostgREST returns the updated row.
+  // Without .select(), a silent 0-row update (RLS, missing id, etc.) returns
+  // {error: null} and we cannot detect it.  With .single(), 0 rows → PGRST116.
+  // After a successful update, read the value back to confirm the write persisted.
+  const { data: updatedPerson, error: personError } = await service
     .from("persons")
     .update({ photo_path: avatarUrl })
-    .eq("id", personId);
+    .eq("id", personId)
+    .select("id, photo_path")
+    .single();
 
-  if (personError) {
+  const personWriteFailed =
+    personError !== null ||
+    !updatedPerson ||
+    updatedPerson.photo_path !== avatarUrl;
+
+  if (personWriteFailed) {
     try {
       await service
         .from("profiles")
@@ -159,7 +168,7 @@ export async function POST(req: NextRequest) {
     } catch { /* ignore compensation error */ }
     await service.storage.from("avatars").remove([storagePath]).catch(() => {});
     return NextResponse.json(
-      { error: "Error al guardar datos genealógicos: " + personError.message },
+      { error: "La foto no pudo persistirse en el árbol genealógico" },
       { status: 500 }
     );
   }

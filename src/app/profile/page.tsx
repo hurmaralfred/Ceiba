@@ -128,6 +128,11 @@ export default function ProfilePage() {
         toast.error(data?.error ?? "Error al subir la foto");
         return;
       }
+      if (!data?.avatarUrl || !data?.personId) {
+        setSaving(false);
+        toast.error("Respuesta incompleta al guardar la foto");
+        return;
+      }
       nextAvatarUrl = data.avatarUrl;
     }
 
