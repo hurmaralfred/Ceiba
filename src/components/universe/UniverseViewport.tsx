@@ -81,20 +81,24 @@ function generateStarField(): StarEntry[] {
   return stars
 }
 
-// Nebula definitions: position, size, color, opacity — static, drawn each frame
+// Nebula definitions — driftX/driftY are slow oscillation multipliers (radians/unit-t)
 const NEBULAE = [
-  { nx: 0.50, ny: 0.45, rFrac: 0.38, aspect: 0.84, rgb: [90,  42,  8] as const, peak: 0.22 }, // warm amber core
-  { nx: 0.18, ny: 0.35, rFrac: 0.30, aspect: 0.83, rgb: [12,  38, 95] as const, peak: 0.17 }, // deep blue left
-  { nx: 0.82, ny: 0.58, rFrac: 0.28, aspect: 0.78, rgb: [55,  15, 90] as const, peak: 0.15 }, // violet right
-  { nx: 0.50, ny: 0.85, rFrac: 0.45, aspect: 0.36, rgb: [65,  25,  5] as const, peak: 0.11 }, // amber dust horizon
-  { nx: 0.50, ny: 0.12, rFrac: 0.32, aspect: 0.44, rgb: [10,  50, 60] as const, peak: 0.09 }, // teal top wisp
-  { nx: 0.28, ny: 0.68, rFrac: 0.22, aspect: 0.82, rgb: [70,  12, 55] as const, peak: 0.09 }, // magenta lower-left
-  { nx: 0.62, ny: 0.38, rFrac: 0.20, aspect: 0.80, rgb: [110, 60, 10] as const, peak: 0.13 }, // gold dust offset
+  { nx: 0.50, ny: 0.45, rFrac: 0.38, aspect: 0.84, rgb: [90,  42,  8] as const, peak: 0.30, dx: 0.031, dy: 0.019, breathe: 0.13 }, // warm amber core
+  { nx: 0.18, ny: 0.35, rFrac: 0.30, aspect: 0.83, rgb: [12,  38, 95] as const, peak: 0.23, dx: 0.024, dy: 0.037, breathe: 0.16 }, // deep blue left
+  { nx: 0.82, ny: 0.58, rFrac: 0.28, aspect: 0.78, rgb: [55,  15, 90] as const, peak: 0.21, dx: 0.041, dy: 0.022, breathe: 0.14 }, // violet right
+  { nx: 0.50, ny: 0.85, rFrac: 0.45, aspect: 0.36, rgb: [65,  25,  5] as const, peak: 0.15, dx: 0.018, dy: 0.029, breathe: 0.10 }, // amber dust horizon
+  { nx: 0.50, ny: 0.12, rFrac: 0.32, aspect: 0.44, rgb: [10,  50, 60] as const, peak: 0.13, dx: 0.027, dy: 0.015, breathe: 0.12 }, // teal top wisp
+  { nx: 0.28, ny: 0.68, rFrac: 0.22, aspect: 0.82, rgb: [70,  12, 55] as const, peak: 0.13, dx: 0.035, dy: 0.043, breathe: 0.18 }, // magenta lower-left
+  { nx: 0.62, ny: 0.38, rFrac: 0.20, aspect: 0.80, rgb: [110, 60, 10] as const, peak: 0.18, dx: 0.022, dy: 0.031, breathe: 0.15 }, // gold dust offset
 ] as const
+
+interface ShootingStar { x: number; y: number; vx: number; vy: number; life: number; len: number }
 
 function AmbientLayer({ width, height }: { width: number; height: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const stars = useMemo(() => generateStarField(), [])
+  const shootingRef = useRef<ShootingStar | null>(null)
+  const nextShootRef = useRef(18 + Math.random() * 20) // first one between 18-38s
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -122,20 +126,24 @@ function AmbientLayer({ width, height }: { width: number; height: number }) {
       ctx.fillStyle = bg
       ctx.fillRect(0, 0, width, height)
 
-      // 2. Nebula clouds — additive screen blend for that emission-nebula glow
+      // 2. Nebula clouds — additive screen blend + animated drift & breathe
       ctx.globalCompositeOperation = 'screen'
-      for (const n of NEBULAE) {
-        const x  = n.nx * width
-        const y  = n.ny * height
+      for (let i = 0; i < NEBULAE.length; i++) {
+        const n = NEBULAE[i]
+        const driftX = Math.sin(t * n.dx + i * 1.37) * 0.025 * width
+        const driftY = Math.cos(t * n.dy + i * 0.91) * 0.020 * height
+        const x  = n.nx * width  + driftX
+        const y  = n.ny * height + driftY
+        const peak = Math.min(0.99, n.peak * (1 + n.breathe * Math.sin(t * 0.07 + i * 1.8)))
         const rx = n.rFrac * D
         ctx.save()
         ctx.translate(x, y)
         ctx.scale(1, n.aspect)
         const grd = ctx.createRadialGradient(0, 0, 0, 0, 0, rx)
         const [r, g, b] = n.rgb
-        grd.addColorStop(0,    `rgba(${r},${g},${b},${n.peak})`)
-        grd.addColorStop(0.45, `rgba(${r},${g},${b},${+(n.peak * 0.45).toFixed(3)})`)
-        grd.addColorStop(0.80, `rgba(${r},${g},${b},${+(n.peak * 0.12).toFixed(3)})`)
+        grd.addColorStop(0,    `rgba(${r},${g},${b},${peak.toFixed(3)})`)
+        grd.addColorStop(0.45, `rgba(${r},${g},${b},${(peak * 0.45).toFixed(3)})`)
+        grd.addColorStop(0.80, `rgba(${r},${g},${b},${(peak * 0.12).toFixed(3)})`)
         grd.addColorStop(1,    `rgba(${r},${g},${b},0)`)
         ctx.fillStyle = grd
         ctx.beginPath()
@@ -155,7 +163,6 @@ function AmbientLayer({ width, height }: { width: number; height: number }) {
         const a = s.a * tw
 
         if (s.bright) {
-          // Soft glow corona around bright stars
           const hR = s.r * 5
           const [r, g, b] = s.rgb
           const glow = ctx.createRadialGradient(x, y, 0, x, y, hR)
@@ -172,6 +179,41 @@ function AmbientLayer({ width, height }: { width: number; height: number }) {
         ctx.arc(x, y, s.r, 0, Math.PI * 2)
         ctx.fillStyle = `rgba(${s.rgb[0]},${s.rgb[1]},${s.rgb[2]},${+a.toFixed(3)})`
         ctx.fill()
+      }
+
+      // 4. Shooting star — spawns periodically, fades in/out
+      if (t >= nextShootRef.current && !shootingRef.current) {
+        const angle = (0.15 + Math.random() * 0.25) * Math.PI  // downward-right arc
+        const speed = 4.5 + Math.random() * 3.5
+        shootingRef.current = {
+          x: Math.random() * width * 0.7,
+          y: Math.random() * height * 0.4,
+          vx:  Math.cos(angle) * speed,
+          vy:  Math.sin(angle) * speed,
+          life: 1,
+          len: 60 + Math.random() * 80,
+        }
+        nextShootRef.current = t + 15 + Math.random() * 22
+      }
+      const ss = shootingRef.current
+      if (ss) {
+        ss.x += ss.vx
+        ss.y += ss.vy
+        ss.life -= 0.022
+        if (ss.life <= 0) {
+          shootingRef.current = null
+        } else {
+          const tail = ctx.createLinearGradient(ss.x - ss.vx * 6, ss.y - ss.vy * 6, ss.x, ss.y)
+          const a = Math.min(1, ss.life * 2)
+          tail.addColorStop(0, `rgba(255,255,240,0)`)
+          tail.addColorStop(1, `rgba(255,255,240,${(a * 0.9).toFixed(2)})`)
+          ctx.strokeStyle = tail
+          ctx.lineWidth = 1.2
+          ctx.beginPath()
+          ctx.moveTo(ss.x - ss.vx * (ss.len / ss.vx), ss.y - ss.vy * (ss.len / ss.vx))
+          ctx.lineTo(ss.x, ss.y)
+          ctx.stroke()
+        }
       }
 
       raf = requestAnimationFrame(frame)
@@ -225,12 +267,17 @@ function ConnectionLines({ nodes, width, height }: { nodes: UniverseNode[]; widt
       width={width} height={height}
       aria-hidden
     >
-      {edges.map(({ from, to, channel }) => {
+      <defs>
+        <filter id="particle-glow" x="-100%" y="-100%" width="300%" height="300%">
+          <feGaussianBlur stdDeviation="2.2" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+      {edges.map(({ from, to, channel }, idx) => {
         const x1 = cx + from.cx
         const y1 = cy + from.cy
         const x2 = cx + to.cx
         const y2 = cy + to.cy
-        // Slight curve: control point offset perpendicular to the line
         const mx = (x1 + x2) / 2 + (cy - y1) * 0.08
         const my = (y1 + y2) / 2 + (cx - x1) * 0.08
         const d  = `M${x1},${y1} Q${mx},${my} ${x2},${y2}`
@@ -238,17 +285,28 @@ function ConnectionLines({ nodes, width, height }: { nodes: UniverseNode[]; widt
         const lineOpacity = st.opacity
           * (to.isDeceased ? 0.45 : 1)
           * (to.isJoined === false ? 0.75 : 1)
+        const pathId = `cp-${from.id.slice(-6)}-${to.id.slice(-6)}`
+        const dur = `${3.8 + (idx % 5) * 0.7}s`
+        const delay = `${-(idx % 4) * 1.1}s`
         return (
-          <path
-            key={`${from.id}-${to.id}`}
-            d={d}
-            fill="none"
-            stroke={st.stroke}
-            strokeWidth={st.width}
-            strokeDasharray={st.dash || undefined}
-            strokeLinecap="round"
-            opacity={lineOpacity}
-          />
+          <g key={`${from.id}-${to.id}`}>
+            <path
+              id={pathId}
+              d={d}
+              fill="none"
+              stroke={st.stroke}
+              strokeWidth={st.width}
+              strokeDasharray={st.dash || undefined}
+              strokeLinecap="round"
+              opacity={lineOpacity}
+            />
+            {/* Energy particle flowing parent → child */}
+            <circle r={2.2} fill={st.stroke} opacity={lineOpacity * 0.95} filter="url(#particle-glow)">
+              <animateMotion dur={dur} begin={delay} repeatCount="indefinite" rotate="auto">
+                <mpath href={`#${pathId}`}/>
+              </animateMotion>
+            </circle>
+          </g>
         )
       })}
     </svg>
