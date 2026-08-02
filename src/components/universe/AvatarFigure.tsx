@@ -661,7 +661,7 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
                 whiteSpace: 'nowrap',
               }}
             >
-              {node.isFocal ? '·' : node.relation}
+              {node.isFocal && node.isRoot ? '·' : node.relation}
             </div>
           </div>
         )
