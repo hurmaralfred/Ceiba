@@ -2,7 +2,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { TreePine, ArrowLeft, Camera, Save, User } from "lucide-react";
+import { TreePine, ArrowLeft, Camera, Save, User, Smile } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 
@@ -199,6 +199,20 @@ export default function ProfilePage() {
       </nav>
 
       <div className="max-w-md mx-auto px-4 py-6 space-y-4">
+        {/* Avatar builder entry */}
+        <Link href="/avatar" className="card flex items-center justify-between py-4 hover:bg-cream-200 transition-colors">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-ceiba-800 flex items-center justify-center">
+              <Smile size={18} className="text-ceiba-300" />
+            </div>
+            <div>
+              <p className="font-bold text-ceiba-800 text-sm">Mi avatar</p>
+              <p className="text-xs text-ceiba-500">Personaliza cómo te ven en el árbol familiar</p>
+            </div>
+          </div>
+          <ArrowLeft size={14} className="text-ceiba-400 rotate-180" />
+        </Link>
+
         {/* Foto */}
         <div className="card flex flex-col items-center py-6 gap-3">
           <div

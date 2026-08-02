@@ -235,11 +235,15 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
   const elder   = node.ageGroup === 'elder'
   const child   = node.ageGroup === 'child'
   const oKey    = getOutfitKey(node)
-  const hasPhoto = !!node.avatarUrl
+  // When the user has set a custom drawn avatar, it takes priority over any uploaded photo
+  const hasPhoto = !!node.avatarUrl && !cfg
 
   const hairStyle  = cfg ? cfg.hairStyle % (female ? 4 : 5) : (seed >> 2) % (female ? 4 : 5)
-  const hasGlasses = !child && !hasPhoto && (seed >> 12) % 5 === 0
-  const hasBeard   = !female && !child && !hasPhoto && (seed >> 16) % 4 === 0
+  const faceShape  = cfg?.faceShape ?? 0
+  const acc        = cfg?.accessories ?? -1 // -1 = hash-based
+  const hasGlasses = acc >= 0 ? (acc === 1 || acc === 3) : (!child && !hasPhoto && (seed >> 12) % 5 === 0)
+  const hasBeard   = acc >= 0 ? (!female && (acc === 2 || acc === 3)) : (!female && !child && !hasPhoto && (seed >> 16) % 4 === 0)
+  const hasEarrings = acc >= 0 ? (female && !child && (acc === 2 || acc === 3)) : false
 
   const skin       = cfg ? SKIN_TONES[cfg.skinTone % 6] : SKIN_TONES[seed % 6]
   const hairColor  = elder ? '#A8A8A8' : (cfg ? HAIR_COLORS[cfg.hairColor % 6] : HAIR_COLORS[(seed >> 4) % 6])
@@ -267,8 +271,8 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
   const CY    = 36
   const R     = 32
 
-  const headRX    = child ? 14   : 15.5
-  const headRY    = child ? 16   : 19
+  const headRX    = child ? 14   : faceShape === 1 ? 17.2 : faceShape === 2 ? 17.8 : 15.5
+  const headRY    = child ? 16   : faceShape === 1 ? 16.5 : faceShape === 2 ? 16.0 : 19
   const headCY    = child ? CY + 2 : CY - 2
   const headTopY  = headCY - headRY
   const hairlineY = headCY - headRY + 7
@@ -477,6 +481,20 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
                 <ellipse cx={earLX - 1} cy={earCY} rx="1.6" ry="2.7" fill={skinDark} opacity="0.20" />
                 <ellipse cx={earRX + 1} cy={earCY} rx="3.2" ry="4.5" fill={skin} />
                 <ellipse cx={earRX + 1} cy={earCY} rx="1.6" ry="2.7" fill={skinDark} opacity="0.20" />
+
+                {/* Earrings */}
+                {hasEarrings && (
+                  <>
+                    <line x1={earLX - 1} y1={earCY + 4.5} x2={earLX - 1} y2={earCY + 8.5}
+                      stroke={darken(hairColor, 0.05)} strokeWidth="0.9" strokeLinecap="round" />
+                    <circle cx={earLX - 1} cy={earCY + 10.5} r="2.4" fill={lighten(hairColor, 0.28)} />
+                    <circle cx={earLX - 1} cy={earCY + 10.5} r="1.5" fill={hairColor} />
+                    <line x1={earRX + 1} y1={earCY + 4.5} x2={earRX + 1} y2={earCY + 8.5}
+                      stroke={darken(hairColor, 0.05)} strokeWidth="0.9" strokeLinecap="round" />
+                    <circle cx={earRX + 1} cy={earCY + 10.5} r="2.4" fill={lighten(hairColor, 0.28)} />
+                    <circle cx={earRX + 1} cy={earCY + 10.5} r="1.5" fill={hairColor} />
+                  </>
+                )}
 
                 {/* Head */}
                 <ellipse cx={CX} cy={headCY} rx={headRX} ry={headRY} fill={`url(#${uid}sk)`} />
