@@ -143,6 +143,7 @@ export function UniversePersonPanel({ node, onClose, onRefocus, onEdit, onInvite
             <PanelActions
               node={node}
               onClose={onClose}
+              onRefocus={onRefocus}
               onEdit={onEdit}
               onInvite={onInvite}
             />
@@ -175,26 +176,36 @@ function PanelChips({ node }: { node: UniverseNode }) {
   )
 }
 
-function PanelActions({ node, onClose, onEdit, onInvite }: { node: UniverseNode } & Omit<Props, 'node' | 'onRefocus'>) {
-  const hasActions = (!!node.memberId && !!onEdit) || (!!node.memberId && !node.isJoined && !!onInvite)
-  if (!hasActions) return null
+function PanelActions({
+  node, onClose, onRefocus, onEdit, onInvite,
+}: { node: UniverseNode } & Omit<Props, 'node'>) {
   return (
-    <div style={{ display: 'flex', gap: 10 }}>
-      {node.memberId && onEdit && (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {/* "Centrar aquí" — always visible; this is the primary action */}
+      {onRefocus && (
         <ActionButton
-          onClick={() => { onClose?.(); onEdit(node.memberId!) }}
-          label="Editar"
-          icon="✎"
+          onClick={() => { onClose?.(); onRefocus(node.id) }}
+          label="Explorar su familia"
+          icon="⊙"
           primary
         />
       )}
-      {node.memberId && !node.isJoined && onInvite && (
-        <ActionButton
-          onClick={() => onInvite(node.memberId!)}
-          label="Invitar"
-          icon="✉"
-        />
-      )}
+      <div style={{ display: 'flex', gap: 8 }}>
+        {node.memberId && onEdit && (
+          <ActionButton
+            onClick={() => { onClose?.(); onEdit(node.memberId!) }}
+            label="Editar"
+            icon="✎"
+          />
+        )}
+        {node.memberId && !node.isJoined && onInvite && (
+          <ActionButton
+            onClick={() => onInvite(node.memberId!)}
+            label="Invitar"
+            icon="✉"
+          />
+        )}
+      </div>
     </div>
   )
 }

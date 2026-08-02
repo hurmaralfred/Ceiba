@@ -128,45 +128,75 @@ function CameraControls({
   return (
     <div style={{
       position: 'absolute',
-      top: 12,
-      right: 12,
-      zIndex: 600,
+      top: 16,
+      right: 16,
+      zIndex: 700,
       display: 'flex',
       flexDirection: 'column',
-      gap: 6,
+      gap: 8,
       pointerEvents: 'auto',
     }}>
-      <CamBtn onClick={onZoomIn}     label="Acercar"          icon="+" />
-      <CamBtn onClick={onZoomOut}    label="Alejar"           icon="−" />
-      <CamBtn onClick={onReset}      label="Restablecer vista" icon="⊙" />
-      {canBack   && <CamBtn onClick={onBack}      label="Volver"    icon="←" />}
-      {isNotRoot && <CamBtn onClick={onBackToRoot} label="Volver a mí" icon="⌂" />}
+      {/* Zoom controls grouped */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <CamBtn onClick={onZoomIn}  label="Acercar" icon="+" />
+        <CamBtn onClick={onZoomOut} label="Alejar"  icon="−" />
+      </div>
+
+      <CamBtn onClick={onReset} label="Centrar" icon="⊙" />
+
+      {canBack && (
+        <CamBtn onClick={onBack} label="Volver" icon="←" highlight />
+      )}
+      {isNotRoot && (
+        <CamBtn onClick={onBackToRoot} label="Inicio" icon="⌂" />
+      )}
     </div>
   )
 }
 
-function CamBtn({ onClick, label, icon }: { onClick: () => void; label: string; icon: string }) {
+function CamBtn({
+  onClick, label, icon, highlight,
+}: {
+  onClick: () => void
+  label: string
+  icon: string
+  highlight?: boolean
+}) {
   return (
     <button
       onClick={onClick}
       aria-label={label}
       title={label}
       style={{
-        width: 44, height: 44,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: 'rgba(16,12,8,0.82)',
-        border: '1px solid rgba(242,180,60,0.28)',
-        borderRadius: 10,
-        color: 'rgba(242,180,60,0.88)',
-        fontSize: 18,
+        minWidth: 48,
+        height: 48,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 1,
+        background: highlight
+          ? 'rgba(242,180,60,0.22)'
+          : 'rgba(10,8,5,0.90)',
+        border: highlight
+          ? '1.5px solid rgba(242,180,60,0.70)'
+          : '1px solid rgba(242,180,60,0.35)',
+        borderRadius: 12,
+        color: 'rgba(242,180,60,0.95)',
+        fontSize: 16,
+        lineHeight: 1,
         cursor: 'pointer',
-        backdropFilter: 'blur(8px)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.45)',
         transition: 'background 0.15s, border-color 0.15s',
         touchAction: 'none',
         userSelect: 'none',
+        padding: '4px 8px',
       }}
     >
-      {icon}
+      <span style={{ fontSize: 16, lineHeight: 1 }}>{icon}</span>
+      <span style={{ fontSize: 8, letterSpacing: '0.04em', opacity: 0.8 }}>{label}</span>
     </button>
   )
 }

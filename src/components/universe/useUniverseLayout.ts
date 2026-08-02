@@ -68,8 +68,8 @@ export interface UniverseNode {
 }
 
 // ─── Hierarchical family layout ─────────────────────────────────────────────
-const ROW_HEIGHT = 200  // px between generation rows
-const COL_WIDTH  = 90   // px between siblings in the same row
+const ROW_HEIGHT = 280  // px between generation rows
+const COL_WIDTH  = 160  // px between siblings in the same row
 
 const SPOUSE_SET  = new Set(['spouse', 'partner', 'husband', 'wife'])
 const SIBLING_SET = new Set([
