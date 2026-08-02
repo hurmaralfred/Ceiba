@@ -119,19 +119,20 @@ export default function ProfilePage() {
     if (!userId) return;
     setSaving(true);
 
-    let nextAvatarPath = avatarPath;
+    // Upload photo via server-side API — it handles storage + profiles.avatar_path
+    // + persons.photo_path (so the tree and home view pick up the new photo).
     if (photoFile) {
-      const ext = photoFile.name.split(".").pop();
-      const path = `${userId}/avatar.${ext}`;
-      const { error: uploadError } = await supabase.storage
-        .from("avatars")
-        .upload(path, photoFile, { upsert: true });
-      if (uploadError) {
+      const fd = new FormData();
+      fd.append("photo", photoFile);
+      const res = await fetch("/api/profile/photo", { method: "POST", body: fd });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
         setSaving(false);
-        toast.error("Error al subir la foto: " + uploadError.message);
+        toast.error(body.error || "Error al subir la foto");
         return;
       }
-      nextAvatarPath = path;
+      const { avatarUrl } = await res.json();
+      if (avatarUrl) setAvatarPreview(avatarUrl);
     }
 
     const { error: profileError } = await supabase
@@ -140,7 +141,6 @@ export default function ProfilePage() {
         display_name: form.display_name.trim(),
         locale: form.locale.trim() || null,
         timezone: form.timezone.trim() || null,
-        ...(nextAvatarPath ? { avatar_path: nextAvatarPath } : {}),
       })
       .eq("user_id", userId);
 
@@ -174,7 +174,6 @@ export default function ProfilePage() {
       }
     }
 
-    setAvatarPath(nextAvatarPath);
     setPhotoFile(null);
     setSaving(false);
     toast.success("¡Perfil actualizado!");
