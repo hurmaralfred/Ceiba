@@ -75,7 +75,7 @@ export default function FeedPage() {
         date: new Date(),
         accent: isToday ? "border-amber-500 bg-amber-50" : "border-amber-300 bg-amber-50",
         icon: <Cake size={18} className="text-amber-600" />,
-        linkTo: "/tree",
+        linkTo: `/persona/${p.person_id}`,
         isToday,
         birthdayAge,
         birthdayFirstName: p.first_name,
@@ -203,8 +203,9 @@ export default function FeedPage() {
 function BirthdayHeroCard({ birthdays }: { birthdays: FeedItem[] }) {
   const single = birthdays.length === 1;
   const names = birthdays.map(b => b.birthdayFirstName || b.subtitle.split(" ")[0]).join(" y ");
+  const heroLink = single && birthdays[0].linkTo ? birthdays[0].linkTo : "/feed";
   return (
-    <Link href="/tree">
+    <Link href={heroLink}>
       <div style={{
         background: "linear-gradient(135deg, #F59E0B 0%, #FCD34D 40%, #FDE68A 100%)",
         borderRadius: 20,

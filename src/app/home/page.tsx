@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   Home, TreePine, Send, Camera, Settings, Bell,
   Users, Layers, BookOpen, Image as ImageIcon,
-  ChevronRight, Calendar, Cake, UserPlus,
+  ChevronRight, Calendar, Cake, UserPlus, Trophy,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { adaptGraph, type FamilyGraph } from "@/lib/graphAdapter";
@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/Badge";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { BottomNavigation, type NavItem } from "@/components/ui/BottomNavigation";
+import GamificationWidget from "@/components/GamificationWidget";
 
 // ── Tipos locales ───────────────────────────────────────────────────────────
 interface FeedEvent {
@@ -443,6 +444,12 @@ export default function HomePage() {
               ))}
             </div>
           )}
+        </section>
+
+        {/* ── Gamificación ────────────────────────────────────────────────── */}
+        <section>
+          <SectionHeader title="Tu progreso" icon={<Trophy size={17} />} className="mb-3" />
+          <GamificationWidget />
         </section>
 
         {/* ── Historia destacada ──────────────────────────────────────────── */}
