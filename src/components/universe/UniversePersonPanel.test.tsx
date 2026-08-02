@@ -34,6 +34,8 @@ function makeNode(overrides: Partial<UniverseNode> = {}): UniverseNode {
     isDeceased: false,
     isJoined: true,
     parentMemberId: null,
+    connectionChannel: 'blood' as const,
+    orbitParentId: null,
     ...overrides,
   }
 }

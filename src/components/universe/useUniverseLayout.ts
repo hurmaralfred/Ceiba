@@ -41,6 +41,8 @@ const REL_ANGLE: Record<string, number> = {
   other: 45,
 }
 
+export type ConnectionChannel = 'blood' | 'marriage' | 'political'
+
 export interface UniverseNode {
   id: string
   memberId?: string
@@ -65,6 +67,10 @@ export interface UniverseNode {
   isDeceased?: boolean
   isJoined?: boolean
   parentMemberId?: string | null
+  /** Visual channel: drives connection line style and glow color */
+  connectionChannel: ConnectionChannel
+  /** ID of the node this connects to in the orbital display (null for focal) */
+  orbitParentId: string | null
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -467,6 +473,24 @@ export function resolveRelationFromFocal({
   return resolveRelationFromPerspective(focalNode, targetNode, rootNode, { nodes })
 }
 
+// ─── Connection channel resolution ──────────────────────────────────────────
+const BLOOD_RELS_SET = new Set([
+  'father','mother','son','daughter','brother','sister',
+  'half_brother','half_sister','grandfather','grandmother',
+  'grandfather_paternal','grandmother_paternal',
+  'grandfather_maternal','grandmother_maternal',
+  'great_grandfather','great_grandmother',
+  'grandson','granddaughter','great_grandson','great_granddaughter',
+  'uncle','aunt','nephew','niece','cousin',
+])
+const MARRIAGE_RELS_SET = new Set(['spouse','husband','wife','partner'])
+
+function resolveConnectionChannel(relationType: string): ConnectionChannel {
+  if (relationType === 'root' || BLOOD_RELS_SET.has(relationType)) return 'blood'
+  if (MARRIAGE_RELS_SET.has(relationType)) return 'marriage'
+  return 'political'
+}
+
 const ELDER_RELS = new Set(['grandfather', 'grandmother', 'grandfather_paternal',
   'grandmother_paternal', 'grandfather_maternal', 'grandmother_maternal',
   'great_grandfather', 'great_grandmother'])
@@ -619,6 +643,8 @@ export function useUniverseLayout(
         ageGroup: 'adult',
         isDeceased: false,
         isJoined: true,
+        connectionChannel: 'blood',
+        orbitParentId: null,
       })
     }
 
@@ -650,6 +676,8 @@ export function useUniverseLayout(
         isDeceased: m.is_deceased,
         isJoined: !!m.profile_id,
         parentMemberId: m.parent_member_id,
+        connectionChannel: resolveConnectionChannel(m.relation_type),
+        orbitParentId: null,
       })
     }
 
@@ -682,6 +710,8 @@ export function useUniverseLayout(
         isDeceased: m.is_deceased,
         isJoined: !!m.profile_id,
         parentMemberId: e.parentMemberId,
+        connectionChannel: resolveConnectionChannel(m.relation_type),
+        orbitParentId: null,
       })
     }
 
@@ -722,33 +752,44 @@ export function useUniverseLayout(
         n.cx = n.orbitRadius * Math.cos(rad)
         n.cy = n.orbitRadius * Math.sin(rad)
         orbit1AngleById.set(n.id, a)
+        n.orbitParentId = focal.id
       }
     }
 
     // ── Orbit 2+ ─────────────────────────────────────────────────────────────
+    // Build an id→node map for fast parent lookups
+    const nodeById = new Map(nodes.map(n => [n.id, n]))
+
     for (let hop = 2; hop <= MAX_HOP; hop++) {
       const orbitN = nodes.filter(n => n.hopDistance === hop)
       if (orbitN.length === 0) continue
 
-      // Map each hop-N node to its parent hop-(N-1) angle
-      const parentAngleOf = (n: UniverseNode): number => {
-        // Try parentMemberId first, then adjacency
+      // Map each hop-N node to its parent hop-(N-1) angle and id
+      const parentOf = (n: UniverseNode): { id: string; angle: number } | null => {
         if (n.parentMemberId) {
           const pa = orbit1AngleById.get(n.parentMemberId)
-          if (pa !== undefined) return pa
+          if (pa !== undefined) return { id: n.parentMemberId, angle: pa }
         }
         for (const nb of (adj.get(n.id) ?? [])) {
-          const pa = orbit1AngleById.get(nb)
-          if (pa !== undefined) return pa
+          const parent = nodeById.get(nb)
+          if (parent && parent.hopDistance === hop - 1) {
+            const pa = orbit1AngleById.get(nb)
+            if (pa !== undefined) return { id: nb, angle: pa }
+          }
         }
-        return REL_ANGLE[n.relationType] ?? (hashId(n.id) % 360) - 180
+        return null
       }
 
-      const items = orbitN.map(n => ({
-        id: n.id,
-        relationType: n.relationType,
-        preferredAngle: norm(parentAngleOf(n) + ((hashId(n.id) % 40) - 20)),
-      }))
+      const items = orbitN.map(n => {
+        const p = parentOf(n)
+        return {
+          id: n.id,
+          relationType: n.relationType,
+          preferredAngle: p
+            ? norm(p.angle + ((hashId(n.id) % 40) - 20))
+            : REL_ANGLE[n.relationType] ?? (hashId(n.id) % 360) - 180,
+        }
+      })
       const angles = distributeOrbit(items, 22)
 
       for (const n of orbitN) {
@@ -758,6 +799,8 @@ export function useUniverseLayout(
         n.cx = n.orbitRadius * Math.cos(rad)
         n.cy = n.orbitRadius * Math.sin(rad)
         orbit1AngleById.set(n.id, a) // expose to next orbit
+        const p = parentOf(n)
+        n.orbitParentId = p?.id ?? null
       }
     }
 

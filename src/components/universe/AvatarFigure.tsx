@@ -41,14 +41,18 @@ const OUTFIT: Record<string, [string, string]> = {
   default:    ['#3A4A2A', '#202A18'],
 }
 
+// Three-channel color system — aligns with ConnectionLines visual language
+// blood (ancestors, descendants, siblings) → gold
+// marriage (spouse, partner)               → nebula blue
+// political (in-laws, step-*, other)       → violet
 const GLOW_COLOR: Record<string, string> = {
-  root:       '#F2B43C',
-  ancestor:   '#6BDBA4',
-  descendant: '#FF7090',
-  spouse:     '#B07AFF',
-  sibling:    '#60C0FF',
-  inlaw:      '#C0A0FF',
-  default:    '#80C0A0',
+  root:       '#F2B43C',  // gold — blood / self
+  ancestor:   '#F2B43C',  // gold — blood
+  descendant: '#F2B43C',  // gold — blood
+  sibling:    '#F2B43C',  // gold — blood
+  spouse:     '#7BAFD4',  // nebula blue — marriage
+  inlaw:      '#B8A0D8',  // violet — political
+  default:    '#B8A0D8',  // violet — political / unknown
 }
 
 const ANCESTOR_RELS   = new Set(['father','mother','grandfather','grandmother',

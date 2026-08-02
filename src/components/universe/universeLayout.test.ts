@@ -239,6 +239,8 @@ function makeNode(
     isDeceased: false,
     isJoined: false,
     parentMemberId: null,
+    connectionChannel: 'blood' as const,
+    orbitParentId: null,
     ...overrides,
   }
 }

@@ -70,41 +70,62 @@ function AmbientLayer({ width, height }: { width: number; height: number }) {
   )
 }
 
-// ─── Connection lines from focal to Tier-1 nodes ─────────────────────────────
+// ─── Connection lines — 3-channel visual system ───────────────────────────────
+// blood:    gold solid   — sanguínea
+// marriage: blue dashed  — matrimonial
+// political: violet dotted — político-legal
+
+const CONN_STYLES = {
+  blood:    { stroke: '#F2B43C', dash: '',    width: 1.5, opacity: 0.60 },
+  marriage: { stroke: '#7BAFD4', dash: '7 5', width: 1.5, opacity: 0.55 },
+  political:{ stroke: '#B8A0D8', dash: '3 7', width: 1.0, opacity: 0.40 },
+} as const
 
 function ConnectionLines({ nodes, width, height }: { nodes: UniverseNode[]; width: number; height: number }) {
-  const focal = nodes.find(n => n.isFocal)
-  if (!focal) return null
   const cx = width  / 2
   const cy = height / 2
-  const x1 = cx + focal.cx
-  const y1 = cy + focal.cy
+  const nodeById = new Map(nodes.map(n => [n.id, n]))
+
+  // Build edges: each non-focal node → its orbitParentId
+  const edges = nodes
+    .filter(n => !n.isFocal && n.orbitParentId)
+    .map(n => {
+      const parent = nodeById.get(n.orbitParentId!)
+      return parent ? { from: parent, to: n, channel: n.connectionChannel } : null
+    })
+    .filter(Boolean) as Array<{ from: UniverseNode; to: UniverseNode; channel: 'blood' | 'marriage' | 'political' }>
+
+  if (edges.length === 0) return null
+
   return (
     <svg
       style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
       width={width} height={height}
       aria-hidden
     >
-      {nodes
-        .filter(n => !n.isFocal && n.relevanceTier === 1)
-        .map(n => {
-          const x2 = cx + n.cx
-          const y2 = cy + n.cy
-          const mx = (x1 + x2) / 2
-          const my = (y1 + y2) / 2
-          const d  = `M${x1},${y1} Q${mx},${my} ${x2},${y2}`
-          return (
-            <path
-              key={n.id}
-              d={d}
-              fill="none"
-              stroke="#F2B43C"
-              strokeWidth={0.8}
-              strokeDasharray="3 6"
-              opacity={0.18}
-            />
-          )
-        })}
+      {edges.map(({ from, to, channel }) => {
+        const x1 = cx + from.cx
+        const y1 = cy + from.cy
+        const x2 = cx + to.cx
+        const y2 = cy + to.cy
+        // Slight curve: control point offset perpendicular to the line
+        const mx = (x1 + x2) / 2 + (cy - y1) * 0.08
+        const my = (y1 + y2) / 2 + (cx - x1) * 0.08
+        const d  = `M${x1},${y1} Q${mx},${my} ${x2},${y2}`
+        const st = CONN_STYLES[channel]
+        return (
+          <path
+            key={`${from.id}-${to.id}`}
+            d={d}
+            fill="none"
+            stroke={st.stroke}
+            strokeWidth={st.width}
+            strokeDasharray={st.dash || undefined}
+            strokeLinecap="round"
+            opacity={st.opacity}
+          />
+        )
+      })}
     </svg>
   )
 }
