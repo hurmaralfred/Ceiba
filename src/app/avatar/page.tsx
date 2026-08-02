@@ -263,63 +263,55 @@ export default function AvatarBuilderPage() {
   return (
     <main style={{ minHeight: '100vh', background: '#f4f0e8' }}>
 
-      {/* ── Dark top section ── */}
+      {/* ── Sticky header with live preview ── */}
       <div style={{
-        background: 'linear-gradient(180deg, #04090f 0%, #07111c 60%, #0b1c2e 100%)',
-        paddingBottom: 36,
+        position: 'sticky', top: 0, zIndex: 50,
+        background: 'linear-gradient(180deg, #04090f 0%, #07111c 100%)',
+        borderBottom: '1px solid rgba(100,160,255,0.10)',
+        boxShadow: '0 4px 24px rgba(0,0,0,0.45)',
+        display: 'flex', alignItems: 'center',
+        padding: '10px 16px',
+        gap: 16,
       }}>
-        {/* Nav */}
-        <nav style={{
-          display: 'flex', alignItems: 'center', gap: 12,
-          padding: '14px 16px',
-        }}>
-          <Link href="/profile" style={{ color: 'rgba(242,180,60,0.7)', display: 'flex', textDecoration: 'none' }}>
-            <ArrowLeft size={20} />
-          </Link>
-          <span style={{ color: 'rgba(242,228,208,0.85)', fontWeight: 700, fontSize: 16, letterSpacing: '0.01em' }}>
+        {/* Back */}
+        <Link href="/profile" style={{ color: 'rgba(242,180,60,0.7)', display: 'flex', flexShrink: 0, textDecoration: 'none' }}>
+          <ArrowLeft size={20} />
+        </Link>
+
+        {/* Title */}
+        <div style={{ flex: 1 }}>
+          <div style={{ color: 'rgba(242,228,208,0.85)', fontWeight: 700, fontSize: 15, letterSpacing: '0.01em' }}>
             Mi avatar
-          </span>
-        </nav>
-
-        {/* Preview */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 8 }}>
-          <div style={{
-            width: 196, height: 196,
-            borderRadius: '50%',
-            background: 'radial-gradient(ellipse at 38% 32%, #0d1f3c 0%, #05090f 72%)',
-            border: '1.5px solid rgba(100,160,255,0.14)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 0 60px rgba(20,60,180,0.18), 0 0 120px rgba(242,180,60,0.06), inset 0 0 30px rgba(0,0,0,0.55)',
-            position: 'relative', overflow: 'hidden',
-          }}>
-            {/* Stars */}
-            {Array.from({ length: 28 }, (_, i) => (
-              <div key={i} style={{
-                position: 'absolute',
-                width: i % 5 === 0 ? 2 : 1.2,
-                height: i % 5 === 0 ? 2 : 1.2,
-                borderRadius: '50%',
-                background: 'white',
-                opacity: 0.15 + (i % 6) * 0.08,
-                left: `${(i * 43 + 11) % 86 + 7}%`,
-                top: `${(i * 59 + 7) % 86 + 5}%`,
-              }} />
-            ))}
-            {previewNode && (
-              <div style={{ transform: 'scale(2.6)', transformOrigin: 'center center' }}>
-                <AvatarFigure node={previewNode} labelVisible={false} />
-              </div>
-            )}
           </div>
-
-          <div style={{ marginTop: 14, textAlign: 'center' }}>
-            <div style={{ color: '#F2B43C', fontWeight: 700, fontSize: 17, letterSpacing: '0.01em' }}>
-              {displayName}
-            </div>
-            <div style={{ color: 'rgba(242,228,208,0.38)', fontSize: 11, marginTop: 2, letterSpacing: '0.04em' }}>
-              Tú
-            </div>
+          <div style={{ color: 'rgba(242,228,208,0.36)', fontSize: 10.5, letterSpacing: '0.03em', marginTop: 1 }}>
+            Los cambios se ven aquí al instante →
           </div>
+        </div>
+
+        {/* Live preview circle */}
+        <div style={{
+          width: 88, height: 88, flexShrink: 0,
+          borderRadius: '50%',
+          background: 'radial-gradient(ellipse at 38% 32%, #0d1f3c 0%, #05090f 72%)',
+          border: '1.5px solid rgba(100,160,255,0.18)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: '0 0 20px rgba(242,180,60,0.12), inset 0 0 12px rgba(0,0,0,0.5)',
+          position: 'relative', overflow: 'hidden',
+        }}>
+          {Array.from({ length: 14 }, (_, i) => (
+            <div key={i} style={{
+              position: 'absolute',
+              width: 1.2, height: 1.2, borderRadius: '50%', background: 'white',
+              opacity: 0.15 + (i % 4) * 0.1,
+              left: `${(i * 43 + 11) % 80 + 10}%`,
+              top: `${(i * 59 + 7) % 80 + 8}%`,
+            }} />
+          ))}
+          {previewNode && (
+            <div style={{ transform: 'scale(1.17)', transformOrigin: 'center center' }}>
+              <AvatarFigure node={previewNode} labelVisible={false} />
+            </div>
+          )}
         </div>
       </div>
 
