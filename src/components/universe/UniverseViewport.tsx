@@ -1,5 +1,5 @@
 'use client'
-import React, { useRef, useEffect, useCallback, useState } from 'react'
+import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react'
 import type { UniverseNode } from './useUniverseLayout'
 
 interface Props {
@@ -14,59 +14,181 @@ const MIN_SCALE = 0.25
 const MAX_SCALE = 4.0
 const DRAG_THRESHOLD = 6  // px before a press becomes a pan
 
-// ─── Ambient background: stars + warm glow ───────────────────────────────────
+// ─── Ambient background: galaxy nebula + deep star field ─────────────────────
 
-function AmbientLayer({ width, height }: { width: number; height: number }) {
-  const stars = useRef<{ x: number; y: number; r: number; a: number }[]>([])
+interface StarEntry {
+  nx: number; ny: number; r: number; a: number
+  twSpeed: number; twPhase: number
+  twinkles: boolean; bright: boolean
+  rgb: readonly [number, number, number]
+}
 
-  if (stars.current.length === 0) {
-    for (let i = 0; i < 90; i++) {
-      const t = i * 2654.5
-      stars.current.push({
-        x: ((t * 1.618) % 1) * 1200,
-        y: ((t * 2.718) % 1) * 900,
-        r: 0.4 + ((t * 3.14) % 1) * 1.0,
-        a: 0.15 + ((t * 1.41) % 1) * 0.4,
-      })
-    }
+function generateStarField(): StarEntry[] {
+  const stars: StarEntry[] = []
+
+  // Population 1 — micro stars: static background fog
+  for (let i = 0; i < 280; i++) {
+    const t = i * 2654.5
+    stars.push({
+      nx: (t * 1.6180339887) % 1, ny: (t * 2.7182818284) % 1,
+      r:  0.2 + ((t * 3.1415926535) % 1) * 0.3,
+      a:  0.06 + ((t * 1.4142135623) % 1) * 0.18,
+      twSpeed: 1, twPhase: 0, twinkles: false, bright: false,
+      rgb: [255, 255, 255] as const,
+    })
   }
 
+  // Population 2 — normal stars: twinkle + subtle color tints
+  const TINTS: readonly (readonly [number, number, number])[] = [
+    [255,255,255],[255,255,255],[255,255,255],[255,255,255],[255,255,255],
+    [255,255,255],[255,255,255],
+    [200, 220, 255],  // blue tint
+    [255, 248, 210],  // warm yellow
+    [255, 215, 210],  // reddish
+  ]
+  for (let i = 0; i < 100; i++) {
+    const t = (i + 280) * 2654.5
+    stars.push({
+      nx: (t * 1.6180339887) % 1, ny: (t * 2.7182818284) % 1,
+      r:  0.4 + ((t * 3.1415926535) % 1) * 0.8,
+      a:  0.18 + ((t * 1.4142135623) % 1) * 0.30,
+      twSpeed: 0.3 + ((t * 0.5) % 1) * 0.6,
+      twPhase: (t * 7.3890560989) % (Math.PI * 2),
+      twinkles: true, bright: false,
+      rgb: TINTS[i % 10] as [number, number, number],
+    })
+  }
+
+  // Population 3 — bright stars: glow halos + vivid twinkle
+  const BRIGHT_TINTS: readonly (readonly [number, number, number])[] = [
+    [255, 255, 255], [255, 255, 255], [255, 255, 255],
+    [225, 240, 255],  // blue-white
+    [255, 248, 225],  // warm white
+  ]
+  for (let i = 0; i < 18; i++) {
+    const t = (i + 380) * 2654.5
+    stars.push({
+      nx: (t * 1.6180339887) % 1, ny: (t * 2.7182818284) % 1,
+      r:  1.0 + ((t * 3.1415926535) % 1) * 1.2,
+      a:  0.55 + ((t * 1.4142135623) % 1) * 0.35,
+      twSpeed: 0.25 + ((t * 0.5) % 1) * 0.4,
+      twPhase: (t * 7.3890560989) % (Math.PI * 2),
+      twinkles: true, bright: true,
+      rgb: BRIGHT_TINTS[i % 5] as [number, number, number],
+    })
+  }
+
+  return stars
+}
+
+// Nebula definitions: position, size, color, opacity — static, drawn each frame
+const NEBULAE = [
+  { nx: 0.50, ny: 0.45, rFrac: 0.38, aspect: 0.84, rgb: [90,  42,  8] as const, peak: 0.22 }, // warm amber core
+  { nx: 0.18, ny: 0.35, rFrac: 0.30, aspect: 0.83, rgb: [12,  38, 95] as const, peak: 0.17 }, // deep blue left
+  { nx: 0.82, ny: 0.58, rFrac: 0.28, aspect: 0.78, rgb: [55,  15, 90] as const, peak: 0.15 }, // violet right
+  { nx: 0.50, ny: 0.85, rFrac: 0.45, aspect: 0.36, rgb: [65,  25,  5] as const, peak: 0.11 }, // amber dust horizon
+  { nx: 0.50, ny: 0.12, rFrac: 0.32, aspect: 0.44, rgb: [10,  50, 60] as const, peak: 0.09 }, // teal top wisp
+  { nx: 0.28, ny: 0.68, rFrac: 0.22, aspect: 0.82, rgb: [70,  12, 55] as const, peak: 0.09 }, // magenta lower-left
+  { nx: 0.62, ny: 0.38, rFrac: 0.20, aspect: 0.80, rgb: [110, 60, 10] as const, peak: 0.13 }, // gold dust offset
+] as const
+
+function AmbientLayer({ width, height }: { width: number; height: number }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const stars = useMemo(() => generateStarField(), [])
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas || width === 0 || height === 0) return
+    canvas.width  = width
+    canvas.height = height
+    const ctx = canvas.getContext('2d')!
+
+    const cx = width  * 0.50
+    const cy = height * 0.46
+    const D  = Math.max(width, height)
+    let t = 0
+    let raf: number
+
+    function frame() {
+      t += 0.012  // ~0.72 units/s at 60 fps
+
+      // 1. Deep space radial gradient
+      const bg = ctx.createRadialGradient(cx, cy * 0.88, 0, cx, cy, D * 0.92)
+      bg.addColorStop(0,    '#211008')
+      bg.addColorStop(0.20, '#130B12')
+      bg.addColorStop(0.50, '#080614')
+      bg.addColorStop(0.80, '#050410')
+      bg.addColorStop(1,    '#030208')
+      ctx.fillStyle = bg
+      ctx.fillRect(0, 0, width, height)
+
+      // 2. Nebula clouds — additive screen blend for that emission-nebula glow
+      ctx.globalCompositeOperation = 'screen'
+      for (const n of NEBULAE) {
+        const x  = n.nx * width
+        const y  = n.ny * height
+        const rx = n.rFrac * D
+        ctx.save()
+        ctx.translate(x, y)
+        ctx.scale(1, n.aspect)
+        const grd = ctx.createRadialGradient(0, 0, 0, 0, 0, rx)
+        const [r, g, b] = n.rgb
+        grd.addColorStop(0,    `rgba(${r},${g},${b},${n.peak})`)
+        grd.addColorStop(0.45, `rgba(${r},${g},${b},${+(n.peak * 0.45).toFixed(3)})`)
+        grd.addColorStop(0.80, `rgba(${r},${g},${b},${+(n.peak * 0.12).toFixed(3)})`)
+        grd.addColorStop(1,    `rgba(${r},${g},${b},0)`)
+        ctx.fillStyle = grd
+        ctx.beginPath()
+        ctx.ellipse(0, 0, rx, rx, 0, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.restore()
+      }
+      ctx.globalCompositeOperation = 'source-over'
+
+      // 3. Stars — three populations
+      for (const s of stars) {
+        const x  = s.nx * width
+        const y  = s.ny * height
+        const tw = s.twinkles
+          ? 0.5 + 0.5 * Math.sin(t / s.twSpeed + s.twPhase)
+          : 1
+        const a = s.a * tw
+
+        if (s.bright) {
+          // Soft glow corona around bright stars
+          const hR = s.r * 5
+          const [r, g, b] = s.rgb
+          const glow = ctx.createRadialGradient(x, y, 0, x, y, hR)
+          glow.addColorStop(0,   `rgba(${r},${g},${b},${+(a * 0.55).toFixed(3)})`)
+          glow.addColorStop(0.4, `rgba(${r},${g},${b},${+(a * 0.15).toFixed(3)})`)
+          glow.addColorStop(1,   `rgba(${r},${g},${b},0)`)
+          ctx.fillStyle = glow
+          ctx.beginPath()
+          ctx.arc(x, y, hR, 0, Math.PI * 2)
+          ctx.fill()
+        }
+
+        ctx.beginPath()
+        ctx.arc(x, y, s.r, 0, Math.PI * 2)
+        ctx.fillStyle = `rgba(${s.rgb[0]},${s.rgb[1]},${s.rgb[2]},${+a.toFixed(3)})`
+        ctx.fill()
+      }
+
+      raf = requestAnimationFrame(frame)
+    }
+
+    frame()
+    return () => cancelAnimationFrame(raf)
+  }, [width, height, stars])
+
   return (
-    <svg
+    <canvas
+      ref={canvasRef}
+      width={width}
+      height={height}
       style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
-      width={width} height={height}
       aria-hidden
-    >
-      <defs>
-        <radialGradient id="centerGlow" cx="50%" cy="50%" r="50%">
-          <stop offset="0%"   stopColor="#F2B43C" stopOpacity="0.06" />
-          <stop offset="40%"  stopColor="#F2B43C" stopOpacity="0.025" />
-          <stop offset="100%" stopColor="#F2B43C" stopOpacity="0" />
-        </radialGradient>
-        <radialGradient id="deepGlow" cx="50%" cy="52%" r="45%">
-          <stop offset="0%"   stopColor="#8B3A10" stopOpacity="0.08" />
-          <stop offset="100%" stopColor="#8B3A10" stopOpacity="0" />
-        </radialGradient>
-      </defs>
-      <rect width={width} height={height} fill="url(#centerGlow)" />
-      <rect width={width} height={height} fill="url(#deepGlow)" />
-      {stars.current.map((s, i) => (
-        <circle
-          key={i}
-          cx={(s.x / 1200) * width}
-          cy={(s.y / 900)  * height}
-          r={s.r}
-          fill="white"
-          opacity={s.a}
-          style={{ animation: `universeTwinkle ${3 + (i % 5)}s ease-in-out ${-i * 0.3}s infinite` }}
-        />
-      ))}
-      <ellipse
-        cx={width / 2} cy={height * 0.92}
-        rx={width * 0.35} ry={12}
-        fill="rgba(140,90,20,0.06)"
-      />
-    </svg>
+    />
   )
 }
 
