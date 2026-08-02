@@ -632,6 +632,8 @@ export function useUniverseLayout(
   members: FamilyMember[],
   extendedMembers: ExtendedEntry[],
   memberLinks: MemberLink[],
+  viewportW = 375,
+  viewportH = 700,
 ): UniverseNode[] {
   return useMemo(() => {
     // 1. Adjacency map (bidirectional)
@@ -797,9 +799,54 @@ export function useUniverseLayout(
       n.zIndex = computeNodeZIndex(n.hopDistance, n.cy, n.isFocal)
     }
 
+    // 6. Auto-fit: scale layout to fill the viewport without crowding.
+    //    Scaling cx/cy AND node.scale by the same factor is equivalent to
+    //    applying that factor as the camera zoom — nodes remain overlap-free
+    //    because positions and visual sizes shrink proportionally.
+    if (viewportW > 0 && viewportH > 0 && nodes.length > 1) {
+      // Bounding box using avatar half-dimensions at scale=1
+      // SVG: 60×168px (adult). With label ~25px below → total height ~193px.
+      const HALF_W = 30   // 60 / 2
+      const HALF_H = 97   // 193 / 2
+
+      let minX = Infinity, maxX = -Infinity
+      let minY = Infinity, maxY = -Infinity
+      for (const n of nodes) {
+        const hw = HALF_W * n.scale
+        const hh = HALF_H * n.scale
+        if (n.cx - hw < minX) minX = n.cx - hw
+        if (n.cx + hw > maxX) maxX = n.cx + hw
+        if (n.cy - hh < minY) minY = n.cy - hh
+        if (n.cy + hh > maxY) maxY = n.cy + hh
+      }
+
+      const contentW = maxX - minX
+      const contentH = maxY - minY
+
+      // Margins: leave room for controls (right) and panel (bottom on mobile)
+      const isMob = viewportW < 768
+      const padH  = isMob ? 48 : 80
+      const padV  = isMob ? 140 : 100
+      const availW = Math.max(1, viewportW - padH * 2)
+      const availH = Math.max(1, viewportH - padV * 2)
+
+      const scaleX = contentW > 0 ? availW / contentW : 1
+      const scaleY = contentH > 0 ? availH / contentH : 1
+      // Only shrink (never enlarge); floor at 0.38 so text stays legible
+      const fitScale = Math.max(0.38, Math.min(1.0, scaleX, scaleY))
+
+      if (fitScale < 0.97) {
+        for (const n of nodes) {
+          n.cx    = Math.round(n.cx    * fitScale)
+          n.cy    = Math.round(n.cy    * fitScale)
+          n.scale = n.scale * fitScale
+        }
+      }
+    }
+
     // Sort back-to-front
     nodes.sort((a, b) => a.zIndex - b.zIndex)
 
     return nodes
-  }, [focalId, profile, members, extendedMembers, memberLinks])
+  }, [focalId, profile, members, extendedMembers, memberLinks, viewportW, viewportH])
 }

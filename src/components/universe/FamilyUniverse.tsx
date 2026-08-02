@@ -246,7 +246,7 @@ export function FamilyUniverse({
     return halfWidth >= 240 ? 1 : Math.max(0.72, halfWidth / 240)
   }, [containerSize.w])
 
-  const allNodes = useUniverseLayout(focalId, profile, members, extendedMembers, memberLinks)
+  const allNodes = useUniverseLayout(focalId, profile, members, extendedMembers, memberLinks, containerSize.w, containerSize.h)
 
   const { visible: nodes, hiddenCount, maxExpansionReached } = useMemo(
     () => selectVisibleUniverseNodes(allNodes, containerSize.w, additionalCount),
