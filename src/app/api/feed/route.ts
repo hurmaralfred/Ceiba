@@ -16,6 +16,7 @@ import {
  *   - eventos familiares recientes (family_events, creados por mi familia)
  */
 export async function GET(_req: NextRequest) {
+  const birthdayDays = Number(new URL(_req.url).searchParams.get("birthdayDays") ?? 7);
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
@@ -79,7 +80,7 @@ export async function GET(_req: NextRequest) {
   };
 
   const birthdays = ((persons ?? []) as any[])
-    .filter((p) => isBirthdaySoon(p.birth_date))
+    .filter((p) => isBirthdaySoon(p.birth_date, birthdayDays))
     .map((p) => ({ person_id: p.id, first_name: p.first_name, last_name: p.first_surname, birth_date: p.birth_date }));
 
   const { data: publicUrlData } = service.storage.from("family-photos").getPublicUrl("");

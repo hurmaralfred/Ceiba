@@ -18,6 +18,9 @@ interface FeedItem {
   linkTo?: string;
   accent: string;
   icon: React.ReactNode;
+  isToday?: boolean;
+  birthdayAge?: number | null;
+  birthdayFirstName?: string;
 }
 
 function timeAgo(date: Date): string {
@@ -59,18 +62,23 @@ export default function FeedPage() {
       const bd = new Date(p.birth_date);
       const next = new Date(now.getFullYear(), bd.getMonth(), bd.getDate());
       if (next < now) next.setFullYear(now.getFullYear() + 1);
-      const days = Math.ceil((next.getTime() - now.getTime()) / 86400000);
-      const isToday = days === 0 || days === 366;
+      const days = Math.round((next.getTime() - now.getTime()) / 86400000);
+      const isToday = days <= 0 || days >= 365;
       const name = `${p.first_name} ${p.last_name || ""}`.trim();
+      const birthYear = parseInt(p.birth_date.split("-")[0]);
+      const birthdayAge = birthYear > 1900 ? now.getFullYear() - birthYear : null;
       feedItems.push({
         id: `bday-${p.person_id}`,
         type: "birthday",
-        title: isToday ? `🎂 Hoy es el cumpleaños de ${p.first_name}` : `🎂 Cumpleaños de ${p.first_name} en ${days} días`,
+        title: isToday ? `¡Hoy es el cumpleaños de ${p.first_name}!` : `Cumpleaños de ${p.first_name} en ${days} días`,
         subtitle: name,
         date: new Date(),
-        accent: "border-amber-400 bg-amber-50",
+        accent: isToday ? "border-amber-500 bg-amber-50" : "border-amber-300 bg-amber-50",
         icon: <Cake size={18} className="text-amber-600" />,
         linkTo: "/tree",
+        isToday,
+        birthdayAge,
+        birthdayFirstName: p.first_name,
       });
     });
 
@@ -171,12 +179,61 @@ export default function FeedPage() {
         ) : items.length === 0 ? (
           <EmptyFeed />
         ) : (
-          items.map(item => <FeedCard key={item.id} item={item} />)
+          <>
+            {(() => {
+              const todayBdays = items.filter(i => i.type === "birthday" && i.isToday);
+              if (todayBdays.length === 0) return null;
+              return <BirthdayHeroCard birthdays={todayBdays} />;
+            })()}
+            {items.filter(i => !(i.type === "birthday" && i.isToday)).map(item => (
+              <FeedCard key={item.id} item={item} />
+            ))}
+            {items.filter(i => i.type === "birthday" && i.isToday).map(item => (
+              <FeedCard key={`list-${item.id}`} item={item} />
+            ))}
+          </>
         )}
       </main>
 
       <BottomNav />
     </div>
+  );
+}
+
+function BirthdayHeroCard({ birthdays }: { birthdays: FeedItem[] }) {
+  const single = birthdays.length === 1;
+  const names = birthdays.map(b => b.birthdayFirstName || b.subtitle.split(" ")[0]).join(" y ");
+  return (
+    <Link href="/tree">
+      <div style={{
+        background: "linear-gradient(135deg, #F59E0B 0%, #FCD34D 40%, #FDE68A 100%)",
+        borderRadius: 20,
+        padding: "20px 20px",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        textAlign: "center",
+        boxShadow: "0 4px 20px rgba(245,158,11,0.35)",
+        position: "relative",
+        overflow: "hidden",
+      }}>
+        {/* decorative confetti-like dots */}
+        <div style={{ position: "absolute", top: 10, left: 16, fontSize: 14, opacity: 0.5 }}>🎉</div>
+        <div style={{ position: "absolute", top: 10, right: 16, fontSize: 14, opacity: 0.5 }}>🎊</div>
+        <div style={{ fontSize: 52, marginBottom: 6, lineHeight: 1 }}>🎂</div>
+        <p style={{ margin: 0, fontWeight: 800, fontSize: 17, color: "#78350F", lineHeight: 1.2 }}>
+          {single ? `¡Hoy cumple años ${names}!` : `¡Hoy cumplen años ${names}!`}
+        </p>
+        {single && birthdays[0].birthdayAge && (
+          <p style={{ margin: "4px 0 0", fontSize: 13, color: "#92400E", fontWeight: 600 }}>
+            {birthdays[0].birthdayAge} años
+          </p>
+        )}
+        <p style={{ margin: "10px 0 0", fontSize: 12, color: "#92400E", opacity: 0.8 }}>
+          Toca para ver en el árbol familiar →
+        </p>
+      </div>
+    </Link>
   );
 }
 

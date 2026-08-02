@@ -6,20 +6,9 @@ import { sendBirthdayEmail } from "@/lib/email";
 function configureWebPush() {
   const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
   const privateKey = process.env.VAPID_PRIVATE_KEY;
-
-  if (!publicKey) {
-    throw new Error("Missing NEXT_PUBLIC_VAPID_PUBLIC_KEY");
-  }
-
-  if (!privateKey) {
-    throw new Error("Missing VAPID_PRIVATE_KEY");
-  }
-
-  webpush.setVapidDetails(
-    "mailto:ceiba-app@noreply.com",
-    publicKey,
-    privateKey,
-  );
+  if (!publicKey) throw new Error("Missing NEXT_PUBLIC_VAPID_PUBLIC_KEY");
+  if (!privateKey) throw new Error("Missing VAPID_PRIVATE_KEY");
+  webpush.setVapidDetails("mailto:ceiba-app@noreply.com", publicKey, privateKey);
 }
 
 function getServiceClient() {
@@ -41,62 +30,107 @@ export async function GET(req: NextRequest) {
   const today = new Date();
   const mmdd = `${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
-  // Load all members with birth_date
-  const { data: members, error } = await supabase
-    .from("family_members")
-    .select("id, first_name, last_name, birth_date, added_by")
-    .not("birth_date", "is", null);
+  // 1. Find all persons with today's birthday (month-day match on persons table)
+  const { data: birthdayPersons, error: personsError } = await supabase
+    .from("persons")
+    .select("id, first_name, first_surname, birth_date")
+    .not("birth_date", "is", null)
+    .filter("birth_date", "ilike", `%-${mmdd}`);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
-  const todayBirthdays = (members || []).filter(
-    (m) => m.birth_date && (m.birth_date as string).slice(5) === mmdd
-  );
-
-  if (todayBirthdays.length === 0) {
+  if (personsError) return NextResponse.json({ error: personsError.message }, { status: 500 });
+  if (!birthdayPersons || birthdayPersons.length === 0) {
     return NextResponse.json({ ok: true, sent: 0, message: "No birthdays today" });
   }
 
-  // Group by owner
-  const byOwner = todayBirthdays.reduce((acc, m) => {
-    if (!acc[m.added_by]) acc[m.added_by] = [];
-    acc[m.added_by].push(m);
-    return acc;
-  }, {} as Record<string, typeof todayBirthdays>);
+  const bpIds = (birthdayPersons as any[]).map((p) => p.id as string);
 
-  let pushSent = 0;
-  let emailSent = 0;
+  // 2. Get family spaces for birthday persons
+  const { data: bpMemberships } = await supabase
+    .from("space_memberships")
+    .select("person_id, space_id")
+    .in("person_id", bpIds);
 
-  for (const [ownerId, birthdayMembers] of Object.entries(byOwner)) {
-    // Get owner profile (for email)
-    const { data: owner } = await supabase
-      .from("profiles")
-      .select("first_name, email")
-      .eq("id", ownerId)
-      .single();
+  if (!bpMemberships || bpMemberships.length === 0) {
+    return NextResponse.json({ ok: true, sent: 0, message: "Birthday persons not in any space" });
+  }
 
-    // 1. Push notification
+  // person_id → space_ids (for birthday persons)
+  const personSpaces = new Map<string, string[]>();
+  for (const m of bpMemberships as any[]) {
+    if (!personSpaces.has(m.person_id)) personSpaces.set(m.person_id, []);
+    personSpaces.get(m.person_id)!.push(m.space_id);
+  }
+
+  // 3. Get all persons in those spaces
+  const allSpaceIds = [...new Set((bpMemberships as any[]).map((m) => m.space_id as string))];
+  const { data: allSpaceMembers } = await supabase
+    .from("space_memberships")
+    .select("person_id, space_id")
+    .in("space_id", allSpaceIds);
+
+  // space_id → person_ids (everyone in each space)
+  const spacePersons = new Map<string, string[]>();
+  for (const m of (allSpaceMembers ?? []) as any[]) {
+    if (!spacePersons.has(m.space_id)) spacePersons.set(m.space_id, []);
+    spacePersons.get(m.space_id)!.push(m.person_id);
+  }
+
+  // 4. Get user_ids for all family persons via approved person_claims
+  const allPersonIds = [...new Set((allSpaceMembers ?? []).map((m: any) => m.person_id as string))];
+  const { data: claims } = await supabase
+    .from("person_claims")
+    .select("user_id, person_id")
+    .in("person_id", allPersonIds)
+    .eq("claim_status", "approved")
+    .is("revoked_at", null);
+
+  const personToUser = new Map<string, string>();
+  for (const c of (claims ?? []) as any[]) {
+    personToUser.set(c.person_id, c.user_id);
+  }
+
+  // 5. Build notify map: userId → birthday persons in their family space
+  const notifyMap = new Map<string, typeof birthdayPersons>();
+  for (const bp of birthdayPersons as any[]) {
+    const spaces = personSpaces.get(bp.id) ?? [];
+    for (const spaceId of spaces) {
+      const familyPersonIds = spacePersons.get(spaceId) ?? [];
+      for (const personId of familyPersonIds) {
+        const userId = personToUser.get(personId);
+        if (!userId) continue;
+        if (!notifyMap.has(userId)) notifyMap.set(userId, []);
+        const existing = notifyMap.get(userId)!;
+        if (!(existing as any[]).find((e: any) => e.id === bp.id)) existing.push(bp);
+      }
+    }
+  }
+
+  // 6. Send push notification + email to each user
+  let pushSent = 0, emailSent = 0;
+
+  for (const [userId, persons] of notifyMap) {
+    const bpList = persons as any[];
+    const names = bpList.map((p) => p.first_name).join(", ");
+    const pushBody =
+      bpList.length === 1
+        ? `¡Hoy es el cumpleaños de ${bpList[0].first_name} ${bpList[0].first_surname || ""}! 🎂`
+        : `¡Hoy cumplen años ${names}! 🎂`;
+
+    // Push
     const { data: subs } = await supabase
       .from("push_subscriptions")
       .select("endpoint, p256dh, auth")
-      .eq("user_id", ownerId);
+      .eq("user_id", userId);
 
     if (subs && subs.length > 0) {
-      const names = birthdayMembers.map((m) => m.first_name).join(", ");
-      const body =
-        birthdayMembers.length === 1
-          ? `¡Hoy es el cumpleaños de ${birthdayMembers[0].first_name} ${birthdayMembers[0].last_name || ""}! 🎂`
-          : `¡Hoy cumplen años ${names}! 🎂`;
-
       const payload = JSON.stringify({
         title: "🎂 Cumpleaños familiar",
-        body,
+        body: pushBody,
         icon: "/icons/icon-192.png",
         url: "/feed",
       });
-
       const results = await Promise.allSettled(
-        subs.map((sub) =>
+        (subs as any[]).map((sub) =>
           webpush.sendNotification(
             { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
             payload
@@ -106,16 +140,30 @@ export async function GET(req: NextRequest) {
       pushSent += results.filter((r) => r.status === "fulfilled").length;
     }
 
-    // 2. Email notification
-    if (owner?.email) {
-      try {
-        await sendBirthdayEmail(owner.email, owner.first_name, birthdayMembers as any);
+    // Email (via auth.admin to get verified email)
+    try {
+      const { data: authData } = await supabase.auth.admin.getUserById(userId);
+      const email = authData?.user?.email;
+      const displayName =
+        authData?.user?.user_metadata?.full_name ||
+        authData?.user?.user_metadata?.name ||
+        "familiar";
+      if (email) {
+        await sendBirthdayEmail(
+          email,
+          displayName,
+          bpList.map((p) => ({
+            first_name: p.first_name,
+            last_name: p.first_surname || "",
+            birth_date: p.birth_date,
+          }))
+        );
         emailSent++;
-      } catch (e) {
-        console.error("Birthday email failed for", ownerId, e);
       }
+    } catch (e) {
+      console.error("Birthday email failed for", userId, e);
     }
   }
 
-  return NextResponse.json({ ok: true, pushSent, emailSent, checked: todayBirthdays.length });
+  return NextResponse.json({ ok: true, pushSent, emailSent, birthdayCount: birthdayPersons.length });
 }
