@@ -30,6 +30,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [avatarPath, setAvatarPath] = useState<string | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
 
@@ -60,6 +61,7 @@ export default function ProfilePage() {
         locale: profile.locale ?? "",
         timezone: profile.timezone ?? "",
       });
+      setAvatarPath(profile.avatar_path ?? null);
       if (profile.avatar_path) {
         const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(profile.avatar_path);
         setAvatarPreview(urlData.publicUrl);
@@ -117,23 +119,19 @@ export default function ProfilePage() {
     if (!userId) return;
     setSaving(true);
 
-    let nextAvatarUrl: string | null = null;
+    let nextAvatarPath = avatarPath;
     if (photoFile) {
-      const fd = new FormData();
-      fd.append("photo", photoFile);
-      const res = await fetch("/api/profile/photo", { method: "POST", body: fd });
-      const data = await res.json().catch(() => null);
-      if (!res.ok) {
+      const ext = photoFile.name.split(".").pop();
+      const path = `${userId}/avatar.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(path, photoFile, { upsert: true });
+      if (uploadError) {
         setSaving(false);
-        toast.error(data?.error ?? "Error al subir la foto");
+        toast.error("Error al subir la foto: " + uploadError.message);
         return;
       }
-      if (!data?.avatarUrl || !data?.personId) {
-        setSaving(false);
-        toast.error("Respuesta incompleta al guardar la foto");
-        return;
-      }
-      nextAvatarUrl = data.avatarUrl;
+      nextAvatarPath = path;
     }
 
     const { error: profileError } = await supabase
@@ -142,6 +140,7 @@ export default function ProfilePage() {
         display_name: form.display_name.trim(),
         locale: form.locale.trim() || null,
         timezone: form.timezone.trim() || null,
+        ...(nextAvatarPath ? { avatar_path: nextAvatarPath } : {}),
       })
       .eq("user_id", userId);
 
@@ -175,9 +174,9 @@ export default function ProfilePage() {
       }
     }
 
+    setAvatarPath(nextAvatarPath);
     setPhotoFile(null);
     setSaving(false);
-    if (nextAvatarUrl) setAvatarPreview(nextAvatarUrl);
     toast.success("¡Perfil actualizado!");
     router.push("/settings");
   };

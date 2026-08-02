@@ -162,13 +162,16 @@ describe('UniversePersonPanel — close button', () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
-  it('panel has no backdrop overlay (close-on-outside handled by parent container)', () => {
+  it('backdrop click calls onClose', () => {
+    const onClose = vi.fn()
     const { container } = render(
-      <UniversePersonPanel node={makeNode()} onClose={vi.fn()} />,
+      <UniversePersonPanel node={makeNode()} onClose={onClose} />,
     )
-    // Backdrop was removed — outside-tap is handled by FamilyUniverse container onClick
+    // The backdrop is the div with aria-hidden="true" and fixed inset-0
     const backdrop = container.querySelector('div[aria-hidden="true"]')
-    expect(backdrop).toBeNull()
+    expect(backdrop).not.toBeNull()
+    fireEvent.click(backdrop!)
+    expect(onClose).toHaveBeenCalledTimes(1)
   })
 })
 
@@ -200,23 +203,26 @@ describe('UniversePersonPanel — invite button', () => {
   })
 })
 
-// ─── Refocus hint ─────────────────────────────────────────────────────────────
+// ─── Centrar aquí ─────────────────────────────────────────────────────────────
 
-describe('UniversePersonPanel — refocus hint', () => {
-  it('shows the double-tap hint text', () => {
-    const { container } = render(
-      <UniversePersonPanel node={makeNode()} />,
-    )
-    const hint = container.querySelector('p')
-    expect(hint?.textContent).toMatch(/toca nuevamente/i)
-  })
+describe('UniversePersonPanel — refocus button', () => {
+  it('"Centrar aquí" calls onRefocus with node id then onClose', () => {
+    const calls: string[] = []
+    const onRefocus = vi.fn((id: string) => calls.push(`refocus:${id}`))
+    const onClose   = vi.fn(() => calls.push('close'))
 
-  it('does not render a "Centrar aquí" button', () => {
     const { container } = render(
-      <UniversePersonPanel node={makeNode()} onRefocus={vi.fn()} />,
+      <UniversePersonPanel
+        node={makeNode({ id: 'node-42' })}
+        onRefocus={onRefocus}
+        onClose={onClose}
+      />,
     )
     const centrarBtn = Array.from(container.querySelectorAll('button'))
-      .find(b => /centrar/i.test(b.textContent ?? ''))
-    expect(centrarBtn).toBeUndefined()
+      .find(b => /centrar/i.test(b.textContent ?? ''))!
+    fireEvent.click(centrarBtn)
+
+    expect(calls[0]).toBe('refocus:node-42')
+    expect(calls[1]).toBe('close')
   })
 })
