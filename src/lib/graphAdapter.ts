@@ -757,17 +757,21 @@ export function buildAddRelativeRequest(
     // Ascendientes con conector: el nuevo es padre/madre del conector.
     case "grandfather":
     case "great_grandfather":
+    case "great_great_grandfather":
       return { primitive: "parent", backendRelationKey: "father", relatedPersonId: connector, parentKind: "biological", gender: "male" };
     case "grandmother":
     case "great_grandmother":
+    case "great_great_grandmother":
       return { primitive: "parent", backendRelationKey: "mother", relatedPersonId: connector, parentKind: "biological", gender: "female" };
 
     // Descendientes con conector: el nuevo es hijo/hija del conector.
     case "grandson":
     case "great_grandson":
+    case "great_great_grandson":
       return { primitive: "parent", backendRelationKey: "son", relatedPersonId: connector, parentKind: "biological", gender: "male" };
     case "granddaughter":
     case "great_granddaughter":
+    case "great_great_granddaughter":
       return { primitive: "parent", backendRelationKey: "daughter", relatedPersonId: connector, parentKind: "biological", gender: "female" };
 
     default:
