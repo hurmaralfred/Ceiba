@@ -197,7 +197,16 @@ const graph = graphData as FamilyGraph | null;
 console.log("④ Después adaptGraph");
     const unified = buildVisibleMembers(members, extendedMembers);
 console.log("④.5 Conjunto unificado:", unified.length, "miembros");
-    setProfile(profile);
+    // Load avatar_config separately (not in adaptGraph)
+    const { data: avatarRow } = await supabase
+      .from('profiles')
+      .select('avatar_config')
+      .eq('id', user.id)
+      .single()
+    const profileWithConfig = avatarRow?.avatar_config
+      ? ({ ...profile, avatar_config: avatarRow.avatar_config } as typeof profile)
+      : profile
+    setProfile(profileWithConfig);
     setMembers(members);
     setExtendedMembers(extendedMembers);
     setMemberLinks(memberLinks);

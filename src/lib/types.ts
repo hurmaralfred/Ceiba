@@ -26,6 +26,8 @@ export type RelationType =
 
 export type RelationKind = 'blood' | 'affinity' | 'other'
 
+import type { AvatarConfig } from '@/lib/avatarConfig'
+
 export interface Profile {
   id: string
   first_name: string
@@ -33,6 +35,7 @@ export interface Profile {
   email?: string
   phone?: string
   avatar_url?: string
+  avatar_config?: AvatarConfig | null
   social_link?: string
   bio?: string
   birth_year?: number

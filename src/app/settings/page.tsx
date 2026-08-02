@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { TreePine, ArrowLeft, LogOut, Bell, MapPin } from "lucide-react";
+import { TreePine, ArrowLeft, LogOut, Bell, MapPin, Smile } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import BottomNav from "@/components/BottomNav";
 
@@ -62,6 +62,10 @@ export default function SettingsPage() {
           <h2 className="font-bold text-ceiba-800 mb-4">Cuenta</h2>
           <Link href="/profile" className="flex items-center justify-between py-3 border-b border-cream-200 hover:bg-cream-100 -mx-2 px-2 rounded-xl transition-colors">
             <span className="text-sm font-medium text-ceiba-700">Editar perfil</span>
+            <ArrowLeft size={14} className="text-ceiba-400 rotate-180" />
+          </Link>
+          <Link href="/avatar" className="flex items-center justify-between py-3 border-b border-cream-200 hover:bg-cream-100 -mx-2 px-2 rounded-xl transition-colors">
+            <span className="text-sm font-medium text-ceiba-700 flex items-center gap-2"><Smile size={14} /> Mi avatar</span>
             <ArrowLeft size={14} className="text-ceiba-400 rotate-180" />
           </Link>
           <Link href="/map" className="flex items-center justify-between py-3 border-b border-cream-200 hover:bg-cream-100 -mx-2 px-2 rounded-xl transition-colors">

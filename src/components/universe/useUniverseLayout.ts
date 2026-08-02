@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import type { Profile, FamilyMember } from '@/lib/types'
 import type { ExtendedEntry, MemberLink } from '@/components/tree/FamilyTreeGraph'
+import type { AvatarConfig } from '@/lib/avatarConfig'
 
 // ─── Orbital geometry ───────────────────────────────────────────────────────
 const ORBIT_RADII  = [0, 115, 210, 295, 370, 440] as const
@@ -67,6 +68,7 @@ export interface UniverseNode {
   relationType: string
   gender?: string | null
   avatarUrl?: string | null
+  avatarConfig?: AvatarConfig | null
   isRoot: boolean
   isFocal: boolean
   hopDistance: number
@@ -649,6 +651,7 @@ export function useUniverseLayout(
         relationType: 'root',
         gender: profile.gender,
         avatarUrl: profile.avatar_url,
+        avatarConfig: profile.avatar_config ?? null,
         isRoot: true,
         isFocal: focalId === 'root',
         hopDistance: rootHop,

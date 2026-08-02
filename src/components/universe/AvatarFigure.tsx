@@ -230,19 +230,20 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
   const [focused, setFocused] = useState(false)
 
   const seed    = hashId(node.id)
-  const female  = isFemale(node)
+  const cfg     = node.avatarConfig
+  const female  = cfg ? cfg.gender === 'female' : isFemale(node)
   const elder   = node.ageGroup === 'elder'
   const child   = node.ageGroup === 'child'
   const oKey    = getOutfitKey(node)
   const hasPhoto = !!node.avatarUrl
 
-  const hairStyle  = (seed >> 2) % (female ? 4 : 5)
+  const hairStyle  = cfg ? cfg.hairStyle % (female ? 4 : 5) : (seed >> 2) % (female ? 4 : 5)
   const hasGlasses = !child && !hasPhoto && (seed >> 12) % 5 === 0
   const hasBeard   = !female && !child && !hasPhoto && (seed >> 16) % 4 === 0
 
-  const skin       = SKIN_TONES[seed % 6]
-  const hairColor  = elder ? '#A8A8A8' : HAIR_COLORS[(seed >> 4) % 6]
-  const eyeColor   = EYE_COLORS[(seed >> 8) % 6]
+  const skin       = cfg ? SKIN_TONES[cfg.skinTone % 6] : SKIN_TONES[seed % 6]
+  const hairColor  = elder ? '#A8A8A8' : (cfg ? HAIR_COLORS[cfg.hairColor % 6] : HAIR_COLORS[(seed >> 4) % 6])
+  const eyeColor   = cfg ? EYE_COLORS[cfg.eyeColor % 6] : EYE_COLORS[(seed >> 8) % 6]
   const [shirt]    = OUTFIT[oKey]
   const glowColor  = GLOW_COLOR[oKey]
   const glowRgb    = GLOW_RGB[glowColor] ?? '200,180,140'
