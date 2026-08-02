@@ -67,6 +67,96 @@ export interface UniverseNode {
   parentMemberId?: string | null
 }
 
+// ─── Hierarchical family layout ─────────────────────────────────────────────
+const ROW_HEIGHT = 200  // px between generation rows
+const COL_WIDTH  = 90   // px between siblings in the same row
+
+const SPOUSE_SET  = new Set(['spouse', 'partner', 'husband', 'wife'])
+const SIBLING_SET = new Set([
+  'brother', 'sister', 'half_brother', 'half_sister',
+  'brother_in_law', 'sister_in_law', 'cousin',
+])
+
+// Maps a relation type to a generation row relative to focal (0 = same row).
+// Ancestors: negative. Descendants: positive.
+function generationOf(relationType: string): number {
+  switch (relationType) {
+    case 'great_grandfather': case 'great_grandmother': return -3
+    case 'grandfather': case 'grandmother':
+    case 'grandfather_paternal': case 'grandmother_paternal':
+    case 'grandfather_maternal': case 'grandmother_maternal': return -2
+    case 'father': case 'mother':
+    case 'stepfather': case 'stepmother':
+    case 'uncle': case 'aunt':
+    case 'father_in_law': case 'mother_in_law': return -1
+    case 'spouse': case 'husband': case 'wife': case 'partner':
+    case 'brother': case 'sister': case 'half_brother': case 'half_sister':
+    case 'brother_in_law': case 'sister_in_law': case 'cousin': return 0
+    case 'son': case 'daughter':
+    case 'stepson': case 'stepdaughter': case 'stepchild':
+    case 'nephew': case 'niece':
+    case 'son_in_law': case 'daughter_in_law': return 1
+    case 'grandson': case 'granddaughter': return 2
+    case 'great_grandson': case 'great_granddaughter': return 3
+    default: return 0
+  }
+}
+
+// Assigns cx, cy to every non-focal node using generation rows.
+// Focal stays at (0, 0). Siblings left, partners right, children below, parents above.
+function assignHierarchicalPositions(nodes: UniverseNode[]): void {
+  const focal = nodes.find(n => n.isFocal)
+  if (!focal) return
+
+  focal.cx = 0
+  focal.cy = 0
+
+  const nonFocal = nodes.filter(n => !n.isFocal)
+
+  // Group by generation row
+  const byGen = new Map<number, UniverseNode[]>()
+  for (const n of nonFocal) {
+    const gen = generationOf(n.relationType)
+    const row = byGen.get(gen) ?? []
+    row.push(n)
+    byGen.set(gen, row)
+  }
+
+  for (const [gen, genNodes] of byGen) {
+    const y = gen * ROW_HEIGHT
+
+    if (gen === 0) {
+      // Same row as focal: siblings left, partners then others right
+      const siblings = genNodes.filter(n => SIBLING_SET.has(n.relationType))
+      const partners = genNodes.filter(n => SPOUSE_SET.has(n.relationType))
+      const others   = genNodes.filter(n =>
+        !SIBLING_SET.has(n.relationType) && !SPOUSE_SET.has(n.relationType))
+
+      // Siblings: placed to the left, closest sibling at -COL_WIDTH
+      siblings.forEach((n, i) => {
+        n.cx = -(siblings.length - i) * COL_WIDTH
+        n.cy = 0
+      })
+
+      // Partners first, then other same-gen nodes, placed to the right
+      ;[...partners, ...others].forEach((n, i) => {
+        n.cx = (i + 1) * COL_WIDTH
+        n.cy = 0
+      })
+    } else {
+      // All other generations: distribute evenly, centered at x=0
+      const sorted = [...genNodes].sort((a, b) =>
+        a.id < b.id ? -1 : 1
+      )
+      const totalWidth = (sorted.length - 1) * COL_WIDTH
+      sorted.forEach((n, i) => {
+        n.cx = i * COL_WIDTH - totalWidth / 2
+        n.cy = y
+      })
+    }
+  }
+}
+
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 function hashId(id: string): number {
@@ -699,73 +789,10 @@ export function useUniverseLayout(
       }
     }
 
-    // 4. Assign angles
-    const focal = nodes.find(n => n.isFocal)
-    if (!focal) return nodes
+    // 4. Assign hierarchical positions (generation rows — no orbital geometry)
+    assignHierarchicalPositions(nodes)
 
-    // Build angle-to-orbit-1-parent map for hop-2+ nodes
-    const orbit1AngleById = new Map<string, number>()
-
-    // ── Orbit 1 ──────────────────────────────────────────────────────────────
-    const orbit1 = nodes.filter(n => n.hopDistance === 1)
-    if (orbit1.length > 0) {
-      const items = orbit1.map(n => ({
-        id: n.id,
-        relationType: n.relationType,
-        preferredAngle: REL_ANGLE[n.relationType] ?? (hashId(n.id) % 360) - 180,
-      }))
-      const angles = distributeOrbit(items, 32)
-      for (const n of orbit1) {
-        const a = angles.get(n.id) ?? 0
-        n.angleDeg = a
-        const rad = a * Math.PI / 180
-        n.cx = n.orbitRadius * Math.cos(rad)
-        n.cy = n.orbitRadius * Math.sin(rad)
-        orbit1AngleById.set(n.id, a)
-      }
-    }
-
-    // ── Orbit 2+ ─────────────────────────────────────────────────────────────
-    for (let hop = 2; hop <= MAX_HOP; hop++) {
-      const orbitN = nodes.filter(n => n.hopDistance === hop)
-      if (orbitN.length === 0) continue
-
-      // Map each hop-N node to its parent hop-(N-1) angle
-      const parentAngleOf = (n: UniverseNode): number => {
-        // Try parentMemberId first, then adjacency
-        if (n.parentMemberId) {
-          const pa = orbit1AngleById.get(n.parentMemberId)
-          if (pa !== undefined) return pa
-        }
-        for (const nb of (adj.get(n.id) ?? [])) {
-          const pa = orbit1AngleById.get(nb)
-          if (pa !== undefined) return pa
-        }
-        return REL_ANGLE[n.relationType] ?? (hashId(n.id) % 360) - 180
-      }
-
-      const items = orbitN.map(n => ({
-        id: n.id,
-        relationType: n.relationType,
-        preferredAngle: norm(parentAngleOf(n) + ((hashId(n.id) % 40) - 20)),
-      }))
-      const angles = distributeOrbit(items, 22)
-
-      for (const n of orbitN) {
-        const a = angles.get(n.id) ?? 0
-        n.angleDeg = a
-        const rad = a * Math.PI / 180
-        n.cx = n.orbitRadius * Math.cos(rad)
-        n.cy = n.orbitRadius * Math.sin(rad)
-        orbit1AngleById.set(n.id, a) // expose to next orbit
-      }
-    }
-
-    // Focal always at center
-    focal.cx = 0
-    focal.cy = 0
-
-    // D2: recompute zIndex now that cx/cy are set — ensures deterministic depth ordering
+    // 5. Recompute zIndex now that cx/cy are set
     for (const n of nodes) {
       n.zIndex = computeNodeZIndex(n.hopDistance, n.cy, n.isFocal)
     }

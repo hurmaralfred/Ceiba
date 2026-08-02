@@ -94,6 +94,83 @@ function OrbitRings({ width, height }: { width: number; height: number }) {
   )
 }
 
+// ─── Camera ───────────────────────────────────────────────────────────────────
+
+export type CameraState = {
+  x: number
+  y: number
+  scale: number
+  focusedPersonId: string
+}
+
+const MIN_SCALE    = 0.5   // 0.25 is too small to read labels on any viewport
+const MAX_SCALE    = 4.0
+const DEFAULT_SCALE = 1.0
+const ZOOM_STEP    = 0.25
+const NAV_H        = 64    // BottomNav height (keep in sync with UniversePersonPanel)
+const PANEL_FRACTION = 0.55 // mobile panel max-height is 55dvh
+
+const INITIAL_CAMERA: CameraState = { x: 0, y: 0, scale: DEFAULT_SCALE, focusedPersonId: 'root' }
+
+// ─── Camera controls ─────────────────────────────────────────────────────────
+
+function CameraControls({
+  onZoomIn, onZoomOut, onReset, onBack, onBackToRoot, canBack, isNotRoot,
+}: {
+  onZoomIn: () => void
+  onZoomOut: () => void
+  onReset: () => void
+  onBack: () => void
+  onBackToRoot: () => void
+  canBack: boolean
+  isNotRoot: boolean
+}) {
+  return (
+    <div style={{
+      position: 'absolute',
+      top: 12,
+      right: 12,
+      zIndex: 600,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 6,
+      pointerEvents: 'auto',
+    }}>
+      <CamBtn onClick={onZoomIn}     label="Acercar"          icon="+" />
+      <CamBtn onClick={onZoomOut}    label="Alejar"           icon="−" />
+      <CamBtn onClick={onReset}      label="Restablecer vista" icon="⊙" />
+      {canBack   && <CamBtn onClick={onBack}      label="Volver"    icon="←" />}
+      {isNotRoot && <CamBtn onClick={onBackToRoot} label="Volver a mí" icon="⌂" />}
+    </div>
+  )
+}
+
+function CamBtn({ onClick, label, icon }: { onClick: () => void; label: string; icon: string }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+      style={{
+        width: 44, height: 44,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: 'rgba(16,12,8,0.82)',
+        border: '1px solid rgba(242,180,60,0.28)',
+        borderRadius: 10,
+        color: 'rgba(242,180,60,0.88)',
+        fontSize: 18,
+        cursor: 'pointer',
+        backdropFilter: 'blur(8px)',
+        transition: 'background 0.15s, border-color 0.15s',
+        touchAction: 'none',
+        userSelect: 'none',
+      }}
+    >
+      {icon}
+    </button>
+  )
+}
+
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface Props {
@@ -115,40 +192,42 @@ export function FamilyUniverse({
   onEditMember,
   onInviteMember,
 }: Props) {
-  const [focalId,        setFocalId]       = useState<string>('root')
-  const [selectedId,     setSelectedId]    = useState<string | null>(null)
-  const [containerSize,  setContainerSize] = useState({ w: 375, h: 812 })
+  // ── Single camera source of truth ─────────────────────────────────────────
+  const [camera,        setCamera]        = useState<CameraState>(INITIAL_CAMERA)
+  const [cameraHistory, setCameraHistory] = useState<CameraState[]>([])
+
+  // focalId derived from camera — single source, no divergence possible
+  const focalId = camera.focusedPersonId
+
+  const [selectedId,      setSelectedId]      = useState<string | null>(null)
+  const [containerSize,   setContainerSize]   = useState({ w: 375, h: 812 })
   const [additionalCount, setAdditionalCount] = useState(0)
 
-  // Reset expansion whenever the focal person changes
+  // Reset expansion when focal changes
   useEffect(() => { setAdditionalCount(0) }, [focalId])
 
   const isMobile  = containerSize.w < 768
   const batchSize = isMobile ? BATCH_MOBILE : BATCH_DESKTOP
 
-  // D3: scale down the viewport so orbit-2 avatars (radius 210) clear the edges on narrow screens.
+  // Responsive base scale — narrow screens shrink the whole constellation
   const viewScale = useMemo(() => {
     if (containerSize.w <= 0) return 1
     const halfWidth = containerSize.w / 2
     return halfWidth >= 240 ? 1 : Math.max(0.72, halfWidth / 240)
   }, [containerSize.w])
 
-  const allNodes = useUniverseLayout(
-    focalId, profile, members, extendedMembers, memberLinks,
-  )
+  const allNodes = useUniverseLayout(focalId, profile, members, extendedMembers, memberLinks)
 
   const { visible: nodes, hiddenCount, maxExpansionReached } = useMemo(
     () => selectVisibleUniverseNodes(allNodes, containerSize.w, additionalCount),
     [allNodes, containerSize.w, additionalCount],
   )
 
-  // Derive selected node from id so state is a plain string, not a stale object reference
   const selectedNode = useMemo(
     () => (selectedId ? nodes.find(n => n.id === selectedId) ?? null : null),
     [selectedId, nodes],
   )
 
-  // Track which node IDs are newly entering the visible set (for reveal animation)
   const prevVisibleIds = useRef(new Set<string>())
   const newNodeIds = useMemo(() => {
     const ids = new Set<string>()
@@ -161,7 +240,6 @@ export function FamilyUniverse({
     prevVisibleIds.current = new Set(nodes.map(n => n.id))
   }, [nodes])
 
-  // Track container size for orbit rings
   const containerRef = useCallback((el: HTMLDivElement | null) => {
     if (!el) return
     const ro = new ResizeObserver(([entry]) => {
@@ -171,22 +249,79 @@ export function FamilyUniverse({
     ro.observe(el)
   }, [])
 
+  // ── Camera handlers ────────────────────────────────────────────────────────
+
+  // Called by viewport when wheel/drag changes x, y, scale
+  const handleCameraChange = useCallback((cam: { x: number; y: number; scale: number }) => {
+    setCamera(prev => ({ ...prev, ...cam }))
+  }, [])
+
+  // "Centrar aquí" — save current state, switch focal person, center in visible area.
+  // After focalId changes the layout recomputes placing the new focal at world (0,0).
+  // x=0 centers horizontally. y must account for the panel covering the bottom on mobile:
+  //   panelH ≈ PANEL_FRACTION * containerH - NAV_H
+  //   yCenterOffset = -panelH / 2  (shift content up so focal lands in the visible zone)
+  // On desktop the panel is a side sheet, so y stays 0.
+  const handleRefocus = useCallback((id: string) => {
+    setCameraHistory(prev => [...prev, camera])
+    const isMobileView = containerSize.w < 768
+    const panelH = isMobileView
+      ? Math.max(0, containerSize.h * PANEL_FRACTION - NAV_H)
+      : 0
+    const yCenterOffset = isMobileView ? -(panelH / 2) : 0
+    setCamera(prev => ({ x: 0, y: yCenterOffset, scale: prev.scale, focusedPersonId: id }))
+    setSelectedId(null)
+  }, [camera, containerSize])
+
+  // "Volver" — restore previous camera state
+  const handleBack = useCallback(() => {
+    setCameraHistory(prev => {
+      if (prev.length === 0) return prev
+      const last = prev[prev.length - 1]
+      setCamera(last)
+      return prev.slice(0, -1)
+    })
+    setSelectedId(null)
+  }, [])
+
+  // "Volver a mí" — reset to initial state centered on root
+  const handleBackToRoot = useCallback(() => {
+    setCamera(INITIAL_CAMERA)
+    setCameraHistory([])
+    setSelectedId(null)
+  }, [])
+
+  // Zoom control buttons act around the viewport center (x=0, y=0 offset)
+  const handleZoomIn = useCallback(() => {
+    setCamera(prev => ({
+      ...prev,
+      scale: Math.min(MAX_SCALE, parseFloat((prev.scale + ZOOM_STEP).toFixed(3))),
+    }))
+  }, [])
+
+  const handleZoomOut = useCallback(() => {
+    setCamera(prev => ({
+      ...prev,
+      scale: Math.max(MIN_SCALE, parseFloat((prev.scale - ZOOM_STEP).toFixed(3))),
+    }))
+  }, [])
+
+  const handleResetView = useCallback(() => {
+    setCamera(prev => ({ ...prev, x: 0, y: 0, scale: DEFAULT_SCALE }))
+  }, [])
+
+  // ── Avatar interaction ─────────────────────────────────────────────────────
+
   const handleAvatarClick = useCallback((node: UniverseNode) => {
     if (node.isFocal) return
     setSelectedId(prev => {
       if (prev === node.id) {
-        // Second tap on the same avatar → refocus
-        setFocalId(node.id)
+        handleRefocus(node.id)
         return null
       }
       return node.id
     })
-  }, [])
-
-  const handleRefocus = useCallback((id: string) => {
-    setFocalId(id)
-    setSelectedId(null)
-  }, [])
+  }, [handleRefocus])
 
   const handleClose = useCallback(() => setSelectedId(null), [])
 
@@ -195,6 +330,8 @@ export function FamilyUniverse({
   }, [batchSize])
 
   const showExpandButton = (hiddenCount > 0 || maxExpansionReached) && !selectedId
+  const canBack   = cameraHistory.length > 0
+  const isNotRoot = focalId !== 'root'
 
   return (
     <>
@@ -205,11 +342,16 @@ export function FamilyUniverse({
         style={{ position: 'relative', width: '100%', height: '100%' }}
         onClick={handleClose}
       >
-        <UniverseViewport nodes={nodes} onFocusChange={handleRefocus} viewScale={viewScale}>
-          {/* Orbit guide rings (sit behind avatars) */}
-          <OrbitRings width={containerSize.w} height={containerSize.h} />
-
-          {/* Avatars */}
+        <UniverseViewport
+          nodes={nodes}
+          camera={camera}
+          onCameraChange={handleCameraChange}
+          onFocusChange={handleRefocus}
+          viewScale={viewScale}
+          minScale={MIN_SCALE}
+          maxScale={MAX_SCALE}
+        >
+          {/* Avatars — inside camera transform layer */}
           {nodes.map(node => (
             <AvatarSlot
               key={node.id}
@@ -222,7 +364,7 @@ export function FamilyUniverse({
           ))}
         </UniverseViewport>
 
-        {/* Info panel */}
+        {/* Panel — outside camera layer, fixed above BottomNav */}
         <UniversePersonPanel
           node={selectedNode}
           onClose={handleClose}
@@ -231,7 +373,18 @@ export function FamilyUniverse({
           onInvite={onInviteMember}
         />
 
-        {/* Expand button */}
+        {/* Camera controls — fixed top-right, outside transform */}
+        <CameraControls
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
+          onReset={handleResetView}
+          onBack={handleBack}
+          onBackToRoot={handleBackToRoot}
+          canBack={canBack}
+          isNotRoot={isNotRoot}
+        />
+
+        {/* Expand button — above BottomNav */}
         {showExpandButton && (
           <button
             onClick={maxExpansionReached ? undefined : handleExpand}

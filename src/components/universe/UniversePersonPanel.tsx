@@ -2,22 +2,29 @@
 import React from 'react'
 import type { UniverseNode } from './useUniverseLayout'
 
+/*
+ * Layout constants (keep in sync with BottomNav height).
+ * BottomNav: fixed bottom-0, z-index 50, approx 64px tall + safe-area.
+ * Panel must sit above BottomNav, so z-index: 60 and bottom offset ≥ nav height.
+ */
+const NAV_H = 64 /* px, BottomNav approximate height without safe-area */
+
 const PANEL_CSS = `
 .unv-panel {
   position: fixed;
-  bottom: 0;
+  bottom: calc(${NAV_H}px + env(safe-area-inset-bottom, 0px));
   left: 0;
   right: 0;
   background: linear-gradient(to top, #1A1208 0%, rgba(20,14,6,0.97) 100%);
   border-top: 1px solid rgba(242,180,60,0.18);
   border-radius: 16px 16px 0 0;
-  z-index: 50;
+  z-index: 60;
   box-shadow: 0 -8px 32px rgba(0,0,0,0.5);
   display: flex;
   flex-direction: column;
-  max-height: min(55dvh, 460px);
+  max-height: calc(55dvh - ${NAV_H}px);
   overflow: hidden;
-  transform: translateY(100%);
+  transform: translateY(calc(100% + ${NAV_H}px + env(safe-area-inset-bottom, 0px)));
   transition: transform 0.35s cubic-bezier(0.34,1.22,0.64,1);
 }
 .unv-panel--visible {
@@ -31,8 +38,12 @@ const PANEL_CSS = `
   flex: 1 1 auto;
   overflow-y: auto;
   padding: 0 20px;
-  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: 12px;
   -webkit-overflow-scrolling: touch;
+}
+.unv-panel__actions {
+  flex-shrink: 0;
+  padding: 8px 20px 16px;
 }
 @media (min-width: 768px) {
   .unv-panel {
@@ -40,10 +51,10 @@ const PANEL_CSS = `
     right: 24px;
     bottom: 24px;
     width: clamp(280px, 22vw, 360px);
-    max-height: 70vh;
+    max-height: min(calc(100dvh - 80px), 480px);
     border-radius: 16px;
     border-top: 1px solid rgba(242,180,60,0.18);
-    transform: translateY(calc(100% + 32px));
+    transform: translateY(calc(100% + 40px));
   }
   .unv-panel--visible {
     transform: translateY(0);
@@ -121,10 +132,15 @@ export function UniversePersonPanel({ node, onClose, onRefocus, onEdit, onInvite
           )}
         </div>
 
-        {/* Scrollable body: chips + actions */}
+        {/* Scrollable body: status chips */}
         <div className="unv-panel__body">
+          {node && <PanelChips node={node} />}
+        </div>
+
+        {/* Fixed actions row — always visible, never scrolled away */}
+        <div className="unv-panel__actions">
           {node && (
-            <PanelBody
+            <PanelActions
               node={node}
               onClose={onClose}
               onEdit={onEdit}
@@ -138,48 +154,16 @@ export function UniversePersonPanel({ node, onClose, onRefocus, onEdit, onInvite
   )
 }
 
-function PanelBody({ node, onClose, onEdit, onInvite }: { node: UniverseNode } & Omit<Props, 'node'>) {
+function PanelChips({ node }: { node: UniverseNode }) {
   return (
-    <div>
-      {/* Status chips */}
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
-        {node.isJoined && (
-          <StatusChip color="#2A6B3A" text="En Ceiba" />
-        )}
-        {!node.isJoined && (
-          <StatusChip color="#5C4A20" text="Sin cuenta" />
-        )}
-        {node.isDeceased && (
-          <StatusChip color="#4A4A4A" text="Fallecido/a" />
-        )}
-        {node.isRoot && (
-          <StatusChip color="#2A4A7A" text="Tú" />
-        )}
-      </div>
-
-      {/* Actions */}
-      <div style={{ display: 'flex', gap: 10, paddingBottom: 4 }}>
-        {node.memberId && onEdit && (
-          <ActionButton
-            onClick={() => { onClose?.(); onEdit(node.memberId!) }}
-            label="Editar"
-            icon="✎"
-            primary
-          />
-        )}
-
-        {node.memberId && !node.isJoined && onInvite && (
-          <ActionButton
-            onClick={() => onInvite(node.memberId!)}
-            label="Invitar"
-            icon="✉"
-          />
-        )}
-      </div>
-
-      {/* Refocus hint */}
+    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', paddingTop: 4, paddingBottom: 8 }}>
+      {node.isJoined  && <StatusChip color="#2A6B3A" text="En Ceiba" />}
+      {!node.isJoined && <StatusChip color="#5C4A20" text="Sin cuenta" />}
+      {node.isDeceased && <StatusChip color="#4A4A4A" text="Fallecido/a" />}
+      {node.isRoot    && <StatusChip color="#2A4A7A" text="Tú" />}
       <p style={{
-        marginTop: 12,
+        width: '100%',
+        marginTop: 8,
         fontSize: 11,
         color: 'rgba(242,180,60,0.45)',
         letterSpacing: '0.02em',
@@ -187,6 +171,30 @@ function PanelBody({ node, onClose, onEdit, onInvite }: { node: UniverseNode } &
       }}>
         Toca nuevamente para explorar su familia
       </p>
+    </div>
+  )
+}
+
+function PanelActions({ node, onClose, onEdit, onInvite }: { node: UniverseNode } & Omit<Props, 'node' | 'onRefocus'>) {
+  const hasActions = (!!node.memberId && !!onEdit) || (!!node.memberId && !node.isJoined && !!onInvite)
+  if (!hasActions) return null
+  return (
+    <div style={{ display: 'flex', gap: 10 }}>
+      {node.memberId && onEdit && (
+        <ActionButton
+          onClick={() => { onClose?.(); onEdit(node.memberId!) }}
+          label="Editar"
+          icon="✎"
+          primary
+        />
+      )}
+      {node.memberId && !node.isJoined && onInvite && (
+        <ActionButton
+          onClick={() => onInvite(node.memberId!)}
+          label="Invitar"
+          icon="✉"
+        />
+      )}
     </div>
   )
 }

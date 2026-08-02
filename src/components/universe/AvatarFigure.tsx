@@ -1,5 +1,5 @@
 'use client'
-import React, { useId, useState } from 'react'
+import React, { useId, useState, useEffect } from 'react'
 import type { UniverseNode } from './useUniverseLayout'
 
 // ─── Color helpers ────────────────────────────────────────────────────────────
@@ -223,7 +223,23 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
   const child      = node.ageGroup === 'child'
   const oKey       = getOutfitKey(node)
   const [photoError, setPhotoError] = useState(false)
+  // Reset per-node error state when URL changes (prevents one person's failure affecting another)
+  useEffect(() => { setPhotoError(false) }, [node.avatarUrl])
+
   const hasPhoto   = !!node.avatarUrl && !photoError
+
+  // DEV diagnostic — logs photo chain for the focal node only; never runs in production
+  useEffect(() => {
+    if (process.env.NODE_ENV !== 'development') return
+    if (!node.isFocal) return
+    console.log('[AvatarFigure:photo]', {
+      personId: node.id,
+      hasPhotoPath: !!node.avatarUrl,
+      resolvedAvatarUrl: node.avatarUrl ?? null,
+      hasPhoto,
+      photoLoadState: photoError ? 'error' : hasPhoto ? 'loaded' : 'no-photo',
+    })
+  }, [node.id, node.isFocal, node.avatarUrl, hasPhoto, photoError])
 
   // Accessory flags — only shown when there's no photo
   const hairStyle  = (seed >> 2)  % (female ? 4 : 5)
@@ -458,28 +474,32 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
                   animation: `universeLook 9s ease-in-out ${swayDelay} infinite`,
                 }}
               >
-                {/* Ears */}
-                <ellipse cx="8.5" cy="30" rx="3.5" ry="4.5" fill={skin} />
-                <ellipse cx="8.5" cy="30" rx="2"   ry="2.8" fill={skinDark} opacity="0.2" />
-                <ellipse cx="51.5" cy="30" rx="3.5" ry="4.5" fill={skin} />
-                <ellipse cx="51.5" cy="30" rx="2"   ry="2.8" fill={skinDark} opacity="0.2" />
-
-                {/* Head sphere */}
-                <circle cx="30" cy="30" r="22" fill={`url(#${uid}hg)`} />
-
                 {hasPhoto ? (
-                  /* ── Profile photo — circular crop ── */
-                  <image
-                    href={node.avatarUrl!}
-                    x="7" y="7"
-                    width="46" height="46"
-                    clipPath={`url(#${uid}hc)`}
-                    preserveAspectRatio="xMidYMid slice"
-                    onError={() => setPhotoError(true)}
-                  />
-                ) : (
-                  /* ── Generated face ── */
+                  /* ── Photo mode: circular photo replaces the entire head.
+                     No ears, no SVG face — a single circular crop is the head. ── */
                   <>
+                    <circle cx="30" cy="30" r="22" fill={`url(#${uid}hg)`} />
+                    <image
+                      href={node.avatarUrl!}
+                      x="7" y="7"
+                      width="46" height="46"
+                      clipPath={`url(#${uid}hc)`}
+                      preserveAspectRatio="xMidYMid slice"
+                      onError={() => setPhotoError(true)}
+                    />
+                  </>
+                ) : (
+                  /* ── Generated face mode: ears + head sphere + face features ── */
+                  <>
+                    {/* Ears */}
+                    <ellipse cx="8.5" cy="30" rx="3.5" ry="4.5" fill={skin} />
+                    <ellipse cx="8.5" cy="30" rx="2"   ry="2.8" fill={skinDark} opacity="0.2" />
+                    <ellipse cx="51.5" cy="30" rx="3.5" ry="4.5" fill={skin} />
+                    <ellipse cx="51.5" cy="30" rx="2"   ry="2.8" fill={skinDark} opacity="0.2" />
+
+                    {/* Head sphere */}
+                    <circle cx="30" cy="30" r="22" fill={`url(#${uid}hg)`} />
+
                     <Hair uid={uid} color={hairColor} female={female} elder={elder} child={child} style={hairStyle} />
 
                     {/* Eyebrows */}
