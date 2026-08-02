@@ -14,6 +14,8 @@ export type RelationType =
   | 'grandfather_maternal' | 'grandmother_maternal'
   | 'grandson' | 'granddaughter'
   | 'great_grandson' | 'great_granddaughter'
+  | 'great_great_grandfather' | 'great_great_grandmother'
+  | 'great_great_grandson' | 'great_great_granddaughter'
   | 'uncle' | 'aunt' | 'cousin'
   | 'father_in_law' | 'mother_in_law'
   | 'brother_in_law' | 'sister_in_law'
@@ -142,6 +144,10 @@ export const RELATION_LABELS: Record<RelationType, string> = {
   granddaughter: 'Nieta',
   great_grandson: 'Bisnieto',
   great_granddaughter: 'Bisnieta',
+  great_great_grandfather: 'Tatarabuelo',
+  great_great_grandmother: 'Tatarabuela',
+  great_great_grandson: 'Tataranieto',
+  great_great_granddaughter: 'Tataranieta',
   uncle: 'Tío',
   aunt: 'Tía',
   cousin: 'Primo/a',
@@ -164,7 +170,10 @@ export const BLOOD_RELATIONS = new Set<RelationType>([
   'nephew','niece','grandfather','grandmother','great_grandfather','great_grandmother',
   'grandfather_paternal','grandmother_paternal',
   'grandfather_maternal','grandmother_maternal','grandson','granddaughter',
-  'great_grandson','great_granddaughter','uncle','aunt','cousin',
+  'great_grandson','great_granddaughter',
+  'great_great_grandfather','great_great_grandmother',
+  'great_great_grandson','great_great_granddaughter',
+  'uncle','aunt','cousin',
 ])
 
 export const INVERSE_RELATION: Record<RelationType, RelationType> = {
@@ -196,6 +205,10 @@ export const INVERSE_RELATION: Record<RelationType, RelationType> = {
   granddaughter: 'grandmother_paternal',
   great_grandson: 'great_grandfather',
   great_granddaughter: 'great_grandmother',
+  great_great_grandfather: 'great_great_grandson',
+  great_great_grandmother: 'great_great_granddaughter',
+  great_great_grandson: 'great_great_grandfather',
+  great_great_granddaughter: 'great_great_grandmother',
   uncle: 'nephew',
   aunt: 'niece',
   cousin: 'cousin',

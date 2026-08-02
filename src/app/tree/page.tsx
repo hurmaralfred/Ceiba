@@ -55,13 +55,13 @@ const MapView = lazyLoad(
 const RELATION_GROUPS: { label: string; keys: KinshipKey[] }[] = [
   {
     label: "Ascendientes",
-    keys: ["father", "mother", "grandfather", "grandmother", "great_grandfather", "great_grandmother"],
+    keys: ["father", "mother", "grandfather", "grandmother", "great_grandfather", "great_grandmother", "great_great_grandfather", "great_great_grandmother"],
   },
   { label: "Hermanos", keys: ["brother", "sister"] },
   { label: "Pareja", keys: ["spouse", "partner"] },
   {
     label: "Descendientes",
-    keys: ["son", "daughter", "grandson", "granddaughter", "great_grandson", "great_granddaughter"],
+    keys: ["son", "daughter", "grandson", "granddaughter", "great_grandson", "great_granddaughter", "great_great_grandson", "great_great_granddaughter"],
   },
   { label: "Tíos y sobrinos", keys: ["uncle", "aunt", "nephew", "niece"] },
   {
@@ -359,6 +359,7 @@ console.log("⑤ Datos cargados");
   const connectorLabel = (rt: RelationType): string => {
     if (rt === "grandfather" || rt === "grandmother") return "¿Padre o madre de cuál de tus padres?";
     if (rt === "great_grandfather" || rt === "great_grandmother") return "¿Padre o madre de cuál de tus abuelos?";
+    if (rt === "great_great_grandfather" || rt === "great_great_grandmother") return "¿Padre o madre de cuál de tus bisabuelos?";
     if (rt === "grandson" || rt === "granddaughter") return "¿Hijo o hija de cuál de tus hijos?";
     if (rt === "great_grandson" || rt === "great_granddaughter") return "¿Hijo o hija de cuál de tus nietos?";
     return "";
@@ -370,12 +371,15 @@ console.log("⑤ Datos cargados");
     if (rt === "grandfather" || rt === "grandmother") {
       allowed = ["father", "mother"];
     } else if (rt === "great_grandfather" || rt === "great_grandmother") {
-      // Incluye las variantes paternas/maternas que aún produce el grafo.
       allowed = [
         "grandfather", "grandmother",
         "grandfather_paternal", "grandmother_paternal",
         "grandfather_maternal", "grandmother_maternal",
       ];
+    } else if (rt === "great_great_grandfather" || rt === "great_great_grandmother") {
+      allowed = ["great_grandfather", "great_grandmother"];
+    } else if (rt === "great_great_grandson" || rt === "great_great_granddaughter") {
+      allowed = ["great_grandson", "great_granddaughter"];
     } else if (rt === "grandson" || rt === "granddaughter") {
       allowed = ["son", "daughter"];
     } else if (rt === "great_grandson" || rt === "great_granddaughter") {

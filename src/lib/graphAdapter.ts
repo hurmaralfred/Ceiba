@@ -127,6 +127,10 @@ const GENDER_PAIRS: Partial<Record<RelationType, { male: RelationType; female: R
   granddaughter: { male: "grandson", female: "granddaughter" },
   great_grandson: { male: "great_grandson", female: "great_granddaughter" },
   great_granddaughter: { male: "great_grandson", female: "great_granddaughter" },
+  great_great_grandfather: { male: "great_great_grandfather", female: "great_great_grandmother" },
+  great_great_grandmother: { male: "great_great_grandfather", female: "great_great_grandmother" },
+  great_great_grandson: { male: "great_great_grandson", female: "great_great_granddaughter" },
+  great_great_granddaughter: { male: "great_great_grandson", female: "great_great_granddaughter" },
   // Consanguíneos colaterales
   uncle: { male: "uncle", female: "aunt" },
   aunt: { male: "uncle", female: "aunt" },
@@ -651,10 +655,14 @@ const CONNECTOR_RELATIONS = new Set<RelationType>([
   "grandmother",
   "great_grandfather",
   "great_grandmother",
+  "great_great_grandfather",
+  "great_great_grandmother",
   "grandson",
   "granddaughter",
   "great_grandson",
   "great_granddaughter",
+  "great_great_grandson",
+  "great_great_granddaughter",
 ]);
 
 export function relationRequiresConnector(
@@ -684,10 +692,14 @@ const ADD_RELATIVE_SUPPORTED = new Set<RelationType>([
   "grandmother",
   "great_grandfather",
   "great_grandmother",
+  "great_great_grandfather",
+  "great_great_grandmother",
   "grandson",
   "granddaughter",
   "great_grandson",
   "great_granddaughter",
+  "great_great_grandson",
+  "great_great_granddaughter",
 ]);
 
 export function isAddRelativeSupported(relation: string): boolean {

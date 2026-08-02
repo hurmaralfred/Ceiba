@@ -253,6 +253,46 @@ export const KINSHIP_CATALOG: Record<
     },
   },
 
+  great_great_grandfather: {
+    key: "great_great_grandfather",
+    label: "Tatarabuelo",
+    plan: {
+      kind: "derived",
+      operation: "parent-of-ancestor",
+      requiresSelection: true,
+    },
+  },
+
+  great_great_grandmother: {
+    key: "great_great_grandmother",
+    label: "Tatarabuela",
+    plan: {
+      kind: "derived",
+      operation: "parent-of-ancestor",
+      requiresSelection: true,
+    },
+  },
+
+  great_great_grandson: {
+    key: "great_great_grandson",
+    label: "Tataranieto",
+    plan: {
+      kind: "derived",
+      operation: "child-of-descendant",
+      requiresSelection: true,
+    },
+  },
+
+  great_great_granddaughter: {
+    key: "great_great_granddaughter",
+    label: "Tataranieta",
+    plan: {
+      kind: "derived",
+      operation: "child-of-descendant",
+      requiresSelection: true,
+    },
+  },
+
   aunt: {
     key: "aunt",
     label: "Tía",

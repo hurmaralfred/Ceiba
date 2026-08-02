@@ -10,8 +10,122 @@ import {
 } from './useUniverseLayout'
 import { AvatarFigure } from './AvatarFigure'
 import { UniverseViewport } from './UniverseViewport'
-import { UniversePersonPanel } from './UniversePersonPanel'
 import type { UniverseNode } from './useUniverseLayout'
+
+// ─── Floating person card ─────────────────────────────────────────────────────
+
+const CARD_CSS = `
+@keyframes unvCardIn {
+  from { opacity: 0; transform: translate(-50%, calc(-100% + 10px)); }
+  to   { opacity: 1; transform: translate(-50%, -100%); }
+}
+@keyframes unvCardInBelow {
+  from { opacity: 0; transform: translate(-50%, -10px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+`
+
+interface CardAnchor { x: number; y: number; below: boolean }
+
+function UniversePersonCard({
+  node, anchor, onClose, onRefocus, onEdit, onInvite,
+}: {
+  node: UniverseNode
+  anchor: CardAnchor
+  onClose: () => void
+  onRefocus?: (id: string) => void
+  onEdit?: (memberId: string) => void
+  onInvite?: (memberId: string) => void
+}) {
+  const safeX = Math.max(108, Math.min(anchor.x, (typeof window !== 'undefined' ? window.innerWidth : 390) - 108))
+
+  const baseTransform = anchor.below ? 'translate(-50%, 0)' : 'translate(-50%, -100%)'
+  const animName = anchor.below ? 'unvCardInBelow' : 'unvCardIn'
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        left: safeX,
+        top: anchor.below ? anchor.y + 8 : anchor.y - 8,
+        transform: baseTransform,
+        width: 216,
+        zIndex: 700,
+        background: 'rgba(10,6,3,0.94)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        border: '1px solid rgba(242,180,60,0.28)',
+        borderRadius: 18,
+        boxShadow: '0 12px 40px rgba(0,0,0,0.7), 0 0 0 0.5px rgba(242,180,60,0.10)',
+        padding: '14px 14px 12px',
+        animation: `${animName} 0.22s cubic-bezier(0.34,1.22,0.64,1) both`,
+        pointerEvents: 'auto',
+      }}
+      onClick={e => e.stopPropagation()}
+      onPointerDown={e => e.stopPropagation()}
+    >
+      {/* Relation */}
+      <div style={{
+        fontSize: 10, letterSpacing: '0.08em', fontWeight: 700,
+        color: '#F2B43C', textTransform: 'uppercase', marginBottom: 5,
+      }}>
+        {node.relation}
+      </div>
+
+      {/* Name */}
+      <div style={{
+        fontSize: 15, fontWeight: 700, color: '#F2E8D0',
+        lineHeight: 1.25, marginBottom: 10,
+        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+      }}>
+        {node.name}
+      </div>
+
+      {/* Status chips */}
+      <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 10 }}>
+        {node.isJoined  && <CardChip color="#2A6B3A" text="En Ceiba" />}
+        {!node.isJoined && <CardChip color="#5C4A20" text="Sin cuenta" />}
+        {node.isDeceased && <CardChip color="#4A4040" text="Fallecido/a" />}
+      </div>
+
+      {/* Actions */}
+      <div style={{ display: 'flex', gap: 6 }}>
+        <CardBtn primary label="Centrar" onClick={() => { onRefocus?.(node.id); onClose() }} />
+        {node.memberId && onEdit && (
+          <CardBtn label="Editar" onClick={() => { onClose(); onEdit(node.memberId!) }} />
+        )}
+        {node.memberId && !node.isJoined && onInvite && (
+          <CardBtn label="Invitar" onClick={() => { onClose(); onInvite(node.memberId!) }} />
+        )}
+      </div>
+    </div>
+  )
+}
+
+function CardChip({ color, text }: { color: string; text: string }) {
+  return (
+    <span style={{
+      background: color + '38', border: `1px solid ${color}70`,
+      color: '#F2E8D0', borderRadius: 20, fontSize: 10,
+      padding: '2px 8px', letterSpacing: '0.02em',
+    }}>{text}</span>
+  )
+}
+
+function CardBtn({ label, onClick, primary }: { label: string; onClick: () => void; primary?: boolean }) {
+  return (
+    <button onClick={onClick} style={{
+      flex: primary ? 1 : undefined,
+      padding: '8px 12px', minHeight: 36,
+      borderRadius: 10, cursor: 'pointer',
+      border: primary ? '1px solid rgba(242,180,60,0.45)' : '1px solid rgba(255,255,255,0.13)',
+      background: primary ? 'rgba(242,180,60,0.10)' : 'rgba(255,255,255,0.05)',
+      color: primary ? '#F2B43C' : 'rgba(255,255,255,0.72)',
+      fontSize: 12, fontWeight: primary ? 600 : 400,
+      whiteSpace: 'nowrap', letterSpacing: '0.02em',
+    }}>{label}</button>
+  )
+}
 
 // ─── CSS keyframes injected once ─────────────────────────────────────────────
 
@@ -117,6 +231,7 @@ export function FamilyUniverse({
 }: Props) {
   const [focalId,       setFocalId]       = useState<string>('root')
   const [selectedNode,  setSelectedNode]  = useState<UniverseNode | null>(null)
+  const [cardAnchor,    setCardAnchor]    = useState<CardAnchor | null>(null)
   const [containerSize, setContainerSize] = useState({ w: 375, h: 812 })
   const [additionalCount, setAdditionalCount] = useState(0)
 
@@ -165,9 +280,13 @@ export function FamilyUniverse({
     ro.observe(el)
   }, [])
 
-  const handleAvatarClick = useCallback((node: UniverseNode) => {
+  const handleAvatarClick = useCallback((node: UniverseNode, anchor: CardAnchor) => {
     if (node.isFocal) return
-    setSelectedNode(prev => prev?.id === node.id ? null : node)
+    setSelectedNode(prev => {
+      if (prev?.id === node.id) { setCardAnchor(null); return null }
+      setCardAnchor(anchor)
+      return node
+    })
   }, [])
 
   const handleRefocus = useCallback((id: string) => {
@@ -175,7 +294,7 @@ export function FamilyUniverse({
     setSelectedNode(null)
   }, [])
 
-  const handleClose = useCallback(() => setSelectedNode(null), [])
+  const handleClose = useCallback(() => { setSelectedNode(null); setCardAnchor(null) }, [])
 
   const handleExpand = useCallback(() => {
     setAdditionalCount(c => c + batchSize)
@@ -187,10 +306,12 @@ export function FamilyUniverse({
   return (
     <>
       <UniverseStyles />
+      <style dangerouslySetInnerHTML={{ __html: CARD_CSS }} />
 
       <div
         ref={containerRef}
         style={{ position: 'relative', width: '100%', height: '100%' }}
+        onClick={handleClose}
       >
         <UniverseViewport nodes={nodes} onFocusChange={handleRefocus} viewScale={viewScale}>
           {/* Orbit guide rings (sit behind avatars) */}
@@ -202,21 +323,24 @@ export function FamilyUniverse({
               key={node.id}
               node={node}
               selected={selectedNode?.id === node.id}
-              onClick={() => handleAvatarClick(node)}
+              onClick={handleAvatarClick}
               viewScale={viewScale}
               isNew={newNodeIds.has(node.id)}
             />
           ))}
         </UniverseViewport>
 
-        {/* Info panel */}
-        <UniversePersonPanel
-          node={selectedNode}
-          onClose={handleClose}
-          onRefocus={handleRefocus}
-          onEdit={onEditMember}
-          onInvite={onInviteMember}
-        />
+        {/* Floating person card — dismisses on click outside */}
+        {selectedNode && cardAnchor && (
+          <UniversePersonCard
+            node={selectedNode}
+            anchor={cardAnchor}
+            onClose={handleClose}
+            onRefocus={handleRefocus}
+            onEdit={onEditMember}
+            onInvite={onInviteMember}
+          />
+        )}
 
         {/* Expand button */}
         {showExpandButton && (
@@ -257,10 +381,12 @@ function AvatarSlot({
 }: {
   node: UniverseNode
   selected: boolean
-  onClick: () => void
+  onClick: (node: UniverseNode, anchor: CardAnchor) => void
   viewScale?: number
   isNew?: boolean
 }) {
+  const divRef = useRef<HTMLDivElement>(null)
+
   // New nodes enter with fade + scale animation
   const [appeared, setAppeared] = useState(!isNew)
   useEffect(() => {
@@ -270,8 +396,19 @@ function AvatarSlot({
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  const handleClick = useCallback(() => {
+    if (node.isFocal) return
+    const rect = divRef.current?.getBoundingClientRect()
+    if (!rect) return
+    const cx = rect.left + rect.width / 2
+    const top = rect.top
+    const below = top < 180  // too close to top — show card below
+    onClick(node, { x: cx, y: below ? rect.bottom : top, below })
+  }, [node, onClick])
+
   return (
     <div
+      ref={divRef}
       data-avatar="true"
       style={{
         position: 'absolute',
@@ -286,10 +423,11 @@ function AvatarSlot({
           'opacity  0.45s ease',
         ].join(', '),
       }}
+      onClick={e => { e.stopPropagation(); handleClick() }}
     >
       <AvatarFigure
         node={node}
-        onClick={node.isFocal ? undefined : onClick}
+        onClick={node.isFocal ? undefined : handleClick}
         highlighted={selected}
         hitAreaScale={node.scale * viewScale}
         labelVisible={node.relevanceTier <= 1}

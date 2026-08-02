@@ -30,6 +30,7 @@ const REL_ANGLE: Record<string, number> = {
   grandfather_paternal: -155, grandmother_paternal: -148,
   grandfather: -150, grandmother: -145,
   great_grandfather: -160,  great_grandmother: -155,
+  great_great_grandfather: -165, great_great_grandmother: -150,
   uncle: -165,
   // Maternal line — upper-right quadrant
   mother: -42,  stepmother: -52,
@@ -40,6 +41,7 @@ const REL_ANGLE: Record<string, number> = {
   stepson: 78,  stepdaughter: 102, stepchild: 90,
   grandson: 74, granddaughter: 106,
   great_grandson: 78, great_granddaughter: 102,
+  great_great_grandson: 72, great_great_granddaughter: 108,
   nephew: 132,  niece: 48,
   son_in_law: 62, daughter_in_law: 118,
   // Siblings — lateral (near ±180°)
@@ -105,8 +107,10 @@ const RELATION_LABELS: Record<string, string> = {
   grandfather_paternal: 'Abuelo paterno', grandmother_paternal: 'Abuela paterna',
   grandfather_maternal: 'Abuelo materno', grandmother_maternal: 'Abuela materna',
   great_grandfather: 'Bisabuelo', great_grandmother: 'Bisabuela',
+  great_great_grandfather: 'Tatarabuelo', great_great_grandmother: 'Tatarabuela',
   grandson: 'Nieto', granddaughter: 'Nieta',
   great_grandson: 'Bisnieto', great_granddaughter: 'Bisnieta',
+  great_great_grandson: 'Tataranieto', great_great_granddaughter: 'Tataranieta',
   uncle: 'Tío', aunt: 'Tía', cousin: 'Primo/a',
   uncle_by_marriage: 'Tío político', aunt_by_marriage: 'Tía política',
   nephew: 'Sobrino', niece: 'Sobrina',
@@ -493,7 +497,9 @@ const BLOOD_RELS_SET = new Set([
   'grandfather_paternal','grandmother_paternal',
   'grandfather_maternal','grandmother_maternal',
   'great_grandfather','great_grandmother',
+  'great_great_grandfather','great_great_grandmother',
   'grandson','granddaughter','great_grandson','great_granddaughter',
+  'great_great_grandson','great_great_granddaughter',
   'uncle','aunt','nephew','niece','cousin',
 ])
 const MARRIAGE_RELS_SET = new Set(['spouse','husband','wife','partner'])
