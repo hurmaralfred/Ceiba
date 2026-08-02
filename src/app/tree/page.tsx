@@ -417,6 +417,9 @@ console.log("⑤ Datos cargados");
           router.push(`/collab/${member.id}`);
           return;
         }
+      } else {
+        // API error — allow edit optimistically (the user added this member)
+        setCanEditMember(true);
       }
     } catch (err) {
       console.error("Error checking edit permission:", err);
