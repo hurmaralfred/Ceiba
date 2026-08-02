@@ -3,8 +3,8 @@ import type { Profile, FamilyMember } from '@/lib/types'
 import type { ExtendedEntry, MemberLink } from '@/components/tree/FamilyTreeGraph'
 
 // ─── Orbital geometry ───────────────────────────────────────────────────────
-const ORBIT_RADII  = [0, 115, 210, 295] as const
-const MAX_HOP      = 3
+const ORBIT_RADII  = [0, 115, 210, 295, 370] as const
+const MAX_HOP      = 4
 // Scale and opacity are tier-based, not orbit-based.
 // Tier 0 = focal, 1 = intimate circle, 2 = close family, 3 = not rendered.
 // Sizes follow the 3-channel design system: r≈28 / 18 / 12 / 8
