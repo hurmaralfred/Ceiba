@@ -359,20 +359,36 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
             )}
           </defs>
 
-          <g filter={deceasedFilter}>
-            {/* ── Glow orbital ring ────────────────────────────────────── */}
-            <ellipse
-              cx="30" cy={glowCY} rx="27" ry="9"
-              fill={`url(#${uid}gg)`}
-              style={{ animation: `universeGlowPulse 2.8s ease-in-out ${glowDelay} infinite` }}
-            />
-            <ellipse
-              cx="30" cy={glowCY + 0.5} rx="19" ry="4.5"
+          {/* ── Deceased indicator ring — outside desaturation filter ── */}
+          {node.isDeceased && !node.isFocal && (
+            <circle
+              cx="30" cy="30" r="26.5"
               fill="none"
-              stroke={glowColor}
-              strokeWidth="0.75"
-              opacity="0.45"
+              stroke="rgba(200,185,155,0.55)"
+              strokeWidth="1"
+              strokeDasharray="2 3"
             />
+          )}
+
+          <g filter={deceasedFilter}>
+            {/* ── Glow corona — only for intimate ring; hidden for tier 2+ ── */}
+            {node.relevanceTier <= 1 && (
+              <>
+                <ellipse
+                  cx="30" cy={glowCY} rx="27" ry="9"
+                  fill={`url(#${uid}gg)`}
+                  opacity={node.isJoined === false ? 0.2 : 1}
+                  style={{ animation: `universeGlowPulse 2.8s ease-in-out ${glowDelay} infinite` }}
+                />
+                <ellipse
+                  cx="30" cy={glowCY + 0.5} rx="19" ry="4.5"
+                  fill="none"
+                  stroke={glowColor}
+                  strokeWidth="0.75"
+                  opacity={node.isJoined === false ? 0.15 : 0.45}
+                />
+              </>
+            )}
 
             {/* Ground shadow */}
             <ellipse cx="30" cy={shadowCY} rx="13" ry="3.2" fill="rgba(0,0,0,0.20)" />
@@ -508,6 +524,18 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
                     {/* Optional: glasses */}
                     {hasGlasses && <Glasses frameColor={eyeColor} />}
                   </>
+
+                {/* Sin cuenta — dashed ring signals "pending invitation" */}
+                {!node.isJoined && !node.isFocal && !node.isDeceased && (
+                  <circle
+                    cx="30" cy="30" r="26.5"
+                    fill="none"
+                    stroke={glowColor}
+                    strokeWidth="0.9"
+                    strokeDasharray="4 4"
+                    opacity="0.5"
+                  />
+                )}
 
                 {/* Highlight ring when selected */}
                 {highlighted && !node.isFocal && (

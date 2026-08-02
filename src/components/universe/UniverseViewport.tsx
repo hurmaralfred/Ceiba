@@ -113,6 +113,9 @@ function ConnectionLines({ nodes, width, height }: { nodes: UniverseNode[]; widt
         const my = (y1 + y2) / 2 + (cx - x1) * 0.08
         const d  = `M${x1},${y1} Q${mx},${my} ${x2},${y2}`
         const st = CONN_STYLES[channel]
+        const lineOpacity = st.opacity
+          * (to.isDeceased ? 0.45 : 1)
+          * (to.isJoined === false ? 0.75 : 1)
         return (
           <path
             key={`${from.id}-${to.id}`}
@@ -122,7 +125,7 @@ function ConnectionLines({ nodes, width, height }: { nodes: UniverseNode[]; widt
             strokeWidth={st.width}
             strokeDasharray={st.dash || undefined}
             strokeLinecap="round"
-            opacity={st.opacity}
+            opacity={lineOpacity}
           />
         )
       })}
