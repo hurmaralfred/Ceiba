@@ -875,7 +875,7 @@ console.log("⑤ Datos cargados");
               <>
                 <TreeErrorBoundary>
                   {UNIVERSE_RENDERER_ENABLED ? (
-                    <div style={{ height: "calc(100vh - 140px)", borderRadius: 16, overflow: "hidden", background: "#07111c" }}>
+                    <div style={{ position: "relative", height: "calc(100vh - 140px)", borderRadius: 16, overflow: "hidden", background: "#07111c" }}>
                       <FamilyUniverseComponent
                         profile={profile}
                         members={members}
@@ -897,6 +897,38 @@ console.log("⑤ Datos cargados");
                           if (member) sendInvite(member);
                         }}
                       />
+                      {/* Stats pill — family count + global Ceiba growth */}
+                      <div style={{
+                        position: "absolute", top: 14, left: "50%", transform: "translateX(-50%)",
+                        display: "flex", alignItems: "center", gap: 10,
+                        background: "rgba(8,4,2,0.72)", backdropFilter: "blur(16px)",
+                        WebkitBackdropFilter: "blur(16px)",
+                        border: "1px solid rgba(242,180,60,0.22)", borderRadius: 30,
+                        padding: "5px 16px", zIndex: 900, pointerEvents: "none",
+                        whiteSpace: "nowrap",
+                      }}>
+                        <span style={{ fontSize: 11, color: "rgba(242,228,208,0.75)", letterSpacing: "0.02em" }}>
+                          <span style={{ color: "#F2B43C", fontWeight: 700 }}>{visibleMembers.length}</span>
+                          {" familiares · "}
+                          <span style={{ color: "#F2B43C", fontWeight: 700 }}>{joinedMembers.length}</span>
+                          {" en Ceiba"}
+                        </span>
+                        {growthStats && (
+                          <>
+                            <span style={{ color: "rgba(242,180,60,0.25)", fontSize: 14, lineHeight: 1 }}>|</span>
+                            <span style={{ fontSize: 11, color: "rgba(242,228,208,0.42)", letterSpacing: "0.02em" }}>
+                              <span style={{ color: "rgba(242,228,208,0.65)", fontWeight: 500 }}>
+                                {growthStats.totalActivePersons.toLocaleString("es")}
+                              </span>
+                              {" personas · "}
+                              <span style={{ color: "rgba(242,228,208,0.65)", fontWeight: 500 }}>
+                                {growthStats.totalRegisteredUsers.toLocaleString("es")}
+                              </span>
+                              {" registrados"}
+                            </span>
+                          </>
+                        )}
+                      </div>
                     </div>
                   ) : PREMIUM_TREE_RENDERER_ENABLED ? (
                     <div style={{ margin: "0 -0.75rem" }}>
