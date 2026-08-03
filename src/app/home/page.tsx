@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   Home, TreePine, BookOpen, Camera, User, Bell, Menu,
   Users, GitBranch, Image as ImageIcon, Gift, Send,
-  Trophy, ChevronRight, Cake, Sparkles, X, MessageCircle,
+  Trophy, ChevronRight, Cake, Sparkles, X, MessageCircle, Map,
 } from "lucide-react";
 import { useFamilyPresence } from "@/hooks/useFamilyPresence";
 import { createClient } from "@/lib/supabase/client";
@@ -617,6 +617,33 @@ export default function HomePage() {
                 </div>
               </div>
               <ChevronRight size={18} style={{ color: "rgba(100,120,240,0.5)" }} />
+            </div>
+          </div>
+        </Link>
+
+        {/* Mapa familiar — ancho completo, cian */}
+        <Link href="/mapa">
+          <div style={{ ...s3dCard("#021416","40,200,200","#000a0a"), marginBottom: 9 }}>
+            <div style={{ position: "absolute", top: 0, left: "25%", right: "25%", height: 1,
+              background: "rgba(40,200,200,0.38)" }} />
+            <div style={{ position: "absolute", top: -10, right: -10, width: 80, height: 80,
+              borderRadius: "50%", background: "radial-gradient(circle,rgba(40,200,200,0.16) 0%,transparent 70%)",
+              pointerEvents: "none" }} />
+            <div style={{ padding: "13px 14px", display: "flex", alignItems: "center", gap: 12, position: "relative" }}>
+              <div style={{ width: 40, height: 40, borderRadius: 13, background: "#041a1a",
+                borderTop: "1.5px solid rgba(40,200,200,0.48)", borderBottom: "2px solid #000a0a",
+                borderLeft: "1px solid rgba(40,200,200,0.2)", borderRight: "1px solid rgba(0,0,0,0.55)",
+                boxShadow: "0 4px 0 #000a0a, 0 6px 10px rgba(0,0,0,0.65)",
+                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Map size={19} style={{ color: "#28c8c8" }} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#fff", marginBottom: 2 }}>Mapa familiar</div>
+                <div style={{ fontSize: 10, color: "rgba(40,200,200,0.6)" }}>
+                  De dónde venimos · ciudades de origen
+                </div>
+              </div>
+              <ChevronRight size={18} style={{ color: "rgba(40,200,200,0.45)" }} />
             </div>
           </div>
         </Link>
