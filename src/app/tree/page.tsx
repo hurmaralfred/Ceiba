@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import lazyLoad from "next/dynamic";
 import { TreePine, MapPin, Users, Share2, LogOut, User, Send, List, GitFork, Plus, X, Pencil, Map as MapIcon, Image, Calendar, MessageCircle, Megaphone, Camera, AlertTriangle, Search } from "lucide-react";
@@ -79,8 +79,10 @@ export default function TreePage() {
 
 function TreePageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
   usePushNotifications(); // Registra FCM token si el usuario da permiso
+  const [showWelcome, setShowWelcome] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [members, setMembers] = useState<FamilyMember[]>([]);
   const [extendedMembers, setExtendedMembers] = useState<ExtendedEntry[]>([]);
@@ -143,6 +145,11 @@ function TreePageContent() {
     } else {
       setNotifPermission(Notification.permission);
       if (Notification.permission === "granted") subscribeUser();
+    }
+    if (searchParams.get("welcome") === "1") {
+      setShowWelcome(true);
+      // Limpiar param de la URL sin recargar
+      window.history.replaceState({}, "", "/tree");
     }
   }, []);
 
@@ -723,6 +730,74 @@ console.log("⑤ Datos cargados");
 
   return (
     <div style={{ minHeight: "100vh", background: "#030208" }}>
+
+      {/* ── Overlay bienvenida primer uso ── */}
+      {showWelcome && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 200,
+          background: "rgba(3,2,8,0.88)", backdropFilter: "blur(8px)",
+          display: "flex", alignItems: "flex-end", justifyContent: "center",
+        }}>
+          <div style={{
+            width: "100%", maxWidth: 480, margin: "0 auto",
+            background: "#0c0a18",
+            borderTop: "1.5px solid rgba(212,175,55,0.45)",
+            borderLeft: "1px solid rgba(212,175,55,0.18)",
+            borderRight: "1px solid rgba(0,0,0,0.6)",
+            borderRadius: "24px 24px 0 0",
+            padding: "28px 24px 40px",
+            boxShadow: "0 -12px 40px rgba(0,0,0,0.8), 0 0 40px rgba(212,175,55,0.1)",
+          }}>
+            {/* Barra de arrastre */}
+            <div style={{ width: 40, height: 4, borderRadius: 2, background: "rgba(212,175,55,0.2)", margin: "0 auto 24px" }} />
+
+            <div style={{ textAlign: "center", marginBottom: 24 }}>
+              <div style={{ fontSize: 48, marginBottom: 12 }}>🌳</div>
+              <h2 style={{ fontSize: 22, fontWeight: 800, color: "#fff", marginBottom: 8, letterSpacing: "-0.02em" }}>
+                ¡Tu árbol familiar está vivo!
+              </h2>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", lineHeight: 1.6 }}>
+                Cuando tus familiares entren, el árbol ya estará listo para ellos.
+              </p>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <button
+                onClick={() => {
+                  setShowWelcome(false);
+                  if (profile?.id) {
+                    const msg = `Hola, te invito a Ceiba — la app donde nuestra familia se mantiene conectada. Entra aquí: https://ceibapp.com`;
+                    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
+                  }
+                }}
+                style={{
+                  width: "100%", padding: "14px 0", borderRadius: 14,
+                  background: "#25D366",
+                  borderTop: "2px solid #3de87d", borderLeft: "1.5px solid rgba(100,255,150,0.4)",
+                  borderBottom: "4px solid #148a3e", borderRight: "1.5px solid rgba(0,0,0,0.4)",
+                  boxShadow: "0 8px 0 #0d6b2e, 0 12px 24px rgba(0,0,0,0.5)",
+                  color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer", border: "none",
+                }}
+              >
+                Invitar familia por WhatsApp
+              </button>
+
+              <button
+                onClick={() => setShowWelcome(false)}
+                style={{
+                  width: "100%", padding: "13px 0", borderRadius: 14,
+                  background: "transparent",
+                  border: "1px solid rgba(212,175,55,0.22)",
+                  color: "rgba(212,175,55,0.7)", fontWeight: 600, fontSize: 14, cursor: "pointer",
+                }}
+              >
+                Explorar mi árbol
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header galaxy */}
       <nav style={{
         background: "rgba(3,2,8,0.97)", backdropFilter: "blur(12px)",

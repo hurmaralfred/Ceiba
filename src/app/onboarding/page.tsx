@@ -188,98 +188,92 @@ function AddRelativeModal({
     relation_type: slot.relation_key,
   });
 
+  const inputStyle: React.CSSProperties = {
+    background: "#0c0a18", border: "1px solid rgba(212,175,55,0.22)",
+    borderRadius: 12, padding: "13px 14px", color: "#fff", fontSize: 14,
+    outline: "none", width: "100%", boxSizing: "border-box",
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-end">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative w-full bg-cream-50 rounded-t-3xl px-5 pt-5 pb-10 shadow-2xl max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-5">
-          <h3 className="font-bold text-lg text-ceiba-900">
+    <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "flex-end" }}>
+      <div style={{ position: "absolute", inset: 0, background: "rgba(3,2,8,0.75)", backdropFilter: "blur(4px)" }} onClick={onClose} />
+      <div style={{
+        position: "relative", width: "100%", maxWidth: 480, margin: "0 auto",
+        background: "#0c0a18",
+        borderTop: "1.5px solid rgba(212,175,55,0.4)", borderLeft: "1px solid rgba(212,175,55,0.15)",
+        borderRight: "1px solid rgba(0,0,0,0.6)",
+        borderRadius: "24px 24px 0 0",
+        padding: "20px 20px 40px",
+        boxShadow: "0 -12px 40px rgba(0,0,0,0.8), 0 0 30px rgba(212,175,55,0.08)",
+        maxHeight: "90vh", overflowY: "auto",
+      }}>
+        {/* Barra de arrastre */}
+        <div style={{ width: 36, height: 3, borderRadius: 2, background: "rgba(212,175,55,0.2)", margin: "0 auto 20px" }} />
+
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+          <h3 style={{ fontWeight: 700, fontSize: 18, color: "#fff" }}>
             {slot.emoji} {slot.label}
           </h3>
-          <button onClick={onClose} className="text-ceiba-400 hover:text-ceiba-600">
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(212,175,55,0.4)", padding: 4 }}>
             <X size={22} />
           </button>
         </div>
 
-        <div className="flex flex-col gap-3">
-          <div className="grid grid-cols-2 gap-3">
-            <input
-              type="text"
-              placeholder="Nombres *"
-              value={form.first_names}
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <input type="text" placeholder="Nombres *" value={form.first_names}
               onChange={(e) => setForm((f) => ({ ...f, first_names: e.target.value }))}
-              className="col-span-1 rounded-xl border border-cream-300 px-4 py-3 text-sm outline-none focus:border-ceiba-400"
-              autoFocus
-            />
-            <input
-              type="text"
-              placeholder="Apellidos *"
-              value={form.last_names}
+              style={inputStyle} autoFocus />
+            <input type="text" placeholder="Apellidos *" value={form.last_names}
               onChange={(e) => setForm((f) => ({ ...f, last_names: e.target.value }))}
-              className="col-span-1 rounded-xl border border-cream-300 px-4 py-3 text-sm outline-none focus:border-ceiba-400"
-            />
+              style={inputStyle} />
           </div>
 
-          <input
-            type="date"
-            placeholder="Fecha de nacimiento (opcional)"
-            value={form.birth_date}
-            onChange={(e) => setForm((f) => ({ ...f, birth_date: e.target.value }))}
-            className="rounded-xl border border-cream-300 px-4 py-3 text-sm outline-none focus:border-ceiba-400 text-ceiba-700"
-          />
-
-          <div className="rounded-xl border border-cream-300 bg-white px-4 py-3 focus-within:border-ceiba-400">
-            <PhoneInput
-              international
-              defaultCountry="CO"
-              countryCallingCodeEditable={false}
-              labels={phoneLabels}
-              placeholder="WhatsApp (opcional)"
+          <div style={{ background: "#0c0a18", border: "1px solid rgba(212,175,55,0.22)", borderRadius: 12, padding: "10px 14px" }}>
+            <PhoneInput international defaultCountry="CO" countryCallingCodeEditable={false}
+              labels={phoneLabels} placeholder="WhatsApp (opcional)"
               value={form.phone || undefined}
-              onChange={(value) =>
-                setForm((f) => ({ ...f, phone: value ?? "" }))
-              }
-              className="ceiba-phone-input text-sm"
+              onChange={(value) => setForm((f) => ({ ...f, phone: value ?? "" }))}
+              className="ceiba-phone-input-dark text-sm"
             />
           </div>
 
           {/* Toggle fallecido */}
-          <button
-            type="button"
+          <button type="button"
             onClick={() => setForm((f) => ({ ...f, is_living: !f.is_living }))}
-            className="flex items-center gap-3 text-sm text-ceiba-600"
-          >
-            <div className={`w-10 h-6 rounded-full transition-colors flex items-center px-0.5 ${
-              !form.is_living ? "bg-gray-400" : "bg-gray-200"
-            }`}>
-              <div className={`w-5 h-5 bg-cream-50 rounded-full shadow transition-transform ${
-                !form.is_living ? "translate-x-4" : ""
-              }`} />
+            style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 13, color: "rgba(255,255,255,0.5)", background: "none", border: "none", cursor: "pointer", padding: "4px 0" }}>
+            <div style={{
+              width: 40, height: 22, borderRadius: 100, flexShrink: 0, padding: "2px",
+              background: !form.is_living ? "rgba(180,200,255,0.3)" : "rgba(255,255,255,0.1)",
+              display: "flex", alignItems: "center", transition: "background 0.2s",
+            }}>
+              <div style={{
+                width: 18, height: 18, borderRadius: "50%", background: "#fff",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.4)",
+                transform: !form.is_living ? "translateX(18px)" : "translateX(0)",
+                transition: "transform 0.2s",
+              }} />
             </div>
             Fallecido/a — aparece con † en el árbol
           </button>
 
           <button
             onClick={() => {
-              if (!form.first_names.trim()) {
-                toast.error("El nombre es obligatorio");
-                return;
-              }
-
-              if (!form.last_names.trim()) {
-                toast.error("El apellido es obligatorio");
-                return;
-              }
-
-              if (form.phone && !isValidPhoneNumber(form.phone)) {
-                toast.error("El número de teléfono no es válido");
-                return;
-              }
-
+              if (!form.first_names.trim()) { toast.error("El nombre es obligatorio"); return; }
+              if (!form.last_names.trim()) { toast.error("El apellido es obligatorio"); return; }
+              if (form.phone && !isValidPhoneNumber(form.phone)) { toast.error("El número no es válido"); return; }
               onSave(form);
             }}
             disabled={loading}
-            className="w-full bg-ceiba-500 hover:bg-ceiba-400 disabled:opacity-50 text-white font-bold py-4 rounded-2xl mt-2 transition-colors"
+            style={{
+              width: "100%", padding: "14px 0", borderRadius: 14, marginTop: 4,
+              background: loading ? "#6a5600" : "#c9a820",
+              borderTop: "2px solid #f5e060", borderLeft: "1.5px solid rgba(255,240,100,0.5)",
+              borderBottom: "4px solid #6a5600", borderRight: "1.5px solid rgba(0,0,0,0.4)",
+              boxShadow: "0 8px 0 #4a3c00, 0 12px 20px rgba(0,0,0,0.6)",
+              color: "#030208", fontSize: 15, fontWeight: 800, cursor: loading ? "not-allowed" : "pointer",
+              opacity: loading ? 0.6 : 1, border: "none",
+            }}
           >
             {loading ? "Guardando..." : "Agregar y seguir"}
           </button>
@@ -862,15 +856,32 @@ export default function OnboardingPage() {
         />
       )}
 
-      <div className="min-h-screen bg-cream-100 flex flex-col max-w-lg mx-auto">
+      <div style={{ minHeight: "100vh", background: "#030208", display: "flex", flexDirection: "column", maxWidth: 480, margin: "0 auto", position: "relative" }}>
+        {/* Estrellas de fondo */}
+        <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice"
+          style={{ position: "fixed", inset: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 0, maxWidth: 480, margin: "0 auto" }}>
+          {Array.from({ length: 50 }, (_, i) => (
+            <circle key={i} cx={`${((i * 137.5) % 100).toFixed(1)}`} cy={`${((i * 97.3) % 100).toFixed(1)}`}
+              r={`${(0.4 + (i % 4) * 0.2).toFixed(2)}`} fill="white" opacity={`${(0.12 + (i % 6) * 0.06).toFixed(2)}`} />
+          ))}
+        </svg>
+
         {/* Progress */}
-        <ProgressBar step={stepIndex} total={TOTAL_STEPS} />
+        <div style={{ position: "relative", zIndex: 10, padding: "52px 20px 12px", display: "flex", gap: 6 }}>
+          {Array.from({ length: TOTAL_STEPS }, (_, i) => (
+            <div key={i} style={{
+              flex: 1, height: 3, borderRadius: 100,
+              background: i < stepIndex ? "#d4af37" : "rgba(212,175,55,0.12)",
+              transition: "background 0.4s ease",
+            }} />
+          ))}
+        </div>
 
         {/* ── CHECKING ──────────────────────────────────────────── */}
         {step === "checking" && (
-          <div className="flex flex-col items-center justify-center px-5 flex-1 gap-3 text-center">
-            <TreePine size={48} className="text-ceiba-300 animate-pulse" />
-            <p className="text-ceiba-500 text-sm">Verificando tu cuenta...</p>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, padding: "0 20px", position: "relative", zIndex: 10 }}>
+            <TreePine size={48} style={{ color: "rgba(212,175,55,0.5)", animation: "pulse 2s ease-in-out infinite" }} />
+            <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 14 }}>Verificando tu cuenta...</p>
           </div>
         )}
 
@@ -904,71 +915,88 @@ export default function OnboardingPage() {
 
         {/* ── PROFILE ─────────────────────────────────────────── */}
         {step === "profile" && (
-          <div className="flex flex-col px-5 pt-6 pb-10 gap-5 flex-1">
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "24px 20px 32px", gap: 28, position: "relative", zIndex: 10 }}>
             <div>
-              <h1 className="text-2xl font-bold text-ceiba-900 mb-1">Cuéntanos quién eres</h1>
-              <p className="text-ceiba-500 text-sm">Un par de datos y tu árbol estará listo.</p>
+              <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "rgba(212,175,55,0.5)", marginBottom: 8 }}>Un último detalle</p>
+              <h1 style={{ fontSize: 26, fontWeight: 800, color: "#fff", lineHeight: 1.15, letterSpacing: "-0.02em" }}>
+                ¿Cómo quieres que te<br/>vea tu familia?
+              </h1>
             </div>
 
-            <div className="flex flex-col gap-3">
-              <div className="grid grid-cols-2 gap-3">
-                <input
-                  type="text"
-                  placeholder="Nombres *"
-                  value={profFirstNames}
-                  onChange={(e) => setProfFirstNames(e.target.value)}
-                  className="rounded-2xl border border-cream-300 px-4 py-3.5 outline-none focus:border-ceiba-400 bg-cream-50"
-                />
-                <input
-                  type="text"
-                  placeholder="Apellidos"
-                  value={profLastNames}
-                  onChange={(e) => setProfLastNames(e.target.value)}
-                  className="rounded-2xl border border-cream-300 px-4 py-3.5 outline-none focus:border-ceiba-400 bg-cream-50"
-                />
+            {/* Avatar + nombre como confirmación */}
+            <div style={{
+              background: "#0c0a18", borderRadius: 18, padding: "16px 18px",
+              borderTop: "1.5px solid rgba(212,175,55,0.3)", borderLeft: "1px solid rgba(212,175,55,0.12)",
+              borderBottom: "3px solid #040300", borderRight: "1px solid rgba(0,0,0,0.6)",
+              boxShadow: "0 7px 0 #040300, 0 12px 22px rgba(0,0,0,0.6)",
+              display: "flex", alignItems: "center", gap: 14,
+            }}>
+              <div style={{
+                width: 52, height: 52, borderRadius: "50%", flexShrink: 0,
+                background: "radial-gradient(circle at 35% 30%, rgba(212,175,55,0.3), rgba(3,2,8,0.9))",
+                border: "1.5px solid rgba(212,175,55,0.4)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 22, fontWeight: 800, color: "#d4af37",
+              }}>
+                {profFirstNames ? profFirstNames[0].toUpperCase() : "?"}
               </div>
-              <input
-                type="date"
-                value={profBirthDate}
-                onChange={(e) => setProfBirthDate(e.target.value)}
-                className="rounded-2xl border border-cream-300 px-4 py-3.5 outline-none focus:border-ceiba-400 bg-cream-50 text-ceiba-700"
-              />
-              <input
-                type="text"
-                placeholder="Ciudad donde vives"
-                value={profCity}
-                onChange={(e) => setProfCity(e.target.value)}
-                className="rounded-2xl border border-cream-300 px-4 py-3.5 outline-none focus:border-ceiba-400 bg-cream-50"
-              />
+              <div style={{ flex: 1 }}>
+                <p style={{ fontSize: 15, fontWeight: 700, color: "#fff" }}>{profFirstNames} {profLastNames}</p>
+                <button
+                  onClick={() => { setProfFirstNames(""); setProfLastNames(""); }}
+                  style={{ fontSize: 11, color: "rgba(212,175,55,0.45)", background: "none", border: "none", cursor: "pointer", padding: 0, marginTop: 2 }}
+                >
+                  No es mi nombre
+                </button>
+              </div>
+            </div>
 
-              <div>
-                <p className="text-sm font-semibold text-ceiba-700 mb-2">Género *</p>
-                <div className="grid grid-cols-3 gap-2">
-                  {ONBOARDING_GENDER_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => setProfGender(opt.value)}
-                      className={`rounded-2xl border px-2 py-3 text-sm font-semibold transition-colors ${
-                        profGender === opt.value
-                          ? "border-ceiba-500 bg-ceiba-500 text-white"
-                          : "border-cream-300 bg-cream-50 text-ceiba-700"
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
+            {/* Campos de nombre si fueron borrados */}
+            {(!profFirstNames || !profLastNames) && (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <input type="text" placeholder="Nombres *" value={profFirstNames}
+                  onChange={(e) => setProfFirstNames(e.target.value)} autoFocus
+                  style={{ background: "#0c0a18", border: "1px solid rgba(212,175,55,0.25)", borderRadius: 12, padding: "12px 14px", color: "#fff", fontSize: 14, outline: "none" }} />
+                <input type="text" placeholder="Apellidos *" value={profLastNames}
+                  onChange={(e) => setProfLastNames(e.target.value)}
+                  style={{ background: "#0c0a18", border: "1px solid rgba(212,175,55,0.25)", borderRadius: 12, padding: "12px 14px", color: "#fff", fontSize: 14, outline: "none" }} />
+              </div>
+            )}
+
+            {/* Género — única pregunta activa */}
+            <div>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.55)", marginBottom: 12, fontWeight: 600 }}>¿Con qué género te identificas?</p>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+                {ONBOARDING_GENDER_OPTIONS.map((opt) => (
+                  <button key={opt.value} type="button" onClick={() => setProfGender(opt.value)}
+                    style={{
+                      padding: "13px 8px", borderRadius: 14, fontSize: 13, fontWeight: 700, cursor: "pointer",
+                      background: profGender === opt.value ? "#d4af37" : "#0c0a18",
+                      color: profGender === opt.value ? "#030208" : "rgba(255,255,255,0.55)",
+                      border: profGender === opt.value ? "1.5px solid #f5e060" : "1px solid rgba(212,175,55,0.18)",
+                      boxShadow: profGender === opt.value ? "0 4px 0 #6a5600, 0 0 16px rgba(212,175,55,0.3)" : "0 2px 0 #000",
+                      transition: "all 0.15s ease",
+                    }}>
+                    {opt.label}
+                  </button>
+                ))}
               </div>
             </div>
 
             <button
               onClick={saveProfile}
-              disabled={profLoading || !getProfileGenderFormState(profGender).canSubmit}
-              className="w-full flex items-center justify-center gap-2 bg-ceiba-500 hover:bg-ceiba-400 disabled:opacity-50 text-white font-bold py-4 rounded-2xl mt-auto transition-colors"
+              disabled={profLoading || !getProfileGenderFormState(profGender).canSubmit || !profFirstNames.trim() || !profLastNames.trim()}
+              style={{
+                marginTop: "auto", width: "100%", padding: "15px 0", borderRadius: 14,
+                background: (profLoading || !getProfileGenderFormState(profGender).canSubmit) ? "#6a5600" : "#c9a820",
+                borderTop: "2px solid #f5e060", borderLeft: "1.5px solid rgba(255,240,100,0.5)",
+                borderBottom: "4px solid #6a5600", borderRight: "1.5px solid rgba(0,0,0,0.4)",
+                boxShadow: "0 8px 0 #4a3c00, 0 14px 24px rgba(0,0,0,0.7)",
+                color: "#030208", fontSize: 15, fontWeight: 800, cursor: "pointer", border: "none",
+                opacity: (profLoading || !getProfileGenderFormState(profGender).canSubmit || !profFirstNames.trim() || !profLastNames.trim()) ? 0.5 : 1,
+              }}
             >
-              {profLoading ? "Buscando conexiones..." : "Continuar"}
-              {!profLoading && <ChevronRight size={20} />}
+              {profLoading ? "Conectando tu árbol..." : "Continuar →"}
             </button>
           </div>
         )}
@@ -1016,52 +1044,49 @@ export default function OnboardingPage() {
 
         {/* ── ADD FAMILY ─────────────────────────────────────── */}
         {step === "add_family" && (
-          <div className="flex flex-col px-5 pt-6 pb-32 gap-4 flex-1">
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "20px 20px 140px", gap: 18, position: "relative", zIndex: 10 }}>
             <div>
-              <h1 className="text-2xl font-bold text-ceiba-900 mb-1">Construye tu árbol</h1>
-              <p className="text-ceiba-500 text-sm">Empieza por los más cercanos. Detalles después.</p>
+              <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "rgba(212,175,55,0.5)", marginBottom: 8 }}>Tu árbol familiar</p>
+              <h1 style={{ fontSize: 24, fontWeight: 800, color: "#fff", lineHeight: 1.2, letterSpacing: "-0.02em", marginBottom: 4 }}>¿Quién está en tu familia?</h1>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)" }}>Agrega al menos uno para ver tu árbol.</p>
             </div>
 
-            {/* Contador */}
-            <div className="flex items-center gap-3">
-              <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-ceiba-500 rounded-full transition-all duration-500"
-                  style={{ width: `${(filledCount / 5) * 100}%` }}
-                />
+            {/* Barra de progreso */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ flex: 1, height: 5, background: "rgba(212,175,55,0.1)", borderRadius: 100, overflow: "hidden" }}>
+                <div style={{ width: `${(filledCount / 5) * 100}%`, height: "100%", background: "#d4af37", borderRadius: 100, transition: "width 0.5s ease", boxShadow: "0 0 8px rgba(212,175,55,0.5)" }} />
               </div>
-              <span className="text-sm font-bold text-ceiba-700 flex-shrink-0">
-                {filledCount} / 5
-              </span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: "rgba(212,175,55,0.6)", flexShrink: 0 }}>{filledCount} / 5</span>
             </div>
 
             {/* Slots */}
-            <div className="grid grid-cols-2 gap-3">
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               {SUGGESTED_SLOTS.map((slot) => {
                 const filled = filledSlots[slot.id];
                 return filled ? (
-                  <div
-                    key={slot.id}
-                    className="bg-ceiba-50 border-2 border-ceiba-200 rounded-2xl p-4 flex flex-col gap-1"
-                  >
-                    <span className="text-2xl">{slot.emoji}</span>
-                    <p className="font-semibold text-ceiba-800 text-sm leading-tight">
-                      {filled.first_names}
-                    </p>
-                    <p className="text-ceiba-500 text-xs">{slot.label}</p>
-                    <Check size={14} className="text-ceiba-500 mt-1" />
+                  <div key={slot.id} style={{
+                    background: "rgba(212,175,55,0.08)", borderRadius: 16, padding: "14px 14px 12px",
+                    border: "1.5px solid rgba(212,175,55,0.35)",
+                    boxShadow: "0 4px 0 rgba(212,175,55,0.08)",
+                    display: "flex", flexDirection: "column", gap: 3,
+                  }}>
+                    <span style={{ fontSize: 24 }}>{slot.emoji}</span>
+                    <p style={{ fontWeight: 700, color: "#fff", fontSize: 13, lineHeight: 1.3 }}>{filled.first_names}</p>
+                    <p style={{ color: "rgba(212,175,55,0.6)", fontSize: 11 }}>{slot.label}</p>
+                    <Check size={14} style={{ color: "#d4af37", marginTop: 2 }} />
                   </div>
                 ) : (
-                  <button
-                    key={slot.id}
-                    onClick={() => setActiveSlot(slot)}
-                    className="bg-cream-50 border-2 border-dashed border-cream-300 hover:border-ceiba-400 hover:bg-ceiba-50 rounded-2xl p-4 flex flex-col gap-1 text-left transition-colors"
-                  >
-                    <span className="text-2xl">{slot.emoji}</span>
-                    <p className="font-semibold text-ceiba-800 text-sm leading-tight">{slot.label}</p>
-                    {slot.optional && <p className="text-ceiba-400 text-xs">opcional</p>}
-                    <div className="flex items-center gap-1 text-ceiba-600 text-xs mt-1">
-                      <Plus size={12} /> Agregar
+                  <button key={slot.id} onClick={() => setActiveSlot(slot)} style={{
+                    background: "#0c0a18", borderRadius: 16, padding: "14px 14px 12px",
+                    border: "1.5px dashed rgba(212,175,55,0.2)",
+                    display: "flex", flexDirection: "column", gap: 3, textAlign: "left", cursor: "pointer",
+                    transition: "border-color 0.15s",
+                  }}>
+                    <span style={{ fontSize: 24 }}>{slot.emoji}</span>
+                    <p style={{ fontWeight: 600, color: "rgba(255,255,255,0.7)", fontSize: 13 }}>{slot.label}</p>
+                    {slot.optional && <p style={{ color: "rgba(255,255,255,0.25)", fontSize: 10 }}>opcional</p>}
+                    <div style={{ display: "flex", alignItems: "center", gap: 4, color: "rgba(212,175,55,0.5)", fontSize: 11, marginTop: 2 }}>
+                      <Plus size={11} /> Agregar
                     </div>
                   </button>
                 );
@@ -1110,10 +1135,10 @@ export default function OnboardingPage() {
                 <Send size={18} /> Invitar a mi familia
               </button>
               <button
-                onClick={() => setStep("notifications")}
-                className="w-full text-ceiba-500 hover:text-ceiba-800 text-sm py-2"
+                onClick={() => router.push("/tree?welcome=1")}
+                className="w-full border border-ceiba-200 text-ceiba-600 hover:bg-ceiba-50 font-semibold text-sm py-3 rounded-2xl transition-colors"
               >
-                Explorar mi árbol después
+                Ver mi árbol ahora →
               </button>
             </div>
           </div>
@@ -1204,10 +1229,10 @@ export default function OnboardingPage() {
                 <Bell size={18} /> Activar notificaciones
               </button>
               <button
-                onClick={() => setStep("done")}
-                className="w-full text-ceiba-400 hover:text-ceiba-600 text-sm py-2"
+                onClick={() => router.push("/tree?welcome=1")}
+                className="w-full border border-ceiba-200 text-ceiba-600 hover:bg-ceiba-50 font-semibold text-sm py-3 rounded-2xl transition-colors"
               >
-                Después
+                Ver mi árbol primero →
               </button>
             </div>
           </div>
@@ -1244,13 +1269,24 @@ export default function OnboardingPage() {
             continuar (1+). Al pulsarlo se completa el onboarding y se
             redirige directo a /tree. */}
         {step === "add_family" && (
-          <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-cream-50 border-t px-5 py-4 flex flex-col gap-2">
+          <div style={{
+            position: "fixed", bottom: 0, left: 0, right: 0, maxWidth: 480, margin: "0 auto",
+            background: "rgba(3,2,8,0.97)", borderTop: "0.5px solid rgba(212,175,55,0.2)",
+            padding: "14px 20px 32px", backdropFilter: "blur(12px)", zIndex: 50,
+          }}>
             <button
-              onClick={() => router.push("/tree")}
-              className="w-full flex items-center justify-center gap-2 font-bold py-4 rounded-2xl transition-all bg-ceiba-500 hover:bg-ceiba-400 text-white"
+              onClick={() => router.push(filledCount > 0 ? "/tree?welcome=1" : "/tree")}
+              style={{
+                width: "100%", padding: "15px 0", borderRadius: 14,
+                background: "#c9a820",
+                borderTop: "2px solid #f5e060", borderLeft: "1.5px solid rgba(255,240,100,0.5)",
+                borderBottom: "4px solid #6a5600", borderRight: "1.5px solid rgba(0,0,0,0.4)",
+                boxShadow: "0 8px 0 #4a3c00, 0 14px 24px rgba(0,0,0,0.7), 0 0 20px rgba(212,175,55,0.2)",
+                color: "#030208", fontSize: 15, fontWeight: 800, cursor: "pointer", border: "none",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+              }}
             >
-              {getAddFamilyContinueLabel(filledCount)}
-              <ChevronRight size={20} />
+              {getAddFamilyContinueLabel(filledCount)} <ChevronRight size={18} />
             </button>
           </div>
         )}
