@@ -4,17 +4,15 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Home, TreePine, Send, Camera, Settings, Bell,
-  Users, Layers, BookOpen, Image as ImageIcon,
-  ChevronRight, Calendar, Cake, UserPlus, Trophy,
+  Users, ChevronRight, Calendar, Cake, Trophy,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { adaptGraph, type FamilyGraph } from "@/lib/graphAdapter";
 import { buildVisibleMembers } from "@/lib/visibleMembers";
 import { parseGrowthStats, type CeibaGrowthStats } from "@/lib/growthStats";
-import type { Profile, FamilyMember, RelationType } from "@/lib/types";
+import type { Profile, FamilyMember } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
 import { Avatar } from "@/components/ui/Avatar";
-import { Badge } from "@/components/ui/Badge";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { BottomNavigation, type NavItem } from "@/components/ui/BottomNavigation";
@@ -34,6 +32,7 @@ interface FeedBirthday {
   last_name: string;
   birth_date: string;
 }
+type BirthdayWithDays = FeedBirthday & { days: number };
 
 // ── Navegación ──────────────────────────────────────────────────────────────
 const NAV_ITEMS: NavItem[] = [
@@ -45,11 +44,11 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 // ── Utilidades ──────────────────────────────────────────────────────────────
-function getGreeting(firstName: string) {
+function getGreeting() {
   const h = new Date().getHours();
-  const saludo = h < 12 ? "Buenos días" : h < 19 ? "Buenas tardes" : "Buenas noches";
-  const sub = h < 12 ? "Un buen momento para recordar a los tuyos" : h < 19 ? "Tu familia sigue creciendo" : "Recuerda a los que amas";
-  return { saludo, sub, firstName };
+  if (h < 12) return "Buenos días";
+  if (h < 19) return "Buenas tardes";
+  return "Buenas noches";
 }
 
 function daysUntil(birth_date: string): number {
@@ -79,44 +78,55 @@ function eventLabel(event_date: string, event_type: string): string {
   return `${d.getDate()} ${month} · ${typeLabel[event_type] ?? "Evento"}`;
 }
 
-function formatEventDate(d: string): string {
-  return new Date(d).toLocaleDateString("es", { day: "numeric", month: "long", year: "numeric" });
-}
-
-const EVENT_TYPE_LABEL: Record<string, string> = {
-  birth: "Nacimiento", marriage: "Matrimonio", graduation: "Graduación",
-  reunion: "Reunión", anniversary: "Aniversario", death: "Fallecimiento", other: "Evento",
-};
-
-const STATUS_MSG: Record<number, string> = {
-  0: "Comienza tu árbol familiar",
-  1: "Tu familia da sus primeros pasos",
-  2: "Tu familia empieza a conectarse",
-  3: "Tu árbol está creciendo",
-  4: "Tu árbol florece",
-  5: "Tu árbol está completo",
-};
-
-// ── Anillo de progreso ──────────────────────────────────────────────────────
-function ProgressRing({ score, total }: { score: number; total: number }) {
-  const r = 68, circ = 2 * Math.PI * r;
-  const dash = circ * (total > 0 ? score / total : 0);
-  return (
-    <svg width="152" height="152" viewBox="0 0 152 152" aria-hidden>
-      <circle cx="76" cy="76" r={r} fill="none" stroke="#eedfc6" strokeWidth="7" />
-      <circle cx="76" cy="76" r={r} fill="none"
-        stroke="#c1603a" strokeWidth="7"
-        strokeDasharray={`${dash} ${circ}`}
-        strokeLinecap="round"
-        transform="rotate(-90 76 76)"
-        style={{ transition: "stroke-dasharray 0.8s ease" }}
-      />
-    </svg>
-  );
-}
-
+// ── Componentes de apoyo ─────────────────────────────────────────────────────
 function Skeleton({ className = "" }: { className?: string }) {
   return <div className={`animate-pulse rounded-xl bg-cream-300 ${className}`} />;
+}
+
+function BirthdaySpotlight({ birthdays }: { birthdays: BirthdayWithDays[] }) {
+  const single = birthdays.length === 1;
+  const first = birthdays[0];
+  const names = birthdays.map(b => b.first_name).join(" y ");
+  const age = single && first.birth_date
+    ? new Date().getFullYear() - new Date(first.birth_date).getFullYear()
+    : null;
+
+  return (
+    <Link href={single ? `/persona/${first.person_id}` : "/feed"}>
+      <div style={{
+        background: "#f59e0b",
+        borderRadius: 18,
+        padding: "14px 16px",
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        boxShadow: "0 4px 16px rgba(245,158,11,0.3)",
+      }}>
+        <span style={{ fontSize: 36, lineHeight: 1, flexShrink: 0 }}>🎂</span>
+        <div style={{ flex: 1 }}>
+          <div style={{
+            fontSize: 9, fontWeight: 700, letterSpacing: "0.1em",
+            textTransform: "uppercase", color: "#78350f", marginBottom: 2,
+          }}>
+            Hoy en tu familia
+          </div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: "#78350f", lineHeight: 1.2 }}>
+            {single ? `¡Hoy cumple años ${names}!` : `¡Hoy cumplen años ${names}!`}
+          </div>
+          {single && age && (
+            <div style={{ fontSize: 11, color: "#92400e", marginTop: 2 }}>{age} años</div>
+          )}
+        </div>
+        <div style={{
+          background: "rgba(120,53,15,0.18)", borderRadius: 9,
+          padding: "6px 11px", fontSize: 11, fontWeight: 700,
+          color: "#78350f", flexShrink: 0,
+        }}>
+          Ver →
+        </div>
+      </div>
+    </Link>
+  );
 }
 
 // ── Página ──────────────────────────────────────────────────────────────────
@@ -127,6 +137,7 @@ export default function HomePage() {
   const [profile, setProfile]           = useState<Profile | null>(null);
   const [members, setMembers]           = useState<FamilyMember[]>([]);
   const [visibleCount, setVisibleCount] = useState(0);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [growthStats, setGrowthStats]   = useState<CeibaGrowthStats | null>(null);
   const [events, setEvents]             = useState<FeedEvent[]>([]);
   const [birthdays, setBirthdays]       = useState<FeedBirthday[]>([]);
@@ -186,199 +197,168 @@ export default function HomePage() {
 
   // ── Métricas derivadas ────────────────────────────────────────────────────
   const firstName = profile?.first_name ?? "";
-  const { saludo, sub } = getGreeting(firstName || "tú");
-
-  const PARENT_TYPES: RelationType[]  = ["father", "mother"];
-  const PARTNER_TYPES: RelationType[] = ["spouse", "partner", "husband", "wife"];
-  const CHILD_TYPES: RelationType[]   = ["son", "daughter"];
-  const SIBLING_TYPES: RelationType[] = ["brother", "sister"];
-
-  const score = [
-    !!profile?.avatar_url,
-    members.some(m => PARENT_TYPES.includes(m.relation_type as RelationType)),
-    members.some(m => SIBLING_TYPES.includes(m.relation_type as RelationType)),
-    members.some(m => PARTNER_TYPES.includes(m.relation_type as RelationType)),
-    members.some(m => CHILD_TYPES.includes(m.relation_type as RelationType)),
-  ].filter(Boolean).length;
-  const total = 5;
-  const statusMsg = STATUS_MSG[Math.min(score, 5)] ?? STATUS_MSG[3];
+  const saludo = getGreeting();
 
   const generations = members.length > 0
     ? Math.max(0, ...members.map(m => Math.abs(m.generation ?? 0))) + 1
     : 0;
 
-  const STATS = [
-    { icon: <Users size={20} className="text-earth-500"  />, value: visibleCount, label: "Familiares",    bg: "bg-earth-100", href: "/tree"   },
-    { icon: <Layers size={20} className="text-ceiba-600" />, value: generations,  label: "Generaciones", bg: "bg-ceiba-100", href: "/tree"   },
-    { icon: <BookOpen size={20} className="text-gold-500" />, value: events.length, label: "Historias",  bg: "bg-gold-100",  href: "/events" },
-    { icon: <ImageIcon size={20} className="text-earth-400" />, value: photoCount, label: "Fotos",       bg: "bg-earth-50",  href: "/photos" },
-  ];
+  const allBirthdaysWithDays: BirthdayWithDays[] = birthdays.map(b => ({
+    ...b, days: daysUntil(b.birth_date),
+  }));
 
-  // Actividad: cumpleaños próximos + eventos recientes (máx 3 en total)
-  const upcomingBirthdays = birthdays
-    .map(b => ({ ...b, days: daysUntil(b.birth_date) }))
+  const todayBirthdays = allBirthdaysWithDays.filter(b => b.days === 0);
+
+  const activityBirthdays = allBirthdaysWithDays
+    .filter(b => b.days > 0)
     .sort((a, b) => a.days - b.days)
     .slice(0, 2);
 
-  const activityEvents = events.slice(0, Math.max(0, 3 - upcomingBirthdays.length));
-  const featuredEvent = events[0] ?? null;
+  const activityEvents = events.slice(0, Math.max(0, 3 - activityBirthdays.length));
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen pb-28"
-      style={{ background: "linear-gradient(180deg, #ede3d0 0%, #f7edd9 28%, #fdf8f1 100%)" }}>
+    <div className="min-h-screen pb-28" style={{ background: "#fdf8f1" }}>
 
-      {/* ── Header ─────────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-40 backdrop-blur-sm border-b border-cream-400/70"
-        style={{ background: "rgba(253,248,241,0.92)" }}>
-        <div className="flex items-center justify-between px-4 py-3 max-w-lg mx-auto">
-          <div className="flex items-center gap-2">
-            <TreePine size={19} className="text-ceiba-600" strokeWidth={2} />
-            <span className="font-display font-bold text-title text-brown-800 tracking-tight">Ceiba</span>
+      {/* ── HERO ────────────────────────────────────────────────────────── */}
+      <div style={{
+        background: "#1a3a26",
+        borderRadius: "0 0 28px 28px",
+        padding: "12px 20px 0",
+        position: "relative",
+        overflow: "hidden",
+      }}>
+        {/* Leaf decoration */}
+        <svg
+          style={{ position: "absolute", right: -6, top: 0, opacity: 0.07, pointerEvents: "none" }}
+          width="110" height="180" viewBox="0 0 110 180" aria-hidden
+        >
+          <path d="M55,172 C25,142 10,90 16,40 C22,6 48,0 55,2 C62,0 88,6 94,40 C100,90 85,142 55,172Z" fill="white"/>
+          <path d="M55,172 L55,2" stroke="rgba(0,0,0,0.5)" strokeWidth={1} fill="none"/>
+          <path d="M55,48 C40,40 24,38 16,40" stroke="rgba(0,0,0,0.4)" strokeWidth={0.8} fill="none"/>
+          <path d="M55,68 C36,60 20,58 13,62" stroke="rgba(0,0,0,0.4)" strokeWidth={0.8} fill="none"/>
+          <path d="M55,90 C34,80 18,78 11,83" stroke="rgba(0,0,0,0.4)" strokeWidth={0.8} fill="none"/>
+          <path d="M55,48 C70,40 86,38 94,40" stroke="rgba(0,0,0,0.4)" strokeWidth={0.8} fill="none"/>
+          <path d="M55,68 C74,60 90,58 97,62" stroke="rgba(0,0,0,0.4)" strokeWidth={0.8} fill="none"/>
+          <path d="M55,90 C76,80 92,78 99,83" stroke="rgba(0,0,0,0.4)" strokeWidth={0.8} fill="none"/>
+        </svg>
+
+        {/* Top bar */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <TreePine size={18} style={{ color: "#7ab88a" }} />
+            <span className="font-display" style={{ color: "rgba(255,255,255,0.92)", fontSize: 15, fontWeight: 700, letterSpacing: "-0.3px" }}>
+              Ceiba
+            </span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <Link href="/feed"
-              className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-cream-300 transition-colors">
-              <Bell size={19} className="text-brown-400" />
+          <div style={{ display: "flex", gap: 8 }}>
+            <Link href="/feed">
+              <div style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Bell size={15} style={{ color: "rgba(255,255,255,0.8)" }} />
+              </div>
             </Link>
-            {loading || !profile ? (
-              <div className="w-9 h-9 rounded-full bg-cream-300 animate-pulse" />
+            <Link href="/profile">
+              {loading || !profile ? (
+                <div className="animate-pulse" style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(255,255,255,0.15)" }} />
+              ) : (
+                <div style={{ borderRadius: "50%", outline: "3px solid rgba(228,160,40,0.4)", outlineOffset: "2px" }}>
+                  <Avatar size="sm"
+                    name={`${profile.first_name} ${profile.last_name}`}
+                    src={profile.avatar_url ?? undefined}
+                    ring ringColor="terra"
+                  />
+                </div>
+              )}
+            </Link>
+          </div>
+        </div>
+
+        {/* Name + avatar row */}
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", paddingBottom: 22 }}>
+          <div>
+            <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 10, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 5 }}>
+              {saludo}
+            </div>
+            {loading ? (
+              <div className="animate-pulse" style={{ width: 150, height: 42, borderRadius: 8, background: "rgba(255,255,255,0.1)" }} />
             ) : (
-              <Link href="/profile">
-                <Avatar size="sm"
+              <h1 className="font-display" style={{ color: "#fff", fontSize: "2.25rem", fontWeight: 800, letterSpacing: "-0.05em", lineHeight: 1 }}>
+                {firstName || "Hola"}
+              </h1>
+            )}
+            <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 11, marginTop: 10 }}>
+              <span style={{ color: "rgba(255,255,255,0.82)", fontWeight: 600 }}>{visibleCount}</span>
+              {" familiares · "}
+              <span style={{ color: "rgba(255,255,255,0.82)", fontWeight: 600 }}>{generations}</span>
+              {" generaciones"}
+            </div>
+          </div>
+
+          {loading || !profile ? (
+            <div className="animate-pulse" style={{ width: 54, height: 54, borderRadius: "50%", background: "rgba(255,255,255,0.1)", flexShrink: 0 }} />
+          ) : (
+            <Link href="/profile">
+              <div style={{ borderRadius: "50%", outline: "3px solid rgba(228,160,40,0.4)", outlineOffset: "2px", flexShrink: 0 }}>
+                <Avatar size="md"
                   name={`${profile.first_name} ${profile.last_name}`}
                   src={profile.avatar_url ?? undefined}
                   ring ringColor="terra"
                 />
-              </Link>
-            )}
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-lg mx-auto px-4 space-y-8 pt-6">
-
-        {/* ── Saludo ─────────────────────────────────────────────────────── */}
-        <section className="pt-1">
-          {loading ? (
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-28" />
-              <Skeleton className="h-10 w-48" />
-              <Skeleton className="h-4 w-40" />
-            </div>
-          ) : (
-            <>
-              <p className="text-caption text-brown-400 font-medium mb-1"
-                style={{ letterSpacing: "0.08em", textTransform: "uppercase" }}>
-                {saludo}
-              </p>
-              <h1 className="font-display font-bold text-brown-800"
-                style={{ fontSize: "2.25rem", lineHeight: "1.08", letterSpacing: "-0.02em" }}>
-                {firstName}
-              </h1>
-              <p className="text-body text-brown-500 mt-2">{sub}</p>
-              {growthStats && (
-                <p className="text-caption text-brown-400 mt-1">
-                  {growthStats.totalActivePersons} personas en Ceiba
-                </p>
-              )}
-            </>
-          )}
-        </section>
-
-        {/* ── Hero de progreso ───────────────────────────────────────────── */}
-        <section>
-          {loading ? (
-            <Skeleton className="h-72 rounded-3xl" />
-          ) : (
-            <div className="rounded-3xl overflow-hidden"
-              style={{
-                background: "linear-gradient(145deg, #f0dfc8 0%, #ead4b8 100%)",
-                boxShadow: "0 10px 28px rgba(193,96,58,0.16), 0 4px 8px rgba(193,96,58,0.10)",
-              }}>
-
-              <div className="flex flex-col items-center text-center px-6 pt-8 pb-6 gap-4">
-                {/* Anillo + avatar */}
-                <div className="relative">
-                  <ProgressRing score={score} total={total} />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <Avatar size="xl"
-                      name={`${profile?.first_name ?? ""} ${profile?.last_name ?? ""}`}
-                      src={profile?.avatar_url ?? undefined}
-                      ring ringColor="terra"
-                    />
-                  </div>
-                </div>
-
-                {/* Copy */}
-                <div>
-                  <p className="font-display font-bold text-brown-800"
-                    style={{ fontSize: "1.375rem", lineHeight: "1.3", letterSpacing: "-0.01em" }}>
-                    {statusMsg}
-                  </p>
-                  <p className="text-caption text-brown-500 mt-1">
-                    {score} de {total} secciones completadas
-                  </p>
-                </div>
-
-                {/* CTA único */}
-                <Button variant="primary" size="lg" pill fullWidth
-                  icon={<UserPlus size={17} />}
-                  onClick={() => router.push("/invitar")}>
-                  Invitar familiar
-                </Button>
               </div>
-
-              {/* Enlace discreto */}
-              <Link href="/tree">
-                <div className="flex items-center justify-center gap-2 px-6 py-3 border-t hover:bg-black/5 transition-colors"
-                  style={{ borderColor: "rgba(193,96,58,0.15)" }}>
-                  <TreePine size={14} className="text-brown-500" />
-                  <span className="text-caption text-brown-500 font-medium">Ver árbol familiar</span>
-                  <ChevronRight size={13} className="text-brown-400" />
-                </div>
-              </Link>
-            </div>
+            </Link>
           )}
-        </section>
+        </div>
+      </div>
 
-        {/* ── Métricas ───────────────────────────────────────────────────── */}
-        <section>
-          <SectionHeader title="Tu familia" className="mb-3" />
-          <div className="grid grid-cols-2 gap-3">
-            {STATS.map(({ icon, value, label, bg, href }) => (
-              <Link key={label} href={href}>
-                <div className="rounded-2xl p-4 cursor-pointer"
-                  style={{
-                    background: "rgba(255,255,255,0.75)",
-                    boxShadow: "0 1px 4px rgba(193,96,58,0.10), 0 1px 2px rgba(193,96,58,0.06)",
-                    border: "1px solid rgba(227,206,176,0.6)",
-                  }}>
-                  <div className="flex items-start justify-between mb-3">
-                    <div className={`w-10 h-10 rounded-xl ${bg} flex items-center justify-center`}>
-                      {icon}
-                    </div>
-                    <ChevronRight size={14} className="text-brown-300 mt-1 shrink-0" />
-                  </div>
-                  <p className="font-display font-bold text-brown-800"
-                    style={{ fontSize: "1.75rem", lineHeight: "1", letterSpacing: "-0.02em" }}>
-                    {loading ? "—" : value}
-                  </p>
-                  <p className="text-caption text-brown-400 mt-0.5">{label}</p>
+      {/* ── CONTENT ─────────────────────────────────────────────────────── */}
+      <main className="max-w-lg mx-auto px-4 pt-4 space-y-5">
+
+        {/* Birthday spotlight */}
+        {!loading && todayBirthdays.length > 0 && (
+          <BirthdaySpotlight birthdays={todayBirthdays} />
+        )}
+
+        {/* Stats row */}
+        <div className="grid grid-cols-3 gap-2.5">
+          {[
+            { label: "Familiares",   value: visibleCount, href: "/tree",   icon: <Users    size={16} className="text-ceiba-600" /> },
+            { label: "Generaciones", value: generations,  href: "/tree",   icon: <TreePine size={16} className="text-ceiba-600" /> },
+            { label: "Fotos",        value: photoCount,   href: "/photos", icon: <Camera   size={16} className="text-ceiba-600" /> },
+          ].map(({ label, value, href, icon }) => (
+            <Link key={label} href={href}>
+              <div style={{
+                background: "#fff",
+                borderRadius: 14,
+                padding: "12px 8px",
+                textAlign: "center",
+                border: "0.5px solid rgba(193,96,58,0.12)",
+                cursor: "pointer",
+              }}>
+                <div style={{ display: "flex", justifyContent: "center", marginBottom: 3 }}>{icon}</div>
+                <div className="font-display" style={{ fontSize: 24, fontWeight: 800, color: "#1a3a26", letterSpacing: "-1px", lineHeight: 1 }}>
+                  {loading ? "—" : value}
                 </div>
-              </Link>
-            ))}
-          </div>
+                <div style={{ fontSize: 9, color: "#a07050", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", marginTop: 3 }}>
+                  {label}
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+
+        {/* Tu árbol / gamification */}
+        <section>
+          <SectionHeader title="Tu árbol" icon={<Trophy size={17} />} className="mb-3" />
+          <GamificationWidget />
         </section>
 
-        {/* ── Actividad reciente ──────────────────────────────────────────── */}
+        {/* Actividad reciente */}
         <section>
           <SectionHeader
             title="Actividad reciente"
             icon={<Calendar size={17} />}
             action={
-              <Link href="/events"
-                className="text-caption text-earth-500 font-medium hover:text-earth-600">
+              <Link href="/events" className="text-caption text-earth-500 font-medium hover:text-earth-600">
                 Ver todo
               </Link>
             }
@@ -389,14 +369,13 @@ export default function HomePage() {
             <div className="space-y-2">
               {[0, 1, 2].map(i => <Skeleton key={i} className="h-16 rounded-2xl" />)}
             </div>
-          ) : upcomingBirthdays.length === 0 && activityEvents.length === 0 ? (
+          ) : activityBirthdays.length === 0 && activityEvents.length === 0 ? (
             <EmptyState
               icon={<Calendar size={22} className="text-earth-300" />}
               title="Sin actividad aún"
               description="Los cumpleaños y eventos de tu familia aparecerán aquí."
               action={
-                <Button size="sm" variant="secondary"
-                  onClick={() => router.push("/events")}>
+                <Button size="sm" variant="secondary" onClick={() => router.push("/events")}>
                   Agregar evento
                 </Button>
               }
@@ -408,27 +387,29 @@ export default function HomePage() {
                 boxShadow: "0 1px 4px rgba(193,96,58,0.10)",
                 border: "1px solid rgba(227,206,176,0.6)",
               }}>
-              {upcomingBirthdays.map((b, i) => (
-                <div key={b.person_id} className="flex items-center gap-3 px-4 py-3.5"
-                  style={i > 0 ? { borderTop: "1px solid rgba(238,223,198,0.8)" } : {}}>
-                  <div className="w-10 h-10 rounded-full bg-gold-100 flex items-center justify-center shrink-0">
-                    <Cake size={16} className="text-gold-500" />
+              {activityBirthdays.map((b, i) => (
+                <Link key={b.person_id} href={`/persona/${b.person_id}`}>
+                  <div className="flex items-center gap-3 px-4 py-3.5 hover:bg-cream-100/50 transition-colors"
+                    style={i > 0 ? { borderTop: "1px solid rgba(238,223,198,0.8)" } : {}}>
+                    <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                      <Cake size={16} className="text-amber-500" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-body font-semibold text-brown-800 truncate">
+                        {b.first_name} {b.last_name}
+                      </p>
+                      <p className="text-caption text-brown-400">
+                        {birthdayLabel(b.days, b.birth_date)}
+                      </p>
+                    </div>
+                    <ChevronRight size={14} className="text-brown-300 shrink-0" />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-body font-semibold text-brown-800 truncate">
-                      {b.first_name} {b.last_name}
-                    </p>
-                    <p className="text-caption text-brown-400">
-                      {birthdayLabel(b.days, b.birth_date)}
-                    </p>
-                  </div>
-                  <ChevronRight size={14} className="text-brown-300 shrink-0" />
-                </div>
+                </Link>
               ))}
               {activityEvents.map((ev, i) => (
                 <Link key={ev.id} href="/events">
                   <div className="flex items-center gap-3 px-4 py-3.5 hover:bg-cream-100/50 transition-colors"
-                    style={{ borderTop: "1px solid rgba(238,223,198,0.8)" }}>
+                    style={{ borderTop: (i > 0 || activityBirthdays.length > 0) ? "1px solid rgba(238,223,198,0.8)" : undefined }}>
                     <div className="w-10 h-10 rounded-full bg-earth-100 flex items-center justify-center shrink-0">
                       <Calendar size={16} className="text-earth-500" />
                     </div>
@@ -443,73 +424,6 @@ export default function HomePage() {
                 </Link>
               ))}
             </div>
-          )}
-        </section>
-
-        {/* ── Gamificación ────────────────────────────────────────────────── */}
-        <section>
-          <SectionHeader title="Tu progreso" icon={<Trophy size={17} />} className="mb-3" />
-          <GamificationWidget />
-        </section>
-
-        {/* ── Historia destacada ──────────────────────────────────────────── */}
-        <section>
-          <SectionHeader
-            title="Historia destacada"
-            icon={<BookOpen size={17} />}
-            action={
-              <Link href="/events"
-                className="text-caption text-earth-500 font-medium hover:text-earth-600">
-                Ver todas
-              </Link>
-            }
-            className="mb-3"
-          />
-
-          {loading ? (
-            <Skeleton className="h-44 rounded-2xl" />
-          ) : featuredEvent ? (
-            <Link href="/events">
-              <div className="rounded-2xl p-5 cursor-pointer"
-                style={{
-                  background: "linear-gradient(145deg, #f5e8d4 0%, #f0dfc8 100%)",
-                  boxShadow: "0 4px 12px rgba(193,96,58,0.12), 0 2px 4px rgba(193,96,58,0.08)",
-                  border: "1px solid rgba(193,96,58,0.12)",
-                }}>
-                <Badge variant="terra" size="sm" className="mb-3">
-                  {EVENT_TYPE_LABEL[featuredEvent.event_type] ?? "Evento"}
-                </Badge>
-                <p className="font-display font-semibold text-brown-800 mb-2"
-                  style={{ fontSize: "1.125rem", lineHeight: "1.35" }}>
-                  {featuredEvent.title}
-                </p>
-                {featuredEvent.description && (
-                  <p className="font-display text-brown-600 mb-3"
-                    style={{ fontStyle: "italic", fontSize: "0.9375rem", lineHeight: "1.6" }}>
-                    "{featuredEvent.description}"
-                  </p>
-                )}
-                <div className="flex items-center justify-between">
-                  <p className="text-caption text-brown-400 flex items-center gap-1.5">
-                    <Calendar size={11} />
-                    {formatEventDate(featuredEvent.event_date)}
-                  </p>
-                  <ChevronRight size={14} className="text-brown-400" />
-                </div>
-              </div>
-            </Link>
-          ) : (
-            <EmptyState
-              icon={<BookOpen size={22} className="text-earth-300" />}
-              title="Aún no hay historias"
-              description="Registra los momentos importantes de tu familia."
-              action={
-                <Button size="sm" onClick={() => router.push("/events")}
-                  icon={<Calendar size={14} />}>
-                  Agregar historia
-                </Button>
-              }
-            />
           )}
         </section>
 
