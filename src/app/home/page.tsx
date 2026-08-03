@@ -72,45 +72,166 @@ function daysUntil(birth_date: string): number {
   return diff === 365 ? 0 : diff;
 }
 
-// ── Campo de estrellas ────────────────────────────────────────────────────────
-function StarField() {
+// ── Fondo galáctico completo ──────────────────────────────────────────────────
+function GalaxyHero({ children, avatarInitial, avatarUrl, firstName, lastName }: {
+  children: React.ReactNode;
+  avatarInitial: string;
+  avatarUrl?: string | null;
+  firstName: string;
+  lastName: string;
+}) {
   return (
-    <svg style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", pointerEvents: "none" }}
-      xmlns="http://www.w3.org/2000/svg" aria-hidden>
-      <circle cx="16"  cy="20"  r="0.8" fill="white" opacity="0.7"/>
-      <circle cx="306" cy="16"  r="0.7" fill="white" opacity="0.55"/>
-      <circle cx="10"  cy="82"  r="0.9" fill="white" opacity="0.45"/>
-      <circle cx="320" cy="58"  r="0.8" fill="white" opacity="0.6"/>
-      <circle cx="36"  cy="150" r="0.7" fill="white" opacity="0.4"/>
-      <circle cx="302" cy="138" r="0.9" fill="white" opacity="0.5"/>
-      <circle cx="60"  cy="26"  r="0.6" fill="white" opacity="0.45"/>
-      <circle cx="270" cy="30"  r="0.7" fill="white" opacity="0.5"/>
-      <circle cx="42"  cy="105" r="0.8" fill="white" opacity="0.38"/>
-      <circle cx="280" cy="100" r="0.6" fill="white" opacity="0.42"/>
-      <circle cx="18"  cy="196" r="0.7" fill="white" opacity="0.45"/>
-      <circle cx="312" cy="188" r="0.8" fill="white" opacity="0.55"/>
-      <circle cx="154" cy="15"  r="1.2" fill="#d4af37" opacity="0.95"/>
-      <circle cx="94"  cy="12"  r="1"   fill="#d4af37" opacity="0.85"/>
-      <circle cx="232" cy="20"  r="1"   fill="#d4af37" opacity="0.8"/>
-      <circle cx="114" cy="50"  r="0.9" fill="#f0d060" opacity="0.9"/>
-      <circle cx="214" cy="46"  r="0.8" fill="#f0d060" opacity="0.85"/>
-      <circle cx="70"  cy="130" r="1"   fill="#d4af37" opacity="0.7"/>
-      <circle cx="254" cy="124" r="0.9" fill="#d4af37" opacity="0.72"/>
-      <circle cx="130" cy="190" r="0.8" fill="#d4af37" opacity="0.75"/>
-      <circle cx="200" cy="184" r="0.9" fill="#d4af37" opacity="0.7"/>
-      <circle cx="30"  cy="48"  r="1.4" fill="white"   opacity="0.82"/>
-      <circle cx="304" cy="42"  r="1.3" fill="white"   opacity="0.78"/>
-      <line x1="30"  y1="45" x2="30"  y2="51" stroke="white"   strokeWidth="0.4" opacity="0.6"/>
-      <line x1="27"  y1="48" x2="33"  y2="48" stroke="white"   strokeWidth="0.4" opacity="0.6"/>
-      <line x1="304" y1="39" x2="304" y2="45" stroke="white"   strokeWidth="0.4" opacity="0.55"/>
-      <line x1="301" y1="42" x2="307" y2="42" stroke="white"   strokeWidth="0.4" opacity="0.55"/>
-      <line x1="154" y1="12" x2="154" y2="18" stroke="#d4af37" strokeWidth="0.5" opacity="0.7"/>
-      <line x1="151" y1="15" x2="157" y2="15" stroke="#d4af37" strokeWidth="0.5" opacity="0.7"/>
-    </svg>
+    <div style={{ position: "relative", overflow: "hidden", paddingBottom: 32, textAlign: "center",
+      background: "radial-gradient(ellipse 120% 80% at 50% 0%, #12082a 0%, #060318 45%, #030208 100%)" }}>
+
+      <style>{`
+        @keyframes twinkle-a { 0%,100%{opacity:.9;transform:scale(1)} 50%{opacity:.25;transform:scale(.7)} }
+        @keyframes twinkle-b { 0%,100%{opacity:.6;transform:scale(1)} 40%{opacity:.1;transform:scale(.6)} }
+        @keyframes twinkle-c { 0%,100%{opacity:.75;transform:scale(1)} 60%{opacity:.3;transform:scale(.8)} }
+        @keyframes ring-spin  { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+        @keyframes ring-spin-r{ from{transform:rotate(0deg)} to{transform:rotate(-360deg)} }
+        @keyframes core-pulse { 0%,100%{opacity:.55;transform:scale(1)} 50%{opacity:.85;transform:scale(1.12)} }
+        @keyframes dust-float { 0%,100%{opacity:0;transform:translateY(0) translateX(0)} 25%{opacity:.6} 50%{opacity:.3;transform:translateY(-18px) translateX(6px)} 75%{opacity:.5;transform:translateY(-8px) translateX(-4px)} }
+        @keyframes shoot { 0%{opacity:0;transform:translateX(0) translateY(0)} 5%{opacity:1} 100%{opacity:0;transform:translateX(-160px) translateY(60px)} }
+        @keyframes name-glow { 0%,100%{text-shadow:0 0 20px rgba(212,175,55,0.0)} 50%{text-shadow:0 0 28px rgba(212,175,55,0.45)} }
+      `}</style>
+
+      {/* Deep nebula layers */}
+      <div style={{ position:"absolute", top:-60, left:-60, width:280, height:280, borderRadius:"50%", pointerEvents:"none",
+        background:"radial-gradient(circle,rgba(100,30,220,0.22) 0%,transparent 70%)", filter:"blur(30px)" }} />
+      <div style={{ position:"absolute", top:-40, right:-50, width:240, height:240, borderRadius:"50%", pointerEvents:"none",
+        background:"radial-gradient(circle,rgba(20,60,200,0.18) 0%,transparent 70%)", filter:"blur(24px)" }} />
+      <div style={{ position:"absolute", top:80, left:"20%", width:320, height:180, borderRadius:"50%", pointerEvents:"none",
+        background:"radial-gradient(ellipse,rgba(212,175,55,0.1) 0%,transparent 65%)", filter:"blur(20px)" }} />
+      <div style={{ position:"absolute", bottom:-20, left:"10%", width:260, height:140, borderRadius:"50%", pointerEvents:"none",
+        background:"radial-gradient(ellipse,rgba(80,20,160,0.14) 0%,transparent 70%)", filter:"blur(18px)" }} />
+
+      {/* Star field — layered with twinkle animations */}
+      <svg style={{ position:"absolute", inset:0, width:"100%", height:"100%", pointerEvents:"none" }} aria-hidden>
+        {/* Static dim stars */}
+        {[
+          [22,18,0.5],[58,32,0.4],[110,8,0.55],[178,22,0.42],[230,14,0.5],[280,28,0.38],[318,12,0.48],
+          [8,65,0.45],[44,78,0.38],[92,54,0.5],[148,68,0.4],[196,44,0.45],[248,72,0.35],[302,58,0.48],
+          [18,120,0.4],[62,108,0.38],[120,132,0.42],[168,98,0.5],[222,118,0.36],[274,104,0.44],[312,128,0.4],
+          [30,170,0.45],[78,158,0.38],[136,182,0.42],[184,162,0.48],[238,176,0.35],[290,164,0.44],
+          [14,220,0.4],[66,208,0.38],[126,228,0.45],[182,212,0.42],[240,224,0.36],[296,216,0.44],
+        ].map(([x,y,o],i) => <circle key={i} cx={x} cy={y} r="0.65" fill="white" opacity={o} />)}
+
+        {/* Twinkling white stars */}
+        <circle cx="40"  cy="24"  r="1.1" fill="white" opacity="0.9" style={{ animation:"twinkle-a 3.1s ease-in-out infinite" }} />
+        <circle cx="288" cy="18"  r="1.0" fill="white" opacity="0.8" style={{ animation:"twinkle-b 2.7s ease-in-out infinite 0.4s" }} />
+        <circle cx="72"  cy="140" r="0.9" fill="white" opacity="0.75" style={{ animation:"twinkle-c 3.5s ease-in-out infinite 0.9s" }} />
+        <circle cx="256" cy="152" r="1.0" fill="white" opacity="0.7" style={{ animation:"twinkle-a 2.9s ease-in-out infinite 1.3s" }} />
+        <circle cx="20"  cy="190" r="0.9" fill="white" opacity="0.8" style={{ animation:"twinkle-b 3.3s ease-in-out infinite 0.6s" }} />
+        <circle cx="310" cy="178" r="1.0" fill="white" opacity="0.75" style={{ animation:"twinkle-c 2.8s ease-in-out infinite 1.1s" }} />
+        <circle cx="140" cy="30"  r="0.8" fill="white" opacity="0.7" style={{ animation:"twinkle-a 3.6s ease-in-out infinite 0.3s" }} />
+
+        {/* Gold stars */}
+        <circle cx="160" cy="12"  r="1.4" fill="#d4af37" opacity="0.95" style={{ animation:"twinkle-b 4.1s ease-in-out infinite" }} />
+        <circle cx="96"  cy="10"  r="1.1" fill="#d4af37" opacity="0.85" style={{ animation:"twinkle-c 3.8s ease-in-out infinite 0.7s" }} />
+        <circle cx="228" cy="16"  r="1.2" fill="#f0d060" opacity="0.88" style={{ animation:"twinkle-a 3.4s ease-in-out infinite 1.5s" }} />
+        <circle cx="52"  cy="196" r="1.0" fill="#d4af37" opacity="0.7" style={{ animation:"twinkle-b 4.3s ease-in-out infinite 0.2s" }} />
+        <circle cx="268" cy="200" r="1.1" fill="#d4af37" opacity="0.72" style={{ animation:"twinkle-c 3.9s ease-in-out infinite 1.8s" }} />
+
+        {/* Cross sparkles */}
+        <g style={{ animation:"twinkle-a 5s ease-in-out infinite" }}>
+          <circle cx="32" cy="50" r="1.5" fill="white" opacity="0.85" />
+          <line x1="32" y1="46" x2="32" y2="54" stroke="white" strokeWidth="0.5" opacity="0.6"/>
+          <line x1="28" y1="50" x2="36" y2="50" stroke="white" strokeWidth="0.5" opacity="0.6"/>
+        </g>
+        <g style={{ animation:"twinkle-b 4.5s ease-in-out infinite 1.2s" }}>
+          <circle cx="300" cy="44" r="1.4" fill="white" opacity="0.8" />
+          <line x1="300" y1="40" x2="300" y2="48" stroke="white" strokeWidth="0.45" opacity="0.55"/>
+          <line x1="296" y1="44" x2="304" y2="44" stroke="white" strokeWidth="0.45" opacity="0.55"/>
+        </g>
+        <g style={{ animation:"twinkle-c 5.2s ease-in-out infinite 2.1s" }}>
+          <circle cx="162" cy="13" r="1.3" fill="#f5e060" opacity="0.9" />
+          <line x1="162" y1="9"  x2="162" y2="17" stroke="#f5e060" strokeWidth="0.55" opacity="0.7"/>
+          <line x1="158" y1="13" x2="166" y2="13" stroke="#f5e060" strokeWidth="0.55" opacity="0.7"/>
+        </g>
+
+        {/* Shooting stars */}
+        <line x1="260" y1="40" x2="295" y2="28" stroke="white" strokeWidth="0.8" opacity="0"
+          style={{ animation:"shoot 8s linear infinite 2s", transformOrigin:"260px 40px" }} />
+        <line x1="80"  y1="18" x2="118" y2="6"  stroke="white" strokeWidth="0.7" opacity="0"
+          style={{ animation:"shoot 8s linear infinite 5.5s", transformOrigin:"80px 18px" }} />
+      </svg>
+
+      {/* Dust particles */}
+      {[
+        [30,160,2.8],[55,110,3.4],[240,130,2.6],[275,170,3.1],[150,200,2.9],[100,180,3.6],
+      ].map(([x,y,d],i) => (
+        <div key={i} style={{ position:"absolute", left:x, top:y, width:2, height:2, borderRadius:"50%",
+          background:"rgba(212,175,55,0.5)", pointerEvents:"none",
+          animation:`dust-float ${d}s ease-in-out infinite ${i*0.6}s` }} />
+      ))}
+
+      {/* Top bar */}
+      {children}
+
+      {/* Galactic core behind avatar */}
+      <div style={{ position:"relative", display:"inline-block", marginBottom:16, zIndex:5 }}>
+        {/* Outer ambient glow — very large, very soft */}
+        <div style={{ position:"absolute", top:"50%", left:"50%",
+          transform:"translate(-50%,-50%)",
+          width:260, height:260, borderRadius:"50%", pointerEvents:"none",
+          background:"radial-gradient(circle,rgba(130,60,230,0.18) 0%,rgba(212,175,55,0.08) 40%,transparent 70%)",
+          filter:"blur(16px)", animation:"core-pulse 4s ease-in-out infinite" }} />
+        {/* Mid glow */}
+        <div style={{ position:"absolute", top:"50%", left:"50%",
+          transform:"translate(-50%,-50%)",
+          width:170, height:170, borderRadius:"50%", pointerEvents:"none",
+          background:"radial-gradient(circle,rgba(212,175,55,0.22) 0%,rgba(100,40,200,0.15) 50%,transparent 70%)",
+          filter:"blur(10px)", animation:"core-pulse 3.2s ease-in-out infinite 0.5s" }} />
+
+        {/* Outer slow-spinning ring */}
+        <div style={{ position:"absolute", inset:-22, borderRadius:"50%", pointerEvents:"none",
+          background:"conic-gradient(from 0deg,rgba(212,175,55,0.0) 0%,rgba(212,175,55,0.3) 25%,rgba(130,60,230,0.25) 50%,rgba(40,80,220,0.2) 75%,rgba(212,175,55,0.0) 100%)",
+          animation:"ring-spin 18s linear infinite", filter:"blur(4px)" }} />
+
+        {/* Inner sharp ring — faster, opposite direction */}
+        <div style={{ position:"absolute", inset:-8, borderRadius:"50%", pointerEvents:"none",
+          background:"conic-gradient(from 15deg,#d4af37 0%,#f5e070 12%,rgba(212,175,55,0.1) 25%,#7040c0 38%,#2050c8 52%,rgba(40,80,220,0.1) 65%,#18b0c0 76%,#f0d060 88%,#d4af37 100%)",
+          animation:"ring-spin-r 9s linear infinite" }} />
+
+        {/* Gap ring */}
+        <div style={{ position:"absolute", inset:-2, borderRadius:"50%", background:"#030208", pointerEvents:"none" }} />
+
+        {/* Avatar body */}
+        <div style={{ width:120, height:120, borderRadius:"50%", background:"#0c0a18",
+          display:"flex", alignItems:"center", justifyContent:"center", position:"relative", zIndex:2,
+          boxShadow:"inset 0 3px 28px rgba(120,60,220,0.3), inset 0 -3px 14px rgba(0,0,0,0.7), 0 0 0 1px rgba(212,175,55,0.12)" }}>
+          <div style={{ position:"absolute", inset:0, borderRadius:"50%",
+            background:"radial-gradient(circle at 35% 25%,rgba(212,175,55,0.2) 0%,transparent 55%)" }} />
+          {avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={avatarUrl} alt={firstName}
+              style={{ width:120, height:120, borderRadius:"50%", objectFit:"cover", position:"relative" }} />
+          ) : (
+            <span style={{ fontSize:46, color:"#d4af37", fontWeight:800, position:"relative",
+              textShadow:"0 0 20px rgba(212,175,55,0.6)" }}>
+              {avatarInitial}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Name */}
+      <div style={{ fontSize:23, fontWeight:800, color:"#fff", letterSpacing:0.4, marginBottom:4,
+        position:"relative", zIndex:5, animation:"name-glow 5s ease-in-out infinite" }}>
+        {firstName || lastName ? `${firstName} ${lastName}`.trim() : "Cargando..."}
+      </div>
+
+      {/* Tagline */}
+      <div style={{ fontSize:10.5, color:"rgba(212,175,55,0.6)", fontStyle:"italic",
+        marginBottom:20, position:"relative", zIndex:5, letterSpacing:"0.06em" }}>
+        ✦ Guardián de la memoria familiar ✦
+      </div>
+    </div>
   );
 }
 
-// ── Orbe nebulosa ─────────────────────────────────────────────────────────────
+// ── Orbe nebulosa (legacy, kept for other uses) ───────────────────────────────
 function NebulaOrb({ top, left, right, color, size = 220 }: {
   top?: number; left?: number; right?: number; color: string; size?: number;
 }) {
@@ -287,14 +408,12 @@ export default function HomePage() {
     <div style={{ minHeight: "100vh", background: "#030208", paddingBottom: 100, color: "#fff" }}>
 
       {/* ── HERO ─────────────────────────────────────────────────────────── */}
-      <div style={{ position: "relative", overflow: "hidden", paddingBottom: 28, textAlign: "center" }}>
-        {/* Nebulas */}
-        <NebulaOrb top={-40} left={-50}   color="rgba(110,40,220,0.12)" size={240} />
-        <NebulaOrb top={-30} right={-40}  color="rgba(30,70,220,0.1)"  size={220} />
-        <NebulaOrb top={60}  left={undefined} color="rgba(212,175,55,0.11)" size={300} />
-        {/* Estrellas */}
-        <StarField />
-
+      <GalaxyHero
+        avatarInitial={avatarInitial}
+        avatarUrl={profile?.avatar_url}
+        firstName={profile?.first_name ?? ""}
+        lastName={profile?.last_name ?? ""}
+      >
         {/* Barra de navegación superior */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
           padding: "50px 20px 20px", position: "relative", zIndex: 5 }}>
@@ -328,67 +447,30 @@ export default function HomePage() {
             </div>
           </Link>
         </div>
+      </GalaxyHero>
 
-        {/* Avatar con anillo cósmico */}
-        <div style={{ position: "relative", display: "inline-block", marginBottom: 15, zIndex: 5 }}>
-          {/* Halo difuminado exterior */}
-          <div style={{ position: "absolute", inset: -14, borderRadius: "50%", filter: "blur(7px)",
-            background: "conic-gradient(from 0deg,rgba(212,175,55,0.35),rgba(130,60,230,0.3),rgba(40,80,230,0.25),rgba(40,210,190,0.2),rgba(212,175,55,0.35))" }} />
-          {/* Anillo cónico nítido */}
-          <div style={{ position: "absolute", inset: -5, borderRadius: "50%",
-            background: "conic-gradient(from 15deg,#d4af37 0%,#f5e070 16%,#8a6012 32%,#6030b0 48%,#2044c0 64%,#18b0c0 76%,#f0d060 88%,#d4af37 100%)" }} />
-          {/* Gap de separación */}
-          <div style={{ position: "absolute", inset: -1, borderRadius: "50%", background: "#030208" }} />
-          {/* Cuerpo del avatar */}
-          <div style={{ width: 96, height: 96, borderRadius: "50%", background: "#0c0a18",
-            display: "flex", alignItems: "center", justifyContent: "center", position: "relative", zIndex: 2,
-            borderTop: "1px solid rgba(212,175,55,0.15)",
-            boxShadow: "inset 0 2px 20px rgba(120,60,220,0.2), inset 0 -2px 10px rgba(0,0,0,0.6)" }}>
-            <div style={{ position: "absolute", inset: 0, borderRadius: "50%",
-              background: "radial-gradient(circle at 35% 28%,rgba(212,175,55,0.14) 0%,transparent 60%)" }} />
-            {profile?.avatar_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={profile.avatar_url} alt={firstName}
-                style={{ width: 96, height: 96, borderRadius: "50%", objectFit: "cover", position: "relative" }} />
-            ) : (
-              <span style={{ fontSize: 38, color: "#d4af37", fontWeight: 800, position: "relative" }}>
-                {avatarInitial}
-              </span>
-            )}
-          </div>
+      {/* Chips de estadísticas 3D */}
+      <div style={{ display: "flex", gap: 7, flexWrap: "wrap", justifyContent: "center",
+        padding: "0 20px 20px", position: "relative", zIndex: 5,
+        marginTop: -8,
+        background: "linear-gradient(to bottom, rgba(6,3,24,0.6) 0%, transparent 100%)" }}>
+        <div style={s3dChip()}>
+          <Users size={12} style={{ color: "#d4af37" }} />
+          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.85)", fontWeight: 600 }}>
+            {visibleCount} familiares
+          </span>
         </div>
-
-        {/* Nombre y tagline */}
-        <div style={{ fontSize: 22, fontWeight: 700, color: "#fff", letterSpacing: 0.5, marginBottom: 3,
-          position: "relative", zIndex: 5 }}>
-          {profile ? `${profile.first_name} ${profile.last_name}` : "Cargando..."}
+        <div style={s3dChip()}>
+          <GitBranch size={12} style={{ color: "#d4af37" }} />
+          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.85)", fontWeight: 600 }}>
+            {events.length} momentos
+          </span>
         </div>
-        <div style={{ fontSize: 10.5, color: "rgba(212,175,55,0.65)", fontStyle: "italic",
-          marginBottom: 18, position: "relative", zIndex: 5, letterSpacing: "0.03em" }}>
-          Guardiana de la memoria familiar
-        </div>
-
-        {/* Chips de estadísticas 3D */}
-        <div style={{ display: "flex", gap: 7, flexWrap: "wrap", justifyContent: "center",
-          padding: "0 20px", position: "relative", zIndex: 5 }}>
-          <div style={s3dChip()}>
-            <Users size={12} style={{ color: "#d4af37" }} />
-            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.85)", fontWeight: 600 }}>
-              {visibleCount} familiares
-            </span>
-          </div>
-          <div style={s3dChip()}>
-            <GitBranch size={12} style={{ color: "#d4af37" }} />
-            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.85)", fontWeight: 600 }}>
-              {events.length} momentos
-            </span>
-          </div>
-          <div style={s3dChip()}>
-            <ImageIcon size={12} style={{ color: "#d4af37" }} />
-            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.85)", fontWeight: 600 }}>
-              {photos.length} fotos
-            </span>
-          </div>
+        <div style={s3dChip()}>
+          <ImageIcon size={12} style={{ color: "#d4af37" }} />
+          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.85)", fontWeight: 600 }}>
+            {photos.length} fotos
+          </span>
         </div>
       </div>
 
