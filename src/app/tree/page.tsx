@@ -23,7 +23,7 @@ import {
   formatGrowthLine,
   type CeibaGrowthStats,
 } from "@/lib/growthStats";
-import BottomNav from "@/components/BottomNav";
+import { CosmicNav } from "@/components/ui/cosmic";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import toast from "react-hot-toast";
 
@@ -703,10 +703,10 @@ console.log("⑤ Datos cargados");
 
   if (loading) return <LoadingScreen />;
   if (loadError) return (
-    <div className="min-h-screen bg-cream-100 flex items-center justify-center p-6">
-      <div className="bg-red-50 border border-red-200 rounded-2xl p-6 max-w-lg w-full">
-        <p className="text-red-700 font-bold mb-2">Error al cargar</p>
-        <p className="text-red-600 text-sm break-all">{loadError}</p>
+    <div style={{ minHeight: "100vh", background: "#030208", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <div style={{ background: "#160208", border: "1px solid rgba(220,60,80,0.25)", borderRadius: 20, padding: 24, maxWidth: 480, width: "100%" }}>
+        <p style={{ color: "#fff", fontWeight: 700, marginBottom: 8 }}>Error al cargar</p>
+        <p style={{ color: "rgba(220,60,80,0.7)", fontSize: 13, wordBreak: "break-all" }}>{loadError}</p>
       </div>
     </div>
   );
@@ -1449,7 +1449,7 @@ console.log("⑤ Datos cargados");
         <Plus size={26} strokeWidth={2.5} />
       </button>
 
-      <BottomNav />
+      <CosmicNav />
 
     </div>
   );
@@ -1542,10 +1542,10 @@ function MemberGroup({ title, members, onInvite, onEdit, kind }: {
 
 function LoadingScreen() {
   return (
-    <div className="min-h-screen bg-cream-100 flex items-center justify-center">
-      <div className="text-center">
-        <TreePine size={40} className="text-ceiba-600 mx-auto mb-3 animate-pulse" />
-        <p className="text-gray-500">Cargando tu árbol...</p>
+    <div style={{ minHeight: "100vh", background: "#030208", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ textAlign: "center" }}>
+        <TreePine size={40} style={{ color: "#d4af37", opacity: 0.6, display: "block", margin: "0 auto 12px" }} />
+        <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 14 }}>Cargando tu árbol...</p>
       </div>
     </div>
   );

@@ -2,9 +2,9 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { TreePine, ArrowLeft, LogOut, Bell, MapPin, Smile } from "lucide-react";
+import { LogOut, Bell, MapPin, Smile, ChevronRight, User } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import BottomNav from "@/components/BottomNav";
+import { CosmicNav, CosmicHeader, CosmicSpinner, s3dCard, GoldDivider, C } from "@/components/ui/cosmic";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -23,68 +23,89 @@ export default function SettingsPage() {
     router.push("/");
   };
 
-  if (loading) return (
-    <div className="min-h-screen bg-cream-100 flex items-center justify-center">
-      <TreePine size={36} className="text-ceiba-600 animate-pulse" />
-    </div>
-  );
+  if (loading) return <CosmicSpinner />;
+
+  const rowStyle: React.CSSProperties = {
+    display: "flex", alignItems: "center", justifyContent: "space-between",
+    padding: "13px 0", borderBottom: "0.5px solid rgba(212,175,55,0.1)",
+    textDecoration: "none",
+  };
 
   return (
-    <main className="min-h-screen bg-cream-100">
-      <nav className="bg-ceiba-800 text-white px-4 py-4 flex items-center gap-3 shadow-lg">
-        <Link href="/tree" className="text-ceiba-300 hover:text-white transition-colors">
-          <ArrowLeft size={20} />
-        </Link>
-        <div className="flex items-center gap-2 font-display text-lg font-bold">
-          <TreePine size={20} className="text-ceiba-300" /> Privacidad y ajustes
+    <div style={{ minHeight: "100vh", background: C.bg, color: "#fff", paddingBottom: 100 }}>
+      <CosmicHeader title="Ajustes" backHref="/home" />
+
+      <div style={{ padding: "20px 16px", maxWidth: 480, margin: "0 auto" }}>
+
+        {/* Cuenta */}
+        <div style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: "0.14em",
+          textTransform: "uppercase", color: "rgba(212,175,55,0.45)", marginBottom: 10 }}>
+          Cuenta
         </div>
-      </nav>
+        <div style={{ ...s3dCard("#0c0a18","212,175,55","#040300"), padding: "0 16px", marginBottom: 20 }}>
+          <div style={{ position: "absolute", top: 0, left: "18%", right: "18%", height: 1,
+            background: "rgba(212,175,55,0.38)" }} />
+          <Link href="/profile" style={rowStyle}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <User size={15} style={{ color: "rgba(212,175,55,0.6)" }} />
+              <span style={{ fontSize: 13, fontWeight: 600, color: "#fff" }}>Editar perfil</span>
+            </div>
+            <ChevronRight size={15} style={{ color: "rgba(212,175,55,0.35)" }} />
+          </Link>
+          <Link href="/avatar" style={{ ...rowStyle }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <Smile size={15} style={{ color: "rgba(212,175,55,0.6)" }} />
+              <span style={{ fontSize: 13, fontWeight: 600, color: "#fff" }}>Mi avatar</span>
+            </div>
+            <ChevronRight size={15} style={{ color: "rgba(212,175,55,0.35)" }} />
+          </Link>
+          <Link href="/map" style={{ ...rowStyle, borderBottom: "none" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <MapPin size={15} style={{ color: "rgba(212,175,55,0.6)" }} />
+              <span style={{ fontSize: 13, fontWeight: 600, color: "#fff" }}>Mapa familiar</span>
+            </div>
+            <ChevronRight size={15} style={{ color: "rgba(212,175,55,0.35)" }} />
+          </Link>
+        </div>
 
-      <div className="max-w-md mx-auto px-4 py-6 pb-24 space-y-4">
-
-        {/* Notifications */}
-        <div className="card">
-          <div className="flex items-center gap-2 mb-4">
-            <Bell size={16} className="text-ceiba-700" />
-            <h2 className="font-bold text-ceiba-800">Notificaciones</h2>
+        {/* Notificaciones */}
+        <div style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: "0.14em",
+          textTransform: "uppercase", color: "rgba(212,175,55,0.45)", marginBottom: 10 }}>
+          Notificaciones
+        </div>
+        <div style={{ ...s3dCard("#0c0a18","212,175,55","#040300"), padding: "16px", marginBottom: 20 }}>
+          <div style={{ position: "absolute", top: 0, left: "18%", right: "18%", height: 1,
+            background: "rgba(212,175,55,0.38)" }} />
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 10, position: "relative" }}>
+            <Bell size={15} style={{ color: "rgba(212,175,55,0.6)", flexShrink: 0, marginTop: 1 }} />
+            <div>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", lineHeight: 1.6, marginBottom: 6 }}>
+                Ceiba te notifica cuando un familiar se une, acepta una conexión o confirma una sugerencia.
+              </p>
+              <p style={{ fontSize: 11, color: "rgba(212,175,55,0.38)" }}>
+                Para desactivarlas, ve a Ajustes del dispositivo → Ceiba → Notificaciones.
+              </p>
+            </div>
           </div>
-          <p className="text-sm text-ceiba-500 leading-relaxed">
-            Ceiba te notifica cuando un familiar se une, acepta una conexión o confirma una sugerencia.
-            Las notificaciones se activan automáticamente al instalar la app.
-          </p>
-          <p className="text-xs text-ceiba-400 mt-2">
-            Para desactivarlas, ve a la configuración de tu dispositivo → Ceiba → Notificaciones.
-          </p>
         </div>
 
-        {/* Account */}
-        <div className="card">
-          <h2 className="font-bold text-ceiba-800 mb-4">Cuenta</h2>
-          <Link href="/profile" className="flex items-center justify-between py-3 border-b border-cream-200 hover:bg-cream-100 -mx-2 px-2 rounded-xl transition-colors">
-            <span className="text-sm font-medium text-ceiba-700">Editar perfil</span>
-            <ArrowLeft size={14} className="text-ceiba-400 rotate-180" />
-          </Link>
-          <Link href="/avatar" className="flex items-center justify-between py-3 border-b border-cream-200 hover:bg-cream-100 -mx-2 px-2 rounded-xl transition-colors">
-            <span className="text-sm font-medium text-ceiba-700 flex items-center gap-2"><Smile size={14} /> Mi avatar</span>
-            <ArrowLeft size={14} className="text-ceiba-400 rotate-180" />
-          </Link>
-          <Link href="/map" className="flex items-center justify-between py-3 border-b border-cream-200 hover:bg-cream-100 -mx-2 px-2 rounded-xl transition-colors">
-            <span className="text-sm font-medium text-ceiba-700 flex items-center gap-2"><MapPin size={14} /> Ubicación y mapa familiar</span>
-            <ArrowLeft size={14} className="text-ceiba-400 rotate-180" />
-          </Link>
-          <button
-            onClick={logout}
-            className="flex items-center gap-2 text-red-500 hover:text-red-700 font-medium text-sm mt-4 transition-colors"
-          >
-            <LogOut size={16} /> Cerrar sesión
-          </button>
-        </div>
+        <GoldDivider mx={0} />
 
-        <p className="text-center text-xs text-gray-300 pb-4">
+        {/* Cerrar sesión */}
+        <button onClick={logout} style={{
+          display: "flex", alignItems: "center", gap: 8, background: "none", border: "none",
+          cursor: "pointer", color: "rgba(220,60,80,0.7)", fontSize: 13, fontWeight: 600,
+          padding: "16px 0",
+        }}>
+          <LogOut size={15} /> Cerrar sesión
+        </button>
+
+        <p style={{ textAlign: "center", fontSize: 10, color: "rgba(212,175,55,0.2)", paddingTop: 8 }}>
           Ceiba · Tu familia, conectada · v1.0
         </p>
       </div>
-      <BottomNav />
-    </main>
+
+      <CosmicNav />
+    </div>
   );
 }

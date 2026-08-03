@@ -2,9 +2,9 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { TreePine, Cake, Camera, Calendar, RefreshCw, Bell, Megaphone, AlertCircle } from "lucide-react";
+import { Cake, Camera, Calendar, RefreshCw, Megaphone, AlertCircle, Bell, TreePine } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import BottomNav from "@/components/BottomNav";
+import { CosmicNav, CosmicHeader, s3dCard, C } from "@/components/ui/cosmic";
 
 type FeedItemType = "birthday" | "photo" | "event" | "announcement";
 
@@ -16,7 +16,7 @@ interface FeedItem {
   date: Date;
   imageUrl?: string;
   linkTo?: string;
-  accent: string;
+  accentRgb: string;
   icon: React.ReactNode;
   isToday?: boolean;
   birthdayAge?: number | null;
@@ -24,16 +24,12 @@ interface FeedItem {
 }
 
 function timeAgo(date: Date): string {
-  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
-  if (seconds < 60) return "ahora mismo";
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `hace ${minutes} min`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `hace ${hours}h`;
-  const days = Math.floor(hours / 24);
-  if (days === 1) return "ayer";
-  if (days < 7) return `hace ${days} días`;
-  if (days < 30) return `hace ${Math.floor(days / 7)} semanas`;
+  const s = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (s < 60) return "ahora mismo";
+  const m = Math.floor(s / 60); if (m < 60) return `hace ${m}m`;
+  const h = Math.floor(m / 60); if (h < 24) return `hace ${h}h`;
+  const d = Math.floor(h / 24); if (d === 1) return "ayer";
+  if (d < 7) return `hace ${d} días`;
   return date.toLocaleDateString("es", { day: "numeric", month: "short" });
 }
 
@@ -64,20 +60,15 @@ export default function FeedPage() {
       if (next < now) next.setFullYear(now.getFullYear() + 1);
       const days = Math.round((next.getTime() - now.getTime()) / 86400000);
       const isToday = days <= 0 || days >= 365;
-      const name = `${p.first_name} ${p.last_name || ""}`.trim();
       const birthYear = parseInt(p.birth_date.split("-")[0]);
-      const birthdayAge = birthYear > 1900 ? now.getFullYear() - birthYear : null;
       feedItems.push({
-        id: `bday-${p.person_id}`,
-        type: "birthday",
-        title: isToday ? `¡Hoy es el cumpleaños de ${p.first_name}!` : `Cumpleaños de ${p.first_name} en ${days} días`,
-        subtitle: name,
-        date: new Date(),
-        accent: isToday ? "border-amber-500 bg-amber-50" : "border-amber-300 bg-amber-50",
-        icon: <Cake size={18} className="text-amber-600" />,
-        linkTo: `/persona/${p.person_id}`,
-        isToday,
-        birthdayAge,
+        id: `bday-${p.person_id}`, type: "birthday",
+        title: isToday ? `¡Hoy cumple años ${p.first_name}!` : `Cumpleaños de ${p.first_name} en ${days} días`,
+        subtitle: `${p.first_name} ${p.last_name || ""}`.trim(),
+        date: new Date(), accentRgb: "212,175,55",
+        icon: <Cake size={16} style={{ color: "#d4af37" }} />,
+        linkTo: `/persona/${p.person_id}`, isToday,
+        birthdayAge: birthYear > 1900 ? now.getFullYear() - birthYear : null,
         birthdayFirstName: p.first_name,
       });
     });
@@ -85,28 +76,23 @@ export default function FeedPage() {
     (photos || []).forEach((p: any) => {
       const name = p.uploader ? `${p.uploader.first_name} ${p.uploader.last_name || ""}`.trim() : "Alguien";
       feedItems.push({
-        id: `photo-${p.id}`,
-        type: "photo",
+        id: `photo-${p.id}`, type: "photo",
         title: `${name} compartió una foto`,
         subtitle: p.caption || "Sin descripción",
-        date: new Date(p.created_at),
-        imageUrl: p.url,
-        accent: "border-blue-400 bg-blue-50",
-        icon: <Camera size={18} className="text-blue-600" />,
-        linkTo: "/photos",
+        date: new Date(p.created_at), accentRgb: "60,120,240",
+        icon: <Camera size={16} style={{ color: "#4080f0" }} />,
+        imageUrl: p.url, linkTo: "/photos",
       });
     });
 
     (events || []).forEach((e: any) => {
       const name = e.creator ? `${e.creator.first_name} ${e.creator.last_name || ""}`.trim() : "Alguien";
       feedItems.push({
-        id: `event-${e.id}`,
-        type: "event",
+        id: `event-${e.id}`, type: "event",
         title: `${name} registró: ${e.title}`,
         subtitle: `${EVENT_LABEL[e.event_type] || "Evento"} · ${new Date(e.event_date).toLocaleDateString("es", { day: "numeric", month: "long", year: "numeric" })}`,
-        date: new Date(e.created_at),
-        accent: "border-purple-400 bg-purple-50",
-        icon: <Calendar size={18} className="text-purple-600" />,
+        date: new Date(e.created_at), accentRgb: "160,80,240",
+        icon: <Calendar size={16} style={{ color: "#a050f0" }} />,
         linkTo: "/events",
       });
     });
@@ -114,13 +100,10 @@ export default function FeedPage() {
     (broadcasts || []).forEach((b: any) => {
       const name = b.sender ? `${b.sender.first_name} ${b.sender.last_name || ""}`.trim() : "Un familiar";
       feedItems.push({
-        id: `ann-${b.id}`,
-        type: "announcement",
-        title: `📢 ${name}`,
-        subtitle: b.message,
-        date: new Date(b.created_at),
-        accent: "border-amber-400 bg-amber-50",
-        icon: <Megaphone size={18} className="text-amber-600" />,
+        id: `ann-${b.id}`, type: "announcement",
+        title: `${name}`,
+        subtitle: b.message, date: new Date(b.created_at), accentRgb: "220,140,40",
+        icon: <Megaphone size={16} style={{ color: "#dc9030" }} />,
       });
     });
 
@@ -129,7 +112,6 @@ export default function FeedPage() {
       if (b.type === "birthday" && a.type !== "birthday") return 1;
       return b.date.getTime() - a.date.getTime();
     });
-
     setItems(feedItems);
   }, []);
 
@@ -141,45 +123,50 @@ export default function FeedPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await loadFeed();
-    setRefreshing(false);
-  };
+  const handleRefresh = async () => { setRefreshing(true); await loadFeed(); setRefreshing(false); };
 
   return (
-    <div className="min-h-screen bg-cream-100">
-      <header className="sticky top-0 z-40 bg-cream-50 border-b border-cream-300">
-        <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Bell size={20} className="text-ceiba-700" />
-            <h1 className="text-lg font-bold text-ceiba-900">Actividad familiar</h1>
-          </div>
-          <button onClick={handleRefresh} disabled={refreshing} className="p-2 rounded-full hover:bg-cream-200 transition-colors">
-            <RefreshCw size={18} className={`text-ceiba-500 ${refreshing ? "animate-spin" : ""}`} />
+    <div style={{ minHeight: "100vh", background: C.bg, color: "#fff", paddingBottom: 100 }}>
+      <CosmicHeader
+        title="Actividad familiar"
+        backHref="/home"
+        right={
+          <button onClick={handleRefresh} disabled={refreshing}
+            style={{ background: "none", border: "none", cursor: "pointer", padding: 4 }}>
+            <RefreshCw size={17} style={{ color: "rgba(212,175,55,0.5)",
+              animation: refreshing ? "spin 1s linear infinite" : "none" }} />
           </button>
-        </div>
-      </header>
+        }
+      />
 
-      <main className="max-w-lg mx-auto px-4 py-4 pb-24 space-y-3">
+      <div style={{ padding: "14px 14px 0" }}>
         {loading ? (
-          <div className="space-y-3">
-            {[1,2,3,4,5].map(i => <div key={i} className="bg-white rounded-2xl h-20 animate-pulse" />)}
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {[1,2,3,4].map(i => (
+              <div key={i} style={{ height: 68, borderRadius: 16, background: "#0c0a18",
+                opacity: 0.4, animation: "pulse 2s infinite" }} />
+            ))}
           </div>
         ) : feedError ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center px-4">
-            <AlertCircle size={36} className="text-red-300 mb-3" />
-            <h3 className="font-bold text-gray-700 mb-1">No se pudo cargar la actividad</h3>
-            <p className="text-sm text-gray-400 mb-4">Revisa tu conexión e intenta de nuevo.</p>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center",
+            justifyContent: "center", padding: "60px 0", textAlign: "center" }}>
+            <AlertCircle size={36} style={{ color: "rgba(220,60,80,0.5)", marginBottom: 12 }} />
+            <div style={{ fontSize: 15, fontWeight: 700, color: "#fff", marginBottom: 6 }}>
+              No se pudo cargar la actividad
+            </div>
+            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginBottom: 16 }}>
+              Revisa tu conexión e intenta de nuevo.
+            </p>
             <button onClick={handleRefresh} disabled={refreshing}
-              className="btn-primary text-sm inline-flex items-center gap-1.5">
-              <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} /> Reintentar
+              style={{ background: "#c9a820", border: "none", borderRadius: 10, padding: "10px 22px",
+                color: "#030208", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+              Reintentar
             </button>
           </div>
         ) : items.length === 0 ? (
           <EmptyFeed />
         ) : (
-          <>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {(() => {
               const todayBdays = items.filter(i => i.type === "birthday" && i.isToday);
               if (todayBdays.length === 0) return null;
@@ -188,14 +175,11 @@ export default function FeedPage() {
             {items.filter(i => !(i.type === "birthday" && i.isToday)).map(item => (
               <FeedCard key={item.id} item={item} />
             ))}
-            {items.filter(i => i.type === "birthday" && i.isToday).map(item => (
-              <FeedCard key={`list-${item.id}`} item={item} />
-            ))}
-          </>
+          </div>
         )}
-      </main>
+      </div>
 
-      <BottomNav />
+      <CosmicNav />
     </div>
   );
 }
@@ -207,30 +191,25 @@ function BirthdayHeroCard({ birthdays }: { birthdays: FeedItem[] }) {
   return (
     <Link href={heroLink}>
       <div style={{
-        background: "linear-gradient(135deg, #F59E0B 0%, #FCD34D 40%, #FDE68A 100%)",
-        borderRadius: 20,
-        padding: "20px 20px",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
+        borderRadius: 20, padding: "20px",
+        background: "#100c02", position: "relative", overflow: "hidden",
+        borderTop: "1.5px solid rgba(212,175,55,0.5)", borderLeft: "1px solid rgba(212,175,55,0.22)",
+        borderBottom: "3px solid #040300", borderRight: "1px solid rgba(0,0,0,0.6)",
+        boxShadow: "0 7px 0 #040300, 0 12px 22px rgba(0,0,0,0.85), 0 0 28px rgba(212,175,55,0.2)",
         textAlign: "center",
-        boxShadow: "0 4px 20px rgba(245,158,11,0.35)",
-        position: "relative",
-        overflow: "hidden",
       }}>
-        {/* decorative confetti-like dots */}
-        <div style={{ position: "absolute", top: 10, left: 16, fontSize: 14, opacity: 0.5 }}>🎉</div>
-        <div style={{ position: "absolute", top: 10, right: 16, fontSize: 14, opacity: 0.5 }}>🎊</div>
-        <div style={{ fontSize: 52, marginBottom: 6, lineHeight: 1 }}>🎂</div>
-        <p style={{ margin: 0, fontWeight: 800, fontSize: 17, color: "#78350F", lineHeight: 1.2 }}>
+        <div style={{ position: "absolute", top: 0, left: "20%", right: "20%", height: 1,
+          background: "rgba(212,175,55,0.55)" }} />
+        <div style={{ fontSize: 48, marginBottom: 8, lineHeight: 1 }}>🎂</div>
+        <p style={{ margin: 0, fontWeight: 800, fontSize: 17, color: "#fff", lineHeight: 1.2 }}>
           {single ? `¡Hoy cumple años ${names}!` : `¡Hoy cumplen años ${names}!`}
         </p>
         {single && birthdays[0].birthdayAge && (
-          <p style={{ margin: "4px 0 0", fontSize: 13, color: "#92400E", fontWeight: 600 }}>
+          <p style={{ margin: "4px 0 0", fontSize: 13, color: "#d4af37", fontWeight: 600 }}>
             {birthdays[0].birthdayAge} años
           </p>
         )}
-        <p style={{ margin: "10px 0 0", fontSize: 12, color: "#92400E", opacity: 0.8 }}>
+        <p style={{ margin: "10px 0 0", fontSize: 11, color: "rgba(212,175,55,0.5)" }}>
           Toca para ver en el árbol familiar →
         </p>
       </div>
@@ -239,40 +218,67 @@ function BirthdayHeroCard({ birthdays }: { birthdays: FeedItem[] }) {
 }
 
 function FeedCard({ item }: { item: FeedItem }) {
-  const content = (
-    <div className={`bg-white rounded-2xl border-l-4 ${item.accent} shadow-sm p-4 flex items-start gap-3 active:scale-[0.98] transition-transform`}>
-      <div className="shrink-0 w-9 h-9 rounded-full bg-white shadow-sm flex items-center justify-center">
-        {item.imageUrl && item.type !== "photo" ? (
-          <img src={item.imageUrl} alt="" className="w-9 h-9 rounded-full object-cover" />
-        ) : (
-          item.icon
-        )}
+  const inner = (
+    <div style={{
+      ...s3dCard("#0c0a18", item.accentRgb, "#040300"),
+      padding: "12px 13px",
+      display: "flex", alignItems: "flex-start", gap: 11,
+    }}>
+      <div style={{ width: 34, height: 34, borderRadius: 10, background: "#0a0818", flexShrink: 0,
+        borderTop: `1px solid rgba(${item.accentRgb},0.35)`, borderBottom: "1.5px solid #000",
+        boxShadow: `0 3px 0 #030208, 0 0 10px rgba(${item.accentRgb},0.12)`,
+        display: "flex", alignItems: "center", justifyContent: "center" }}>
+        {item.imageUrl && item.type !== "photo"
+          // eslint-disable-next-line @next/next/no-img-element
+          ? <img src={item.imageUrl} alt="" style={{ width: 34, height: 34, borderRadius: 10, objectFit: "cover" }} />
+          : item.icon}
       </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-gray-900 leading-snug">{item.title}</p>
-        <p className={`text-xs text-gray-500 mt-0.5 ${item.type === "announcement" ? "whitespace-pre-wrap" : "truncate"}`}>{item.subtitle}</p>
-        <p className="text-[10px] text-gray-400 mt-1">{timeAgo(item.date)}</p>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontSize: 13, fontWeight: 700, color: "#fff", lineHeight: 1.3, marginBottom: 2 }}>
+          {item.title}
+        </p>
+        <p style={{ fontSize: 11, color: "rgba(255,255,255,0.45)",
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: item.type === "announcement" ? "pre-wrap" : "nowrap",
+          marginBottom: 3 }}>
+          {item.subtitle}
+        </p>
+        <p style={{ fontSize: 10, color: "rgba(212,175,55,0.35)" }}>{timeAgo(item.date)}</p>
       </div>
       {item.imageUrl && item.type === "photo" && (
-        <img src={item.imageUrl} alt="" className="w-14 h-14 rounded-xl object-cover shrink-0" />
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={item.imageUrl} alt=""
+          style={{ width: 52, height: 52, borderRadius: 10, objectFit: "cover", flexShrink: 0,
+            border: "1px solid rgba(60,120,240,0.2)" }} />
       )}
     </div>
   );
-  if (item.linkTo) return <Link href={item.linkTo}>{content}</Link>;
-  return content;
+  if (item.linkTo) return <Link href={item.linkTo}>{inner}</Link>;
+  return inner;
 }
 
 function EmptyFeed() {
   return (
-    <div className="flex flex-col items-center justify-center py-20 text-center">
-      <div className="w-20 h-20 rounded-full bg-green-50 flex items-center justify-center mb-4">
-        <TreePine size={36} className="text-ceiba-700" />
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center",
+      justifyContent: "center", padding: "80px 20px", textAlign: "center" }}>
+      <div style={{ width: 72, height: 72, borderRadius: "50%", background: "#0c0a18",
+        display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16,
+        border: "1px solid rgba(212,175,55,0.18)" }}>
+        <Bell size={30} style={{ color: "rgba(212,175,55,0.4)" }} />
       </div>
-      <h2 className="text-lg font-bold text-gray-800 mb-2">Todo tranquilo por aquí</h2>
-      <p className="text-sm text-gray-500 max-w-xs">
+      <h2 style={{ fontSize: 17, fontWeight: 700, color: "#fff", marginBottom: 8 }}>
+        Todo tranquilo por aquí
+      </h2>
+      <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", maxWidth: 260, lineHeight: 1.6, marginBottom: 24 }}>
         Cuando tus familiares suban fotos, registren eventos o envíen anuncios, aparecerán aquí.
       </p>
-      <Link href="/tree" className="mt-6 btn-primary text-sm">Invitar a mi familia</Link>
+      <Link href="/invitar" style={{ textDecoration: "none" }}>
+        <div style={{ background: "#c9a820", borderRadius: 12, padding: "11px 24px",
+          color: "#030208", fontWeight: 700, fontSize: 13,
+          borderTop: "2px solid #f5e060", borderBottom: "3px solid #6a5600",
+          boxShadow: "0 6px 0 #4a3c00, 0 10px 20px rgba(0,0,0,0.6)" }}>
+          Invitar a mi familia
+        </div>
+      </Link>
     </div>
   );
 }

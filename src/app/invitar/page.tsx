@@ -560,28 +560,31 @@ function InvitarPageInner() {
 
   if (!loading && members.length === 0) {
     return (
-      <div className="min-h-screen bg-cream-100 flex flex-col">
-        <header className="bg-cream-50 border-b px-4 py-4 flex items-center gap-3">
-          <button onClick={() => router.back()} className="text-ceiba-500 hover:text-ceiba-900">
-            <ChevronLeft size={24} />
+      <div style={{ minHeight: "100vh", background: "#030208", display: "flex", flexDirection: "column" }}>
+        <header style={{ background: "#0c0a18", borderBottom: "0.5px solid rgba(212,175,55,0.14)",
+          padding: "52px 20px 16px", display: "flex", alignItems: "center", gap: 12 }}>
+          <button onClick={() => router.back()} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(212,175,55,0.6)", padding: 4 }}>
+            <ChevronLeft size={22} />
           </button>
-          <div className="flex items-center gap-2">
-            <TreePine size={20} className="text-ceiba-600" />
-            <h1 className="font-bold text-lg text-ceiba-900">Invita a los tuyos</h1>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <TreePine size={18} style={{ color: "rgba(212,175,55,0.6)" }} />
+            <h1 style={{ fontWeight: 700, fontSize: 17, color: "#fff" }}>Invita a los tuyos</h1>
           </div>
         </header>
-        <div className="flex-1 flex flex-col items-center justify-center gap-4 px-6 text-center">
-          <Smile size={48} className="text-ceiba-500" />
-          <h2 className="text-xl font-bold text-ceiba-900">¡Toda tu familia directa ya está en Ceiba!</h2>
-          <p className="text-ceiba-500 max-w-xs">
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center",
+          justifyContent: "center", gap: 16, padding: "0 24px", textAlign: "center" }}>
+          <Smile size={48} style={{ color: "rgba(212,175,55,0.4)" }} />
+          <h2 style={{ fontSize: 19, fontWeight: 800, color: "#fff" }}>¡Toda tu familia directa ya está en Ceiba!</h2>
+          <p style={{ color: "rgba(212,175,55,0.5)", maxWidth: 280, fontSize: 13, lineHeight: 1.6 }}>
             Puedes agregar a más familiares extendidos — tíos, primos, abuelos.
           </p>
-          <Link
-            href="/tree"
-            className="flex items-center gap-2 bg-ceiba-500 hover:bg-ceiba-400 text-white font-bold py-3 px-6 rounded-2xl"
-          >
-            Agregar familiar
-            <ChevronRight size={18} />
+          <Link href="/tree" style={{ textDecoration: "none" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#c9a820",
+              borderTop: "2px solid #f5e060", borderBottom: "3px solid #6a5600",
+              boxShadow: "0 6px 0 #4a3c00", borderRadius: 18,
+              color: "#030208", fontWeight: 700, fontSize: 14, padding: "13px 24px", border: "none" }}>
+              Agregar familiar <ChevronRight size={16} />
+            </div>
           </Link>
         </div>
       </div>
@@ -600,59 +603,58 @@ function InvitarPageInner() {
 
       {/* Modal celebración */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-6">
-          <div className="bg-cream-50 rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl">
-            <div className="text-4xl mb-3">🌱</div>
-            <h2 className="text-xl font-bold mb-2">Eres el sembrador de tu rama</h2>
-            <p className="text-ceiba-500 text-sm mb-5">
-              Cuando 3 de ellos entren, ganas la insignia <strong>Conector</strong>.
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 50,
+          display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div style={{ background: "#0c0a18", borderRadius: 24, padding: 24, maxWidth: 340, width: "100%",
+            textAlign: "center", border: "1px solid rgba(212,175,55,0.15)",
+            boxShadow: "0 20px 60px rgba(0,0,0,0.8)" }}>
+            <div style={{ fontSize: 42, marginBottom: 12 }}>🌱</div>
+            <h2 style={{ fontSize: 18, fontWeight: 800, color: "#fff", marginBottom: 8 }}>Eres el sembrador de tu rama</h2>
+            <p style={{ color: "rgba(212,175,55,0.5)", fontSize: 13, marginBottom: 20, lineHeight: 1.6 }}>
+              Cuando 3 de ellos entren, ganas la insignia <strong style={{ color: "#d4af37" }}>Conector</strong>.
             </p>
-            <button
-              onClick={() => setShowModal(false)}
-              className="w-full bg-ceiba-500 hover:bg-ceiba-400 text-white font-bold py-3 rounded-2xl"
-            >
+            <button onClick={() => setShowModal(false)}
+              style={{ width: "100%", background: "#c9a820", border: "none",
+                borderTop: "2px solid #f5e060", borderBottom: "3px solid #6a5600",
+                boxShadow: "0 6px 0 #4a3c00", borderRadius: 18, color: "#030208",
+                fontWeight: 700, fontSize: 15, padding: "13px 0", cursor: "pointer" }}>
               Seguir
             </button>
           </div>
         </div>
       )}
 
-      <div className="min-h-screen bg-cream-100 flex flex-col max-w-lg mx-auto">
+      <div style={{ minHeight: "100vh", background: "#030208", display: "flex", flexDirection: "column", maxWidth: 480, margin: "0 auto", width: "100%" }}>
         {/* Header */}
-        <header className="bg-cream-50 border-b px-4 pt-4 pb-3 sticky top-0 z-20">
-          <div className="flex items-center gap-3 mb-3">
-            <button onClick={() => router.back()} className="text-ceiba-500 hover:text-ceiba-900">
-              <ChevronLeft size={24} />
+        <header style={{ background: "rgba(12,10,24,0.97)", borderBottom: "0.5px solid rgba(212,175,55,0.14)",
+          padding: "52px 20px 14px", position: "sticky", top: 0, zIndex: 20, backdropFilter: "blur(10px)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+            <button onClick={() => router.back()} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(212,175,55,0.6)", padding: 4, flexShrink: 0 }}>
+              <ChevronLeft size={22} />
             </button>
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <TreePine size={18} className="text-ceiba-600" />
-                <h1 className="font-bold text-lg text-ceiba-900">Invita a los tuyos</h1>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <TreePine size={16} style={{ color: "rgba(212,175,55,0.6)" }} />
+                <h1 style={{ fontWeight: 700, fontSize: 16, color: "#fff" }}>Invita a los tuyos</h1>
               </div>
-              <p className="text-ceiba-500 text-xs">Cuando entren, ya verán el árbol lleno.</p>
+              <p style={{ color: "rgba(212,175,55,0.4)", fontSize: 11, marginTop: 2 }}>Cuando entren, ya verán el árbol lleno.</p>
             </div>
-            {/* Contador */}
-            <div className="text-right">
-              <p className="text-sm font-bold text-ceiba-700">
-                {sentCount} / {GOAL}
-              </p>
-              <p className="text-xs text-ceiba-400">enviadas</p>
+            <div style={{ textAlign: "right" }}>
+              <p style={{ fontSize: 13, fontWeight: 700, color: "#d4af37" }}>{sentCount} / {GOAL}</p>
+              <p style={{ fontSize: 10, color: "rgba(212,175,55,0.4)" }}>enviadas</p>
             </div>
           </div>
-
-          {/* Barra de progreso */}
-          <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-ceiba-500 rounded-full transition-all duration-500"
-              style={{ width: `${progressPct}%` }}
-            />
+          <div style={{ width: "100%", height: 3, background: "rgba(212,175,55,0.1)", borderRadius: 100, overflow: "hidden" }}>
+            <div style={{ height: "100%", background: "#c9a820", borderRadius: 100,
+              transition: "width 0.5s ease", width: `${progressPct}%` }} />
           </div>
         </header>
 
         {/* Subheader acciones */}
-        <div className="bg-cream-50 border-b px-4 py-2 flex items-center justify-between">
-          <p className="text-sm text-ceiba-500">
-            <strong className="text-ceiba-800">{members.length}</strong> sin registrar
+        <div style={{ background: "#0a0816", borderBottom: "0.5px solid rgba(212,175,55,0.1)",
+          padding: "8px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <p style={{ fontSize: 13, color: "rgba(212,175,55,0.5)" }}>
+            <strong style={{ color: "#fff" }}>{members.length}</strong> sin registrar
           </p>
           <button
             onClick={() => {
@@ -660,22 +662,22 @@ function InvitarPageInner() {
               setSelected(new Set());
               if (!batchMode) trackEvent("batch_invite_opened" as any, {});
             }}
-            className={`flex items-center gap-1.5 text-sm font-medium py-1.5 px-3 rounded-lg transition-colors ${
-              batchMode
-                ? "bg-ceiba-100 text-ceiba-700"
-                : "text-ceiba-600 hover:bg-ceiba-50"
-            }`}
+            style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600,
+              padding: "7px 12px", borderRadius: 9, cursor: "pointer",
+              background: batchMode ? "rgba(212,175,55,0.12)" : "transparent",
+              border: `1px solid ${batchMode ? "rgba(212,175,55,0.25)" : "transparent"}`,
+              color: "rgba(212,175,55,0.6)" }}
           >
-            <Users size={15} />
+            <Users size={14} />
             {batchMode ? "Cancelar" : "Seleccionar varios"}
           </button>
         </div>
 
         {/* Lista */}
-        <div className="flex-1 px-4 py-4 flex flex-col gap-3 pb-32">
+        <div style={{ flex: 1, padding: "16px 16px", display: "flex", flexDirection: "column", gap: 10, paddingBottom: 120 }}>
           {loading
             ? Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="bg-cream-50 rounded-2xl h-28 animate-pulse" />
+                <div key={i} style={{ height: 100, borderRadius: 18, background: "#0c0a18", opacity: 0.4 }} />
               ))
             : members.map((m, i) => (
                 <div key={m.id}>
@@ -699,33 +701,35 @@ function InvitarPageInner() {
         </div>
 
         {/* Footer flotante */}
-        <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-cream-50 border-t px-4 py-4 flex flex-col gap-2 shadow-xl">
+        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, maxWidth: 480, margin: "0 auto",
+          background: "rgba(12,10,24,0.97)", borderTop: "0.5px solid rgba(212,175,55,0.14)",
+          padding: "12px 16px 28px", display: "flex", flexDirection: "column", gap: 8,
+          backdropFilter: "blur(12px)" }}>
           {batchMode && selected.size > 0 ? (
-            <button
-              onClick={handleBatchInvite}
-              className="w-full flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#1ebe5c] text-white font-bold py-4 rounded-2xl text-base transition-colors"
-            >
-              <Send size={18} />
+            <button onClick={handleBatchInvite}
+              style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
+                gap: 8, background: "#25D366", border: "none", borderRadius: 18, color: "#fff",
+                fontWeight: 700, fontSize: 15, padding: "14px 0", cursor: "pointer" }}>
+              <Send size={17} />
               Invitar a {selected.size} por WhatsApp
             </button>
           ) : sentCount >= 3 ? (
-            <Link
-              href="/tree"
-              className="w-full flex items-center justify-center gap-2 bg-ceiba-500 hover:bg-ceiba-400 text-white font-bold py-4 rounded-2xl text-base transition-colors"
-            >
-              <TreePine size={18} />
-              Ver mi árbol
-              <ChevronRight size={18} />
+            <Link href="/tree" style={{ textDecoration: "none" }}>
+              <div style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
+                gap: 8, background: "#c9a820", borderTop: "2px solid #f5e060", borderBottom: "3px solid #6a5600",
+                boxShadow: "0 6px 0 #4a3c00", borderRadius: 18, color: "#030208",
+                fontWeight: 700, fontSize: 15, padding: "13px 0" }}>
+                <TreePine size={17} /> Ver mi árbol <ChevronRight size={17} />
+              </div>
             </Link>
           ) : (
-            <p className="text-center text-ceiba-400 text-sm py-1">
+            <p style={{ textAlign: "center", color: "rgba(212,175,55,0.4)", fontSize: 12, padding: "4px 0" }}>
               Invita a 3 personas para desbloquear la insignia Conector 🌿
             </p>
           )}
-          <Link
-            href="/tree"
-            className="w-full text-center text-ceiba-400 hover:text-ceiba-600 text-sm py-1"
-          >
+          <Link href="/tree"
+            style={{ textAlign: "center", color: "rgba(212,175,55,0.35)", fontSize: 12,
+              padding: "4px 0", textDecoration: "none", display: "block" }}>
             Invitar más tarde
           </Link>
         </div>

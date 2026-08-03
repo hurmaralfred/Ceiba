@@ -2,9 +2,10 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { TreePine, ArrowLeft, Camera, Save, User, Smile } from "lucide-react";
+import { Camera, Save, User, Smile, ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
+import { CosmicNav, CosmicHeader, CosmicSpinner, s3dCard, s3dInput, s3dGoldBtn, SectionLabel, C } from "@/components/ui/cosmic";
 
 interface ProfileForm {
   display_name: string;
@@ -22,6 +23,18 @@ interface PersonForm {
   birth_country: string;
 }
 
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label style={{ display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "0.1em",
+        textTransform: "uppercase", color: "rgba(212,175,55,0.5)", marginBottom: 6 }}>
+        {label}
+      </label>
+      {children}
+    </div>
+  );
+}
+
 export default function ProfilePage() {
   const router = useRouter();
   const supabase = createClient();
@@ -30,12 +43,11 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
-  const [avatarPath, setAvatarPath] = useState<string | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [initials, setInitials] = useState("?");
 
   const [form, setForm] = useState<ProfileForm>({ display_name: "", locale: "", timezone: "" });
-
   const [personId, setPersonId] = useState<string | null>(null);
   const [personForm, setPersonForm] = useState<PersonForm | null>(null);
   const [noClaim, setNoClaim] = useState(false);
@@ -47,28 +59,27 @@ export default function ProfilePage() {
     if (!user) { router.push("/auth/login"); return; }
     setUserId(user.id);
 
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile } = await supabase
       .from("profiles")
       .select("display_name, avatar_path, locale, timezone")
       .eq("user_id", user.id)
       .maybeSingle();
 
-    if (profileError) {
-      toast.error("Error al cargar el perfil: " + profileError.message);
-    } else if (profile) {
+    if (profile) {
       setForm({
         display_name: profile.display_name ?? "",
         locale: profile.locale ?? "",
         timezone: profile.timezone ?? "",
       });
-      setAvatarPath(profile.avatar_path ?? null);
+      const parts = (profile.display_name || "").split(" ");
+      setInitials((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? ""));
       if (profile.avatar_path) {
         const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(profile.avatar_path);
         setAvatarPreview(urlData.publicUrl);
       }
     }
 
-    const { data: claim, error: claimError } = await supabase
+    const { data: claim } = await supabase
       .from("person_claims")
       .select("person_id")
       .eq("user_id", user.id)
@@ -76,21 +87,17 @@ export default function ProfilePage() {
       .is("revoked_at", null)
       .maybeSingle();
 
-    if (claimError) {
-      toast.error("Error al verificar tu identidad reclamada: " + claimError.message);
-    } else if (!claim) {
+    if (!claim) {
       setNoClaim(true);
     } else {
       setPersonId(claim.person_id);
-      const { data: person, error: personError } = await supabase
+      const { data: person } = await supabase
         .from("persons")
         .select("first_name, middle_name, first_surname, second_surname, birth_date, birth_city, birth_country")
         .eq("id", claim.person_id)
         .maybeSingle();
 
-      if (personError) {
-        toast.error("Error al cargar tus datos genealógicos: " + personError.message);
-      } else if (person) {
+      if (person) {
         setPersonForm({
           first_name: person.first_name ?? "",
           middle_name: person.middle_name ?? "",
@@ -100,6 +107,10 @@ export default function ProfilePage() {
           birth_city: person.birth_city ?? "",
           birth_country: person.birth_country ?? "",
         });
+        if (!profile?.display_name) {
+          const init = (person.first_name?.[0] ?? "") + (person.first_surname?.[0] ?? "");
+          setInitials(init);
+        }
       }
     }
 
@@ -119,8 +130,6 @@ export default function ProfilePage() {
     if (!userId) return;
     setSaving(true);
 
-    // Upload photo via server-side API — it handles storage + profiles.avatar_path
-    // + persons.photo_path (so the tree and home view pick up the new photo).
     if (photoFile) {
       const fd = new FormData();
       fd.append("photo", photoFile);
@@ -137,11 +146,7 @@ export default function ProfilePage() {
 
     const { error: profileError } = await supabase
       .from("profiles")
-      .update({
-        display_name: form.display_name.trim(),
-        locale: form.locale.trim() || null,
-        timezone: form.timezone.trim() || null,
-      })
+      .update({ display_name: form.display_name.trim(), locale: form.locale.trim() || null, timezone: form.timezone.trim() || null })
       .eq("user_id", userId);
 
     if (profileError) {
@@ -166,10 +171,9 @@ export default function ProfilePage() {
         p_birth_city: personForm.birth_city.trim() || null,
         p_birth_country: personForm.birth_country.trim() || null,
       });
-
       if (personRpcError) {
         setSaving(false);
-        toast.error("Error al guardar tus datos genealógicos: " + personRpcError.message);
+        toast.error("Error al guardar datos genealógicos: " + personRpcError.message);
         return;
       }
     }
@@ -180,164 +184,142 @@ export default function ProfilePage() {
     router.push("/settings");
   };
 
-  if (loading) return (
-    <div className="min-h-screen bg-gradient-to-b from-ceiba-950 to-ceiba-800 flex items-center justify-center">
-      <TreePine size={40} className="text-ceiba-300 animate-pulse" />
-    </div>
-  );
+  if (loading) return <CosmicSpinner />;
 
   return (
-    <main className="min-h-screen bg-cream-100">
-      <nav className="bg-ceiba-800 text-white px-4 py-4 flex items-center gap-3 shadow-lg">
-        <Link href="/settings" className="text-ceiba-300 hover:text-white transition-colors">
-          <ArrowLeft size={20} />
-        </Link>
-        <div className="flex items-center gap-2 font-display text-lg font-bold">
-          <TreePine size={20} className="text-ceiba-300" /> Mi perfil
-        </div>
-      </nav>
+    <div style={{ minHeight: "100vh", background: C.bg, color: "#fff", paddingBottom: 100 }}>
+      <CosmicHeader title="Mi perfil" backHref="/settings" />
 
-      <div className="max-w-md mx-auto px-4 py-6 space-y-4">
-        {/* Avatar builder entry */}
-        <Link href="/avatar" className="card flex items-center justify-between py-4 hover:bg-cream-200 transition-colors">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-ceiba-800 flex items-center justify-center">
-              <Smile size={18} className="text-ceiba-300" />
-            </div>
-            <div>
-              <p className="font-bold text-ceiba-800 text-sm">Mi avatar</p>
-              <p className="text-xs text-ceiba-500">Personaliza cómo te ven en el árbol familiar</p>
-            </div>
-          </div>
-          <ArrowLeft size={14} className="text-ceiba-400 rotate-180" />
-        </Link>
+      <div style={{ padding: "20px 16px", maxWidth: 480, margin: "0 auto", display: "flex", flexDirection: "column", gap: 16 }}>
 
-        {/* Foto */}
-        <div className="card flex flex-col items-center py-6 gap-3">
-          <div
-            onClick={() => fileInputRef.current?.click()}
-            className="w-24 h-24 rounded-full bg-ceiba-700 flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity overflow-hidden relative"
-          >
-            {avatarPreview ? (
-              <img src={avatarPreview} alt="Foto" className="w-full h-full object-cover" />
-            ) : (
-              <User size={36} className="text-white" />
-            )}
-            <div className="absolute bottom-0 right-0 w-7 h-7 bg-cream-50 rounded-full flex items-center justify-center shadow-md">
-              <Camera size={14} className="text-ceiba-700" />
+        {/* Avatar */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, paddingTop: 8 }}>
+          <div onClick={() => fileInputRef.current?.click()}
+            style={{ width: 88, height: 88, borderRadius: "50%", background: "#0c0a18", cursor: "pointer",
+              padding: 3, position: "relative",
+              backgroundImage: "conic-gradient(from 15deg,#d4af37 0%,#f5e070 16%,#8a6012 32%,#6030b0 48%,#2044c0 64%,#18b0c0 76%,#f0d060 88%,#d4af37 100%)",
+              boxShadow: "0 0 20px rgba(212,175,55,0.25)" }}>
+            <div style={{ width: "100%", height: "100%", borderRadius: "50%", background: "#0c0a18",
+              overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              {avatarPreview
+                // eslint-disable-next-line @next/next/no-img-element
+                ? <img src={avatarPreview} alt="Avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                : <span style={{ fontSize: 26, fontWeight: 800, color: "#d4af37" }}>{initials || <User size={26} style={{ color: "#d4af37" }} />}</span>}
+            </div>
+            <div style={{ position: "absolute", bottom: 4, right: 4, width: 24, height: 24, borderRadius: "50%",
+              background: "#0c0a18", border: "1.5px solid rgba(212,175,55,0.3)",
+              display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Camera size={12} style={{ color: "#d4af37" }} />
             </div>
           </div>
           <button type="button" onClick={() => fileInputRef.current?.click()}
-            className="text-sm text-ceiba-700 font-semibold hover:underline">
-            {avatarPreview ? "Cambiar foto" : "Agregar foto de perfil"}
+            style={{ background: "none", border: "none", cursor: "pointer",
+              fontSize: 12, color: "rgba(212,175,55,0.6)", fontWeight: 600 }}>
+            {avatarPreview ? "Cambiar foto" : "Agregar foto"}
           </button>
-          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
+          <input ref={fileInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handlePhotoChange} />
         </div>
 
-        {/* Cuenta (profiles) */}
-        <div className="card space-y-4">
-          <h3 className="font-bold text-ceiba-800">Cuenta</h3>
-          <div>
-            <label className="block text-sm font-medium text-ceiba-700 mb-1">Nombre para mostrar <span className="text-red-500">*</span></label>
-            <input type="text" className="input-field"
-              value={form.display_name}
-              onChange={e => setForm(f => ({ ...f, display_name: e.target.value }))}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-ceiba-700 mb-1">Idioma</label>
-              <input type="text" className="input-field" placeholder="es"
-                value={form.locale}
-                onChange={e => setForm(f => ({ ...f, locale: e.target.value }))}
-              />
+        {/* Avatar builder */}
+        <Link href="/avatar" style={{ textDecoration: "none" }}>
+          <div style={{ ...s3dCard("#0c0a18","212,175,55","#040300"), padding: "13px 16px",
+            display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ position: "absolute", top: 0, left: "18%", right: "18%", height: 1, background: "rgba(212,175,55,0.35)" }} />
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ width: 34, height: 34, borderRadius: 10, background: "#0a0818",
+                border: "1px solid rgba(212,175,55,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Smile size={15} style={{ color: "rgba(212,175,55,0.7)" }} />
+              </div>
+              <div>
+                <p style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>Mi avatar</p>
+                <p style={{ fontSize: 11, color: "rgba(212,175,55,0.4)" }}>Personaliza tu figura en el árbol</p>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-ceiba-700 mb-1">Zona horaria</label>
-              <input type="text" className="input-field" placeholder="America/Bogota"
-                value={form.timezone}
-                onChange={e => setForm(f => ({ ...f, timezone: e.target.value }))}
-              />
+            <ChevronRight size={14} style={{ color: "rgba(212,175,55,0.35)" }} />
+          </div>
+        </Link>
+
+        {/* Cuenta */}
+        <div>
+          <SectionLabel>Cuenta</SectionLabel>
+          <div style={{ ...s3dCard("#0c0a18","212,175,55","#040300"), padding: "16px", display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ position: "absolute", top: 0, left: "18%", right: "18%", height: 1, background: "rgba(212,175,55,0.35)" }} />
+            <Field label="Nombre para mostrar *">
+              <input type="text" style={s3dInput()} value={form.display_name}
+                onChange={e => setForm(f => ({ ...f, display_name: e.target.value }))} />
+            </Field>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <Field label="Idioma">
+                <input type="text" style={s3dInput()} placeholder="es" value={form.locale}
+                  onChange={e => setForm(f => ({ ...f, locale: e.target.value }))} />
+              </Field>
+              <Field label="Zona horaria">
+                <input type="text" style={s3dInput()} placeholder="America/Bogota" value={form.timezone}
+                  onChange={e => setForm(f => ({ ...f, timezone: e.target.value }))} />
+              </Field>
             </div>
           </div>
         </div>
 
-        {/* Datos genealógicos (persons, vía person_claims) */}
-        {noClaim && (
-          <div className="card">
-            <h3 className="font-bold text-ceiba-800 mb-1">Datos genealógicos</h3>
-            <p className="text-sm text-ceiba-500">
-              Todavía no tienes una identidad reclamada en el árbol familiar, así que no hay datos genealógicos que editar aquí.
-            </p>
-          </div>
-        )}
+        {/* Datos genealógicos */}
+        <div>
+          <SectionLabel>Datos genealógicos</SectionLabel>
+          {noClaim && (
+            <div style={{ ...s3dCard("#0c0a18","212,175,55","#040300"), padding: "16px" }}>
+              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", lineHeight: 1.6 }}>
+                Todavía no tienes una identidad reclamada en el árbol, así que no hay datos genealógicos que editar aquí.
+              </p>
+            </div>
+          )}
+          {personForm && (
+            <div style={{ ...s3dCard("#0c0a18","212,175,55","#040300"), padding: "16px", display: "flex", flexDirection: "column", gap: 12 }}>
+              <div style={{ position: "absolute", top: 0, left: "18%", right: "18%", height: 1, background: "rgba(212,175,55,0.35)" }} />
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <Field label="Nombre *">
+                  <input type="text" style={s3dInput()} value={personForm.first_name}
+                    onChange={e => setPersonForm(f => f && ({ ...f, first_name: e.target.value }))} />
+                </Field>
+                <Field label="Segundo nombre">
+                  <input type="text" style={s3dInput()} value={personForm.middle_name}
+                    onChange={e => setPersonForm(f => f && ({ ...f, middle_name: e.target.value }))} />
+                </Field>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <Field label="Primer apellido *">
+                  <input type="text" style={s3dInput()} value={personForm.first_surname}
+                    onChange={e => setPersonForm(f => f && ({ ...f, first_surname: e.target.value }))} />
+                </Field>
+                <Field label="Segundo apellido">
+                  <input type="text" style={s3dInput()} value={personForm.second_surname}
+                    onChange={e => setPersonForm(f => f && ({ ...f, second_surname: e.target.value }))} />
+                </Field>
+              </div>
+              <Field label="Fecha de nacimiento">
+                <input type="date" style={{ ...s3dInput(), colorScheme: "dark" }} value={personForm.birth_date}
+                  onChange={e => setPersonForm(f => f && ({ ...f, birth_date: e.target.value }))} />
+              </Field>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <Field label="Ciudad de nacimiento">
+                  <input type="text" style={s3dInput()} value={personForm.birth_city}
+                    onChange={e => setPersonForm(f => f && ({ ...f, birth_city: e.target.value }))} />
+                </Field>
+                <Field label="País">
+                  <input type="text" style={s3dInput()} value={personForm.birth_country}
+                    onChange={e => setPersonForm(f => f && ({ ...f, birth_country: e.target.value }))} />
+                </Field>
+              </div>
+            </div>
+          )}
+        </div>
 
-        {personForm && (
-          <div className="card space-y-4">
-            <h3 className="font-bold text-ceiba-800">Datos genealógicos</h3>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-sm font-medium text-ceiba-700 mb-1">Nombre <span className="text-red-500">*</span></label>
-                <input type="text" className="input-field"
-                  value={personForm.first_name}
-                  onChange={e => setPersonForm(f => f && ({ ...f, first_name: e.target.value }))}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-ceiba-700 mb-1">Segundo nombre</label>
-                <input type="text" className="input-field"
-                  value={personForm.middle_name}
-                  onChange={e => setPersonForm(f => f && ({ ...f, middle_name: e.target.value }))}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-sm font-medium text-ceiba-700 mb-1">Primer apellido <span className="text-red-500">*</span></label>
-                <input type="text" className="input-field"
-                  value={personForm.first_surname}
-                  onChange={e => setPersonForm(f => f && ({ ...f, first_surname: e.target.value }))}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-ceiba-700 mb-1">Segundo apellido</label>
-                <input type="text" className="input-field"
-                  value={personForm.second_surname}
-                  onChange={e => setPersonForm(f => f && ({ ...f, second_surname: e.target.value }))}
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-ceiba-700 mb-1">Fecha de nacimiento</label>
-              <input type="date" className="input-field"
-                value={personForm.birth_date}
-                onChange={e => setPersonForm(f => f && ({ ...f, birth_date: e.target.value }))}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-sm font-medium text-ceiba-700 mb-1">Ciudad de nacimiento</label>
-                <input type="text" className="input-field"
-                  value={personForm.birth_city}
-                  onChange={e => setPersonForm(f => f && ({ ...f, birth_city: e.target.value }))}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-ceiba-700 mb-1">País de nacimiento</label>
-                <input type="text" className="input-field"
-                  value={personForm.birth_country}
-                  onChange={e => setPersonForm(f => f && ({ ...f, birth_country: e.target.value }))}
-                />
-              </div>
-            </div>
-          </div>
-        )}
-
-        <button onClick={save} disabled={saving} className="btn-primary w-full flex items-center justify-center gap-2">
-          <Save size={16} />
+        {/* Guardar */}
+        <button onClick={save} disabled={saving} style={s3dGoldBtn(saving)}>
+          <Save size={14} style={{ display: "inline", marginRight: 7, verticalAlign: "middle" }} />
           {saving ? "Guardando..." : "Guardar cambios"}
         </button>
       </div>
-    </main>
+
+      <CosmicNav />
+    </div>
   );
 }
