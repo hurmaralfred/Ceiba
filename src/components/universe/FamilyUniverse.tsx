@@ -348,6 +348,43 @@ export function FamilyUniverse({
           ))}
         </UniverseViewport>
 
+        {/* Back-to-root pill — visible when a non-root person is the focal */}
+        <button
+          onPointerDown={e => e.stopPropagation()}
+          onClick={e => { e.stopPropagation(); setFocalId('root'); setExpandedIds(new Set()) }}
+          style={{
+            position: 'absolute',
+            bottom: 24,
+            left: '50%',
+            transform: `translateX(-50%) translateY(${focalId !== 'root' ? '0' : '12px'})`,
+            opacity: focalId !== 'root' ? 1 : 0,
+            pointerEvents: focalId !== 'root' ? 'auto' : 'none',
+            transition: 'opacity 0.3s ease, transform 0.3s cubic-bezier(0.34,1.2,0.64,1)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '7px 16px 7px 12px',
+            borderRadius: 20,
+            background: 'rgba(12,10,24,0.88)',
+            border: '1px solid rgba(212,175,55,0.30)',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.55), 0 0 0 1px rgba(212,175,55,0.10)',
+            backdropFilter: 'blur(10px)',
+            cursor: 'pointer',
+            color: '#d4af37',
+            fontSize: 12,
+            fontWeight: 600,
+            letterSpacing: '0.02em',
+            zIndex: 40,
+            whiteSpace: 'nowrap',
+          }}
+          aria-label="Volver a mi árbol"
+        >
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+            <path d="M10 12L6 8l4-4" stroke="#d4af37" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          Volver a {profile.first_name}
+        </button>
+
         {/* Floating person card — dismisses on click outside */}
         {selectedNode && cardAnchor && (
           <UniversePersonCard
