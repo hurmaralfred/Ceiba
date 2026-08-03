@@ -349,7 +349,7 @@ export function FamilyUniverse({
             aria-label={`Ver ${hiddenCount} familiares más`}
             style={{
               position: 'absolute',
-              bottom: 24,
+              bottom: 'calc(90px + env(safe-area-inset-bottom))',
               left: '50%',
               transform: 'translateX(-50%)',
               background: 'rgba(16,12,8,0.88)',
