@@ -310,6 +310,10 @@ export function FamilyUniverse({
     })
   }, [minHiddenHop, hiddenNodesList])
 
+  const handleCollapse = useCallback(() => {
+    setExpandedIds(new Set())
+  }, [])
+
   return (
     <>
       <UniverseStyles />
@@ -333,8 +337,13 @@ export function FamilyUniverse({
               onClick={handleAvatarClick}
               viewScale={viewScale}
               isNew={newNodeIds.has(node.id)}
-              showExpand={hiddenCount > 0 && !maxExpansionReached && !selectedNode}
-              onExpand={handleExpand}
+              showExpand={
+                node.isFocal
+                  ? (expandedIds.size > 0 || (hiddenCount > 0 && !maxExpansionReached)) && !selectedNode
+                  : hiddenCount > 0 && !maxExpansionReached && !selectedNode
+              }
+              isExpanded={node.isFocal && expandedIds.size > 0}
+              onExpand={node.isFocal && expandedIds.size > 0 ? handleCollapse : handleExpand}
             />
           ))}
         </UniverseViewport>
@@ -358,7 +367,7 @@ export function FamilyUniverse({
 // ─── Avatar slot: positioned absolutely in viewport ───────────────────────────
 
 function AvatarSlot({
-  node, selected, onClick, viewScale = 1, isNew = false, showExpand = false, onExpand,
+  node, selected, onClick, viewScale = 1, isNew = false, showExpand = false, onExpand, isExpanded = false,
 }: {
   node: UniverseNode
   selected: boolean
@@ -367,6 +376,7 @@ function AvatarSlot({
   isNew?: boolean
   showExpand?: boolean
   onExpand?: () => void
+  isExpanded?: boolean
 }) {
   const divRef = useRef<HTMLDivElement>(null)
 
@@ -440,7 +450,9 @@ function AvatarSlot({
           }}
         >
           <svg width="11" height="11" viewBox="0 0 16 16" fill="none">
-            <line x1="8" y1="3" x2="8" y2="13" stroke="#030208" strokeWidth="2.8" strokeLinecap="round"/>
+            {!isExpanded && (
+              <line x1="8" y1="3" x2="8" y2="13" stroke="#030208" strokeWidth="2.8" strokeLinecap="round"/>
+            )}
             <line x1="3" y1="8" x2="13" y2="8" stroke="#030208" strokeWidth="2.8" strokeLinecap="round"/>
           </svg>
         </button>
