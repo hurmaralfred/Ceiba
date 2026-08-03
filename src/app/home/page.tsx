@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   Home, TreePine, BookOpen, Camera, User, Bell, Menu,
   Users, GitBranch, Image as ImageIcon, Gift, Send,
-  Trophy, ChevronRight, Cake,
+  Trophy, ChevronRight, Cake, Sparkles, X,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { adaptGraph, type FamilyGraph } from "@/lib/graphAdapter";
@@ -19,6 +19,14 @@ interface FeedBirthday {
 interface FeedPhoto { id: string; url: string; caption: string | null; created_at: string; }
 interface FeedEvent { id: string; title: string; event_type: string; event_date: string; description: string | null; created_at: string; }
 type BirthdayWithDays = FeedBirthday & { days: number };
+interface KinshipSuggestion {
+  id: string; score: number;
+  evidence: Array<{ type: string; weight: number; detail: string }>;
+  person_a: { id: string; first_name: string; first_surname: string } | null;
+  person_b: { id: string; first_name: string; first_surname: string } | null;
+  space_a: { id: string; name: string } | null;
+  space_b: { id: string; name: string } | null;
+}
 
 // ── Helpers de estilo 3D ──────────────────────────────────────────────────────
 function s3dCard(bg: string, ar: string, sh: string, glow = 0.1): React.CSSProperties {
@@ -181,6 +189,8 @@ export default function HomePage() {
   const [birthdays,    setBirthdays]    = useState<FeedBirthday[]>([]);
   const [photos,       setPhotos]       = useState<FeedPhoto[]>([]);
   const [events,       setEvents]       = useState<FeedEvent[]>([]);
+  const [suggestions,  setSuggestions]  = useState<KinshipSuggestion[]>([]);
+  const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
 
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -193,9 +203,10 @@ export default function HomePage() {
       if (status.needsConfirmation) { router.replace("/confirmar-datos"); return; }
     }
 
-    const [graphRes, feedRes] = await Promise.allSettled([
+    const [graphRes, feedRes, sugRes] = await Promise.allSettled([
       supabase.rpc("get_my_family_graph", { p_depth: 4 }),
       fetch("/api/feed"),
+      fetch("/api/suggestions"),
     ]);
 
     if (graphRes.status === "fulfilled" && !graphRes.value.error) {
@@ -219,7 +230,22 @@ export default function HomePage() {
         }
       } catch {}
     }
+
+    if (sugRes.status === "fulfilled") {
+      try {
+        const res = sugRes.value;
+        if (res.ok) {
+          const { suggestions: sug } = await res.json();
+          setSuggestions((sug ?? []).slice(0, 3));
+        }
+      } catch {}
+    }
   }, [router, supabase]);
+
+  const handleDismiss = useCallback(async (id: string) => {
+    setDismissedIds(prev => new Set([...prev, id]));
+    await fetch(`/api/suggestions/${id}/dismiss`, { method: "POST" });
+  }, []);
 
   useEffect(() => { load(); }, [load]);
 
@@ -437,6 +463,119 @@ export default function HomePage() {
             </div>
           </div>
         </Link>
+
+        {/* ── Coincidencias familiares ──────────────────────────────────── */}
+        {suggestions.filter(s => !dismissedIds.has(s.id)).length > 0 && (
+          <div style={{ marginBottom: 9 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 9, paddingTop: 6 }}>
+              <Sparkles size={12} style={{ color: "#64c878" }} />
+              <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(100,200,120,0.75)",
+                letterSpacing: "0.1em", textTransform: "uppercase" }}>
+                Posibles conexiones
+              </span>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {suggestions.filter(s => !dismissedIds.has(s.id)).map(s => {
+                if (!s.person_a || !s.person_b) return null;
+                const nameA = `${s.person_a.first_name} ${s.person_a.first_surname}`.trim();
+                const nameB = `${s.person_b.first_name} ${s.person_b.first_surname}`.trim();
+                const pct   = Math.round(s.score * 100);
+                const top   = s.evidence[0];
+                const EVIDENCE: Record<string, string> = {
+                  surname: "Apellido", birth_city: "Ciudad natal", birth_decade: "Época de nacimiento", birth_country: "País",
+                };
+                return (
+                  <div key={s.id} style={{
+                    borderRadius: 18, background: "#050e07", position: "relative", overflow: "hidden",
+                    borderTop: "1.5px solid rgba(100,200,120,0.35)", borderLeft: "1px solid rgba(100,200,120,0.15)",
+                    borderBottom: "3px solid #000c04", borderRight: "1px solid rgba(0,0,0,0.6)",
+                    boxShadow: "0 7px 0 #000c04, 0 12px 22px rgba(0,0,0,0.85), 0 0 18px rgba(100,200,120,0.07)",
+                    padding: "13px 13px 11px",
+                  }}>
+                    <div style={{ position: "absolute", top: 0, left: "18%", right: "18%",
+                      height: 1, background: "rgba(100,200,120,0.4)" }} />
+
+                    {/* header */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 9 }}>
+                      <Sparkles size={12} style={{ color: "#64c878" }} />
+                      <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.11em",
+                        textTransform: "uppercase", color: "rgba(100,200,120,0.65)", flex: 1 }}>
+                        Posible conexión
+                      </span>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: "#64c878",
+                        background: "rgba(100,200,120,0.12)", padding: "2px 8px", borderRadius: 20 }}>
+                        {pct}% coincidencia
+                      </span>
+                      <button onClick={() => handleDismiss(s.id)}
+                        style={{ background: "none", border: "none", cursor: "pointer", padding: 2,
+                          color: "rgba(255,255,255,0.2)", lineHeight: 0, marginLeft: 2 }}>
+                        <X size={14} />
+                      </button>
+                    </div>
+
+                    {/* personas */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 9 }}>
+                      {[{ name: nameA, space: s.space_a?.name }, { name: nameB, space: s.space_b?.name }].map((p, i) => (
+                        <div key={i} style={{ flex: 1, display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+                          {i === 1 && (
+                            <div style={{ width: 22, height: 22, borderRadius: "50%", flexShrink: 0,
+                              background: "rgba(100,200,120,0.12)", border: "1px dashed rgba(100,200,120,0.4)",
+                              display: "flex", alignItems: "center", justifyContent: "center",
+                              fontSize: 10, fontWeight: 800, color: "rgba(100,200,120,0.55)" }}>?</div>
+                          )}
+                          <div style={{ width: 30, height: 30, borderRadius: "50%", flexShrink: 0,
+                            background: "rgba(100,200,120,0.14)", border: "1.5px solid rgba(100,200,120,0.35)",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            fontSize: 11, fontWeight: 800, color: "#64c878" }}>
+                            {p.name.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase()}
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <p style={{ fontSize: 12, fontWeight: 700, color: "#fff", margin: 0,
+                              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</p>
+                            {p.space && (
+                              <p style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", margin: 0,
+                                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.space}</p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* evidencia */}
+                    {top && (
+                      <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", margin: "0 0 10px" }}>
+                        {EVIDENCE[top.type] || top.type}:&nbsp;
+                        <span style={{ color: "#64c878", fontWeight: 600 }}>{top.detail}</span>
+                        {s.evidence.length > 1 && (
+                          <span style={{ color: "rgba(100,200,120,0.4)" }}> +{s.evidence.length - 1} más</span>
+                        )}
+                      </p>
+                    )}
+
+                    {/* acciones */}
+                    <div style={{ display: "flex", gap: 7 }}>
+                      <Link href={`/sugerencias/${s.id}`} style={{ textDecoration: "none", flex: 1 }}>
+                        <button style={{ width: "100%", padding: "8px 0", borderRadius: 10, cursor: "pointer",
+                          background: "#18a836", border: "none",
+                          borderTop: "1.5px solid rgba(100,230,130,0.5)", borderBottom: "2.5px solid #0a5c1c",
+                          boxShadow: "0 5px 0 #073d13, 0 8px 16px rgba(0,0,0,0.6)",
+                          color: "#fff", fontSize: 12, fontWeight: 700 }}>
+                          Ver y confirmar
+                        </button>
+                      </Link>
+                      <button onClick={() => handleDismiss(s.id)}
+                        style={{ padding: "8px 12px", borderRadius: 10, cursor: "pointer",
+                          background: "#0c0a18", border: "1px solid rgba(255,255,255,0.08)",
+                          color: "rgba(255,255,255,0.3)", fontSize: 12, fontWeight: 600 }}>
+                        No es familia
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Spotlight de cumpleaños — oro */}
         {spotlightBirthday && (
