@@ -163,7 +163,7 @@ export function CosmicHeader({
 const NAV_ITEMS: Array<{ href: string; Icon: LucideIcon; label: string; center?: boolean }> = [
   { href: "/home",    Icon: Home,     label: "Inicio"   },
   { href: "/tree",    Icon: TreePine, label: "Árbol"    },
-  { href: "/events",  Icon: BookOpen, label: "Historias", center: true },
+  { href: "/feed",    Icon: BookOpen, label: "Actividad", center: true },
   { href: "/photos",  Icon: Camera,   label: "Álbumes"  },
   { href: "/profile", Icon: User,     label: "Perfil"   },
 ];
