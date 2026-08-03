@@ -769,7 +769,7 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
                 whiteSpace: 'nowrap',
               }}
             >
-              {node.isDeceased ? '✦ descansando' : node.isFocal && node.isRoot ? '·' : node.relation}
+              {node.isDeceased ? `✦ ${node.relation || 'descansando'}` : node.isFocal && node.isRoot ? '·' : node.relation}
             </div>
           </div>
         )

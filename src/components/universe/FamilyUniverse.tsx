@@ -415,7 +415,7 @@ function AvatarSlot({
         hitAreaScale={node.scale * viewScale}
         labelVisible={node.relevanceTier <= 1}
       />
-      {showExpand && !node.isFocal && (
+      {showExpand && (
         <button
           data-avatar="true"
           onPointerDown={e => e.stopPropagation()}
