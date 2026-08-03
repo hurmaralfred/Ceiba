@@ -1433,47 +1433,71 @@ console.log("⑤ Datos cargados");
       )}
       {/* Floating 3D "Agregar familiar" button */}
       <style>{`
-        @keyframes ceiba-fab-breathe {
-          0%, 100% { box-shadow: 0 6px 20px rgba(94,138,80,0.45), 0 2px 6px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.22); }
-          50%       { box-shadow: 0 8px 28px rgba(94,138,80,0.55), 0 3px 8px rgba(0,0,0,0.20), inset 0 1px 0 rgba(255,255,255,0.22); }
+        @keyframes ceiba-fab-pulse {
+          0%, 100% {
+            transform: scale(1) translateY(0);
+            box-shadow: 0 8px 0 #4a3c00, 0 10px 28px rgba(212,175,55,0.50), 0 0 0 0 rgba(212,175,55,0.35);
+          }
+          40% {
+            transform: scale(1.11) translateY(-4px);
+            box-shadow: 0 10px 0 #4a3c00, 0 20px 40px rgba(212,175,55,0.75), 0 0 0 10px rgba(212,175,55,0.15);
+          }
+          55% {
+            transform: scale(1.11) translateY(-4px);
+            box-shadow: 0 10px 0 #4a3c00, 0 20px 40px rgba(212,175,55,0.75), 0 0 0 18px rgba(212,175,55,0);
+          }
         }
         .ceiba-fab {
           position: fixed;
           right: 20px;
-          bottom: calc(112px + env(safe-area-inset-bottom));
-          width: 62px;
-          height: 62px;
+          bottom: calc(132px + env(safe-area-inset-bottom));
+          width: 64px;
+          height: 64px;
           border-radius: 50%;
-          border: none;
+          border-top: 2.5px solid #fff9c4;
+          border-bottom: 5px solid #6a5600;
+          border-left: 1.5px solid rgba(255,240,100,0.4);
+          border-right: 1.5px solid rgba(0,0,0,0.35);
           cursor: pointer;
           display: flex;
           align-items: center;
           justify-content: center;
-          background: linear-gradient(145deg, #7daa72 0%, #6e9464 45%, #5c7a52 100%);
-          box-shadow: 0 6px 20px rgba(94,138,80,0.45), 0 2px 6px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.22);
-          color: white;
-          z-index: 40;
-          transition: transform 0.15s ease, box-shadow 0.15s ease;
-          animation: ceiba-fab-breathe 4s ease-in-out infinite;
+          background: linear-gradient(145deg, #f5e060 0%, #d4af37 45%, #b8950a 100%);
+          box-shadow: 0 8px 0 #4a3c00, 0 10px 28px rgba(212,175,55,0.50), 0 0 0 0 rgba(212,175,55,0.35);
+          color: #030208;
+          z-index: 55;
+          transition: transform 0.12s ease, box-shadow 0.12s ease;
+          animation: ceiba-fab-pulse 2.2s ease-in-out infinite;
           outline-offset: 3px;
+        }
+        .ceiba-fab::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          border-radius: 50%;
+          background: radial-gradient(circle at 36% 22%, rgba(255,255,255,0.55) 0%, transparent 58%);
+          pointer-events: none;
         }
         .ceiba-fab:hover {
-          transform: translateY(-3px) scale(1.05);
-          box-shadow: 0 12px 32px rgba(94,138,80,0.55), 0 4px 10px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.22);
+          animation: none;
+          transform: scale(1.12) translateY(-4px);
+          box-shadow: 0 10px 0 #4a3c00, 0 22px 44px rgba(212,175,55,0.80);
         }
         .ceiba-fab:active {
-          transform: translateY(0px) scale(0.95);
-          box-shadow: 0 3px 10px rgba(94,138,80,0.35), 0 1px 3px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.18);
+          animation: none;
+          transform: scale(0.94) translateY(2px);
+          box-shadow: 0 4px 0 #4a3c00, 0 6px 14px rgba(212,175,55,0.40);
+          border-bottom-width: 2px;
         }
         .ceiba-fab:focus-visible {
-          outline: 2px solid #6e9464;
-          outline-offset: 3px;
+          outline: 2.5px solid #f5e060;
+          outline-offset: 4px;
         }
         @media (min-width: 768px) {
           .ceiba-fab {
-            width: 70px;
-            height: 70px;
-            bottom: calc(80px + env(safe-area-inset-bottom));
+            width: 72px;
+            height: 72px;
+            bottom: calc(104px + env(safe-area-inset-bottom));
             right: 28px;
           }
         }
@@ -1485,7 +1509,6 @@ console.log("⑤ Datos cargados");
         @media (prefers-reduced-motion: reduce) {
           .ceiba-fab {
             animation: none;
-            transition: none;
           }
           .ceiba-fab:hover { transform: none; }
           .ceiba-fab:active { transform: none; }
@@ -1497,7 +1520,7 @@ console.log("⑤ Datos cargados");
         aria-label="Agregar familiar"
         title="Agregar familiar"
       >
-        <Plus size={26} strokeWidth={2.5} />
+        <Plus size={28} strokeWidth={2.8} />
       </button>
 
       <CosmicNav />
