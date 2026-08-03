@@ -161,6 +161,10 @@ const UNIVERSE_CSS = `
   0%, 100% { opacity: 1;    }
   50%       { opacity: 0.5; }
 }
+@keyframes universeEmptyFadeIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0);   }
+}
 @media (prefers-reduced-motion: reduce) {
   [style*="universeSway"],
   [style*="universeBreathe"],
@@ -215,6 +219,7 @@ interface Props {
   memberLinks?: MemberLink[]
   onEditMember?: (memberId: string) => void
   onInviteMember?: (memberId: string) => void
+  onAddMember?: () => void
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -226,6 +231,7 @@ export function FamilyUniverse({
   memberLinks = [],
   onEditMember,
   onInviteMember,
+  onAddMember,
 }: Props) {
   const [focalId,       setFocalId]       = useState<string>('root')
   const [selectedNode,  setSelectedNode]  = useState<UniverseNode | null>(null)
@@ -384,6 +390,65 @@ export function FamilyUniverse({
           </svg>
           Volver a {profile.first_name}
         </button>
+
+        {/* Empty-state hint — shown when the user has no family members yet */}
+        {members.length === 0 && (
+          <div
+            style={{
+              position: 'absolute',
+              bottom: 80,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 10,
+              pointerEvents: 'none',
+              animation: 'universeEmptyFadeIn 0.8s ease 0.4s both',
+            }}
+          >
+            <p style={{
+              fontSize: 13,
+              color: 'rgba(255,255,255,0.45)',
+              textAlign: 'center',
+              lineHeight: 1.55,
+              maxWidth: 220,
+              margin: 0,
+            }}>
+              Aquí aparecerá tu familia.<br />Empieza agregando a alguien cercano.
+            </p>
+            {onAddMember && (
+              <button
+                onPointerDown={e => e.stopPropagation()}
+                onClick={e => { e.stopPropagation(); onAddMember() }}
+                style={{
+                  pointerEvents: 'auto',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '9px 20px',
+                  borderRadius: 20,
+                  background: '#c9a820',
+                  border: 'none',
+                  borderTop: '2px solid #f5e060',
+                  borderBottom: '3px solid #6a5600',
+                  boxShadow: '0 4px 0 #4a3c00, 0 8px 20px rgba(0,0,0,0.55)',
+                  color: '#030208',
+                  fontSize: 13,
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  letterSpacing: '0.01em',
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                  <line x1="8" y1="2" x2="8" y2="14" stroke="#030208" strokeWidth="2.5" strokeLinecap="round"/>
+                  <line x1="2" y1="8" x2="14" y2="8" stroke="#030208" strokeWidth="2.5" strokeLinecap="round"/>
+                </svg>
+                Agregar primer familiar
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Floating person card — dismisses on click outside */}
         {selectedNode && cardAnchor && (

@@ -960,6 +960,7 @@ console.log("⑤ Datos cargados");
                           const member = resolveMemberForEdit(memberId, members, extendedMembers);
                           if (member) sendInvite(member);
                         }}
+                        onAddMember={() => setShowModal(true)}
                       />
                       {/* Stats pill — family count + global Ceiba growth */}
                       <div style={{
