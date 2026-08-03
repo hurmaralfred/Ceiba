@@ -4,6 +4,7 @@
  * Importar desde aquí para mantener coherencia visual en toda la app.
  */
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, TreePine, BookOpen, Camera, User, ArrowLeft, type LucideIcon } from "lucide-react";
@@ -170,6 +171,15 @@ const NAV_ITEMS: Array<{ href: string; Icon: LucideIcon; label: string; center?:
 
 export function CosmicNav() {
   const pathname = usePathname();
+  const [suggCount, setSuggCount] = useState(0);
+
+  useEffect(() => {
+    fetch("/api/suggestions")
+      .then(r => r.ok ? r.json() : { suggestions: [] })
+      .then(d => setSuggCount((d.suggestions ?? []).length))
+      .catch(() => {});
+  }, []);
+
   return (
     <nav style={{
       position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 50,
@@ -198,10 +208,27 @@ export function CosmicNav() {
         );
         const active = pathname === href || pathname?.startsWith(href + "/");
         const color = active ? "#d4af37" : "rgba(212,175,55,0.28)";
+        const showBadge = href === "/home" && suggCount > 0;
         return (
           <Link key={href} href={href}
             style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, textDecoration: "none" }}>
-            <Icon size={22} style={{ color }} />
+            <div style={{ position: "relative" }}>
+              <Icon size={22} style={{ color }} />
+              {showBadge && (
+                <div style={{
+                  position: "absolute", top: -5, right: -7,
+                  minWidth: 16, height: 16, borderRadius: 8,
+                  background: "#d4af37",
+                  border: "1.5px solid #030208",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 9, fontWeight: 800, color: "#030208",
+                  padding: "0 3px",
+                  lineHeight: 1,
+                }}>
+                  {suggCount > 9 ? "9+" : suggCount}
+                </div>
+              )}
+            </div>
             <span style={{ fontSize: 9, fontWeight: active ? 700 : 500, color }}>{label}</span>
           </Link>
         );
