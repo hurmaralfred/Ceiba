@@ -13,13 +13,28 @@ export async function GET(_req: NextRequest) {
 
   const service = getServiceClient();
 
-  // Spaces this user has access to
-  const { data: roles } = await service
-    .from("space_user_roles")
-    .select("space_id")
-    .eq("user_id", user.id);
+  // Resolve user's spaces via person_claims + space_memberships (space_user_roles may be empty)
+  const { data: claims } = await service
+    .from("person_claims")
+    .select("person_id")
+    .eq("user_id", user.id)
+    .eq("claim_status", "approved")
+    .is("revoked_at", null);
 
-  const mySpaceIds = (roles ?? []).map((r: any) => r.space_id as string);
+  const myPersonIds = (claims ?? []).map((c: any) => c.person_id as string);
+
+  const [{ data: memberships }, { data: ownedSpaces }] = await Promise.all([
+    myPersonIds.length
+      ? service.from("space_memberships").select("space_id").in("person_id", myPersonIds)
+      : Promise.resolve({ data: [] }),
+    service.from("family_spaces").select("id").eq("created_by", user.id),
+  ]);
+
+  const mySpaceIds = [...new Set([
+    ...(memberships ?? []).map((m: any) => m.space_id as string),
+    ...(ownedSpaces  ?? []).map((s: any) => s.id       as string),
+  ])];
+
   if (!mySpaceIds.length) return NextResponse.json({ suggestions: [] });
 
   const { data: rows, error } = await service
