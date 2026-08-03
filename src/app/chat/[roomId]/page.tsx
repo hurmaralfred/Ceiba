@@ -2,8 +2,9 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
-import { TreePine, ArrowLeft, Send, Users } from "lucide-react";
+import { ArrowLeft, Send, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { useFamilyPresence } from "@/hooks/useFamilyPresence";
 import toast from "react-hot-toast";
 
 interface Sender {
@@ -46,13 +47,17 @@ export default function ChatRoomPage() {
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
+  const [myUserId, setMyUserId] = useState<string | null>(null);
+  const [otherUserId, setOtherUserId] = useState<string | null>(null);
   const [roomName, setRoomName] = useState("Chat");
   const [roomType, setRoomType] = useState<"group" | "direct">("group");
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastCountRef = useRef(0);
+
+  const onlineIds = useFamilyPresence(myUserId, otherUserId ? [otherUserId] : []);
+  const otherIsOnline = otherUserId ? onlineIds.has(otherUserId) : false;
 
   const scrollToBottom = useCallback(() => {
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
@@ -69,40 +74,32 @@ export default function ChatRoomPage() {
   }, [roomId, scrollToBottom]);
 
   useEffect(() => {
-    init();
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roomId]);
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { router.push("/auth/login"); return; }
+      setMyUserId(user.id);
 
-  const init = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { router.push("/auth/login"); return; }
-    setUserId(user.id);
-
-    // El tipo/nombre de la sala vienen de la lista canónica de conversaciones
-    // (grupal por family_space o directa), no de un ID hardcodeado.
-    const roomsRes = await fetch("/api/chat/rooms");
-    if (roomsRes.ok) {
-      const { conversations } = await roomsRes.json();
-      const conv = (conversations || []).find((c: any) => c.roomId === roomId);
-      if (conv) {
-        setRoomName(conv.name);
-        setRoomType(conv.type);
+      const roomsRes = await fetch("/api/chat/rooms");
+      if (roomsRes.ok) {
+        const { conversations } = await roomsRes.json();
+        const conv = (conversations || []).find((c: any) => c.roomId === roomId);
+        if (conv) {
+          setRoomName(conv.name);
+          setRoomType(conv.type);
+          if (conv.otherUserId) setOtherUserId(conv.otherUserId);
+        }
       }
-    }
 
-    await loadMessages(true);
-    setLoading(false);
-
-    // Recepción: polling ligero (chat_messages tiene RLS sin políticas de
-    // cliente, así que Realtime no entrega estas filas — el servidor las
-    // sirve vía /api/chat/rooms/[roomId]/messages).
-    pollRef.current = setInterval(() => { loadMessages(false); }, 4000);
-  };
+      await loadMessages(true);
+      setLoading(false);
+      pollRef.current = setInterval(() => { loadMessages(false); }, 4000);
+    })();
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, [roomId]);
 
   const send = async () => {
     const body = text.trim();
-    if (!body || !userId) return;
+    if (!body || !myUserId) return;
     setSending(true);
     setText("");
 
@@ -126,10 +123,7 @@ export default function ChatRoomPage() {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      send();
-    }
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
   };
 
   const grouped: { date: string; messages: Message[] }[] = [];
@@ -141,77 +135,129 @@ export default function ChatRoomPage() {
   });
 
   if (loading) return (
-    <div className="min-h-screen bg-cream-100 flex items-center justify-center">
-      <TreePine size={36} className="text-ceiba-600 animate-pulse" />
+    <div style={{ minHeight: "100vh", background: "#030208", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <Send size={32} style={{ color: "#d4af37", opacity: 0.5 }} />
     </div>
   );
 
   return (
-    <main className="h-screen flex flex-col bg-cream-100">
-      <nav className="bg-ceiba-800 text-white px-4 py-4 flex items-center gap-3 shadow-lg flex-shrink-0">
-        <Link href="/chat" className="text-ceiba-300 hover:text-white">
-          <ArrowLeft size={20} />
-        </Link>
-        <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 bg-white/20">
-          {roomType === "group" ? <Users size={16} className="text-white" /> : <span className="text-white text-sm font-bold">{roomName[0]}</span>}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="font-bold text-white truncate">{roomName}</div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-            <span className="text-xs text-ceiba-300">En vivo</span>
-          </div>
-        </div>
-      </nav>
+    <div style={{ height: "100dvh", display: "flex", flexDirection: "column", background: "#030208", color: "#fff" }}>
+      <style>{`@keyframes online-pulse{0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,0.5)}50%{box-shadow:0 0 0 5px rgba(34,197,94,0)}}`}</style>
 
-      <div className="flex-1 overflow-y-auto px-4 py-4">
+      {/* Header */}
+      <div style={{
+        display: "flex", alignItems: "center", gap: 12, padding: "52px 16px 14px",
+        borderBottom: "0.5px solid rgba(212,175,55,0.14)", flexShrink: 0,
+        background: "rgba(3,2,8,0.98)", backdropFilter: "blur(10px)",
+        position: "sticky", top: 0, zIndex: 10,
+      }}>
+        <Link href="/chat">
+          <div style={{ width: 36, height: 36, borderRadius: 11, background: "#0c0a1a",
+            borderTop: "1px solid rgba(212,175,55,0.28)", borderBottom: "2px solid #000",
+            borderLeft: "1px solid rgba(212,175,55,0.12)", borderRight: "1px solid rgba(0,0,0,0.6)",
+            boxShadow: "0 5px 0 #02010a", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <ArrowLeft size={17} style={{ color: "rgba(212,175,55,0.75)" }} />
+          </div>
+        </Link>
+
+        <div style={{ position: "relative", flexShrink: 0 }}>
+          <div style={{ width: 38, height: 38, borderRadius: 13, background: "#0c0a18",
+            border: "1.5px solid rgba(212,175,55,0.25)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 15, fontWeight: 800, color: "#d4af37" }}>
+            {roomType === "group" ? <Users size={18} style={{ color: "rgba(212,175,55,0.7)" }} /> : roomName[0].toUpperCase()}
+          </div>
+          {roomType === "direct" && otherIsOnline && (
+            <div style={{ position: "absolute", bottom: 0, right: 0, width: 10, height: 10,
+              borderRadius: "50%", background: "#22c55e", border: "2px solid #030208",
+              animation: "online-pulse 2s infinite" }} />
+          )}
+        </div>
+
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: "#fff", overflow: "hidden",
+            textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{roomName}</div>
+          {roomType === "direct" && (
+            <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 1 }}>
+              <div style={{ width: 6, height: 6, borderRadius: "50%",
+                background: otherIsOnline ? "#22c55e" : "rgba(255,255,255,0.2)" }} />
+              <span style={{ fontSize: 11, color: otherIsOnline ? "rgba(34,197,94,0.8)" : "rgba(255,255,255,0.3)" }}>
+                {otherIsOnline ? "En línea ahora" : "Desconectado"}
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Messages */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "16px 16px 8px" }}>
         {messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full text-center">
-            <Send size={40} className="text-ceiba-200 mb-3" />
-            <p className="text-ceiba-400 text-sm">
-              {roomType === "group" ? "¡Sé el primero en escribir al grupo!" : "Envía tu primer mensaje"}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+            height: "100%", textAlign: "center", gap: 8 }}>
+            <Send size={36} style={{ color: "rgba(212,175,55,0.3)" }} />
+            <p style={{ fontSize: 14, color: "rgba(255,255,255,0.3)" }}>
+              {roomType === "group" ? "¡Sé el primero en escribir!" : "Envía tu primer mensaje"}
             </p>
           </div>
         )}
 
         {grouped.map(group => (
           <div key={group.date}>
-            <div className="flex items-center gap-3 my-4">
-              <div className="h-px bg-cream-300 flex-1" />
-              <span className="text-xs text-ceiba-400 font-medium px-2">{group.date}</span>
-              <div className="h-px bg-cream-300 flex-1" />
+            <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "16px 0" }}>
+              <div style={{ flex: 1, height: 0.5, background: "rgba(212,175,55,0.12)" }} />
+              <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(212,175,55,0.4)",
+                letterSpacing: "0.08em", textTransform: "uppercase" }}>{group.date}</span>
+              <div style={{ flex: 1, height: 0.5, background: "rgba(212,175,55,0.12)" }} />
             </div>
-            <div className="space-y-3">
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {group.messages.map((m, i) => {
-                const isMe = m.sender_user_id === userId;
+                const isMe = m.sender_user_id === myUserId;
                 const prev = group.messages[i - 1];
-                const showAvatar = !isMe && (!prev || prev.sender_user_id !== m.sender_user_id);
+                const showSender = !isMe && (!prev || prev.sender_user_id !== m.sender_user_id);
 
                 return (
-                  <div key={m.id} className={`flex items-end gap-2 ${isMe ? "flex-row-reverse" : "flex-row"}`}>
+                  <div key={m.id} style={{ display: "flex", alignItems: "flex-end", gap: 8,
+                    flexDirection: isMe ? "row-reverse" : "row" }}>
+                    {/* Avatar placeholder for alignment */}
                     {!isMe && (
-                      <div className="w-7 h-7 flex-shrink-0">
-                        {showAvatar && (
-                          <div className="w-7 h-7 rounded-full bg-ceiba-700 overflow-hidden flex items-center justify-center text-white text-xs font-bold">
+                      <div style={{ width: 28, height: 28, flexShrink: 0 }}>
+                        {showSender && (
+                          <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#1a1030",
+                            border: "1.5px solid rgba(212,175,55,0.2)",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            fontSize: 10, fontWeight: 800, color: "#d4af37", overflow: "hidden" }}>
                             {m.sender?.photo_path
-                              ? <img src={m.sender.photo_path} className="w-full h-full object-cover" alt="" />
+                              // eslint-disable-next-line @next/next/no-img-element
+                              ? <img src={m.sender.photo_path} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" />
                               : `${m.sender?.first_name?.[0] ?? ""}${m.sender?.last_name?.[0] ?? ""}`}
                           </div>
                         )}
                       </div>
                     )}
-                    <div className={`max-w-[72%] flex flex-col ${isMe ? "items-end" : "items-start"}`}>
-                      {showAvatar && !isMe && (
-                        <span className="text-xs text-ceiba-500 mb-1 ml-1">
+                    <div style={{ maxWidth: "72%", display: "flex", flexDirection: "column",
+                      alignItems: isMe ? "flex-end" : "flex-start" }}>
+                      {showSender && !isMe && (
+                        <span style={{ fontSize: 10, color: "rgba(212,175,55,0.5)", marginBottom: 3, marginLeft: 2 }}>
                           {m.sender?.first_name} {m.sender?.last_name}
                         </span>
                       )}
-                      <div className={`px-3 py-2 rounded-2xl text-sm leading-relaxed ${
-                        isMe ? "bg-ceiba-700 text-white rounded-br-sm" : "bg-white text-gray-900 shadow-sm rounded-bl-sm"
-                      }`}>
+                      <div style={{
+                        padding: "9px 13px", borderRadius: isMe ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
+                        fontSize: 14, lineHeight: 1.5,
+                        background: isMe ? "#c9a820" : "#0c0a18",
+                        color: isMe ? "#030208" : "#fff",
+                        fontWeight: isMe ? 600 : 400,
+                        borderTop: isMe ? "1.5px solid #f5e060" : "1px solid rgba(212,175,55,0.15)",
+                        borderBottom: isMe ? "3px solid #6a5600" : "2px solid rgba(0,0,0,0.4)",
+                        boxShadow: isMe ? "0 5px 0 #4a3c00, 0 8px 16px rgba(0,0,0,0.5)" : "0 3px 0 #000, 0 5px 12px rgba(0,0,0,0.4)",
+                      }}>
                         {m.body}
                       </div>
-                      <span className="text-[10px] text-ceiba-400 mt-1 mx-1">{formatTime(m.created_at)}</span>
+                      <span style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", marginTop: 3,
+                        marginLeft: isMe ? 0 : 4, marginRight: isMe ? 4 : 0 }}>
+                        {formatTime(m.created_at)}
+                      </span>
                     </div>
                   </div>
                 );
@@ -222,27 +268,44 @@ export default function ChatRoomPage() {
         <div ref={bottomRef} />
       </div>
 
-      <div className="bg-cream-50 border-t border-cream-300 px-4 py-3 flex-shrink-0">
-        <div className="flex items-end gap-2 max-w-2xl mx-auto">
+      {/* Input bar */}
+      <div style={{ padding: "10px 14px 28px", borderTop: "0.5px solid rgba(212,175,55,0.14)",
+        background: "rgba(3,2,8,0.98)", backdropFilter: "blur(10px)", flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 10 }}>
           <textarea
             ref={inputRef}
-            className="flex-1 border border-cream-300 rounded-2xl px-4 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ceiba-400 max-h-28 bg-cream-50 text-ceiba-900 placeholder-ceiba-400"
             rows={1}
-            placeholder={`Mensaje ${roomType === "group" ? "al grupo" : `a ${roomName.split(" ")[0]}`}...`}
+            placeholder={`Mensaje${roomType === "direct" ? ` a ${roomName.split(" ")[0]}` : " al grupo"}…`}
             value={text}
             onChange={e => setText(e.target.value)}
             onKeyDown={handleKeyDown}
+            style={{
+              flex: 1, background: "#0c0a18", border: "none", borderRadius: 16, padding: "10px 14px",
+              borderTop: "1px solid rgba(212,175,55,0.2)", borderBottom: "2px solid #000",
+              borderLeft: "1px solid rgba(212,175,55,0.1)", borderRight: "1px solid rgba(0,0,0,0.4)",
+              boxShadow: "0 4px 0 #000, 0 6px 12px rgba(0,0,0,0.5)",
+              color: "#fff", fontSize: 14, outline: "none", resize: "none",
+              maxHeight: 112, lineHeight: 1.5,
+            }}
           />
-          <button
-            onClick={send}
-            disabled={!text.trim() || sending}
-            className="w-10 h-10 bg-ceiba-700 hover:bg-ceiba-800 disabled:opacity-40 text-white rounded-full flex items-center justify-center transition-colors flex-shrink-0"
-          >
-            <Send size={16} />
+          <button onClick={send} disabled={!text.trim() || sending} style={{
+            width: 44, height: 44, borderRadius: "50%", flexShrink: 0, cursor: text.trim() ? "pointer" : "default",
+            background: text.trim() ? "#c9a820" : "#0c0a18",
+            borderTop: "2px solid " + (text.trim() ? "#f5e060" : "rgba(212,175,55,0.1)"),
+            borderBottom: "3px solid " + (text.trim() ? "#6a5600" : "#000"),
+            borderLeft: "1px solid rgba(255,240,100,0.3)", borderRight: "1px solid rgba(0,0,0,0.4)",
+            boxShadow: text.trim() ? "0 6px 0 #4a3c00, 0 10px 20px rgba(0,0,0,0.6)" : "0 3px 0 #000",
+            color: text.trim() ? "#030208" : "rgba(212,175,55,0.3)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            transition: "all 0.15s ease", opacity: sending ? 0.6 : 1,
+          }}>
+            <Send size={17} strokeWidth={2.5} />
           </button>
         </div>
-        <p className="text-center text-[10px] text-ceiba-400 mt-1">Enter para enviar · Shift+Enter para nueva línea</p>
+        <p style={{ textAlign: "center", fontSize: 10, color: "rgba(255,255,255,0.2)", marginTop: 6 }}>
+          Enter para enviar · Shift+Enter para nueva línea
+        </p>
       </div>
-    </main>
+    </div>
   );
 }

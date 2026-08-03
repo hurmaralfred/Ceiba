@@ -1,11 +1,12 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { TreePine, ArrowLeft, Users, MessageCircle, Plus, ChevronRight, AlertCircle } from "lucide-react";
+import { MessageCircle, Plus, ChevronRight, Users, ArrowLeft, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { CosmicNav } from "@/components/ui/cosmic";
+import { useFamilyPresence } from "@/hooks/useFamilyPresence";
 import toast from "react-hot-toast";
-import BottomNav from "@/components/BottomNav";
 
 interface Conversation {
   roomId: string;
@@ -39,167 +40,249 @@ function timeAgo(iso: string) {
 export default function ChatListPage() {
   const router = useRouter();
   const supabase = createClient();
+  const [myUserId, setMyUserId] = useState<string | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [familyMembers, setFamilyMembers] = useState<RosterMember[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState(false);
   const [showNewDM, setShowNewDM] = useState(false);
-  const [starting, setStarting] = useState(false);
+  const [starting, setStarting] = useState<string | null>(null);
 
-  useEffect(() => { init(); }, []);
+  const familyUserIds = familyMembers.map(m => m.user_id);
+  const onlineIds = useFamilyPresence(myUserId, familyUserIds);
 
-  const init = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { router.push("/auth/login"); return; }
-    await Promise.all([loadConversations(), loadFamilyMembers()]);
-    setLoading(false);
-  };
-
-  const loadConversations = async () => {
+  const loadConversations = useCallback(async () => {
     const res = await fetch("/api/chat/rooms");
-    if (!res.ok) { setLoadError(true); return; }
-    setLoadError(false);
+    if (!res.ok) return;
     const { conversations } = await res.json();
     setConversations(conversations || []);
-  };
+  }, []);
 
-  const loadFamilyMembers = async () => {
+  const loadFamilyMembers = useCallback(async () => {
     const res = await fetch("/api/family/roster");
     if (!res.ok) return;
     const { members } = await res.json();
     setFamilyMembers(members || []);
-  };
+  }, []);
 
-  const startDM = async (otherUserId: string) => {
+  useEffect(() => {
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { router.push("/auth/login"); return; }
+      setMyUserId(user.id);
+      await Promise.all([loadConversations(), loadFamilyMembers()]);
+      setLoading(false);
+    })();
+  }, []);
+
+  const startDM = async (member: RosterMember) => {
     if (starting) return;
-    setStarting(true);
+    setStarting(member.user_id);
     try {
       const res = await fetch("/api/chat/rooms", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ otherUserId }),
+        body: JSON.stringify({ otherUserId: member.user_id }),
       });
       const body = await res.json();
       if (!res.ok) { toast.error(body.error || "Error al abrir conversación"); return; }
       router.push(`/chat/${body.roomId}`);
     } finally {
-      setStarting(false);
+      setStarting(null);
     }
   };
 
   if (loading) return (
-    <div className="min-h-screen bg-cream-100 flex items-center justify-center">
-      <TreePine size={36} className="text-ceiba-600 animate-pulse" />
+    <div style={{ minHeight: "100vh", background: "#030208", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <MessageCircle size={36} style={{ color: "#d4af37", opacity: 0.6 }} />
     </div>
   );
 
+  const onlineFamily = familyMembers.filter(m => onlineIds.has(m.user_id));
+
   return (
-    <main className="min-h-screen bg-cream-100">
-      <nav className="bg-ceiba-800 text-white px-4 py-4 flex items-center gap-3 shadow-lg">
-        <Link href="/tree" className="text-ceiba-300 hover:text-white">
-          <ArrowLeft size={20} />
+    <div style={{ minHeight: "100vh", background: "#030208", color: "#fff", paddingBottom: 100 }}>
+      {/* Header */}
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "52px 20px 14px",
+        borderBottom: "0.5px solid rgba(212,175,55,0.14)",
+      }}>
+        <Link href="/home">
+          <div style={{ width: 36, height: 36, borderRadius: 11, background: "#0c0a1a",
+            borderTop: "1px solid rgba(212,175,55,0.28)", borderBottom: "2px solid #000",
+            borderLeft: "1px solid rgba(212,175,55,0.12)", borderRight: "1px solid rgba(0,0,0,0.6)",
+            boxShadow: "0 5px 0 #02010a, 0 7px 14px rgba(0,0,0,0.7)",
+            display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <ArrowLeft size={17} style={{ color: "rgba(212,175,55,0.75)" }} />
+          </div>
         </Link>
-        <div className="flex items-center gap-2 font-display text-lg font-bold flex-1">
-          <TreePine size={20} className="text-ceiba-300" /> Mensajes
-        </div>
+        <div style={{ fontSize: 15, fontWeight: 700, color: "#fff", letterSpacing: 0.3 }}>Mensajes</div>
         <button
-          onClick={() => setShowNewDM(!showNewDM)}
-          className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors"
-        >
-          <Plus size={15} /> Nuevo mensaje
+          onClick={() => setShowNewDM(v => !v)}
+          style={{ width: 36, height: 36, borderRadius: 11, background: "#0c0a1a",
+            borderTop: "1px solid rgba(212,175,55,0.28)", borderBottom: "2px solid #000",
+            borderLeft: "1px solid rgba(212,175,55,0.12)", borderRight: "1px solid rgba(0,0,0,0.6)",
+            boxShadow: "0 5px 0 #02010a, 0 7px 14px rgba(0,0,0,0.7)",
+            display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+          {showNewDM ? <X size={16} style={{ color: "rgba(212,175,55,0.75)" }} /> : <Plus size={17} style={{ color: "rgba(212,175,55,0.75)" }} />}
         </button>
-      </nav>
+      </div>
 
-      <div className="max-w-lg mx-auto pb-20">
-        {showNewDM && (
-          <div className="bg-cream-50 border-b border-cream-200 px-4 py-3">
-            <p className="text-xs font-semibold text-ceiba-600 mb-2">Enviar mensaje a:</p>
-            {familyMembers.length === 0 ? (
-              <p className="text-sm text-ceiba-400">Ningún familiar tiene Ceiba aún.</p>
-            ) : (
-              <div className="flex gap-2 flex-wrap">
-                {familyMembers.map(m => (
-                  <button
-                    key={m.person_id}
-                    disabled={starting}
-                    onClick={() => { setShowNewDM(false); startDM(m.user_id); }}
-                    className="flex items-center gap-2 bg-cream-200 hover:bg-ceiba-50 rounded-full px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50"
-                  >
-                    <div className="w-6 h-6 rounded-full bg-ceiba-700 overflow-hidden flex items-center justify-center text-white text-xs font-bold">
-                      {m.photo_path
-                        ? <img src={m.photo_path} className="w-full h-full object-cover" alt="" />
-                        : `${m.first_name[0] || "?"}${(m.last_name || "")[0] || ""}`}
+      {/* New DM sheet */}
+      {showNewDM && (
+        <div style={{ padding: "14px 16px", borderBottom: "0.5px solid rgba(212,175,55,0.1)", background: "#0a0818" }}>
+          <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase",
+            color: "rgba(212,175,55,0.5)", marginBottom: 12 }}>Enviar mensaje a:</p>
+          {familyMembers.length === 0 ? (
+            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)" }}>Ningún familiar tiene Ceiba aún.</p>
+          ) : (
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              {familyMembers.map(m => {
+                const isOnline = onlineIds.has(m.user_id);
+                const initials = `${m.first_name[0] ?? ""}${(m.last_name || "")[0] ?? ""}`.toUpperCase();
+                return (
+                  <button key={m.person_id} disabled={!!starting} onClick={() => startDM(m)}
+                    style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 12px 7px 7px",
+                      borderRadius: 100, background: "#0c0a1a", cursor: starting ? "wait" : "pointer",
+                      border: "1px solid rgba(212,175,55,0.2)", opacity: starting === m.user_id ? 0.6 : 1 }}>
+                    <div style={{ position: "relative", width: 26, height: 26, flexShrink: 0 }}>
+                      <div style={{ width: 26, height: 26, borderRadius: "50%", background: "#1a1030",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: 10, fontWeight: 800, color: "#d4af37", overflow: "hidden" }}>
+                        {m.photo_path
+                          // eslint-disable-next-line @next/next/no-img-element
+                          ? <img src={m.photo_path} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" />
+                          : initials}
+                      </div>
+                      {isOnline && (
+                        <div style={{ position: "absolute", bottom: 0, right: 0, width: 8, height: 8,
+                          borderRadius: "50%", background: "#22c55e", border: "1.5px solid #030208" }} />
+                      )}
                     </div>
-                    {m.first_name} {m.last_name}
+                    <span style={{ fontSize: 13, fontWeight: 600, color: "#fff" }}>{m.first_name}</span>
                   </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        <div className="divide-y divide-cream-200">
-          {conversations.map(conv => (
-            <Link
-              key={conv.roomId}
-              href={`/chat/${conv.roomId}`}
-              className="flex items-center gap-3 px-4 py-4 bg-cream-50 hover:bg-cream-200 transition-colors"
-            >
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 overflow-hidden ${
-                conv.type === "group" ? "bg-ceiba-700" : "bg-blue-600"
-              }`}>
-                {conv.type === "group"
-                  ? <Users size={22} className="text-white" />
-                  : conv.avatar
-                    ? <img src={conv.avatar} className="w-full h-full object-cover" alt="" />
-                    : <span className="text-white font-bold text-sm">{conv.name[0]}</span>
-                }
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <span className={`font-semibold text-ceiba-900 ${conv.unread ? "font-bold" : ""}`}>
-                    {conv.name}
-                  </span>
-                  {conv.lastAt && (
-                    <span className="text-xs text-ceiba-400 flex-shrink-0">{timeAgo(conv.lastAt)}</span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <p className={`text-sm truncate ${conv.unread ? "text-ceiba-900 font-medium" : "text-ceiba-500"}`}>
-                    {conv.lastMessage || "Sin mensajes aún"}
-                  </p>
-                  {conv.unread && <div className="w-2 h-2 rounded-full bg-ceiba-600 flex-shrink-0" />}
-                </div>
-              </div>
-              <ChevronRight size={16} className="text-cream-400 flex-shrink-0" />
-            </Link>
-          ))}
+                );
+              })}
+            </div>
+          )}
         </div>
+      )}
 
-        {loadError && (
-          <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-            <AlertCircle size={36} className="text-red-300 mb-3" />
-            <h3 className="font-bold text-gray-700 mb-1">No se pudieron cargar los mensajes</h3>
-            <p className="text-sm text-gray-400 mb-4">Revisa tu conexión e intenta de nuevo.</p>
-            <button onClick={loadConversations} className="btn-primary text-sm">Reintentar</button>
+      {/* Online now banner */}
+      {onlineFamily.length > 0 && (
+        <div style={{ padding: "12px 16px 10px", borderBottom: "0.5px solid rgba(212,175,55,0.08)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
+            <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e",
+              boxShadow: "0 0 0 0 rgba(34,197,94,0.4)", animation: "online-pulse 2s infinite" }} />
+            <style>{`@keyframes online-pulse{0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,0.4)}50%{box-shadow:0 0 0 5px rgba(34,197,94,0)}}`}</style>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(34,197,94,0.8)", letterSpacing: "0.1em",
+              textTransform: "uppercase" }}>En línea ahora</span>
           </div>
-        )}
+          <div style={{ display: "flex", gap: 8 }}>
+            {onlineFamily.map(m => (
+              <button key={m.user_id} onClick={() => startDM(m)} disabled={!!starting}
+                style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
+                  background: "none", border: "none", cursor: "pointer" }}>
+                <div style={{ position: "relative" }}>
+                  <div style={{ width: 42, height: 42, borderRadius: "50%", background: "#1a1030",
+                    border: "2px solid rgba(34,197,94,0.5)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 15, fontWeight: 800, color: "#d4af37", overflow: "hidden" }}>
+                    {m.photo_path
+                      // eslint-disable-next-line @next/next/no-img-element
+                      ? <img src={m.photo_path} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" />
+                      : `${m.first_name[0] ?? ""}${(m.last_name || "")[0] ?? ""}`.toUpperCase()}
+                  </div>
+                  <div style={{ position: "absolute", bottom: 1, right: 1, width: 10, height: 10,
+                    borderRadius: "50%", background: "#22c55e", border: "2px solid #030208",
+                    animation: "online-pulse 2s infinite" }} />
+                </div>
+                <span style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", fontWeight: 600 }}>{m.first_name}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
-        {!loadError && conversations.length === 0 && (
-          <div className="text-center py-20 px-6">
-            <MessageCircle size={48} className="text-gray-300 mx-auto mb-4" />
-            <h3 className="font-bold text-ceiba-600 mb-2">Sin conversaciones aún</h3>
-            <p className="text-ceiba-400 text-sm mb-6">Envía un mensaje a un familiar para comenzar.</p>
-            <button
-              onClick={() => setShowNewDM(true)}
-              className="btn-primary text-sm inline-flex items-center gap-1.5"
-            >
-              <Plus size={15} /> Nuevo mensaje
+      {/* Conversations list */}
+      <div style={{ padding: "8px 0" }}>
+        {conversations.length === 0 && !showNewDM ? (
+          <div style={{ textAlign: "center", padding: "60px 24px" }}>
+            <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#0c0a18",
+              display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px",
+              border: "1px solid rgba(212,175,55,0.18)" }}>
+              <MessageCircle size={26} style={{ color: "rgba(212,175,55,0.4)" }} />
+            </div>
+            <p style={{ fontSize: 16, fontWeight: 700, color: "#fff", marginBottom: 6 }}>Sin conversaciones</p>
+            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", marginBottom: 20, lineHeight: 1.6 }}>
+              Toca el + para enviar un mensaje a un familiar.
+            </p>
+            <button onClick={() => setShowNewDM(true)}
+              style={{ background: "#c9a820", border: "none", borderRadius: 12, padding: "10px 22px",
+                color: "#030208", fontWeight: 700, fontSize: 13, cursor: "pointer",
+                borderTop: "2px solid #f5e060", borderBottom: "3px solid #6a5600",
+                boxShadow: "0 6px 0 #4a3c00" }}>
+              Nuevo mensaje
             </button>
           </div>
+        ) : (
+          conversations.map(conv => {
+            const isOnline = conv.otherUserId ? onlineIds.has(conv.otherUserId) : false;
+            return (
+              <Link key={conv.roomId} href={`/chat/${conv.roomId}`} style={{ textDecoration: "none" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 18px",
+                  borderBottom: "0.5px solid rgba(212,175,55,0.06)",
+                  background: conv.unread ? "rgba(212,175,55,0.04)" : "transparent" }}>
+                  <div style={{ position: "relative", flexShrink: 0 }}>
+                    <div style={{ width: 48, height: 48, borderRadius: 16, background: "#0c0a18",
+                      border: "1.5px solid rgba(212,175,55,0.2)",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: 17, fontWeight: 800, color: "#d4af37", overflow: "hidden" }}>
+                      {conv.type === "group"
+                        ? <Users size={22} style={{ color: "rgba(212,175,55,0.7)" }} />
+                        : conv.avatar
+                          // eslint-disable-next-line @next/next/no-img-element
+                          ? <img src={conv.avatar} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" />
+                          : conv.name[0].toUpperCase()}
+                    </div>
+                    {isOnline && (
+                      <div style={{ position: "absolute", bottom: 1, right: 1, width: 11, height: 11,
+                        borderRadius: "50%", background: "#22c55e", border: "2px solid #030208",
+                        animation: "online-pulse 2s infinite" }} />
+                    )}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
+                      <span style={{ fontSize: 14, fontWeight: conv.unread ? 700 : 600, color: "#fff",
+                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {conv.name}
+                      </span>
+                      {conv.lastAt && (
+                        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", flexShrink: 0, marginLeft: 8 }}>
+                          {timeAgo(conv.lastAt)}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <p style={{ fontSize: 13, color: conv.unread ? "rgba(255,255,255,0.75)" : "rgba(255,255,255,0.35)",
+                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1,
+                        fontWeight: conv.unread ? 600 : 400, margin: 0 }}>
+                        {conv.lastMessage || "Sin mensajes aún"}
+                      </p>
+                      {conv.unread && (
+                        <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#d4af37", flexShrink: 0 }} />
+                      )}
+                    </div>
+                  </div>
+                  <ChevronRight size={16} style={{ color: "rgba(212,175,55,0.25)", flexShrink: 0 }} />
+                </div>
+              </Link>
+            );
+          })
         )}
       </div>
-      <BottomNav />
-    </main>
+
+      <CosmicNav />
+    </div>
   );
 }

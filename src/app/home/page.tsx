@@ -5,8 +5,9 @@ import Link from "next/link";
 import {
   Home, TreePine, BookOpen, Camera, User, Bell, Menu,
   Users, GitBranch, Image as ImageIcon, Gift, Send,
-  Trophy, ChevronRight, Cake, Sparkles, X,
+  Trophy, ChevronRight, Cake, Sparkles, X, MessageCircle,
 } from "lucide-react";
+import { useFamilyPresence } from "@/hooks/useFamilyPresence";
 import { createClient } from "@/lib/supabase/client";
 import { adaptGraph, type FamilyGraph } from "@/lib/graphAdapter";
 import { buildVisibleMembers } from "@/lib/visibleMembers";
@@ -19,6 +20,11 @@ interface FeedBirthday {
 interface FeedPhoto { id: string; url: string; caption: string | null; created_at: string; }
 interface FeedEvent { id: string; title: string; event_type: string; event_date: string; description: string | null; created_at: string; }
 type BirthdayWithDays = FeedBirthday & { days: number };
+interface FamilyRosterMember {
+  person_id: string; user_id: string;
+  first_name: string; last_name: string; photo_path: string | null;
+}
+
 interface KinshipSuggestion {
   id: string; score: number;
   evidence: Array<{ type: string; weight: number; detail: string }>;
@@ -191,10 +197,13 @@ export default function HomePage() {
   const [events,       setEvents]       = useState<FeedEvent[]>([]);
   const [suggestions,  setSuggestions]  = useState<KinshipSuggestion[]>([]);
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
+  const [roster,       setRoster]       = useState<FamilyRosterMember[]>([]);
+  const [myUserId,     setMyUserId]     = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { router.push("/auth/login"); return; }
+    setMyUserId(user.id);
 
     // Redirigir si hay datos sin confirmar (persona agregada por otro)
     const statusRes = await fetch("/api/profile/data-status");
@@ -203,10 +212,11 @@ export default function HomePage() {
       if (status.needsConfirmation) { router.replace("/confirmar-datos"); return; }
     }
 
-    const [graphRes, feedRes, sugRes] = await Promise.allSettled([
+    const [graphRes, feedRes, sugRes, rosterRes] = await Promise.allSettled([
       supabase.rpc("get_my_family_graph", { p_depth: 4 }),
       fetch("/api/feed"),
       fetch("/api/suggestions"),
+      fetch("/api/family/roster"),
     ]);
 
     if (graphRes.status === "fulfilled" && !graphRes.value.error) {
@@ -240,6 +250,16 @@ export default function HomePage() {
         }
       } catch {}
     }
+
+    if (rosterRes.status === "fulfilled") {
+      try {
+        const res = rosterRes.value;
+        if (res.ok) {
+          const { members } = await res.json();
+          setRoster(members ?? []);
+        }
+      } catch {}
+    }
   }, [router, supabase]);
 
   const handleDismiss = useCallback(async (id: string) => {
@@ -250,6 +270,10 @@ export default function HomePage() {
   useEffect(() => { load(); }, [load]);
 
   // ── Datos derivados ───────────────────────────────────────────────────────
+  const rosterUserIds = roster.map(m => m.user_id);
+  const onlineIds = useFamilyPresence(myUserId, rosterUserIds);
+  const onlineFamily = roster.filter(m => onlineIds.has(m.user_id));
+
   const allBirthdays: BirthdayWithDays[] = birthdays.map(b => ({ ...b, days: daysUntil(b.birth_date) }));
   const todayBirthday    = allBirthdays.find(b => b.days === 0) ?? null;
   const upcomingBirthday = !todayBirthday
@@ -368,6 +392,43 @@ export default function HomePage() {
         </div>
       </div>
 
+      {/* ── EN LÍNEA AHORA ──────────────────────────────────────────────── */}
+      {onlineFamily.length > 0 && (
+        <div style={{ padding: "14px 18px", borderBottom: "0.5px solid rgba(212,175,55,0.1)" }}>
+          <style>{`@keyframes home-online-pulse{0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,0.5)}50%{box-shadow:0 0 0 5px rgba(34,197,94,0)}}`}</style>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
+            <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e",
+              animation: "home-online-pulse 2s infinite" }} />
+            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em",
+              textTransform: "uppercase", color: "rgba(34,197,94,0.75)" }}>En línea ahora</span>
+          </div>
+          <div style={{ display: "flex", gap: 12 }}>
+            {onlineFamily.slice(0, 6).map(m => (
+              <Link key={m.user_id} href="/chat" style={{ textDecoration: "none",
+                display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
+                <div style={{ position: "relative" }}>
+                  <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#1a1030",
+                    border: "2px solid rgba(34,197,94,0.5)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 15, fontWeight: 800, color: "#d4af37", overflow: "hidden" }}>
+                    {m.photo_path
+                      // eslint-disable-next-line @next/next/no-img-element
+                      ? <img src={m.photo_path} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" />
+                      : `${m.first_name[0] ?? ""}${(m.last_name || "")[0] ?? ""}`.toUpperCase()}
+                  </div>
+                  <div style={{ position: "absolute", bottom: 1, right: 1, width: 11, height: 11,
+                    borderRadius: "50%", background: "#22c55e", border: "2px solid #030208",
+                    animation: "home-online-pulse 2s infinite" }} />
+                </div>
+                <span style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", fontWeight: 600,
+                  maxWidth: 44, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                  textAlign: "center" }}>{m.first_name}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Divisor dorado */}
       <div style={{ height: 0.5,
         background: "linear-gradient(90deg,transparent,rgba(212,175,55,0.3),transparent)",
@@ -442,6 +503,41 @@ export default function HomePage() {
             </div>
           </Link>
         </div>
+
+        {/* Mensajes — ancho completo, índigo */}
+        <Link href="/chat">
+          <div style={{ ...s3dCard("#04050f","100,120,240","#010108"), marginBottom: 9 }}>
+            <div style={{ position: "absolute", top: 0, left: "25%", right: "25%", height: 1,
+              background: "rgba(100,120,240,0.38)" }} />
+            <div style={{ padding: "13px 14px", display: "flex", alignItems: "center", gap: 12, position: "relative" }}>
+              <div style={{ width: 40, height: 40, borderRadius: 13, background: "#060718",
+                borderTop: "1.5px solid rgba(100,120,240,0.48)", borderBottom: "2px solid #010108",
+                borderLeft: "1px solid rgba(100,120,240,0.2)", borderRight: "1px solid rgba(0,0,0,0.55)",
+                boxShadow: "0 4px 0 #010108, 0 6px 10px rgba(0,0,0,0.65)",
+                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <MessageCircle size={19} style={{ color: "#6478f0" }} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#fff", marginBottom: 2 }}>Mensajes familiares</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                  {onlineFamily.length > 0 && (
+                    <>
+                      <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e",
+                        animation: "home-online-pulse 2s infinite" }} />
+                      <span style={{ fontSize: 10, color: "rgba(34,197,94,0.7)" }}>
+                        {onlineFamily.length} familiar{onlineFamily.length > 1 ? "es" : ""} en línea
+                      </span>
+                    </>
+                  )}
+                  {onlineFamily.length === 0 && (
+                    <span style={{ fontSize: 10, color: "rgba(100,120,240,0.6)" }}>Chat privado familiar</span>
+                  )}
+                </div>
+              </div>
+              <ChevronRight size={18} style={{ color: "rgba(100,120,240,0.5)" }} />
+            </div>
+          </div>
+        </Link>
 
         {/* Invitar — ancho completo, azul */}
         <Link href="/invitar">
