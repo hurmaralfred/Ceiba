@@ -3,7 +3,7 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import lazyLoad from "next/dynamic";
-import { TreePine, MapPin, Users, Share2, LogOut, User, Send, List, GitFork, Plus, X, Pencil, Map as MapIcon, Image, Calendar, MessageCircle, Megaphone, Camera, AlertTriangle } from "lucide-react";
+import { TreePine, MapPin, Users, Share2, LogOut, User, Send, List, GitFork, Plus, X, Pencil, Map as MapIcon, Image, Calendar, MessageCircle, Megaphone, Camera, AlertTriangle, Search } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Profile, FamilyMember, RelationType, RELATION_LABELS } from "@/lib/types";
 import { adaptGraph, buildAddRelativeRequest, isAddRelativeSupported, relationRequiresConnector, type FamilyGraph } from "@/lib/graphAdapter";
@@ -118,6 +118,7 @@ function TreePageContent() {
   const [checkingEditPermission, setCheckingEditPermission] = useState(false);
   const [pendingCollabRequests, setPendingCollabRequests] = useState<Array<{ id: string; request_type: string; requester_user_id: string }>>([]);
   const [processingRequestId, setProcessingRequestId] = useState<string | null>(null);
+  const [showSearch, setShowSearch] = useState(false);
 
   // El contador global es informativo: nunca debe impedir que el árbol
   // cargue. Si la RPC falla se registra en consola y se oculta la línea,
@@ -736,6 +737,16 @@ console.log("⑤ Datos cargados");
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <InstallBanner />
 
+          {/* Buscar */}
+          <button onClick={() => setShowSearch(true)} style={{
+            width: 34, height: 34, borderRadius: 10, background: "#0c0a1a", border: "none",
+            borderTop: "1px solid rgba(212,175,55,0.28)", borderBottom: "2px solid #000",
+            boxShadow: "0 4px 0 #02010a, 0 6px 12px rgba(0,0,0,0.6)",
+            display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
+          }}>
+            <Search size={15} style={{ color: "rgba(212,175,55,0.7)" }} />
+          </button>
+
           {/* Invitar */}
           <Link href="/invitar" style={{ textDecoration: "none" }}>
             <div style={{
@@ -818,7 +829,10 @@ console.log("⑤ Datos cargados");
         </div>
       )}
 
-      <div style={{ maxWidth: 896, margin: "0 auto", padding: view === "graph" ? "0 12px 16px" : "0 12px 96px" }}>
+      <div style={view === "graph"
+        ? { padding: 0 }
+        : { maxWidth: 896, margin: "0 auto", padding: "0 14px 96px" }
+      }>
         {/* SLIM profile strip — hidden in graph view */}
         {view !== "graph" && profile && (
           <div style={{ marginBottom: 12, paddingTop: 12 }}>
@@ -923,7 +937,7 @@ console.log("⑤ Datos cargados");
               <>
                 <TreeErrorBoundary>
                   {UNIVERSE_RENDERER_ENABLED ? (
-                    <div style={{ position: "relative", height: "calc(100vh - 140px)", borderRadius: 16, overflow: "hidden", background: "#07111c" }}>
+                    <div style={{ position: "relative", height: "calc(100svh - 80px)", overflow: "hidden", background: "#07111c" }}>
                       <FamilyUniverseComponent
                         profile={profile}
                         members={members}
@@ -1490,6 +1504,141 @@ console.log("⑤ Datos cargados");
 
       <CosmicNav />
 
+      {showSearch && <SearchModal onClose={() => setShowSearch(false)} />}
+
+    </div>
+  );
+}
+
+// ── Buscador global ───────────────────────────────────────────────────────────
+function SearchModal({ onClose }: { onClose: () => void }) {
+  const [q, setQ] = useState("");
+  const [results, setResults] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (q.length < 2) { setResults([]); return; }
+    const t = setTimeout(async () => {
+      setLoading(true);
+      const res = await fetch(`/api/people/search?q=${encodeURIComponent(q)}`);
+      if (res.ok) { const { results: r } = await res.json(); setResults(r ?? []); }
+      setLoading(false);
+    }, 350);
+    return () => clearTimeout(t);
+  }, [q]);
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 200,
+      background: "rgba(3,2,8,0.92)", backdropFilter: "blur(16px)",
+      display: "flex", flexDirection: "column",
+    }}>
+      {/* Header */}
+      <div style={{
+        padding: "52px 16px 12px",
+        borderBottom: "0.5px solid rgba(212,175,55,0.18)",
+        display: "flex", alignItems: "center", gap: 10,
+      }}>
+        <div style={{ flex: 1, position: "relative" }}>
+          <Search size={16} style={{
+            position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)",
+            color: "rgba(212,175,55,0.5)", pointerEvents: "none",
+          }} />
+          <input
+            autoFocus
+            value={q}
+            onChange={e => setQ(e.target.value)}
+            placeholder="Buscar persona en Ceiba…"
+            style={{
+              width: "100%", background: "#0c0a1a", border: "none",
+              borderTop: "1px solid rgba(212,175,55,0.28)",
+              borderLeft: "1px solid rgba(212,175,55,0.12)",
+              borderBottom: "2px solid #000",
+              borderRight: "1px solid rgba(0,0,0,0.5)",
+              boxShadow: "0 4px 0 #02010a, 0 6px 12px rgba(0,0,0,0.5)",
+              borderRadius: 12, padding: "11px 12px 11px 38px",
+              color: "#fff", fontSize: 15, outline: "none",
+              boxSizing: "border-box",
+            }}
+          />
+        </div>
+        <button onClick={onClose} style={{
+          width: 36, height: 36, borderRadius: 10, background: "#0c0a1a", border: "none",
+          borderTop: "1px solid rgba(212,175,55,0.2)", borderBottom: "2px solid #000",
+          boxShadow: "0 4px 0 #02010a", display: "flex", alignItems: "center",
+          justifyContent: "center", cursor: "pointer", flexShrink: 0,
+        }}>
+          <X size={16} style={{ color: "rgba(212,175,55,0.6)" }} />
+        </button>
+      </div>
+
+      {/* Results */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px 100px" }}>
+        {loading && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {[1,2,3].map(i => (
+              <div key={i} style={{ height: 64, borderRadius: 14, background: "#0c0a18", opacity: 0.4 }} />
+            ))}
+          </div>
+        )}
+
+        {!loading && q.length >= 2 && results.length === 0 && (
+          <div style={{ textAlign: "center", padding: "60px 0", color: "rgba(255,255,255,0.3)", fontSize: 14 }}>
+            Sin resultados para "{q}"
+          </div>
+        )}
+
+        {!loading && q.length < 2 && (
+          <div style={{ textAlign: "center", padding: "60px 0", color: "rgba(212,175,55,0.3)", fontSize: 13 }}>
+            Escribe al menos 2 letras para buscar
+          </div>
+        )}
+
+        {!loading && results.length > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {results.map((p: any) => {
+              const name = [p.first_name, p.first_surname, p.second_surname].filter(Boolean).join(" ");
+              const initials = [p.first_name, p.first_surname].filter(Boolean).map((w: string) => w[0]).join("").toUpperCase();
+              const detail = [p.birth_city, p.birth_country].filter(Boolean).join(", ");
+              const year = p.birth_date ? new Date(p.birth_date).getFullYear() : null;
+              return (
+                <Link key={p.id} href={`/persona/${p.id}`} onClick={onClose} style={{ textDecoration: "none" }}>
+                  <div style={{
+                    background: "#0c0a18", borderRadius: 14, padding: "12px 13px",
+                    borderTop: "1px solid rgba(212,175,55,0.18)",
+                    borderLeft: "1px solid rgba(212,175,55,0.08)",
+                    borderBottom: "2px solid #000",
+                    boxShadow: "0 5px 0 #040300, 0 8px 16px rgba(0,0,0,0.7)",
+                    display: "flex", alignItems: "center", gap: 12,
+                  }}>
+                    <div style={{
+                      width: 42, height: 42, borderRadius: 12, flexShrink: 0,
+                      background: "rgba(212,175,55,0.1)", border: "1.5px solid rgba(212,175,55,0.3)",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: 15, fontWeight: 800, color: "#d4af37",
+                    }}>{initials}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: 14, fontWeight: 700, color: "#fff", margin: 0,
+                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</p>
+                      {p.family_name && (
+                        <p style={{ fontSize: 11, color: "rgba(212,175,55,0.55)", margin: "2px 0 0",
+                          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {p.family_name}
+                        </p>
+                      )}
+                      {(detail || year) && (
+                        <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", margin: "1px 0 0" }}>
+                          {[year, detail].filter(Boolean).join(" · ")}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
