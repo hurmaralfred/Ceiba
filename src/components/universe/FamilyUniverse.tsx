@@ -26,7 +26,7 @@ const CARD_CSS = `
 interface CardAnchor { x: number; y: number; below: boolean }
 
 function UniversePersonCard({
-  node, anchor, onClose, onRefocus, onEdit, onInvite,
+  node, anchor, onClose, onRefocus, onEdit, onInvite, onAdd,
 }: {
   node: UniverseNode
   anchor: CardAnchor
@@ -34,6 +34,7 @@ function UniversePersonCard({
   onRefocus?: (id: string) => void
   onEdit?: (memberId: string) => void
   onInvite?: (memberId: string) => void
+  onAdd?: () => void
 }) {
   const safeX = Math.max(108, Math.min(anchor.x, (typeof window !== 'undefined' ? window.innerWidth : 390) - 108))
 
@@ -94,6 +95,9 @@ function UniversePersonCard({
         )}
         {node.memberId && !node.isJoined && onInvite && (
           <CardBtn label="Invitar" onClick={() => { onClose(); onInvite(node.memberId!) }} />
+        )}
+        {onAdd && (
+          <CardBtn label="+ Familiar" onClick={() => { onClose(); onAdd() }} />
         )}
       </div>
     </div>
@@ -164,6 +168,10 @@ const UNIVERSE_CSS = `
 @keyframes universeEmptyFadeIn {
   from { opacity: 0; transform: translateX(-50%) translateY(8px); }
   to   { opacity: 1; transform: translateX(-50%) translateY(0);   }
+}
+@keyframes universeTapHintOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
   [style*="universeSway"],
@@ -237,7 +245,19 @@ export function FamilyUniverse({
   const [selectedNode,  setSelectedNode]  = useState<UniverseNode | null>(null)
   const [cardAnchor,    setCardAnchor]    = useState<CardAnchor | null>(null)
   const [containerSize, setContainerSize] = useState({ w: 375, h: 812 })
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
+  const [expandedIds,   setExpandedIds]   = useState<Set<string>>(new Set())
+  const [showTapHint,   setShowTapHint]   = useState(() => {
+    try { return !localStorage.getItem('ceiba_tap_hint_seen') } catch { return false }
+  })
+
+  useEffect(() => {
+    if (!showTapHint) return
+    const t = setTimeout(() => {
+      setShowTapHint(false)
+      try { localStorage.setItem('ceiba_tap_hint_seen', '1') } catch { /* */ }
+    }, 4000)
+    return () => clearTimeout(t)
+  }, [showTapHint])
 
   // Reset expansion whenever the focal person changes
   useEffect(() => { setExpandedIds(new Set()) }, [focalId])
@@ -346,7 +366,7 @@ export function FamilyUniverse({
               showExpand={
                 node.isFocal
                   ? (expandedIds.size > 0 || (hiddenCount > 0 && !maxExpansionReached)) && !selectedNode
-                  : hiddenCount > 0 && !maxExpansionReached && !selectedNode
+                  : hiddenCount > 0 && !maxExpansionReached && !selectedNode && expandedIds.size === 0
               }
               isExpanded={node.isFocal && expandedIds.size > 0}
               onExpand={node.isFocal && expandedIds.size > 0 ? handleCollapse : handleExpand}
@@ -390,6 +410,34 @@ export function FamilyUniverse({
           </svg>
           Volver a {profile.first_name}
         </button>
+
+        {/* First-visit hint — tap avatar to re-center */}
+        {showTapHint && members.length > 0 && (
+          <div style={{
+            position: 'absolute',
+            bottom: 90,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            pointerEvents: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '6px 14px',
+            borderRadius: 20,
+            background: 'rgba(12,10,24,0.82)',
+            border: '1px solid rgba(212,175,55,0.22)',
+            backdropFilter: 'blur(8px)',
+            animation: 'universeEmptyFadeIn 0.5s ease both, universeTapHintOut 0.5s ease 3.5s both',
+            whiteSpace: 'nowrap',
+          }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+              <path d="M12 5v14M5 12l7 7 7-7" stroke="#d4af37" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.65)', letterSpacing: '0.02em' }}>
+              Toca un familiar para ver opciones y re-centrar
+            </span>
+          </div>
+        )}
 
         {/* Empty-state hint — shown when the user has no family members yet */}
         {members.length === 0 && (
@@ -459,6 +507,7 @@ export function FamilyUniverse({
             onRefocus={handleRefocus}
             onEdit={onEditMember}
             onInvite={onInviteMember}
+            onAdd={onAddMember}
           />
         )}
       </div>
@@ -525,7 +574,7 @@ function AvatarSlot({
         onClick={node.isFocal ? undefined : handleClick}
         highlighted={selected}
         hitAreaScale={node.scale * viewScale}
-        labelVisible={node.relevanceTier <= 1}
+        labelVisible={node.relevanceTier <= 2}
       />
       {showExpand && (
         <button
