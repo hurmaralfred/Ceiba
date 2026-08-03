@@ -735,8 +735,6 @@ console.log("⑤ Datos cargados");
 
         {/* Right actions */}
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <InstallBanner />
-
           {/* Buscar */}
           <button onClick={() => setShowSearch(true)} style={{
             width: 34, height: 34, borderRadius: 10, background: "#0c0a1a", border: "none",

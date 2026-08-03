@@ -2,10 +2,10 @@
   "name": "Ceiba – Conecta tu familia",
   "short_name": "Ceiba",
   "description": "Descubre y conecta con tus familiares, cerca o lejos.",
-  "start_url": "/tree",
+  "start_url": "/home",
   "display": "standalone",
-  "background_color": "#f9fafb",
-  "theme_color": "#15803d",
+  "background_color": "#030208",
+  "theme_color": "#030208",
   "orientation": "portrait",
   "icons": [
     {
