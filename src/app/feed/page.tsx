@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Cake, Camera, Calendar, RefreshCw, Megaphone, AlertCircle, Bell, TreePine } from "lucide-react";
+import { Cake, Camera, Calendar, RefreshCw, Megaphone, AlertCircle, Bell, Sparkles } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { CosmicNav, CosmicHeader, s3dCard, C } from "@/components/ui/cosmic";
 
@@ -38,19 +38,38 @@ const EVENT_LABEL: Record<string, string> = {
   graduation: "Graduación", reunion: "Reunión", anniversary: "Aniversario", other: "Evento",
 };
 
+interface KinshipSuggestion {
+  id: string;
+  score: number;
+  evidence: Array<{ type: string; weight: number; detail: string }>;
+  person_a: { id: string; first_name: string; first_surname: string; second_surname?: string } | null;
+  person_b: { id: string; first_name: string; first_surname: string; second_surname?: string } | null;
+  space_a: { id: string; name: string } | null;
+  space_b: { id: string; name: string } | null;
+}
+
 export default function FeedPage() {
   const router = useRouter();
   const supabase = createClient();
   const [items, setItems] = useState<FeedItem[]>([]);
+  const [suggestions, setSuggestions] = useState<KinshipSuggestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [feedError, setFeedError] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
 
   const loadFeed = useCallback(async () => {
-    const res = await fetch("/api/feed");
-    if (!res.ok) { setFeedError(true); return; }
+    const [feedRes, sugRes] = await Promise.all([
+      fetch("/api/feed"),
+      fetch("/api/suggestions"),
+    ]);
+    if (!feedRes.ok) { setFeedError(true); return; }
     setFeedError(false);
-    const { birthdays, photos, broadcasts, events } = await res.json();
+    const { birthdays, photos, broadcasts, events } = await feedRes.json();
+    if (sugRes.ok) {
+      const { suggestions: sug } = await sugRes.json();
+      setSuggestions(sug ?? []);
+    }
     const feedItems: FeedItem[] = [];
     const now = new Date();
 
@@ -124,6 +143,10 @@ export default function FeedPage() {
   }, []);
 
   const handleRefresh = async () => { setRefreshing(true); await loadFeed(); setRefreshing(false); };
+  const handleDismiss = async (id: string) => {
+    setDismissedIds(prev => new Set([...prev, id]));
+    await fetch(`/api/suggestions/${id}/dismiss`, { method: "POST" });
+  };
 
   return (
     <div style={{ minHeight: "100vh", background: C.bg, color: "#fff", paddingBottom: 100 }}>
@@ -172,6 +195,9 @@ export default function FeedPage() {
               if (todayBdays.length === 0) return null;
               return <BirthdayHeroCard birthdays={todayBdays} />;
             })()}
+            {suggestions.filter(s => !dismissedIds.has(s.id)).map(s => (
+              <KinshipCard key={s.id} suggestion={s} onDismiss={handleDismiss} />
+            ))}
             {items.filter(i => !(i.type === "birthday" && i.isToday)).map(item => (
               <FeedCard key={item.id} item={item} />
             ))}
@@ -254,6 +280,114 @@ function FeedCard({ item }: { item: FeedItem }) {
   );
   if (item.linkTo) return <Link href={item.linkTo}>{inner}</Link>;
   return inner;
+}
+
+const EVIDENCE_LABEL: Record<string, string> = {
+  surname: "Apellido compartido",
+  birth_city: "Misma ciudad",
+  birth_decade: "Misma generación",
+  birth_country: "Mismo país",
+};
+
+function KinshipCard({ suggestion, onDismiss }: { suggestion: KinshipSuggestion; onDismiss: (id: string) => void }) {
+  const { id, score, evidence, person_a, person_b, space_a, space_b } = suggestion;
+  if (!person_a || !person_b) return null;
+  const nameA = `${person_a.first_name} ${person_a.first_surname}`.trim();
+  const nameB = `${person_b.first_name} ${person_b.first_surname}`.trim();
+  const pct = Math.round(score * 100);
+  const topEvidence = evidence[0];
+
+  return (
+    <div style={{
+      ...s3dCard("#0c0a18", "100,200,120", "#000c04"),
+      padding: "14px 14px 12px", position: "relative", overflow: "hidden",
+    }}>
+      {/* top shine */}
+      <div style={{ position: "absolute", top: 0, left: "18%", right: "18%", height: 1,
+        background: "rgba(100,200,120,0.5)" }} />
+      <div style={{ position: "absolute", inset: 0, pointerEvents: "none",
+        background: "radial-gradient(circle at 85% 15%, rgba(100,200,120,0.08) 0%, transparent 50%)" }} />
+
+      {/* header */}
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
+        <Sparkles size={13} style={{ color: "#64c878" }} />
+        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em",
+          textTransform: "uppercase", color: "rgba(100,200,120,0.7)" }}>
+          Posible conexión familiar
+        </span>
+        <span style={{ marginLeft: "auto", fontSize: 11, fontWeight: 700,
+          color: "#64c878", background: "rgba(100,200,120,0.12)",
+          padding: "2px 8px", borderRadius: 20 }}>
+          {pct}% coincidencia
+        </span>
+      </div>
+
+      {/* people row */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+        <PersonChip name={nameA} spaceName={space_a?.name} accentRgb="100,200,120" />
+        <div style={{ flexShrink: 0, color: "rgba(100,200,120,0.5)", fontSize: 16 }}>—</div>
+        <div style={{ width: 26, height: 26, borderRadius: "50%", background: "rgba(100,200,120,0.15)",
+          border: "1px dashed rgba(100,200,120,0.5)", display: "flex",
+          alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <span style={{ fontSize: 11, fontWeight: 800, color: "rgba(100,200,120,0.6)" }}>?</span>
+        </div>
+        <div style={{ flexShrink: 0, color: "rgba(100,200,120,0.5)", fontSize: 16 }}>—</div>
+        <PersonChip name={nameB} spaceName={space_b?.name} accentRgb="100,200,120" />
+      </div>
+
+      {/* evidence badge */}
+      {topEvidence && (
+        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", marginBottom: 10 }}>
+          {EVIDENCE_LABEL[topEvidence.type] || topEvidence.type}:&nbsp;
+          <span style={{ color: "#64c878", fontWeight: 600 }}>{topEvidence.detail}</span>
+          {evidence.length > 1 && (
+            <span style={{ color: "rgba(100,200,120,0.4)" }}> +{evidence.length - 1} más</span>
+          )}
+        </div>
+      )}
+
+      {/* actions */}
+      <div style={{ display: "flex", gap: 8 }}>
+        <Link href={`/sugerencias/${id}`} style={{ textDecoration: "none", flex: 1 }}>
+          <button style={{ width: "100%", padding: "8px 0", borderRadius: 10, cursor: "pointer",
+            background: "#18a836", border: "none",
+            borderTop: "1.5px solid rgba(100,230,130,0.5)", borderBottom: "2.5px solid #0a5c1c",
+            boxShadow: "0 5px 0 #073d13, 0 8px 16px rgba(0,0,0,0.6)",
+            color: "#fff", fontSize: 12, fontWeight: 700 }}>
+            Ver detalle y confirmar
+          </button>
+        </Link>
+        <button onClick={() => onDismiss(id)}
+          style={{ padding: "8px 14px", borderRadius: 10, cursor: "pointer",
+            background: "#0c0a18", border: "1px solid rgba(255,255,255,0.1)",
+            color: "rgba(255,255,255,0.35)", fontSize: 12, fontWeight: 600 }}>
+          No es familia
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function PersonChip({ name, spaceName, accentRgb }: { name: string; spaceName?: string; accentRgb: string }) {
+  const initials = name.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 7, flex: 1, minWidth: 0 }}>
+      <div style={{ width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
+        background: `rgba(${accentRgb},0.15)`, border: `1.5px solid rgba(${accentRgb},0.4)`,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: 11, fontWeight: 800, color: `rgb(${accentRgb})` }}>
+        {initials}
+      </div>
+      <div style={{ minWidth: 0 }}>
+        <p style={{ fontSize: 12, fontWeight: 700, color: "#fff", margin: 0,
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</p>
+        {spaceName && (
+          <p style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", margin: 0,
+            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{spaceName}</p>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function EmptyFeed() {
