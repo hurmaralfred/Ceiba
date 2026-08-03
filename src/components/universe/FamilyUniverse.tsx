@@ -454,6 +454,7 @@ function GhostSlots({
         return (
           <div
             key={`ghost-${node.id}`}
+            data-avatar="true"
             onClick={e => { e.stopPropagation(); onExpand() }}
             style={{
               position: 'absolute',
