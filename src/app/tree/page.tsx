@@ -717,107 +717,135 @@ console.log("⑤ Datos cargados");
   const pendingMembers = visibleMembers.filter(m => !m.profile_id);
 
   return (
-    <div className="min-h-screen bg-cream-100">
-      {/* Nav */}
-      <nav className="bg-ceiba-900 text-white px-6 py-4 flex items-center justify-between shadow-lg" style={{borderBottom:"2px solid #4a6342"}}>
-        <Link href="/tree" className="flex items-center gap-2 font-display text-xl font-bold">
-          <TreePine size={24} className="text-ceiba-300" /> Ceiba
+    <div style={{ minHeight: "100vh", background: "#030208" }}>
+      {/* Header galaxy */}
+      <nav style={{
+        background: "rgba(3,2,8,0.97)", backdropFilter: "blur(12px)",
+        borderBottom: "0.5px solid rgba(212,175,55,0.18)",
+        padding: "52px 18px 12px",
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        position: "sticky", top: 0, zIndex: 40,
+      }}>
+        {/* Logo */}
+        <Link href="/tree" style={{ display: "flex", alignItems: "center", gap: 7, textDecoration: "none" }}>
+          <TreePine size={20} style={{ color: "#d4af37" }} />
+          <span style={{ fontSize: 17, fontWeight: 800, color: "#d4af37", letterSpacing: "0.02em" }}>Ceiba</span>
         </Link>
-        <div className="flex items-center gap-3">
+
+        {/* Right actions */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <InstallBanner />
-          <Link href="/map" className="flex items-center gap-1 text-ceiba-200 hover:text-white text-sm transition-colors">
-            <MapPin size={16} /> Mapa
+
+          {/* Invitar */}
+          <Link href="/invitar" style={{ textDecoration: "none" }}>
+            <div style={{
+              display: "flex", alignItems: "center", gap: 5,
+              background: "#c9a820", borderRadius: 10, padding: "6px 12px",
+              borderTop: "1.5px solid #f5e060", borderBottom: "2.5px solid #6a5600",
+              boxShadow: "0 5px 0 #4a3c00, 0 8px 16px rgba(0,0,0,0.6)",
+              fontSize: 12, fontWeight: 700, color: "#030208",
+            }}>
+              <Send size={13} /> Invitar
+            </div>
           </Link>
-          <Link href="/photos" className="flex items-center gap-1 text-ceiba-200 hover:text-white text-sm transition-colors">
-            <Image size={16} /> Fotos
-          </Link>
-          <Link href="/events" className="flex items-center gap-1 text-ceiba-200 hover:text-white text-sm transition-colors">
-            <Calendar size={16} /> Historia
-          </Link>
-          <Link href="/chat" className="flex items-center gap-1 text-ceiba-200 hover:text-white text-sm transition-colors">
-            <MessageCircle size={16} /> Chat
-          </Link>
-          <Link href="/invitar" className="flex items-center gap-1 bg-ceiba-600 hover:bg-ceiba-500 text-white text-sm font-semibold px-3 py-1 rounded-lg transition-colors">
-            <Send size={15} /> Invitar
-          </Link>
-          <button onClick={shareTree} className="flex items-center gap-1 text-ceiba-200 hover:text-white text-sm transition-colors">
-            <Share2 size={16} /> Compartir
+
+          {/* Compartir */}
+          <button onClick={shareTree} style={{
+            width: 34, height: 34, borderRadius: 10, background: "#0c0a1a", border: "none",
+            borderTop: "1px solid rgba(212,175,55,0.28)", borderBottom: "2px solid #000",
+            boxShadow: "0 4px 0 #02010a, 0 6px 12px rgba(0,0,0,0.6)",
+            display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
+          }}>
+            <Share2 size={15} style={{ color: "rgba(212,175,55,0.7)" }} />
           </button>
-          <Link href="/settings" className="flex items-center gap-1 text-ceiba-200 hover:text-white text-sm transition-colors">
-            <User size={16} />
+
+          {/* Perfil */}
+          <Link href="/profile">
+            <div style={{
+              width: 34, height: 34, borderRadius: 10, background: "#0c0a1a",
+              borderTop: "1px solid rgba(212,175,55,0.28)", borderBottom: "2px solid #000",
+              boxShadow: "0 4px 0 #02010a, 0 6px 12px rgba(0,0,0,0.6)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              <User size={15} style={{ color: "rgba(212,175,55,0.7)" }} />
+            </div>
           </Link>
+
+          {/* SOS */}
           <button
             onClick={triggerSOS}
             disabled={sosSending}
-            className={`flex items-center gap-1 text-sm font-bold px-3 py-1 rounded-lg transition-colors ${
-              sosActive
-                ? "bg-red-700 text-white animate-pulse"
-                : "bg-red-500 hover:bg-red-400 text-white"
-            }`}
             title="Enviar alerta SOS a tu familia"
+            style={{
+              width: 34, height: 34, borderRadius: 10, border: "none", cursor: "pointer",
+              background: sosActive ? "#7f1d1d" : "#dc2626",
+              borderTop: "1px solid rgba(255,100,100,0.4)", borderBottom: "2px solid #7f1d1d",
+              boxShadow: "0 4px 0 #450a0a, 0 6px 12px rgba(0,0,0,0.6)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              animation: sosActive ? "pulse 2s infinite" : "none",
+            }}
           >
-            <AlertTriangle size={15} />
-            {sosSending ? "..." : sosActive ? "SOS activo" : "SOS"}
+            <AlertTriangle size={15} style={{ color: "#fff" }} />
           </button>
         </div>
       </nav>
 
       {/* Notification permission banner */}
       {!notifDismissed && notifPermission !== "granted" && notifPermission !== "unsupported" && (
-        <div className={`px-4 py-2.5 flex items-center gap-3 text-sm ${
-          notifPermission === "denied"
-            ? "bg-gray-700 text-gray-200"
-            : "bg-amber-500 text-white"
-        }`}>
-          <span className="text-base">🔔</span>
-          <span className="flex-1">
+        <div style={{
+          padding: "10px 16px", display: "flex", alignItems: "center", gap: 10, fontSize: 12,
+          background: notifPermission === "denied" ? "rgba(40,40,50,0.9)" : "rgba(180,120,0,0.85)",
+          borderBottom: "0.5px solid rgba(212,175,55,0.15)",
+        }}>
+          <span>🔔</span>
+          <span style={{ flex: 1, color: "rgba(255,255,255,0.85)", lineHeight: 1.4 }}>
             {notifPermission === "denied"
-              ? "Notificaciones bloqueadas — no recibirás anuncios ni alertas familiares. Actívalas en ajustes."
-              : "Activa las notificaciones para no perderte anuncios, cumpleaños y avisos de tu familia."}
+              ? "Notificaciones bloqueadas. Actívalas en ajustes para recibir alertas familiares."
+              : "Activa notificaciones para cumpleaños, anuncios y alertas."}
           </span>
           {notifPermission !== "denied" && (
-            <button
-              onClick={requestNotificationPermission}
-              className="bg-white text-amber-600 font-bold px-3 py-1 rounded-lg text-xs hover:bg-amber-50 transition-colors flex-shrink-0"
-            >
+            <button onClick={requestNotificationPermission} style={{
+              background: "#d4af37", border: "none", borderRadius: 8, padding: "5px 10px",
+              color: "#030208", fontWeight: 700, fontSize: 11, cursor: "pointer", flexShrink: 0,
+            }}>
               Activar
             </button>
           )}
-          <button
-            onClick={() => setNotifDismissed(true)}
-            className="opacity-70 hover:opacity-100 transition-opacity flex-shrink-0 text-lg leading-none"
-            aria-label="Cerrar"
-          >
-            ×
-          </button>
+          <button onClick={() => setNotifDismissed(true)} style={{
+            background: "none", border: "none", color: "rgba(255,255,255,0.5)",
+            fontSize: 18, cursor: "pointer", lineHeight: 1, flexShrink: 0, padding: 0,
+          }}>×</button>
         </div>
       )}
 
-      <div className={`max-w-4xl mx-auto px-3 py-3 ${view === "graph" ? "pb-4" : "pb-24"}`}>
-        {/* SLIM profile strip — hidden in graph view (canvas has its own top bar) */}
+      <div style={{ maxWidth: 896, margin: "0 auto", padding: view === "graph" ? "0 12px 16px" : "0 12px 96px" }}>
+        {/* SLIM profile strip — hidden in graph view */}
         {view !== "graph" && profile && (
-          <div className="mb-3">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-ceiba-700 flex-shrink-0 overflow-hidden flex items-center justify-center text-white font-bold text-sm">
+          <div style={{ marginBottom: 12, paddingTop: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{
+                width: 36, height: 36, borderRadius: 11, background: "#0c0a1a", flexShrink: 0,
+                border: "1.5px solid rgba(212,175,55,0.35)", overflow: "hidden",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                color: "#d4af37", fontWeight: 800, fontSize: 13,
+              }}>
                 {profile.avatar_url
-                  ? <img src={profile.avatar_url} className="w-full h-full object-cover" alt="" />
+                  ? <img src={profile.avatar_url} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" />
                   : `${profile.first_name[0]}${profile.last_name?.[0] || ""}`}
               </div>
-              <span className="font-semibold text-gray-800 flex-1 truncate">{profile.first_name} {profile.last_name}</span>
-              <span className="text-xs text-gray-400 flex-shrink-0">
+              <span style={{ fontWeight: 700, color: "#fff", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {profile.first_name} {profile.last_name}
+              </span>
+              <span style={{ fontSize: 11, color: "rgba(212,175,55,0.5)", flexShrink: 0 }}>
                 {formatFamilyLine(visibleMembers.length, joinedMembers.length)}
               </span>
-              <button onClick={shareTree} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors flex-shrink-0" title="Compartir árbol">
-                <Share2 size={16} />
+              <button onClick={shareTree} style={{ background: "none", border: "none", cursor: "pointer", padding: 4, flexShrink: 0 }}>
+                <Share2 size={15} style={{ color: "rgba(212,175,55,0.5)" }} />
               </button>
             </div>
-
-            {/* Contador global de crecimiento. Segunda línea discreta;
-                se oculta por completo si la RPC no respondió. */}
             {growthStats && (
-              <p className="text-[11px] text-gray-400 mt-0.5 pl-11 truncate">
-                <span className="hidden sm:inline">{formatGrowthLine(growthStats, "desktop")}</span>
-                <span className="sm:hidden">{formatGrowthLine(growthStats, "mobile")}</span>
+              <p style={{ fontSize: 11, color: "rgba(212,175,55,0.35)", marginTop: 2, paddingLeft: 46, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {formatGrowthLine(growthStats, "mobile")}
               </p>
             )}
           </div>
@@ -833,52 +861,63 @@ console.log("⑤ Datos cargados");
 
         {/* Family list / graph */}
         {visibleMembers.length === 0 ? (
-          <div className="card text-center py-10 px-6">
-            <div className="w-20 h-20 rounded-3xl bg-ceiba-50 flex items-center justify-center mx-auto mb-5">
-              <TreePine size={40} className="text-ceiba-400" />
+          <div style={{ textAlign: "center", padding: "40px 24px", borderRadius: 20,
+            background: "#0c0a18", border: "0.5px solid rgba(212,175,55,0.12)", marginTop: 16 }}>
+            <div style={{ width: 72, height: 72, borderRadius: 20, background: "rgba(212,175,55,0.08)",
+              display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+              <TreePine size={36} style={{ color: "rgba(212,175,55,0.4)" }} />
             </div>
-            <h3 className="text-xl font-bold text-gray-800 mb-2">Tu árbol familiar te espera</h3>
-            <p className="text-gray-500 mb-6 max-w-xs mx-auto leading-relaxed">
+            <h3 style={{ fontSize: 17, fontWeight: 800, color: "#fff", marginBottom: 8 }}>Tu árbol familiar te espera</h3>
+            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", marginBottom: 24, maxWidth: 280, margin: "0 auto 24px", lineHeight: 1.6 }}>
               Agrega a tu mamá, papá, hermanos o pareja. Cuando ellos se registren, sus familiares se conectarán solos a tu árbol.
             </p>
-            <button onClick={() => setShowModal(true)} className="btn-primary mb-4">
-              <Plus size={16} className="inline mr-1" /> Agregar primer familiar
+            <button onClick={() => setShowModal(true)} style={{
+              background: "#c9a820", border: "none", borderRadius: 12, padding: "12px 24px",
+              borderTop: "2px solid #f5e060", borderBottom: "3px solid #6a5600",
+              boxShadow: "0 6px 0 #4a3c00, 0 10px 20px rgba(0,0,0,0.6)",
+              color: "#030208", fontWeight: 800, fontSize: 14, cursor: "pointer",
+            }}>
+              <Plus size={15} style={{ display: "inline", marginRight: 6 }} /> Agregar primer familiar
             </button>
-            <p className="text-xs text-gray-400">💡 Empieza por quien más conoces de tu familia</p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {/* Action bar — hidden in graph view (view switcher lives inside the canvas) */}
-            {view !== "graph" && <div className="flex items-center gap-2">
-              {/* SECONDARY: Anunciar — icono only */}
-              {joinedMembers.length > 0 && (
-                <button
-                  onClick={() => setShowBroadcast(true)}
-                  className="p-2 rounded-xl border border-amber-200 text-amber-500 hover:bg-amber-50 transition-colors flex-shrink-0"
-                  title="Anunciar a la familia"
-                >
-                  <Megaphone size={18} />
-                </button>
-              )}
-              {/* View toggles — segmented control */}
-              <div className="flex items-center bg-gray-100 rounded-xl p-0.5 gap-0.5 flex-shrink-0">
-                <button
-                  onClick={() => setView("graph")}
-                  className="p-1.5 rounded-lg transition-colors text-gray-400 hover:text-gray-600"
-                  title="Árbol"
-                ><GitFork size={15} /></button>
-                <button
-                  onClick={() => setView("list")}
-                  className={`p-1.5 rounded-lg transition-colors ${view === "list" ? "bg-white shadow text-ceiba-700" : "text-gray-400 hover:text-gray-600"}`}
-                  title="Lista"
-                ><List size={15} /></button>
-                <button
-                  onClick={activateMap}
-                  className={`p-1.5 rounded-lg transition-colors ${view === "map" ? "bg-white shadow text-ceiba-700" : "text-gray-400 hover:text-gray-600"}`}
-                  title="Mapa"
-                ><MapIcon size={15} /></button>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {/* Action bar — hidden in graph view */}
+            {view !== "graph" && (
+              <div style={{ display: "flex", alignItems: "center", gap: 8, paddingTop: 12 }}>
+                {joinedMembers.length > 0 && (
+                  <button onClick={() => setShowBroadcast(true)} style={{
+                    width: 36, height: 36, borderRadius: 10, background: "#0c0a1a", border: "none",
+                    borderTop: "1px solid rgba(212,175,55,0.28)", borderBottom: "2px solid #000",
+                    boxShadow: "0 4px 0 #02010a", display: "flex", alignItems: "center",
+                    justifyContent: "center", cursor: "pointer", flexShrink: 0,
+                  }}>
+                    <Megaphone size={16} style={{ color: "rgba(212,175,55,0.7)" }} />
+                  </button>
+                )}
+                {/* View toggle */}
+                <div style={{ display: "flex", alignItems: "center", background: "#0c0a1a",
+                  borderRadius: 12, padding: 3, gap: 2, flexShrink: 0,
+                  border: "0.5px solid rgba(212,175,55,0.14)" }}>
+                  {([
+                    { v: "graph", Icon: GitFork, label: "Árbol" },
+                    { v: "list",  Icon: List,    label: "Lista" },
+                    { v: "map",   Icon: MapIcon, label: "Mapa" },
+                  ] as const).map(({ v, Icon, label }) => (
+                    <button key={v}
+                      onClick={() => v === "map" ? activateMap() : setView(v as any)}
+                      title={label}
+                      style={{
+                        padding: "6px 10px", borderRadius: 9, border: "none", cursor: "pointer",
+                        background: view === v ? "#1a1428" : "transparent",
+                        boxShadow: view === v ? "0 2px 6px rgba(0,0,0,0.5)" : "none",
+                      }}>
+                      <Icon size={14} style={{ color: view === v ? "#d4af37" : "rgba(212,175,55,0.3)" }} />
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>}
+            )}
 
             {view === "graph" && profile && (
               <>
