@@ -360,7 +360,7 @@ export function FamilyUniverse({
           onClick={e => { e.stopPropagation(); setFocalId('root'); setExpandedIds(new Set()) }}
           style={{
             position: 'absolute',
-            bottom: 24,
+            bottom: 90,
             left: '50%',
             transform: `translateX(-50%) translateY(${focalId !== 'root' ? '0' : '12px'})`,
             opacity: focalId !== 'root' ? 1 : 0,

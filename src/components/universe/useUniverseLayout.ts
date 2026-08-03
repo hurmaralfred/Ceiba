@@ -416,6 +416,80 @@ function composedRelKey(focalRelToRoot: string, targetRelToRoot: string): string
     return map[targetRelToRoot]
   }
 
+  // Grandparent as focal — maternal line (root's mother is focal's child)
+  if (fr === 'grandfather_maternal' || fr === 'grandmother_maternal') {
+    const map: Record<string, string> = {
+      mother: 'daughter',        father: 'son_in_law',
+      stepmother: 'stepdaughter', stepfather: 'son_in_law',
+      son: 'great_grandson',     daughter: 'great_granddaughter',
+      stepson: 'great_grandson', stepdaughter: 'great_granddaughter',
+      brother: 'grandson',       sister: 'granddaughter',
+      half_brother: 'grandson',  half_sister: 'granddaughter',
+      grandson: 'great_grandson', granddaughter: 'great_granddaughter',
+      wife: 'granddaughter',     husband: 'grandson',
+      spouse: 'grandchild',      partner: 'grandchild',
+    }
+    return map[targetRelToRoot]
+  }
+
+  // Grandparent as focal — paternal line (root's father is focal's child)
+  if (fr === 'grandfather_paternal' || fr === 'grandmother_paternal') {
+    const map: Record<string, string> = {
+      father: 'son',             mother: 'daughter_in_law',
+      stepfather: 'stepson',     stepmother: 'daughter_in_law',
+      son: 'great_grandson',     daughter: 'great_granddaughter',
+      stepson: 'great_grandson', stepdaughter: 'great_granddaughter',
+      brother: 'grandson',       sister: 'granddaughter',
+      half_brother: 'grandson',  half_sister: 'granddaughter',
+      grandson: 'great_grandson', granddaughter: 'great_granddaughter',
+      wife: 'granddaughter',     husband: 'grandson',
+      spouse: 'grandchild',      partner: 'grandchild',
+    }
+    return map[targetRelToRoot]
+  }
+
+  // Generic grandparent (side unspecified) — best-effort
+  if (fr === 'grandfather' || fr === 'grandmother') {
+    const map: Record<string, string> = {
+      mother: 'daughter',        father: 'son',
+      stepmother: 'stepdaughter', stepfather: 'stepson',
+      son: 'great_grandson',     daughter: 'great_granddaughter',
+      stepson: 'great_grandson', stepdaughter: 'great_granddaughter',
+      brother: 'grandson',       sister: 'granddaughter',
+      half_brother: 'grandson',  half_sister: 'granddaughter',
+      grandson: 'great_grandson', granddaughter: 'great_granddaughter',
+      wife: 'granddaughter',     husband: 'grandson',
+      spouse: 'grandchild',      partner: 'grandchild',
+    }
+    return map[targetRelToRoot]
+  }
+
+  // Great-grandparent as focal
+  if (fr === 'great_grandfather' || fr === 'great_grandmother') {
+    const map: Record<string, string> = {
+      grandfather: 'son',          grandmother: 'daughter',
+      grandfather_paternal: 'son', grandmother_paternal: 'daughter',
+      grandfather_maternal: 'son', grandmother_maternal: 'daughter',
+      mother: 'granddaughter',     father: 'grandson',
+      son: 'great_great_grandson', daughter: 'great_great_granddaughter',
+      brother: 'great_grandson',   sister: 'great_granddaughter',
+    }
+    return map[targetRelToRoot]
+  }
+
+  // Uncle/aunt as focal
+  if (fr === 'uncle' || fr === 'aunt') {
+    const map: Record<string, string> = {
+      son: 'cousin',       daughter: 'cousin',
+      father: 'brother',   mother: 'sister',
+      stepfather: 'brother', stepmother: 'sister',
+      brother: 'nephew',   sister: 'niece',
+      grandfather: 'father', grandmother: 'mother',
+      grandson: 'cousin',  granddaughter: 'cousin',
+    }
+    return map[targetRelToRoot]
+  }
+
   return undefined
 }
 
