@@ -247,40 +247,17 @@ export function FamilyUniverse({
     focalId, profile, members, extendedMembers, memberLinks,
   )
 
-  // Adjacency map: same edges as useUniverseLayout so we can find each node's hidden neighbours
-  const adj = useMemo(() => {
-    const map = new Map<string, Set<string>>()
-    const add = (a: string, b: string) => {
-      if (!a || !b || a === b) return
-      if (!map.has(a)) map.set(a, new Set())
-      if (!map.has(b)) map.set(b, new Set())
-      map.get(a)!.add(b)
-      map.get(b)!.add(a)
-    }
-    for (const m of members) add('root', m.id)
-    for (const e of extendedMembers) add(e.member.id, e.parentMemberId)
-    for (const l of memberLinks) add(l.fromMemberId, l.toMemberId)
-    for (const m of members) { if (m.parent_member_id) add(m.id, m.parent_member_id) }
-    return map
-  }, [members, extendedMembers, memberLinks])
-
   const { visible: nodes, hiddenCount, hiddenNodes: hiddenNodesList, maxExpansionReached } = useMemo(
     () => selectVisibleUniverseNodes(allNodes, containerSize.w, 0, expandedIds),
     [allNodes, containerSize.w, expandedIds],
   )
 
-  // Set of hidden node IDs (for O(1) lookup)
-  const hiddenIdSet = useMemo(() => new Set(hiddenNodesList.map(n => n.id)), [hiddenNodesList])
-
-  // Per-node: IDs of directly-adjacent hidden nodes (the ones "+" will reveal)
-  const nodeHiddenNeighbors = useMemo(() => {
-    const result = new Map<string, string[]>()
-    for (const node of nodes) {
-      const ids = [...(adj.get(node.id) ?? [])].filter(id => hiddenIdSet.has(id))
-      if (ids.length > 0) result.set(node.id, ids)
-    }
-    return result
-  }, [nodes, adj, hiddenIdSet])
+  // The shallowest hop level among all currently hidden nodes.
+  // Clicking any "+" reveals all hidden nodes at this level (progressive expansion inward→outward).
+  const minHiddenHop = useMemo(() => {
+    if (!hiddenNodesList.length) return null
+    return Math.min(...hiddenNodesList.map(n => n.hopDistance))
+  }, [hiddenNodesList])
 
   // Track which node IDs are newly entering the visible set (for reveal animation)
   const prevVisibleIds = useRef(new Set<string>())
@@ -321,13 +298,17 @@ export function FamilyUniverse({
 
   const handleClose = useCallback(() => { setSelectedNode(null); setCardAnchor(null) }, [])
 
-  const handleExpandNode = useCallback((neighborIds: string[]) => {
+  // Reveal all hidden nodes at the shallowest hop level (progressive outward expansion)
+  const handleExpand = useCallback(() => {
+    if (minHiddenHop === null) return
     setExpandedIds(prev => {
       const next = new Set(prev)
-      for (const id of neighborIds) next.add(id)
+      for (const n of hiddenNodesList) {
+        if (n.hopDistance === minHiddenHop) next.add(n.id)
+      }
       return next
     })
-  }, [])
+  }, [minHiddenHop, hiddenNodesList])
 
   return (
     <>
@@ -344,21 +325,18 @@ export function FamilyUniverse({
           <OrbitRings width={containerSize.w} height={containerSize.h} />
 
           {/* Avatars */}
-          {nodes.map(node => {
-            const hiddenNeighborIds = nodeHiddenNeighbors.get(node.id)
-            return (
-              <AvatarSlot
-                key={node.id}
-                node={node}
-                selected={selectedNode?.id === node.id}
-                onClick={handleAvatarClick}
-                viewScale={viewScale}
-                isNew={newNodeIds.has(node.id)}
-                showExpand={!!hiddenNeighborIds && !selectedNode}
-                onExpand={hiddenNeighborIds ? () => handleExpandNode(hiddenNeighborIds) : undefined}
-              />
-            )
-          })}
+          {nodes.map(node => (
+            <AvatarSlot
+              key={node.id}
+              node={node}
+              selected={selectedNode?.id === node.id}
+              onClick={handleAvatarClick}
+              viewScale={viewScale}
+              isNew={newNodeIds.has(node.id)}
+              showExpand={hiddenCount > 0 && !maxExpansionReached && !selectedNode}
+              onExpand={handleExpand}
+            />
+          ))}
         </UniverseViewport>
 
         {/* Floating person card — dismisses on click outside */}
