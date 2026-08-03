@@ -37,18 +37,23 @@ export async function GET(_req: NextRequest) {
 
   if (!mySpaceIds.length) return NextResponse.json({ suggestions: [] });
 
-  const { data: rows, error } = await service
-    .from("suggested_connections")
-    .select(`
-      id, score, evidence, status, created_at,
-      person_id_a, person_id_b, space_id_a, space_id_b
-    `)
-    .eq("status", "pending")
-    .or(`space_id_a.in.(${mySpaceIds.join(",")}),space_id_b.in.(${mySpaceIds.join(",")})`)
-    .order("score", { ascending: false })
-    .limit(20);
+  const SELECT = "id, score, evidence, status, created_at, person_id_a, person_id_b, space_id_a, space_id_b";
 
+  const [{ data: rowsA, error: errA }, { data: rowsB, error: errB }] = await Promise.all([
+    service.from("suggested_connections").select(SELECT).eq("status", "pending").in("space_id_a", mySpaceIds),
+    service.from("suggested_connections").select(SELECT).eq("status", "pending").in("space_id_b", mySpaceIds),
+  ]);
+
+  const error = errA || errB;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Merge and deduplicate by id
+  const seen = new Set<string>();
+  const rows = [...(rowsA ?? []), ...(rowsB ?? [])].filter((r: any) => {
+    if (seen.has(r.id)) return false;
+    seen.add(r.id);
+    return true;
+  }).sort((a: any, b: any) => b.score - a.score).slice(0, 20);
 
   if (!rows || rows.length === 0) return NextResponse.json({ suggestions: [] });
 
