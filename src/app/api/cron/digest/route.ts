@@ -87,6 +87,14 @@ export async function GET(req: NextRequest) {
     const totalMembers = (totalFam || []).length;
     const joinedMembers = (totalFam || []).filter((m) => m.profile_id).length;
 
+    // Skip users with nothing to report — an empty digest drives unsubscribes
+    const hasActivity =
+      (newMembers || []).length > 0 ||
+      upcomingBirthdays.length > 0 ||
+      (newPhotos ?? 0) > 0 ||
+      (newEvents ?? 0) > 0;
+    if (!hasActivity) continue;
+
     try {
       const result = await sendWeeklyDigestEmail(profile.email, profile.first_name, {
         newMembers: (newMembers || []) as any,

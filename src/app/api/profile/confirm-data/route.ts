@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import webpush from "web-push";
 import { createClient } from "@/lib/supabase/server";
 import { getServiceClient } from "@/lib/server/family";
 
@@ -69,5 +70,63 @@ export async function POST(req: NextRequest) {
     metadata: { fields: ["first_name","middle_name","first_surname","second_surname","birth_date","birth_city","birth_country"] },
   });
 
+  // Notify the space owner that a family member joined (fire-and-forget, never blocks response)
+  notifySpaceOwnerOnJoin(service, user.id, claim.person_id, first_name?.trim(), first_surname?.trim()).catch(() => {});
+
   return NextResponse.json({ ok: true });
+}
+
+async function notifySpaceOwnerOnJoin(
+  service: ReturnType<typeof getServiceClient>,
+  joinerUserId: string,
+  joinerPersonId: string,
+  firstName: string,
+  firstSurname: string,
+) {
+  // Find the space this person belongs to
+  const { data: membership } = await service
+    .from("space_memberships")
+    .select("space_id")
+    .eq("person_id", joinerPersonId)
+    .limit(1)
+    .maybeSingle();
+  if (!membership?.space_id) return;
+
+  // Find the space owner
+  const { data: space } = await service
+    .from("family_spaces")
+    .select("created_by")
+    .eq("id", membership.space_id)
+    .maybeSingle();
+  if (!space?.created_by || space.created_by === joinerUserId) return;
+
+  // Get owner's push subscriptions
+  const { data: subs } = await service
+    .from("push_subscriptions")
+    .select("endpoint, p256dh, auth")
+    .eq("user_id", space.created_by);
+  if (!subs || subs.length === 0) return;
+
+  const vapidPublic  = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  const vapidPrivate = process.env.VAPID_PRIVATE_KEY;
+  if (!vapidPublic || !vapidPrivate) return;
+
+  webpush.setVapidDetails("mailto:ceiba-app@noreply.com", vapidPublic, vapidPrivate);
+
+  const joinerName = `${firstName} ${firstSurname}`.trim();
+  const payload = JSON.stringify({
+    title: "¡Familiar se unió a Ceiba! 🌳",
+    body: `${joinerName} aceptó la invitación y ya está en tu árbol familiar.`,
+    icon: "/icons/icon-192.png",
+    url: "/tree",
+  });
+
+  await Promise.allSettled(
+    (subs as any[]).map((sub) =>
+      webpush.sendNotification(
+        { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+        payload,
+      )
+    )
+  );
 }
