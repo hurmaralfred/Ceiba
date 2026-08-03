@@ -244,43 +244,42 @@ export default function HomePage() {
         </svg>
 
         {/* Top bar */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <TreePine size={18} style={{ color: "#7ab88a" }} />
             <span className="font-display" style={{ color: "rgba(255,255,255,0.92)", fontSize: 15, fontWeight: 700, letterSpacing: "-0.3px" }}>
               Ceiba
             </span>
           </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <Link href="/feed">
-              <div style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Bell size={15} style={{ color: "rgba(255,255,255,0.8)" }} />
-              </div>
-            </Link>
-            <Link href="/profile">
-              {loading || !profile ? (
-                <div className="animate-pulse" style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(255,255,255,0.15)" }} />
-              ) : (
-                <div style={{ borderRadius: "50%", outline: "3px solid rgba(228,160,40,0.4)", outlineOffset: "2px" }}>
-                  <Avatar size="sm"
-                    name={`${profile.first_name} ${profile.last_name}`}
-                    src={profile.avatar_url ?? undefined}
-                    ring ringColor="terra"
-                  />
-                </div>
-              )}
-            </Link>
-          </div>
+          <Link href="/feed">
+            <div style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Bell size={15} style={{ color: "rgba(255,255,255,0.8)" }} />
+            </div>
+          </Link>
         </div>
 
-        {/* Name + avatar row */}
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", paddingBottom: 22 }}>
+        {/* Avatar centrado + nombre */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", paddingBottom: 26, gap: 14 }}>
+          <Link href="/profile">
+            {loading || !profile ? (
+              <div className="animate-pulse" style={{ width: 112, height: 112, borderRadius: "50%", background: "rgba(255,255,255,0.12)" }} />
+            ) : (
+              <div style={{ borderRadius: "50%", outline: "4px solid rgba(228,160,40,0.5)", outlineOffset: "3px" }}>
+                <Avatar size="2xl"
+                  name={`${profile.first_name} ${profile.last_name}`}
+                  src={profile.avatar_url ?? undefined}
+                  ring ringColor="terra"
+                />
+              </div>
+            )}
+          </Link>
+
           <div>
             <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 10, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 5 }}>
               {saludo}
             </div>
             {loading ? (
-              <div className="animate-pulse" style={{ width: 150, height: 42, borderRadius: 8, background: "rgba(255,255,255,0.1)" }} />
+              <div className="animate-pulse" style={{ width: 160, height: 40, borderRadius: 8, background: "rgba(255,255,255,0.1)", margin: "0 auto" }} />
             ) : (
               <h1 className="font-display" style={{ color: "#fff", fontSize: "2.25rem", fontWeight: 800, letterSpacing: "-0.05em", lineHeight: 1 }}>
                 {firstName || "Hola"}
@@ -293,20 +292,6 @@ export default function HomePage() {
               {" generaciones"}
             </div>
           </div>
-
-          {loading || !profile ? (
-            <div className="animate-pulse" style={{ width: 54, height: 54, borderRadius: "50%", background: "rgba(255,255,255,0.1)", flexShrink: 0 }} />
-          ) : (
-            <Link href="/profile">
-              <div style={{ borderRadius: "50%", outline: "3px solid rgba(228,160,40,0.4)", outlineOffset: "2px", flexShrink: 0 }}>
-                <Avatar size="md"
-                  name={`${profile.first_name} ${profile.last_name}`}
-                  src={profile.avatar_url ?? undefined}
-                  ring ringColor="terra"
-                />
-              </div>
-            </Link>
-          )}
         </div>
       </div>
 
