@@ -243,54 +243,53 @@ export default function HomePage() {
           <path d="M55,90 C76,80 92,78 99,83" stroke="rgba(0,0,0,0.4)" strokeWidth={0.8} fill="none"/>
         </svg>
 
-        {/* Top bar */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+        {/* Top bar: brand izquierda, bell + avatar derecha */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <TreePine size={18} style={{ color: "#7ab88a" }} />
             <span className="font-display" style={{ color: "rgba(255,255,255,0.92)", fontSize: 15, fontWeight: 700, letterSpacing: "-0.3px" }}>
               Ceiba
             </span>
           </div>
-          <Link href="/feed">
-            <div style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Bell size={15} style={{ color: "rgba(255,255,255,0.8)" }} />
-            </div>
-          </Link>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <Link href="/feed">
+              <div style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Bell size={15} style={{ color: "rgba(255,255,255,0.75)" }} />
+              </div>
+            </Link>
+            <Link href="/profile">
+              {loading || !profile ? (
+                <div className="animate-pulse" style={{ width: 80, height: 80, borderRadius: "50%", background: "rgba(255,255,255,0.12)" }} />
+              ) : (
+                <div style={{ borderRadius: "50%", outline: "3px solid rgba(228,160,40,0.5)", outlineOffset: "3px" }}>
+                  <Avatar size="xl"
+                    name={`${profile.first_name} ${profile.last_name}`}
+                    src={profile.avatar_url ?? undefined}
+                    ring ringColor="terra"
+                  />
+                </div>
+              )}
+            </Link>
+          </div>
         </div>
 
-        {/* Avatar centrado + nombre */}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", paddingBottom: 26, gap: 14 }}>
-          <Link href="/profile">
-            {loading || !profile ? (
-              <div className="animate-pulse" style={{ width: 112, height: 112, borderRadius: "50%", background: "rgba(255,255,255,0.12)" }} />
-            ) : (
-              <div style={{ borderRadius: "50%", outline: "4px solid rgba(228,160,40,0.5)", outlineOffset: "3px" }}>
-                <Avatar size="2xl"
-                  name={`${profile.first_name} ${profile.last_name}`}
-                  src={profile.avatar_url ?? undefined}
-                  ring ringColor="terra"
-                />
-              </div>
-            )}
-          </Link>
-
-          <div>
-            <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 10, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 5 }}>
-              {saludo}
-            </div>
-            {loading ? (
-              <div className="animate-pulse" style={{ width: 160, height: 40, borderRadius: 8, background: "rgba(255,255,255,0.1)", margin: "0 auto" }} />
-            ) : (
-              <h1 className="font-display" style={{ color: "#fff", fontSize: "2.25rem", fontWeight: 800, letterSpacing: "-0.05em", lineHeight: 1 }}>
-                {firstName || "Hola"}
-              </h1>
-            )}
-            <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 11, marginTop: 10 }}>
-              <span style={{ color: "rgba(255,255,255,0.82)", fontWeight: 600 }}>{visibleCount}</span>
-              {" familiares · "}
-              <span style={{ color: "rgba(255,255,255,0.82)", fontWeight: 600 }}>{generations}</span>
-              {" generaciones"}
-            </div>
+        {/* Nombre y stats */}
+        <div style={{ paddingBottom: 22 }}>
+          <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 10, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 5 }}>
+            {saludo}
+          </div>
+          {loading ? (
+            <div className="animate-pulse" style={{ width: 160, height: 42, borderRadius: 8, background: "rgba(255,255,255,0.1)" }} />
+          ) : (
+            <h1 className="font-display" style={{ color: "#fff", fontSize: "2.5rem", fontWeight: 800, letterSpacing: "-0.05em", lineHeight: 1 }}>
+              {firstName || "Hola"}
+            </h1>
+          )}
+          <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 11, marginTop: 10 }}>
+            <span style={{ color: "rgba(255,255,255,0.82)", fontWeight: 600 }}>{visibleCount}</span>
+            {" familiares · "}
+            <span style={{ color: "rgba(255,255,255,0.82)", fontWeight: 600 }}>{generations}</span>
+            {" generaciones"}
           </div>
         </div>
       </div>
