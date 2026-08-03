@@ -186,6 +186,13 @@ export default function HomePage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { router.push("/auth/login"); return; }
 
+    // Redirigir si hay datos sin confirmar (persona agregada por otro)
+    const statusRes = await fetch("/api/profile/data-status");
+    if (statusRes.ok) {
+      const status = await statusRes.json();
+      if (status.needsConfirmation) { router.replace("/confirmar-datos"); return; }
+    }
+
     const [graphRes, feedRes] = await Promise.allSettled([
       supabase.rpc("get_my_family_graph", { p_depth: 4 }),
       fetch("/api/feed"),

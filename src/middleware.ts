@@ -33,7 +33,7 @@ export async function middleware(request: NextRequest) {
   // /invite/[token] debe quedar público: es el enlace que recibe un familiar
   // sin cuenta todavía; get_invitation_by_token() ya está diseñada para
   // funcionar sin sesión y la propia página resuelve el registro/login.
-  const protectedPaths = ['/home', '/tree', '/map', '/profile', '/onboarding']
+  const protectedPaths = ['/home', '/tree', '/map', '/profile', '/onboarding', '/confirmar-datos']
   const devPreviews = ['/home/preview', '/dev/']
   const isProtected =
     !devPreviews.some(p => request.nextUrl.pathname.startsWith(p)) &&
