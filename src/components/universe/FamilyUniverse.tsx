@@ -252,7 +252,7 @@ export function FamilyUniverse({
     focalId, profile, members, extendedMembers, memberLinks,
   )
 
-  const { visible: nodes, hiddenCount, hiddenNodes, maxExpansionReached } = useMemo(
+  const { visible: nodes, hiddenCount, maxExpansionReached } = useMemo(
     () => selectVisibleUniverseNodes(allNodes, containerSize.w, additionalCount),
     [allNodes, containerSize.w, additionalCount],
   )
@@ -314,16 +314,6 @@ export function FamilyUniverse({
           {/* Orbit guide rings (sit behind avatars) */}
           <OrbitRings width={containerSize.w} height={containerSize.h} />
 
-          {/* Ghost placeholder slots for hidden nodes */}
-          {hiddenCount > 0 && !selectedNode && (
-            <GhostSlots
-              hiddenNodes={hiddenNodes}
-              hiddenCount={hiddenCount}
-              onExpand={handleExpand}
-              viewScale={viewScale}
-            />
-          )}
-
           {/* Avatars */}
           {nodes.map(node => (
             <AvatarSlot
@@ -333,6 +323,8 @@ export function FamilyUniverse({
               onClick={handleAvatarClick}
               viewScale={viewScale}
               isNew={newNodeIds.has(node.id)}
+              showExpand={hiddenCount > 0 && !maxExpansionReached && !selectedNode}
+              onExpand={handleExpand}
             />
           ))}
         </UniverseViewport>
@@ -356,13 +348,15 @@ export function FamilyUniverse({
 // ─── Avatar slot: positioned absolutely in viewport ───────────────────────────
 
 function AvatarSlot({
-  node, selected, onClick, viewScale = 1, isNew = false,
+  node, selected, onClick, viewScale = 1, isNew = false, showExpand = false, onExpand,
 }: {
   node: UniverseNode
   selected: boolean
   onClick: (node: UniverseNode, anchor: CardAnchor) => void
   viewScale?: number
   isNew?: boolean
+  showExpand?: boolean
+  onExpand?: () => void
 }) {
   const divRef = useRef<HTMLDivElement>(null)
 
@@ -411,112 +405,37 @@ function AvatarSlot({
         hitAreaScale={node.scale * viewScale}
         labelVisible={node.relevanceTier <= 1}
       />
+      {showExpand && !node.isFocal && (
+        <button
+          data-avatar="true"
+          onPointerDown={e => e.stopPropagation()}
+          onClick={e => { e.stopPropagation(); onExpand?.() }}
+          style={{
+            position: 'absolute',
+            top: -8,
+            right: -8,
+            width: 24,
+            height: 24,
+            borderRadius: '50%',
+            background: 'radial-gradient(circle at 38% 32%, #f5e060 0%, #c9a820 55%, #7a5c00 100%)',
+            border: '2px solid rgba(3,2,8,0.92)',
+            boxShadow: '0 2px 7px rgba(0,0,0,0.7), 0 0 0 1.5px rgba(212,175,55,0.35)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            padding: 0,
+            zIndex: 20,
+            flexShrink: 0,
+          }}
+        >
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="none">
+            <line x1="8" y1="3" x2="8" y2="13" stroke="#030208" strokeWidth="2.8" strokeLinecap="round"/>
+            <line x1="3" y1="8" x2="13" y2="8" stroke="#030208" strokeWidth="2.8" strokeLinecap="round"/>
+          </svg>
+        </button>
+      )}
     </div>
   )
 }
 
-// ─── Ghost placeholder slots ──────────────────────────────────────────────────
-// Shows the first few hidden nodes as faded ghost circles in their real orbit
-// positions. The last ghost carries a "+N" badge to signal "tap to reveal".
-
-const GHOST_CSS = `
-@keyframes ghostPulse {
-  0%, 100% { opacity: 0.28; transform: scale(1); }
-  50%       { opacity: 0.45; transform: scale(1.06); }
-}
-`
-
-function GhostSlots({
-  hiddenNodes,
-  hiddenCount,
-  onExpand,
-  viewScale = 1,
-}: {
-  hiddenNodes: UniverseNode[]
-  hiddenCount: number
-  onExpand: () => void
-  viewScale?: number
-}) {
-  // Show at most 4 ghost slots; last one always carries the badge
-  const MAX_GHOSTS = 4
-  const ghosts = hiddenNodes.slice(0, MAX_GHOSTS)
-  if (ghosts.length === 0) return null
-
-  return (
-    <>
-      <style dangerouslySetInnerHTML={{ __html: GHOST_CSS }} />
-      {ghosts.map((node, i) => {
-        const isLast = i === ghosts.length - 1
-        // Size: mirror the avatar figure — head radius ≈ 22 * scale, in px
-        const r = Math.round(22 * node.scale * viewScale)
-        const diameter = r * 2
-
-        return (
-          <div
-            key={`ghost-${node.id}`}
-            data-avatar="true"
-            onClick={e => { e.stopPropagation(); onExpand() }}
-            style={{
-              position: 'absolute',
-              left: '50%',
-              top: '50%',
-              transform: `translate(calc(-50% + ${node.cx}px), calc(-50% + ${node.cy}px))`,
-              zIndex: node.zIndex - 1,
-              cursor: 'pointer',
-            }}
-          >
-            {/* Ghost circle */}
-            <div
-              style={{
-                width: diameter,
-                height: diameter,
-                borderRadius: '50%',
-                background: 'rgba(242,180,60,0.08)',
-                border: '1.5px dashed rgba(242,180,60,0.35)',
-                boxShadow: '0 0 10px rgba(242,180,60,0.15)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                animation: `ghostPulse ${2.4 + i * 0.4}s ease-in-out ${i * 0.3}s infinite`,
-              }}
-            >
-              {/* "+" icon in center */}
-              <svg width={Math.max(8, r * 0.55)} height={Math.max(8, r * 0.55)} viewBox="0 0 16 16" fill="none">
-                <line x1="8" y1="3" x2="8" y2="13" stroke="rgba(242,180,60,0.55)" strokeWidth="2" strokeLinecap="round"/>
-                <line x1="3" y1="8" x2="13" y2="8" stroke="rgba(242,180,60,0.55)" strokeWidth="2" strokeLinecap="round"/>
-              </svg>
-            </div>
-
-            {/* Badge on last ghost: total hidden count */}
-            {isLast && hiddenCount > 1 && (
-              <div
-                style={{
-                  position: 'absolute',
-                  top: -6,
-                  right: -8,
-                  background: 'rgba(212,175,55,0.92)',
-                  border: '1.5px solid rgba(10,6,3,0.9)',
-                  borderRadius: 10,
-                  minWidth: 18,
-                  height: 18,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 9,
-                  fontWeight: 800,
-                  color: '#1a0e00',
-                  padding: '0 4px',
-                  letterSpacing: '-0.01em',
-                  zIndex: 10,
-                  boxShadow: '0 2px 6px rgba(0,0,0,0.6)',
-                }}
-              >
-                +{hiddenCount}
-              </div>
-            )}
-          </div>
-        )
-      })}
-    </>
-  )
-}
