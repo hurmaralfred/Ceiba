@@ -251,6 +251,7 @@ export function selectVisibleUniverseNodes(
   nodes: UniverseNode[],
   viewportWidth: number,
   additionalCount = 0,
+  forcedIds?: ReadonlySet<string>,
 ): VisibleUniverseSet {
   const isMobile   = viewportWidth < 768
   const maxVisible = isMobile ? MAX_TOTAL_MOBILE : MAX_TOTAL_DESKTOP
@@ -294,20 +295,35 @@ export function selectVisibleUniverseNodes(
 
   const allHidden = [...t1Hidden, ...t2Hidden, ...t3Sorted]
 
-  const maxExpanded    = isMobile ? MAX_EXPANDED_MOBILE : MAX_EXPANDED_DESKTOP
-  const baseCount      = t0.length + t1Visible.length + t2Visible.length
-  const expansionCap   = Math.max(0, maxExpanded - baseCount)
-  const expansionCount = Math.min(additionalCount, expansionCap, allHidden.length)
-  const stillHidden    = allHidden.slice(expansionCount)
+  // Forced-visible nodes (targeted expansion via "+" on a specific avatar)
+  const forcedVisible: UniverseNode[] = []
+  const unforcedHidden: UniverseNode[] = []
+  if (forcedIds?.size) {
+    for (const n of allHidden) {
+      if (forcedIds.has(n.id)) {
+        forcedVisible.push(n.relevanceTier === 3 ? { ...n, scale: EXPANDED_SCALE, opacity: EXPANDED_OPACITY } : n)
+      } else {
+        unforcedHidden.push(n)
+      }
+    }
+  } else {
+    unforcedHidden.push(...allHidden)
+  }
 
-  const expandedNodes: UniverseNode[] = allHidden.slice(0, expansionCount).map(n =>
+  const maxExpanded    = isMobile ? MAX_EXPANDED_MOBILE : MAX_EXPANDED_DESKTOP
+  const baseCount      = t0.length + t1Visible.length + t2Visible.length + forcedVisible.length
+  const expansionCap   = Math.max(0, maxExpanded - baseCount)
+  const expansionCount = Math.min(additionalCount, expansionCap, unforcedHidden.length)
+  const stillHidden    = unforcedHidden.slice(expansionCount)
+
+  const expandedNodes: UniverseNode[] = unforcedHidden.slice(0, expansionCount).map(n =>
     n.relevanceTier === 3
       ? { ...n, scale: EXPANDED_SCALE, opacity: EXPANDED_OPACITY }
       : n,
   )
 
   return {
-    visible:             [...t0, ...t1Visible, ...t2Visible, ...expandedNodes],
+    visible:             [...t0, ...t1Visible, ...t2Visible, ...forcedVisible, ...expandedNodes],
     hiddenCount:         stillHidden.length,
     hiddenNodes:         stillHidden,
     maxExpansionReached: baseCount + expansionCount >= maxExpanded && stillHidden.length > 0,
