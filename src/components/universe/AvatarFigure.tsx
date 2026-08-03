@@ -747,11 +747,13 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
                   ? 'rgba(210,228,255,0.90)'
                   : node.isFocal ? glowColor : 'rgba(255,255,255,0.92)',
                 letterSpacing: '0.01em',
-                whiteSpace: 'nowrap',
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical' as const,
                 overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                maxWidth: 80,
+                maxWidth: node.isFocal ? 110 : 84,
                 margin: '0 auto',
+                wordBreak: 'break-word' as const,
                 textShadow: node.isDeceased
                   ? '0 0 8px rgba(180,210,255,0.60)'
                   : node.isFocal ? `0 0 8px ${glowColor}80` : undefined,
