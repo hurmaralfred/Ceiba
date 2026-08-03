@@ -161,6 +161,17 @@ const UNIVERSE_CSS = `
   0%, 100% { transform: translateY(0px);  }
   50%       { transform: translateY(-5px); }
 }
+@keyframes universeAlive {
+  0%   { transform: rotate(-3.5deg) translateY(0px);    }
+  20%  { transform: rotate(-1.2deg) translateY(-3px);   }
+  50%  { transform: rotate( 3.5deg) translateY(0px);    }
+  80%  { transform: rotate( 1.2deg) translateY(-3px);   }
+  100% { transform: rotate(-3.5deg) translateY(0px);    }
+}
+@keyframes universeFocalBreathe {
+  0%, 100% { transform: scale(1.000); }
+  50%       { transform: scale(1.012); }
+}
 @keyframes universeGlowPulse {
   0%, 100% { opacity: 1;    }
   50%       { opacity: 0.5; }
@@ -181,6 +192,8 @@ const UNIVERSE_CSS = `
   [style*="universeTwinkle"],
   [style*="universeOrbitPulse"],
   [style*="universeFloat"],
+  [style*="universeAlive"],
+  [style*="universeFocalBreathe"],
   [style*="universeGlowPulse"] {
     animation: none !important;
   }

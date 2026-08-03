@@ -259,8 +259,8 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
   const browColor  = elder ? '#888888' : darken(hairColor, 0.10)
   const eyeDark    = darken(eyeColor, 0.38)
 
-  const floatDelay = `-${(seed % 32) * 0.12}s`
-  const floatDur   = `${3.2 + (seed % 18) * 0.12}s`
+  const floatDelay = `-${(seed % 40) * 0.17}s`
+  const floatDur   = `${4.2 + (seed % 24) * 0.13}s`
   const glowDelay  = `-${(seed % 40) * 0.07}s`
 
   // ── Portrait geometry ──────────────────────────────────────────────────────
@@ -277,7 +277,7 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
   const headTopY  = headCY - headRY
   const hairlineY = headCY - headRY + 7
   const eyeY      = child ? headCY - 1 : headCY - 4
-  const eyeR      = child ? 6.5 : 5.0
+  const eyeR      = child ? 8.0 : 6.5
   const browY     = eyeY - (child ? 8 : 9)
   const noseY     = headCY + (child ? 7 : 9)
   const mouthY    = headCY + (child ? 13 : 16)
@@ -327,12 +327,13 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
       {/* Float wrapper */}
       <div
         style={{
-          animation: !node.isFocal
-            ? `universeFloat ${floatDur} ease-in-out ${floatDelay} infinite`
-            : undefined,
+          animation: node.isFocal
+            ? `universeFocalBreathe 4.2s ease-in-out infinite`
+            : `universeAlive ${floatDur} ease-in-out ${floatDelay} infinite`,
           filter: dropShadow,
           transition: 'filter 0.3s ease',
           willChange: 'transform',
+          transformOrigin: 'center 82%',
         }}
       >
         <svg
@@ -549,31 +550,33 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
                   </>
                 )}
 
-                {/* ── Left eye ── */}
-                <circle cx={CX - 8} cy={eyeY} r={eyeR + 0.6} fill="white" />
-                <path d={`M${CX - 8 - eyeR} ${eyeY} A${eyeR + 0.6} ${eyeR + 0.6} 0 0 1 ${CX - 8 + eyeR} ${eyeY}`}
-                  fill="rgba(40,15,5,0.10)" />
-                <circle cx={CX - 8} cy={eyeY} r={eyeR - 0.8} fill={`url(#${uid}el)`} />
-                <circle cx={CX - 8} cy={eyeY} r={eyeR - 2.3} fill="#060100" />
-                <circle cx={CX - 9.5} cy={eyeY - 1.6} r="1.5"  fill="white" opacity="0.92" />
-                <circle cx={CX - 6.8} cy={eyeY + 1.2} r="0.75" fill="white" opacity="0.46" />
-                <path d={`M${CX - 8 - eyeR - 0.5} ${eyeY - 0.4} Q${CX - 8} ${eyeY - eyeR - 1.5} ${CX - 8 + eyeR + 0.5} ${eyeY - 0.4}`}
-                  fill="none" stroke="#070100" strokeWidth={female ? 1.7 : 1.3} strokeLinecap="round" />
+                {/* ── Left eye (Pixar: bigger iris, 3 specular dots) ── */}
+                <circle cx={CX - 8} cy={eyeY} r={eyeR + 0.8} fill="white" />
+                <path d={`M${CX - 8 - eyeR} ${eyeY} A${eyeR + 0.8} ${eyeR + 0.8} 0 0 1 ${CX - 8 + eyeR} ${eyeY}`}
+                  fill="rgba(40,15,5,0.08)" />
+                <circle cx={CX - 8} cy={eyeY} r={eyeR - 0.5} fill={`url(#${uid}el)`} />
+                <circle cx={CX - 8} cy={eyeY} r={eyeR - 2.0} fill="#060100" />
+                <circle cx={CX - 9.8} cy={eyeY - 2.0} r="2.0"  fill="white" opacity="0.95" />
+                <circle cx={CX - 6.5} cy={eyeY + 1.4} r="1.0"  fill="white" opacity="0.52" />
+                <circle cx={CX - 9.0} cy={eyeY + 2.0} r="0.55" fill="white" opacity="0.35" />
+                <path d={`M${CX - 8 - eyeR - 0.5} ${eyeY - 0.4} Q${CX - 8} ${eyeY - eyeR - 2} ${CX - 8 + eyeR + 0.5} ${eyeY - 0.4}`}
+                  fill="none" stroke="#070100" strokeWidth={female ? 2.0 : 1.5} strokeLinecap="round" />
                 {female && (
                   <path d={`M${CX - 8 - eyeR + 1} ${eyeY + 0.5} Q${CX - 8} ${eyeY + eyeR + 0.5} ${CX - 8 + eyeR - 1} ${eyeY + 0.5}`}
                     fill="none" stroke="#070100" strokeWidth="0.8" opacity="0.46" strokeLinecap="round" />
                 )}
 
-                {/* ── Right eye ── */}
-                <circle cx={CX + 8} cy={eyeY} r={eyeR + 0.6} fill="white" />
-                <path d={`M${CX + 8 - eyeR} ${eyeY} A${eyeR + 0.6} ${eyeR + 0.6} 0 0 1 ${CX + 8 + eyeR} ${eyeY}`}
-                  fill="rgba(40,15,5,0.10)" />
-                <circle cx={CX + 8} cy={eyeY} r={eyeR - 0.8} fill={`url(#${uid}er)`} />
-                <circle cx={CX + 8} cy={eyeY} r={eyeR - 2.3} fill="#060100" />
-                <circle cx={CX + 6.5} cy={eyeY - 1.6} r="1.5"  fill="white" opacity="0.92" />
-                <circle cx={CX + 9.2} cy={eyeY + 1.2} r="0.75" fill="white" opacity="0.46" />
-                <path d={`M${CX + 8 - eyeR - 0.5} ${eyeY - 0.4} Q${CX + 8} ${eyeY - eyeR - 1.5} ${CX + 8 + eyeR + 0.5} ${eyeY - 0.4}`}
-                  fill="none" stroke="#070100" strokeWidth={female ? 1.7 : 1.3} strokeLinecap="round" />
+                {/* ── Right eye (Pixar: bigger iris, 3 specular dots) ── */}
+                <circle cx={CX + 8} cy={eyeY} r={eyeR + 0.8} fill="white" />
+                <path d={`M${CX + 8 - eyeR} ${eyeY} A${eyeR + 0.8} ${eyeR + 0.8} 0 0 1 ${CX + 8 + eyeR} ${eyeY}`}
+                  fill="rgba(40,15,5,0.08)" />
+                <circle cx={CX + 8} cy={eyeY} r={eyeR - 0.5} fill={`url(#${uid}er)`} />
+                <circle cx={CX + 8} cy={eyeY} r={eyeR - 2.0} fill="#060100" />
+                <circle cx={CX + 6.2} cy={eyeY - 2.0} r="2.0"  fill="white" opacity="0.95" />
+                <circle cx={CX + 9.5} cy={eyeY + 1.4} r="1.0"  fill="white" opacity="0.52" />
+                <circle cx={CX + 7.0} cy={eyeY + 2.0} r="0.55" fill="white" opacity="0.35" />
+                <path d={`M${CX + 8 - eyeR - 0.5} ${eyeY - 0.4} Q${CX + 8} ${eyeY - eyeR - 2} ${CX + 8 + eyeR + 0.5} ${eyeY - 0.4}`}
+                  fill="none" stroke="#070100" strokeWidth={female ? 2.0 : 1.5} strokeLinecap="round" />
                 {female && (
                   <path d={`M${CX + 8 - eyeR + 1} ${eyeY + 0.5} Q${CX + 8} ${eyeY + eyeR + 0.5} ${CX + 8 + eyeR - 1} ${eyeY + 0.5}`}
                     fill="none" stroke="#070100" strokeWidth="0.8" opacity="0.46" strokeLinecap="round" />
@@ -605,11 +608,15 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
                 <path d={`M${CX - 1.8} ${mouthY + 2} Q${CX} ${mouthY + 4} ${CX + 1.8} ${mouthY + 2}`}
                   fill="none" stroke="rgba(255,210,195,0.20)" strokeWidth="1.2" strokeLinecap="round" />
 
-                {/* Cheek blush */}
-                <ellipse cx={CX - headRX + 5} cy={mouthY - 3} rx={child ? 7 : 5.5} ry={child ? 5 : 4}
-                  fill="rgba(255,105,75,0.10)" />
-                <ellipse cx={CX + headRX - 5} cy={mouthY - 3} rx={child ? 7 : 5.5} ry={child ? 5 : 4}
-                  fill="rgba(255,105,75,0.10)" />
+                {/* Cheek blush — Pixar warm rose */}
+                <ellipse cx={CX - headRX + 4} cy={mouthY - 4} rx={child ? 9 : 7} ry={child ? 6.5 : 5}
+                  fill="rgba(255,90,65,0.17)" />
+                <ellipse cx={CX - headRX + 4} cy={mouthY - 4} rx={child ? 5 : 4} ry={child ? 3.5 : 2.8}
+                  fill="rgba(255,120,90,0.10)" />
+                <ellipse cx={CX + headRX - 4} cy={mouthY - 4} rx={child ? 9 : 7} ry={child ? 6.5 : 5}
+                  fill="rgba(255,90,65,0.17)" />
+                <ellipse cx={CX + headRX - 4} cy={mouthY - 4} rx={child ? 5 : 4} ry={child ? 3.5 : 2.8}
+                  fill="rgba(255,120,90,0.10)" />
 
                 {/* Beard */}
                 {hasBeard && (
