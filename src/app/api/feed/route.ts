@@ -42,12 +42,17 @@ export async function GET(_req: NextRequest) {
 
   const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
-  const [{ data: persons }, { data: photos }, { data: broadcasts }, { data: events }] = await Promise.all([
+  const [{ data: persons }, { data: personsWithDeath }, { data: photos }, { data: broadcasts }, { data: events }] = await Promise.all([
     service
       .from("persons")
       .select("id, first_name, first_surname, birth_date")
       .in("id", allPersonIds)
       .not("birth_date", "is", null),
+    service
+      .from("persons")
+      .select("id, first_name, first_surname, death_date")
+      .in("id", allPersonIds)
+      .not("death_date", "is", null),
     service
       .from("photos")
       .select("id, uploader_user_id, storage_path, caption, created_at")
@@ -72,6 +77,8 @@ export async function GET(_req: NextRequest) {
   ]);
 
   const now = new Date();
+  const todayMMDD = `${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+
   const isBirthdaySoon = (dateStr: string, days = 7) => {
     const bd = new Date(dateStr);
     const next = new Date(now.getFullYear(), bd.getMonth(), bd.getDate());
@@ -83,11 +90,41 @@ export async function GET(_req: NextRequest) {
     .filter((p) => isBirthdaySoon(p.birth_date, birthdayDays))
     .map((p) => ({ person_id: p.id, first_name: p.first_name, last_name: p.first_surname, birth_date: p.birth_date }));
 
+  // "Hoy en la historia familiar" — birth & death anniversaries matching today's month-day
+  const anniversaries: Array<{
+    person_id: string; first_name: string; last_name: string;
+    type: "birth" | "death"; date: string; years: number;
+  }> = [];
+
+  const currentYear = now.getFullYear();
+  ((persons ?? []) as any[]).forEach((p) => {
+    const mmdd = p.birth_date.slice(5, 10); // "MM-DD"
+    const birthYear = parseInt(p.birth_date.slice(0, 4));
+    // Show birth anniversary only if NOT already showing as upcoming birthday, and year is in the past
+    if (mmdd === todayMMDD && birthYear < currentYear && !isBirthdaySoon(p.birth_date, birthdayDays)) {
+      anniversaries.push({
+        person_id: p.id, first_name: p.first_name, last_name: p.first_surname,
+        type: "birth", date: p.birth_date, years: currentYear - birthYear,
+      });
+    }
+  });
+  ((personsWithDeath ?? []) as any[]).forEach((p) => {
+    const mmdd = p.death_date.slice(5, 10);
+    const deathYear = parseInt(p.death_date.slice(0, 4));
+    if (mmdd === todayMMDD && deathYear < currentYear) {
+      anniversaries.push({
+        person_id: p.id, first_name: p.first_name, last_name: p.first_surname,
+        type: "death", date: p.death_date, years: currentYear - deathYear,
+      });
+    }
+  });
+
   const { data: publicUrlData } = service.storage.from("family-photos").getPublicUrl("");
   const baseUrl = publicUrlData.publicUrl.replace(/\/$/, "");
 
   return NextResponse.json({
     birthdays,
+    anniversaries,
     photos: ((photos ?? []) as any[]).map((p) => ({
       ...p,
       url: `${baseUrl}/${p.storage_path}`,

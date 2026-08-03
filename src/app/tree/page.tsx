@@ -119,6 +119,7 @@ function TreePageContent() {
   const [pendingCollabRequests, setPendingCollabRequests] = useState<Array<{ id: string; request_type: string; requester_user_id: string }>>([]);
   const [processingRequestId, setProcessingRequestId] = useState<string | null>(null);
   const [showSearch, setShowSearch] = useState(false);
+  const [invitePrompt, setInvitePrompt] = useState<{ name: string; firstName: string } | null>(null);
 
   // El contador global es informativo: nunca debe impedir que el árbol
   // cargue. Si la RPC falla se registra en consola y se oculta la línea,
@@ -349,11 +350,14 @@ console.log("⑤ Datos cargados");
         setModalPhotoPreview(null);
       }
 
-      toast.success("Familiar agregado");
+      const addedName = `${form.primer_nombre.trim()} ${form.primer_apellido.trim()}`.trim();
+      toast.success(`${addedName} agregado al árbol`);
       setShowModal(false);
       setForm(EMPTY_FORM);
       loadData();
       loadGrowthStats();
+      // Invite prompt — show after 600ms so modal close animation finishes
+      setTimeout(() => setInvitePrompt({ name: addedName, firstName: form.primer_nombre.trim() }), 600);
     } catch (err: any) {
       // Se muestra el error REAL devuelto por add_relative (p. ej. permisos o
       // espacio familiar), no un mensaje genérico que oculte la causa.
@@ -1522,6 +1526,74 @@ console.log("⑤ Datos cargados");
       >
         <Plus size={28} strokeWidth={2.8} />
       </button>
+
+      {invitePrompt && (
+        <>
+          <div
+            onClick={() => setInvitePrompt(null)}
+            style={{
+              position: "fixed", inset: 0, zIndex: 70,
+              background: "rgba(3,2,8,0.72)", backdropFilter: "blur(6px)",
+            }}
+          />
+          <div style={{
+            position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 71,
+            background: "#0c0a18",
+            borderTop: "1.5px solid rgba(212,175,55,0.35)",
+            borderRadius: "20px 20px 0 0",
+            padding: "28px 24px 40px",
+            boxShadow: "0 -10px 40px rgba(0,0,0,0.9), 0 0 30px rgba(212,175,55,0.08)",
+          }}>
+            <div style={{
+              width: 36, height: 4, borderRadius: 2,
+              background: "rgba(212,175,55,0.3)", margin: "0 auto 24px",
+            }} />
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.14em",
+              textTransform: "uppercase", color: "rgba(212,175,55,0.45)", marginBottom: 10 }}>
+              Familiar agregado
+            </div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: "#fff", marginBottom: 6 }}>
+              {invitePrompt.name}
+            </div>
+            <div style={{ fontSize: 14, color: "rgba(255,255,255,0.55)", marginBottom: 28, lineHeight: 1.5 }}>
+              ¿Le invitarías a ver y completar el árbol familiar en Ceiba?
+            </div>
+            <a
+              href={`https://wa.me/?text=${encodeURIComponent(`Hola ${invitePrompt.firstName}, te agregué al árbol familiar en Ceiba. Únetenos para ver a toda la familia en un solo lugar 🌳\n\nceibapp.com/invitar`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setInvitePrompt(null)}
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+                width: "100%", padding: "15px 0", borderRadius: 14, marginBottom: 12,
+                background: "#25D366",
+                borderTop: "2px solid #4ce88a",
+                borderLeft: "1.5px solid rgba(255,255,255,0.2)",
+                borderBottom: "4px solid #128C47",
+                borderRight: "1.5px solid rgba(0,0,0,0.3)",
+                boxShadow: "0 8px 0 #0a5c2e, 0 14px 24px rgba(0,0,0,0.7)",
+                color: "#fff", fontSize: 15, fontWeight: 800,
+                letterSpacing: "0.02em", textDecoration: "none",
+              }}
+            >
+              <Share2 size={18} strokeWidth={2.5} />
+              Invitar por WhatsApp
+            </a>
+            <button
+              onClick={() => setInvitePrompt(null)}
+              style={{
+                width: "100%", padding: "13px 0", borderRadius: 14,
+                background: "transparent",
+                border: "1px solid rgba(212,175,55,0.2)",
+                color: "rgba(255,255,255,0.45)", fontSize: 14, fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              Ahora no
+            </button>
+          </div>
+        </>
+      )}
 
       <CosmicNav />
 

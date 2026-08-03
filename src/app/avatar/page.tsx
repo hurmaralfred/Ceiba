@@ -506,7 +506,7 @@ export default function AvatarBuilderPage() {
           onClick={save}
           disabled={saving}
           style={{
-            width: '100%', padding: '13px 0', borderRadius: 16, border: 'none',
+            width: '100%', padding: '13px 0', borderRadius: 16,
             cursor: saving ? 'default' : 'pointer',
             opacity: saving ? 0.65 : 1,
             transition: 'background 0.2s, opacity 0.15s',

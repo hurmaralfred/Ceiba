@@ -2,11 +2,11 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Cake, Camera, Calendar, RefreshCw, Megaphone, AlertCircle, Bell, Sparkles } from "lucide-react";
+import { Cake, Camera, Calendar, RefreshCw, Megaphone, AlertCircle, Bell, Sparkles, Heart, Star, Plus, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { CosmicNav, CosmicHeader, s3dCard, C } from "@/components/ui/cosmic";
 
-type FeedItemType = "birthday" | "photo" | "event" | "announcement";
+type FeedItemType = "birthday" | "photo" | "event" | "announcement" | "anniversary_birth" | "anniversary_death";
 
 interface FeedItem {
   id: string;
@@ -65,7 +65,7 @@ export default function FeedPage() {
     ]);
     if (!feedRes.ok) { setFeedError(true); return; }
     setFeedError(false);
-    const { birthdays, photos, broadcasts, events } = await feedRes.json();
+    const { birthdays, photos, broadcasts, events, anniversaries } = await feedRes.json();
     if (sugRes.ok) {
       const { suggestions: sug } = await sugRes.json();
       setSuggestions(sug ?? []);
@@ -126,9 +126,32 @@ export default function FeedPage() {
       });
     });
 
+    (anniversaries || []).forEach((a: any) => {
+      const isBirth = a.type === "birth";
+      feedItems.push({
+        id: `ann-${a.type}-${a.person_id}`,
+        type: isBirth ? "anniversary_birth" : "anniversary_death",
+        title: isBirth
+          ? `Hoy hace ${a.years} años nació ${a.first_name} ${a.last_name || ""}`.trim()
+          : `Hoy hace ${a.years} años falleció ${a.first_name} ${a.last_name || ""}`.trim(),
+        subtitle: isBirth ? `Un recuerdo especial de la historia familiar` : `En su memoria`,
+        date: new Date(),
+        accentRgb: isBirth ? "212,175,55" : "160,140,200",
+        icon: isBirth
+          ? <Star size={16} style={{ color: "#d4af37" }} />
+          : <Heart size={16} style={{ color: "#a08cc8" }} />,
+        linkTo: `/persona/${a.person_id}`,
+      });
+    });
+
+    const typeOrder = (t: FeedItemType) => {
+      if (t === "birthday") return 0;
+      if (t === "anniversary_birth" || t === "anniversary_death") return 1;
+      return 2;
+    };
     feedItems.sort((a, b) => {
-      if (a.type === "birthday" && b.type !== "birthday") return -1;
-      if (b.type === "birthday" && a.type !== "birthday") return 1;
+      const od = typeOrder(a.type) - typeOrder(b.type);
+      if (od !== 0) return od;
       return b.date.getTime() - a.date.getTime();
     });
     setItems(feedItems);
@@ -392,25 +415,66 @@ function PersonChip({ name, spaceName, accentRgb }: { name: string; spaceName?: 
 
 function EmptyFeed() {
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center",
-      justifyContent: "center", padding: "80px 20px", textAlign: "center" }}>
-      <div style={{ width: 72, height: 72, borderRadius: "50%", background: "#0c0a18",
-        display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16,
-        border: "1px solid rgba(212,175,55,0.18)" }}>
-        <Bell size={30} style={{ color: "rgba(212,175,55,0.4)" }} />
+    <div style={{ padding: "40px 4px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ textAlign: "center", marginBottom: 8 }}>
+        <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#0c0a18",
+          display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px",
+          border: "1px solid rgba(212,175,55,0.18)" }}>
+          <Bell size={26} style={{ color: "rgba(212,175,55,0.4)" }} />
+        </div>
+        <h2 style={{ fontSize: 17, fontWeight: 700, color: "#fff", marginBottom: 6 }}>
+          Todo tranquilo por aquí
+        </h2>
+        <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", maxWidth: 260, lineHeight: 1.6, margin: "0 auto" }}>
+          El feed se llena cuando tu familia está en Ceiba. Da el primer paso:
+        </p>
       </div>
-      <h2 style={{ fontSize: 17, fontWeight: 700, color: "#fff", marginBottom: 8 }}>
-        Todo tranquilo por aquí
-      </h2>
-      <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", maxWidth: 260, lineHeight: 1.6, marginBottom: 24 }}>
-        Cuando tus familiares suban fotos, registren eventos o envíen anuncios, aparecerán aquí.
-      </p>
+
+      {/* CTA 1: Agregar familiares */}
+      <Link href="/tree" style={{ textDecoration: "none" }}>
+        <div style={{
+          background: "#0c0a18", borderRadius: 16, padding: "14px 16px",
+          borderTop: "1.5px solid rgba(212,175,55,0.22)", borderLeft: "1px solid rgba(212,175,55,0.1)",
+          borderBottom: "3px solid #040300", borderRight: "1px solid rgba(0,0,0,0.5)",
+          boxShadow: "0 6px 0 #040300, 0 10px 20px rgba(0,0,0,0.7)",
+          display: "flex", alignItems: "center", gap: 14,
+        }}>
+          <div style={{ width: 42, height: 42, borderRadius: 12, background: "rgba(212,175,55,0.12)",
+            border: "1.5px solid rgba(212,175,55,0.3)", display: "flex",
+            alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <Plus size={20} style={{ color: "#d4af37" }} />
+          </div>
+          <div>
+            <p style={{ fontSize: 13, fontWeight: 700, color: "#fff", margin: 0 }}>Agregar familiares al árbol</p>
+            <p style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", margin: "2px 0 0" }}>
+              Cada persona que agregas trae contenido al feed
+            </p>
+          </div>
+          <span style={{ marginLeft: "auto", color: "rgba(212,175,55,0.4)", fontSize: 18 }}>›</span>
+        </div>
+      </Link>
+
+      {/* CTA 2: Invitar familia */}
       <Link href="/invitar" style={{ textDecoration: "none" }}>
-        <div style={{ background: "#c9a820", borderRadius: 12, padding: "11px 24px",
-          color: "#030208", fontWeight: 700, fontSize: 13,
-          borderTop: "2px solid #f5e060", borderBottom: "3px solid #6a5600",
-          boxShadow: "0 6px 0 #4a3c00, 0 10px 20px rgba(0,0,0,0.6)" }}>
-          Invitar a mi familia
+        <div style={{
+          background: "rgba(212,175,55,0.08)", borderRadius: 16, padding: "14px 16px",
+          borderTop: "1.5px solid rgba(212,175,55,0.35)", borderLeft: "1px solid rgba(212,175,55,0.15)",
+          borderBottom: "3px solid #040300", borderRight: "1px solid rgba(0,0,0,0.5)",
+          boxShadow: "0 6px 0 #040300, 0 10px 20px rgba(0,0,0,0.7)",
+          display: "flex", alignItems: "center", gap: 14,
+        }}>
+          <div style={{ width: 42, height: 42, borderRadius: 12, background: "rgba(212,175,55,0.15)",
+            border: "1.5px solid rgba(212,175,55,0.4)", display: "flex",
+            alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <Users size={20} style={{ color: "#d4af37" }} />
+          </div>
+          <div>
+            <p style={{ fontSize: 13, fontWeight: 700, color: "#d4af37", margin: 0 }}>Invitar a mi familia por WhatsApp</p>
+            <p style={{ fontSize: 11, color: "rgba(212,175,55,0.5)", margin: "2px 0 0" }}>
+              Cuantos más se unan, más vivo está el feed
+            </p>
+          </div>
+          <span style={{ marginLeft: "auto", color: "rgba(212,175,55,0.5)", fontSize: 18 }}>›</span>
         </div>
       </Link>
     </div>
