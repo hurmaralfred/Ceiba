@@ -257,7 +257,7 @@ function CardShine({ ar }: { ar: string }) {
 }
 
 // ── Navegación cósmica ────────────────────────────────────────────────────────
-function CosmicNav({ pathname }: { pathname: string }) {
+function CosmicNav({ pathname, suggCount = 0 }: { pathname: string; suggCount?: number }) {
   const items = [
     { href: "/home",    Icon: Home,     label: "Inicio"   },
     { href: "/tree",    Icon: TreePine, label: "Árbol"    },
@@ -291,10 +291,24 @@ function CosmicNav({ pathname }: { pathname: string }) {
         );
         const active = pathname === href;
         const color = active ? "#d4af37" : "rgba(212,175,55,0.28)";
+        const showBadge = href === "/home" && suggCount > 0;
         return (
           <Link key={href} href={href}
             style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, textDecoration: "none" }}>
-            <Icon size={22} style={{ color }} />
+            <div style={{ position: "relative" }}>
+              <Icon size={22} style={{ color }} />
+              {showBadge && (
+                <div style={{
+                  position: "absolute", top: -5, right: -7,
+                  minWidth: 16, height: 16, borderRadius: 8,
+                  background: "#d4af37", border: "1.5px solid #030208",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 9, fontWeight: 800, color: "#030208", padding: "0 3px", lineHeight: 1,
+                }}>
+                  {suggCount > 9 ? "9+" : suggCount}
+                </div>
+              )}
+            </div>
             <span style={{ fontSize: 9, fontWeight: active ? 700 : 500, color }}>{label}</span>
           </Link>
         );
@@ -516,12 +530,49 @@ export default function HomePage() {
         background: "linear-gradient(90deg,transparent,rgba(212,175,55,0.3),transparent)",
         margin: "0 20px" }} />
 
+      {/* ── CUMPLEAÑOS HOY (prioridad máxima) ───────────────────────────── */}
+      {todayBirthday && (
+        <div style={{ padding: "14px 14px 0" }}>
+          <Link href={`/persona/${todayBirthday.person_id}`}>
+            <div style={{
+              borderRadius: 18, background: "#100c02", position: "relative", overflow: "hidden",
+              borderTop: "1.5px solid rgba(212,175,55,0.6)", borderLeft: "1px solid rgba(212,175,55,0.22)",
+              borderBottom: "3px solid #040300", borderRight: "1px solid rgba(0,0,0,0.6)",
+              boxShadow: "0 7px 0 #040300, 0 12px 22px rgba(0,0,0,0.85), 0 0 28px rgba(212,175,55,0.22)",
+            }}>
+              <div style={{ position: "absolute", top: 0, left: "20%", right: "20%", height: 1,
+                background: "rgba(212,175,55,0.7)" }} />
+              <div style={{ position: "absolute", inset: 0, borderRadius: 18, pointerEvents: "none",
+                background: "radial-gradient(circle at 10% 50%,rgba(212,175,55,0.14) 0%,transparent 55%)" }} />
+              <div style={{ padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, position: "relative" }}>
+                <div style={{ fontSize: 34, lineHeight: 1 }}>🎂</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.16em",
+                    textTransform: "uppercase", color: "#d4af37", marginBottom: 2 }}>
+                    ¡Cumpleaños hoy!
+                  </div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: "#fff", marginBottom: 2 }}>
+                    {todayBirthday.first_name} {todayBirthday.last_name}
+                  </div>
+                  <div style={{ fontSize: 11, color: "rgba(212,175,55,0.55)" }}>
+                    {new Date().getFullYear() - new Date(todayBirthday.birth_date).getFullYear()} años · Toca para felicitar
+                  </div>
+                </div>
+                <ChevronRight size={18} style={{ color: "rgba(212,175,55,0.5)", flexShrink: 0 }} />
+              </div>
+            </div>
+          </Link>
+        </div>
+      )}
+
       {/* ── FUNCIONES ────────────────────────────────────────────────────── */}
       <div style={{ padding: "16px 14px 14px" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 13 }}>
           <span style={{ fontSize: 11, fontWeight: 700, color: "#d4af37", letterSpacing: "0.1em",
             textTransform: "uppercase" }}>Descubre tu historia</span>
-          <span style={{ fontSize: 10, color: "rgba(212,175,55,0.42)" }}>Ver todo →</span>
+          <Link href="/events" style={{ textDecoration: "none" }}>
+            <span style={{ fontSize: 10, color: "rgba(212,175,55,0.42)" }}>Ver todo →</span>
+          </Link>
         </div>
 
         {/* Grid 2×2 */}
@@ -831,8 +882,15 @@ export default function HomePage() {
                 <div style={{ fontSize: 14, fontWeight: 700, color: "#fff", marginBottom: 8 }}>Tu árbol crece</div>
                 <div style={{ height: 5, background: "rgba(212,175,55,0.08)", borderRadius: 100, overflow: "hidden",
                   boxShadow: "inset 0 1px 3px rgba(0,0,0,0.6)" }}>
-                  <div style={{ width: "60%", height: "100%", background: "#d4af37", borderRadius: 100,
-                    boxShadow: "0 0 8px rgba(212,175,55,0.6)" }} />
+                  <div style={{
+                    width: `${Math.min(100, Math.round((visibleCount / 100) * 100))}%`,
+                    height: "100%", background: "#d4af37", borderRadius: 100,
+                    boxShadow: "0 0 8px rgba(212,175,55,0.6)",
+                    transition: "width 0.8s ease",
+                  }} />
+                </div>
+                <div style={{ fontSize: 9, color: "rgba(212,175,55,0.4)", marginTop: 5 }}>
+                  {visibleCount} de 100 familiares
                 </div>
               </div>
               <Trophy size={33} style={{ color: "#d4af37", flexShrink: 0 }} />
@@ -842,7 +900,7 @@ export default function HomePage() {
       </div>
 
       {/* Navegación inferior cósmica */}
-      <CosmicNav pathname={pathname ?? "/home"} />
+      <CosmicNav pathname={pathname ?? "/home"} suggCount={suggestions.filter(s => !dismissedIds.has(s.id)).length} />
     </div>
   );
 }
