@@ -237,9 +237,9 @@ export default function LandingPage() {
             boxShadow: "0 20px 60px rgba(0,0,0,0.8), 0 0 0 1px rgba(212,175,55,0.15)",
             background: "#0c0a18" }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="https://images.pexels.com/photos/1128318/pexels-photo-1128318.jpeg?auto=compress&cs=tinysrgb&w=900"
+            <img src="https://images.pexels.com/photos/13197844/pexels-photo-13197844.jpeg?auto=compress&cs=tinysrgb&w=900"
               alt="Familia de tres generaciones conectada"
-              style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 30%" }} />
+              style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 40%" }} />
             <div style={{ position: "absolute", inset: 0,
               background: `linear-gradient(to right, rgba(3,2,8,0.45) 0%, transparent, rgba(3,2,8,0.22) 100%)` }} />
             <div style={{ position: "absolute", inset: 0,
