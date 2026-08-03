@@ -383,21 +383,48 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
             </radialGradient>
 
             {node.isDeceased && (
-              <filter id={`${uid}ds`}>
-                <feColorMatrix type="saturate" values="0.12" />
-                <feComponentTransfer>
-                  <feFuncA type="linear" slope="0.68" />
-                </feComponentTransfer>
-              </filter>
+              <>
+                {/* Desaturate + tint toward silver-blue + reduce opacity */}
+                <filter id={`${uid}ds`} colorInterpolationFilters="sRGB">
+                  <feColorMatrix type="saturate" values="0" />
+                  {/* Tint toward cool luminous silver: lift R/B channels slightly */}
+                  <feColorMatrix type="matrix" values="
+                    0.82 0.06 0.14 0 0.07
+                    0.06 0.82 0.14 0 0.07
+                    0.06 0.08 0.88 0 0.12
+                    0    0    0    0.52 0
+                  " />
+                </filter>
+                {/* Ethereal aura gradient — diffuse glow behind avatar */}
+                <radialGradient id={`${uid}aura`} cx="50%" cy="44%" r="50%">
+                  <stop offset="0%"   stopColor="rgba(210,228,255,0.55)" />
+                  <stop offset="35%"  stopColor="rgba(180,210,255,0.26)" />
+                  <stop offset="65%"  stopColor="rgba(195,215,255,0.10)" />
+                  <stop offset="100%" stopColor="rgba(180,205,255,0)" />
+                </radialGradient>
+                {/* Orbit path for animateMotion particles */}
+                <path id={`${uid}op`}
+                  d={`M${CX - (R + 15)},${CY} A${R + 15},${R + 10},0,1,0,${CX + (R + 15)},${CY} A${R + 15},${R + 10},0,1,0,${CX - (R + 15)},${CY}Z`}
+                  fill="none"
+                />
+              </>
             )}
           </defs>
 
-          {/* Deceased ring — outside filter */}
-          {node.isDeceased && !node.isFocal && (
-            <circle cx={CX} cy={CY} r={R + 3}
-              fill="none" stroke="rgba(200,185,155,0.50)"
-              strokeWidth="1" strokeDasharray="2 3"
-            />
+          {/* ── Ethereal aura behind avatar (unaffected by desaturate filter) ── */}
+          {node.isDeceased && (
+            <>
+              {/* Outer diffuse glow */}
+              <ellipse cx={CX} cy={CY - 3} rx={R + 24} ry={R + 20}
+                fill={`url(#${uid}aura)`}
+                style={{ animation: `universeGlowPulse 4s ease-in-out ${glowDelay} infinite` }}
+              />
+              {/* Inner luminous core */}
+              <ellipse cx={CX} cy={CY - 2} rx={R + 9} ry={R + 7}
+                fill="rgba(205,222,255,0.18)"
+                style={{ animation: `universeGlowPulse 2.8s ease-in-out ${glowDelay} infinite` }}
+              />
+            </>
           )}
 
           <g filter={deceasedFilter}>
@@ -639,6 +666,62 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
                 fill="none" stroke={glowColor} strokeWidth="1.2" opacity="0.26" />
             )}
           </g>
+
+          {/* ── Spiritual overlay — rendered AFTER filter group so they stay luminous ── */}
+          {node.isDeceased && (
+            <>
+              {/* Halo arc above head */}
+              <path
+                d={`M${CX - R + 3},${headTopY - 3} A${R - 1},${R - 1},0,0,1,${CX + R - 3},${headTopY - 3}`}
+                fill="none" stroke="rgba(225,238,255,0.85)" strokeWidth="2.0" strokeLinecap="round"
+                style={{ animation: `universeGlowPulse 2.6s ease-in-out ${glowDelay} infinite` }}
+              />
+              {/* Outer halo ring — wider, subtler */}
+              <path
+                d={`M${CX - R},${headTopY - 5} A${R + 2},${R + 2},0,0,1,${CX + R},${headTopY - 5}`}
+                fill="none" stroke="rgba(200,220,255,0.28)" strokeWidth="0.8" strokeLinecap="round"
+              />
+
+              {/* Sparkle star at apex of halo */}
+              <g
+                transform={`translate(${CX},${headTopY - 12})`}
+                style={{ animation: `universeGlowPulse 1.9s ease-in-out ${glowDelay} infinite` }}
+              >
+                <line x1="0" y1="-5" x2="0" y2="5"   stroke="rgba(255,252,220,0.95)" strokeWidth="1.3" strokeLinecap="round" />
+                <line x1="-5" y1="0" x2="5" y2="0"   stroke="rgba(255,252,220,0.95)" strokeWidth="1.3" strokeLinecap="round" />
+                <line x1="-3" y1="-3" x2="3" y2="3"  stroke="rgba(255,252,220,0.55)" strokeWidth="0.9" strokeLinecap="round" />
+                <line x1="3" y1="-3" x2="-3" y2="3"  stroke="rgba(255,252,220,0.55)" strokeWidth="0.9" strokeLinecap="round" />
+              </g>
+
+              {/* Spirit ring 1 — slow clockwise spin */}
+              <circle cx={CX} cy={CY} r={R + 9}
+                fill="none" stroke="rgba(195,218,255,0.25)" strokeWidth="0.9" strokeDasharray="4 6"
+                style={{ animation: `universeSpin 20s linear infinite`, transformOrigin: `${CX}px ${CY}px` }}
+              />
+              {/* Spirit ring 2 — slow counter-clockwise */}
+              <circle cx={CX} cy={CY} r={R + 16}
+                fill="none" stroke="rgba(195,218,255,0.13)" strokeWidth="0.6" strokeDasharray="2 8"
+                style={{ animation: `universeSpin 32s linear reverse infinite`, transformOrigin: `${CX}px ${CY}px` }}
+              />
+
+              {/* 3 orbiting light particles */}
+              <circle r="1.6" fill="rgba(235,245,255,0.95)">
+                <animateMotion dur="7s" repeatCount="indefinite" rotate="auto">
+                  <mpath href={`#${uid}op`} />
+                </animateMotion>
+              </circle>
+              <circle r="1.1" fill="rgba(210,232,255,0.80)">
+                <animateMotion dur="7s" begin="-2.3s" repeatCount="indefinite" rotate="auto">
+                  <mpath href={`#${uid}op`} />
+                </animateMotion>
+              </circle>
+              <circle r="0.9" fill="rgba(255,245,200,0.85)">
+                <animateMotion dur="7s" begin="-4.6s" repeatCount="indefinite" rotate="auto">
+                  <mpath href={`#${uid}op`} />
+                </animateMotion>
+              </circle>
+            </>
+          )}
         </svg>
       </div>
 
@@ -660,14 +743,18 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
               style={{
                 fontSize: 10,
                 fontWeight: 600,
-                color: node.isFocal ? glowColor : 'rgba(255,255,255,0.92)',
+                color: node.isDeceased
+                  ? 'rgba(210,228,255,0.90)'
+                  : node.isFocal ? glowColor : 'rgba(255,255,255,0.92)',
                 letterSpacing: '0.01em',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 maxWidth: 80,
                 margin: '0 auto',
-                textShadow: node.isFocal ? `0 0 8px ${glowColor}80` : undefined,
+                textShadow: node.isDeceased
+                  ? '0 0 8px rgba(180,210,255,0.60)'
+                  : node.isFocal ? `0 0 8px ${glowColor}80` : undefined,
               }}
             >
               {node.shortName}
@@ -675,12 +762,14 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
             <div
               style={{
                 fontSize: 8.5,
-                color: node.isFocal ? glowColor : 'rgba(255,255,255,0.48)',
+                color: node.isDeceased
+                  ? 'rgba(180,210,255,0.58)'
+                  : node.isFocal ? glowColor : 'rgba(255,255,255,0.48)',
                 letterSpacing: '0.02em',
                 whiteSpace: 'nowrap',
               }}
             >
-              {node.isFocal && node.isRoot ? '·' : node.relation}
+              {node.isDeceased ? '✦ descansando' : node.isFocal && node.isRoot ? '·' : node.relation}
             </div>
           </div>
         )
