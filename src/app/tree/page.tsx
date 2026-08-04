@@ -1670,19 +1670,19 @@ function TreePageContent() {
           position: fixed;
           right: 20px;
           bottom: calc(132px + env(safe-area-inset-bottom));
-          width: 64px;
-          height: 64px;
+          width: 42px;
+          height: 42px;
           border-radius: 50%;
-          border-top: 2.5px solid #fff9c4;
-          border-bottom: 5px solid #6a5600;
-          border-left: 1.5px solid rgba(255,240,100,0.4);
-          border-right: 1.5px solid rgba(0,0,0,0.35);
+          border-top: 1.5px solid #fff9c4;
+          border-bottom: 3px solid #6a5600;
+          border-left: 1px solid rgba(255,240,100,0.4);
+          border-right: 1px solid rgba(0,0,0,0.35);
           cursor: pointer;
           display: flex;
           align-items: center;
           justify-content: center;
           background: linear-gradient(145deg, #f5e060 0%, #d4af37 45%, #b8950a 100%);
-          box-shadow: 0 8px 0 #4a3c00, 0 10px 28px rgba(212,175,55,0.50), 0 0 0 0 rgba(212,175,55,0.35);
+          box-shadow: 0 5px 0 #4a3c00, 0 7px 18px rgba(212,175,55,0.40), 0 0 0 0 rgba(212,175,55,0.25);
           color: #030208;
           z-index: 55;
           transition: transform 0.12s ease, box-shadow 0.12s ease;
@@ -1714,8 +1714,8 @@ function TreePageContent() {
         }
         @media (min-width: 768px) {
           .ceiba-fab {
-            width: 72px;
-            height: 72px;
+            width: 46px;
+            height: 46px;
             bottom: calc(104px + env(safe-area-inset-bottom));
             right: 28px;
           }
@@ -1739,7 +1739,7 @@ function TreePageContent() {
         aria-label="Agregar familiar"
         title="Agregar familiar"
       >
-        <Plus size={28} strokeWidth={2.8} />
+        <Plus size={18} strokeWidth={2.2} />
       </button>
 
       {invitePrompt && (

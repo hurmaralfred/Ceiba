@@ -479,166 +479,43 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
               </>
             ) : (
               <g clipPath={`url(#${uid}pc)`}>
-                {/* Background */}
-                <circle cx={CX} cy={CY} r={R} fill={`url(#${uid}bg)`} />
+                {/* ── Placeholder elegante — iniciales ── */}
+                {/* Background radial: dark center, subtle glow rim */}
+                <radialGradient id={`${uid}plbg`} cx="50%" cy="38%" r="70%">
+                  <stop offset="0%"   stopColor={`rgba(${glowRgb},0.16)`} />
+                  <stop offset="60%"  stopColor="rgba(8,6,14,0.95)" />
+                  <stop offset="100%" stopColor="rgba(3,2,8,0.98)" />
+                </radialGradient>
+                <circle cx={CX} cy={CY} r={R} fill={`url(#${uid}plbg)`} />
 
-                {/* Shirt / shoulders */}
-                <ellipse cx={CX} cy={neckBotY + 22} rx={R + 6} ry="26" fill={`url(#${uid}sh)`} />
-                {/* V-collar */}
-                <path
-                  d={`M${CX - 8} ${neckBotY - 2} L${CX} ${neckBotY + 7} L${CX + 8} ${neckBotY - 2}`}
-                  fill="none" stroke={skin} strokeWidth="2.8" strokeLinecap="round"
-                />
-
-                {/* Neck */}
-                <path
-                  d={`M${CX - 6} ${neckTopY} Q${CX - 7} ${neckBotY} ${CX - 8} ${neckBotY + 2} L${CX + 8} ${neckBotY + 2} Q${CX + 7} ${neckBotY} ${CX + 6} ${neckTopY} Q${CX} ${neckTopY + 5} ${CX - 6} ${neckTopY} Z`}
-                  fill={`url(#${uid}sk)`}
-                />
-                <ellipse cx={CX - 4} cy={neckTopY + 6} rx="3" ry="6" fill={skinDark} opacity="0.16" />
-                <ellipse cx={CX + 4} cy={neckTopY + 6} rx="3" ry="6" fill={skinDark} opacity="0.16" />
-
-                {/* Hair — rendered before head so head creates hairline naturally */}
-                <PortraitHair
-                  color={hairColor} female={female} elder={elder} child={child} style={hairStyle}
-                  headTopY={headTopY} hairlineY={hairlineY} cx={CX}
-                />
-
-                {/* Ears */}
-                <ellipse cx={earLX - 1} cy={earCY} rx="3.2" ry="4.5" fill={skin} />
-                <ellipse cx={earLX - 1} cy={earCY} rx="1.6" ry="2.7" fill={skinDark} opacity="0.20" />
-                <ellipse cx={earRX + 1} cy={earCY} rx="3.2" ry="4.5" fill={skin} />
-                <ellipse cx={earRX + 1} cy={earCY} rx="1.6" ry="2.7" fill={skinDark} opacity="0.20" />
-
-                {/* Earrings */}
-                {hasEarrings && (
-                  <>
-                    <line x1={earLX - 1} y1={earCY + 4.5} x2={earLX - 1} y2={earCY + 8.5}
-                      stroke={darken(hairColor, 0.05)} strokeWidth="0.9" strokeLinecap="round" />
-                    <circle cx={earLX - 1} cy={earCY + 10.5} r="2.4" fill={lighten(hairColor, 0.28)} />
-                    <circle cx={earLX - 1} cy={earCY + 10.5} r="1.5" fill={hairColor} />
-                    <line x1={earRX + 1} y1={earCY + 4.5} x2={earRX + 1} y2={earCY + 8.5}
-                      stroke={darken(hairColor, 0.05)} strokeWidth="0.9" strokeLinecap="round" />
-                    <circle cx={earRX + 1} cy={earCY + 10.5} r="2.4" fill={lighten(hairColor, 0.28)} />
-                    <circle cx={earRX + 1} cy={earCY + 10.5} r="1.5" fill={hairColor} />
-                  </>
-                )}
-
-                {/* Head */}
-                <ellipse cx={CX} cy={headCY} rx={headRX} ry={headRY} fill={`url(#${uid}sk)`} />
-
-                {/* Subtle face shading */}
-                <ellipse cx={CX - headRX + 3} cy={headCY - 2} rx="4" ry="8" fill={skinDark} opacity="0.09" />
-                <ellipse cx={CX + headRX - 3} cy={headCY - 2} rx="4" ry="8" fill={skinDark} opacity="0.09" />
-                <ellipse cx={CX - 2} cy={headCY - headRY + 7} rx="5" ry="4" fill="white" opacity="0.08" />
-                <ellipse cx={CX} cy={chinY - 1} rx={headRX - 3} ry="4" fill={skinDark} opacity="0.08" />
-
-                {/* Eyebrows */}
-                {female ? (
-                  <>
-                    <path d={`M${CX - 13} ${browY + 1} Q${CX - 8} ${browY - 2} ${CX - 4} ${browY + 1}`}
-                      fill="none" stroke={browColor} strokeWidth="1.6" strokeLinecap="round" />
-                    <path d={`M${CX + 4} ${browY + 1} Q${CX + 8} ${browY - 2} ${CX + 13} ${browY + 1}`}
-                      fill="none" stroke={browColor} strokeWidth="1.6" strokeLinecap="round" />
-                  </>
-                ) : (
-                  <>
-                    <path d={`M${CX - 14} ${browY} Q${CX - 8} ${browY - 3} ${CX - 4} ${browY + 1}`}
-                      fill="none" stroke={browColor} strokeWidth={elder ? 2.1 : child ? 1.6 : 1.9} strokeLinecap="round" />
-                    <path d={`M${CX + 4} ${browY + 1} Q${CX + 8} ${browY - 3} ${CX + 14} ${browY}`}
-                      fill="none" stroke={browColor} strokeWidth={elder ? 2.1 : child ? 1.6 : 1.9} strokeLinecap="round" />
-                  </>
-                )}
-
-                {/* ── Left eye (Pixar: bigger iris, 3 specular dots) ── */}
-                <circle cx={CX - 8} cy={eyeY} r={eyeR + 0.8} fill="white" />
-                <path d={`M${CX - 8 - eyeR} ${eyeY} A${eyeR + 0.8} ${eyeR + 0.8} 0 0 1 ${CX - 8 + eyeR} ${eyeY}`}
-                  fill="rgba(40,15,5,0.08)" />
-                <circle cx={CX - 8} cy={eyeY} r={eyeR - 0.5} fill={`url(#${uid}el)`} />
-                <circle cx={CX - 8} cy={eyeY} r={eyeR - 2.0} fill="#060100" />
-                <circle cx={CX - 9.8} cy={eyeY - 2.0} r="2.0"  fill="white" opacity="0.95" />
-                <circle cx={CX - 6.5} cy={eyeY + 1.4} r="1.0"  fill="white" opacity="0.52" />
-                <circle cx={CX - 9.0} cy={eyeY + 2.0} r="0.55" fill="white" opacity="0.35" />
-                <path d={`M${CX - 8 - eyeR - 0.5} ${eyeY - 0.4} Q${CX - 8} ${eyeY - eyeR - 2} ${CX - 8 + eyeR + 0.5} ${eyeY - 0.4}`}
-                  fill="none" stroke="#070100" strokeWidth={female ? 2.0 : 1.5} strokeLinecap="round" />
-                {female && (
-                  <path d={`M${CX - 8 - eyeR + 1} ${eyeY + 0.5} Q${CX - 8} ${eyeY + eyeR + 0.5} ${CX - 8 + eyeR - 1} ${eyeY + 0.5}`}
-                    fill="none" stroke="#070100" strokeWidth="0.8" opacity="0.46" strokeLinecap="round" />
-                )}
-
-                {/* ── Right eye (Pixar: bigger iris, 3 specular dots) ── */}
-                <circle cx={CX + 8} cy={eyeY} r={eyeR + 0.8} fill="white" />
-                <path d={`M${CX + 8 - eyeR} ${eyeY} A${eyeR + 0.8} ${eyeR + 0.8} 0 0 1 ${CX + 8 + eyeR} ${eyeY}`}
-                  fill="rgba(40,15,5,0.08)" />
-                <circle cx={CX + 8} cy={eyeY} r={eyeR - 0.5} fill={`url(#${uid}er)`} />
-                <circle cx={CX + 8} cy={eyeY} r={eyeR - 2.0} fill="#060100" />
-                <circle cx={CX + 6.2} cy={eyeY - 2.0} r="2.0"  fill="white" opacity="0.95" />
-                <circle cx={CX + 9.5} cy={eyeY + 1.4} r="1.0"  fill="white" opacity="0.52" />
-                <circle cx={CX + 7.0} cy={eyeY + 2.0} r="0.55" fill="white" opacity="0.35" />
-                <path d={`M${CX + 8 - eyeR - 0.5} ${eyeY - 0.4} Q${CX + 8} ${eyeY - eyeR - 2} ${CX + 8 + eyeR + 0.5} ${eyeY - 0.4}`}
-                  fill="none" stroke="#070100" strokeWidth={female ? 2.0 : 1.5} strokeLinecap="round" />
-                {female && (
-                  <path d={`M${CX + 8 - eyeR + 1} ${eyeY + 0.5} Q${CX + 8} ${eyeY + eyeR + 0.5} ${CX + 8 + eyeR - 1} ${eyeY + 0.5}`}
-                    fill="none" stroke="#070100" strokeWidth="0.8" opacity="0.46" strokeLinecap="round" />
-                )}
-
-                {/* Elder crow's feet */}
-                {elder && (
-                  <>
-                    <path d={`M${CX - 8 + eyeR + 0.5} ${eyeY - 0.5} Q${CX - 3} ${eyeY + 2} ${CX - 2} ${eyeY + 5}`}
-                      fill="none" stroke={skinDark} strokeWidth="0.7" opacity="0.36" />
-                    <path d={`M${CX + 8 - eyeR - 0.5} ${eyeY - 0.5} Q${CX + 3} ${eyeY + 2} ${CX + 2} ${eyeY + 5}`}
-                      fill="none" stroke={skinDark} strokeWidth="0.7" opacity="0.36" />
-                  </>
-                )}
-
-                {/* Nose */}
-                <path d={`M${CX - 2.5} ${noseY - 5} Q${CX - 3.8} ${noseY - 1} ${CX - 3.2} ${noseY + 1}`}
-                  fill="none" stroke={skinDeep} strokeWidth="0.85" opacity="0.48" strokeLinecap="round" />
-                <path d={`M${CX + 2.5} ${noseY - 5} Q${CX + 3.8} ${noseY - 1} ${CX + 3.2} ${noseY + 1}`}
-                  fill="none" stroke={skinDeep} strokeWidth="0.85" opacity="0.48" strokeLinecap="round" />
-                <circle cx={CX - 3} cy={noseY + 1} r="1.1" fill={skinDeep} opacity="0.20" />
-                <circle cx={CX + 3} cy={noseY + 1} r="1.1" fill={skinDeep} opacity="0.20" />
-
-                {/* Lips */}
-                <path d={`M${CX - 6.5} ${mouthY} Q${CX - 3} ${mouthY - 3} ${CX} ${mouthY - 1.5} Q${CX + 3} ${mouthY - 3} ${CX + 6.5} ${mouthY}`}
-                  fill="none" stroke="#8B3020" strokeWidth={female ? 1.9 : 1.5} strokeLinecap="round" />
-                <path d={`M${CX - 5.5} ${mouthY + 0.5} Q${CX} ${mouthY + 5} ${CX + 5.5} ${mouthY + 0.5}`}
-                  fill="none" stroke="#8B3020" strokeWidth={female ? 2.1 : 1.7} strokeLinecap="round" />
-                <path d={`M${CX - 1.8} ${mouthY + 2} Q${CX} ${mouthY + 4} ${CX + 1.8} ${mouthY + 2}`}
-                  fill="none" stroke="rgba(255,210,195,0.20)" strokeWidth="1.2" strokeLinecap="round" />
-
-                {/* Cheek blush — Pixar warm rose */}
-                <ellipse cx={CX - headRX + 4} cy={mouthY - 4} rx={child ? 9 : 7} ry={child ? 6.5 : 5}
-                  fill="rgba(255,90,65,0.17)" />
-                <ellipse cx={CX - headRX + 4} cy={mouthY - 4} rx={child ? 5 : 4} ry={child ? 3.5 : 2.8}
-                  fill="rgba(255,120,90,0.10)" />
-                <ellipse cx={CX + headRX - 4} cy={mouthY - 4} rx={child ? 9 : 7} ry={child ? 6.5 : 5}
-                  fill="rgba(255,90,65,0.17)" />
-                <ellipse cx={CX + headRX - 4} cy={mouthY - 4} rx={child ? 5 : 4} ry={child ? 3.5 : 2.8}
-                  fill="rgba(255,120,90,0.10)" />
-
-                {/* Beard */}
-                {hasBeard && (
-                  <path
-                    d={`M${CX - 9} ${chinY - 9} Q${CX - 5} ${chinY + 1} ${CX} ${chinY + 2} Q${CX + 5} ${chinY + 1} ${CX + 9} ${chinY - 9} Q${CX + 4} ${chinY - 3} ${CX} ${chinY - 2} Q${CX - 4} ${chinY - 3} ${CX - 9} ${chinY - 9} Z`}
-                    fill={darken(hairColor, 0.08)} opacity="0.72"
-                  />
-                )}
-
-                {/* Glasses */}
-                {hasGlasses && (
-                  <g opacity="0.80">
-                    <circle cx={CX - 8} cy={eyeY} r={eyeR + 1.6} fill="none" stroke={eyeColor} strokeWidth="1.3" />
-                    <circle cx={CX + 8} cy={eyeY} r={eyeR + 1.6} fill="none" stroke={eyeColor} strokeWidth="1.3" />
-                    <path d={`M${CX - 8 + eyeR + 1.6} ${eyeY} L${CX + 8 - eyeR - 1.6} ${eyeY}`}
-                      stroke={eyeColor} strokeWidth="1.3" />
-                    <path d={`M${CX - 8 - eyeR - 1.6} ${eyeY - 0.5} L${CX - 8 - eyeR - 4.5} ${eyeY - 1}`}
-                      stroke={eyeColor} strokeWidth="1.1" />
-                    <path d={`M${CX + 8 + eyeR + 1.6} ${eyeY - 0.5} L${CX + 8 + eyeR + 4.5} ${eyeY - 1}`}
-                      stroke={eyeColor} strokeWidth="1.1" />
-                  </g>
-                )}
+                {/* Initials — elegant placeholder */}
+                {(() => {
+                  const words = node.name.trim().split(/\s+/)
+                  const first = words[0]?.[0]?.toUpperCase() ?? ''
+                  const last  = words.length > 1 ? words[words.length - 1]?.[0]?.toUpperCase() ?? '' : ''
+                  const initials = first + last
+                  const fontSize = initials.length === 1 ? 22 : 18
+                  return (
+                    <>
+                      {/* Subtle rim light */}
+                      <circle cx={CX} cy={CY - 6} r={R * 0.55}
+                        fill={`rgba(${glowRgb},0.06)`} />
+                      {/* Initials text */}
+                      <text
+                        x={CX} y={CY + fontSize * 0.36}
+                        textAnchor="middle"
+                        fontSize={fontSize}
+                        fontWeight="300"
+                        letterSpacing="0.06em"
+                        fill={glowColor}
+                        opacity="0.88"
+                        fontFamily="system-ui, -apple-system, sans-serif"
+                      >
+                        {initials}
+                      </text>
+                    </>
+                  )
+                })()}
               </g>
             )}
 

@@ -240,9 +240,9 @@ function AmbientLayer({ width, height }: { width: number; height: number }) {
 // political: violet dotted — político-legal
 
 const CONN_STYLES = {
-  blood:    { stroke: '#F2B43C', dash: '',    width: 1.5, opacity: 0.60 },
-  marriage: { stroke: '#7BAFD4', dash: '7 5', width: 1.5, opacity: 0.55 },
-  political:{ stroke: '#B8A0D8', dash: '3 7', width: 1.0, opacity: 0.40 },
+  blood:    { stroke: '#F2B43C', dash: '',    width: 0.8, opacity: 0.18 },
+  marriage: { stroke: '#7BAFD4', dash: '7 5', width: 0.8, opacity: 0.14 },
+  political:{ stroke: '#B8A0D8', dash: '3 7', width: 0.6, opacity: 0.10 },
 } as const
 
 function ConnectionLines({ nodes, width, height }: { nodes: UniverseNode[]; width: number; height: number }) {
@@ -301,7 +301,7 @@ function ConnectionLines({ nodes, width, height }: { nodes: UniverseNode[]; widt
               opacity={lineOpacity}
             />
             {/* Energy particle flowing parent → child */}
-            <circle r={2.2} fill={st.stroke} opacity={lineOpacity * 0.95} filter="url(#particle-glow)">
+            <circle r={1.4} fill={st.stroke} opacity={lineOpacity * 1.4} filter="url(#particle-glow)">
               <animateMotion dur={dur} begin={delay} repeatCount="indefinite" rotate="auto">
                 <mpath href={`#${pathId}`}/>
               </animateMotion>

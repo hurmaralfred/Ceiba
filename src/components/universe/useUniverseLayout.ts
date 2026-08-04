@@ -4,14 +4,36 @@ import type { ExtendedEntry, MemberLink } from '@/components/tree/FamilyTreeGrap
 import type { AvatarConfig } from '@/lib/avatarConfig'
 
 // ─── Orbital geometry ───────────────────────────────────────────────────────
-const ORBIT_RADII  = [0, 115, 210, 295, 370, 440] as const
+// +50% radii for constellation breathing room
+const ORBIT_RADII  = [0, 173, 315, 443, 555, 660] as const
 const MAX_HOP      = 5
-// Scale and opacity are tier-based, not orbit-based.
-// Tier 0 = focal, 1 = intimate circle, 2 = close family, 3 = not rendered.
-// Sizes follow the 3-channel design system: r≈28 / 18 / 12 / 8
-// SVG head radius ≈ 22px → scale = target_r / 22
-const TIER_SCALES  = [1.30, 0.82, 0.55, 0.0] as const
 const TIER_OPACITY = [1.0,  1.0,  0.60, 0.0] as const
+
+// Relation-aware scale hierarchy (user: Tú 100% / Padres 80% / Hijos 75% / Hermanos 70% / Demás 55%)
+// SVG focal head r≈32px after 1.30× scale. All others scale relative.
+const PARENT_SCALE_RELS = new Set([
+  'father','mother','stepfather','stepmother',
+  'grandfather','grandmother','grandfather_paternal','grandmother_paternal',
+  'grandfather_maternal','grandmother_maternal',
+])
+const CHILD_SCALE_RELS = new Set([
+  'son','daughter','stepson','stepdaughter','stepchild',
+  'grandson','granddaughter',
+])
+const SIBLING_SCALE_RELS = new Set([
+  'brother','sister','half_brother','half_sister',
+])
+
+function resolveNodeScale(relationType: string, tier: 0 | 1 | 2 | 3): number {
+  if (tier === 0) return 1.30   // focal — 100%
+  if (tier >= 3) return 0.0
+  if (tier === 2) return 0.72   // extended family — 55% of 1.30
+  // Tier 1: relation-specific hierarchy
+  if (PARENT_SCALE_RELS.has(relationType)) return 1.04   // 80%
+  if (CHILD_SCALE_RELS.has(relationType))  return 0.975  // 75%
+  if (SIBLING_SCALE_RELS.has(relationType)) return 0.91  // 70%
+  return 0.975  // spouse, in-laws, etc → 75%
+}
 
 // Preferred angle (°) per relation type, measured from 3 o'clock, clockwise positive.
 //
@@ -794,7 +816,7 @@ export function useUniverseLayout(
         angleDeg: 0,
         cx: 0, cy: 0,
         relevanceTier: rootTier,
-        scale: TIER_SCALES[rootTier] as number,
+        scale: resolveNodeScale('root', rootTier),
         opacity: TIER_OPACITY[rootTier] as number,
         zIndex: 10 - rootHop,
         ageGroup: 'adult',
@@ -826,7 +848,7 @@ export function useUniverseLayout(
         angleDeg: 0,
         cx: 0, cy: 0,
         relevanceTier: tier,
-        scale: TIER_SCALES[tier] as number,
+        scale: resolveNodeScale(m.relation_type, tier),
         opacity: TIER_OPACITY[tier] as number,
         zIndex: 10 - hop,  // recomputed after positions are set
         ageGroup: ageGroup(m),
@@ -860,7 +882,7 @@ export function useUniverseLayout(
         angleDeg: 0,
         cx: 0, cy: 0,
         relevanceTier: tier,
-        scale: TIER_SCALES[tier] as number,
+        scale: resolveNodeScale(m.relation_type, tier),
         opacity: TIER_OPACITY[tier] as number,
         zIndex: 10 - hop,
         ageGroup: ageGroup(m),
@@ -891,7 +913,7 @@ export function useUniverseLayout(
         relationType: n.relationType,
         preferredAngle: REL_ANGLE[n.relationType] ?? (hashId(n.id) % 360) - 180,
       }))
-      const angles = distributeOrbit(items, 32)
+      const angles = distributeOrbit(items, 45)
       for (const n of orbit1) {
         const a = angles.get(n.id) ?? 0
         n.angleDeg = a
@@ -937,7 +959,7 @@ export function useUniverseLayout(
             : REL_ANGLE[n.relationType] ?? (hashId(n.id) % 360) - 180,
         }
       })
-      const angles = distributeOrbit(items, 22)
+      const angles = distributeOrbit(items, 31)
 
       for (const n of orbitN) {
         const a = angles.get(n.id) ?? 0
