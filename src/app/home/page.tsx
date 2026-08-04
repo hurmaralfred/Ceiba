@@ -429,9 +429,23 @@ export default function HomePage() {
   const firstName = profile?.first_name ?? "";
   const avatarInitial = firstName[0]?.toUpperCase() ?? "?";
 
-  // Mensaje diario rotativo — cambia cada día
-  const dailyMessage = (() => {
-    const msgs = [
+  // Mensaje del día — primero basado en eventos reales, luego rotativo
+  const contextMessage = (() => {
+    const today  = new Date();
+    const todayM = today.getMonth();
+    const todayD = today.getDate();
+
+    // Aniversario: un evento cuyo mes/día coincide hoy pero año pasado
+    const anniversary = events.find(e => {
+      const ed = new Date(e.event_date);
+      return ed.getMonth() === todayM && ed.getDate() === todayD && ed.getFullYear() < today.getFullYear();
+    });
+    if (anniversary) {
+      const years = today.getFullYear() - new Date(anniversary.event_date).getFullYear();
+      return `Hoy hace ${years} año${years !== 1 ? "s" : ""}: "${anniversary.title}". Un momento para recordar.`;
+    }
+
+    const fallbacks = [
       "Es un buen día para recordar algo.",
       "La historia de tu familia merece ser contada.",
       "Cada momento que documentas, permanece para siempre.",
@@ -444,7 +458,58 @@ export default function HomePage() {
       "Hoy es un buen día para conectar.",
     ];
     const dayIndex = Math.floor(Date.now() / 86_400_000);
-    return msgs[dayIndex % msgs.length];
+    return fallbacks[dayIndex % fallbacks.length];
+  })();
+
+  // Stats útiles
+  const birthdaysThisMonth = allBirthdays.filter(b => b.days <= 30).length;
+  const recentMemories = [
+    ...photos.filter(p => (Date.now() - new Date(p.created_at).getTime()) < 7 * 86_400_000),
+    ...events.filter(e => (Date.now() - new Date(e.created_at).getTime()) < 7 * 86_400_000),
+  ].length;
+
+  // Tarjeta dinámica — elige el contenido más relevante del momento
+  const dynamicCard: { type: "evento" | "foto" | "cumple" | "mensaje"; label: string; title: string; subtitle: string; href: string; imageUrl?: string } = (() => {
+    // 1. Evento histórico publicado recientemente (≤7 días)
+    const freshEvent = events.find(e => (Date.now() - new Date(e.created_at).getTime()) < 7 * 86_400_000);
+    if (freshEvent) return {
+      type: "evento", label: "Historia reciente",
+      title: freshEvent.title,
+      subtitle: freshEvent.description?.slice(0, 80) ?? "Un momento guardado en tu historia familiar.",
+      href: "/events",
+    };
+    // 2. Foto reciente (≤7 días)
+    const freshPhoto = photos.find(p => (Date.now() - new Date(p.created_at).getTime()) < 7 * 86_400_000);
+    if (freshPhoto) return {
+      type: "foto", label: "Recuerdo del día",
+      title: freshPhoto.caption ?? "Un recuerdo familiar",
+      subtitle: "Foto añadida recientemente a tu álbum.",
+      href: "/photos",
+      imageUrl: freshPhoto.url,
+    };
+    // 3. Cumpleaños próximo ≤14 días
+    const soon = allBirthdays.filter(b => b.days > 0 && b.days <= 14).sort((a, b) => a.days - b.days)[0];
+    if (soon) return {
+      type: "cumple", label: `En ${soon.days} día${soon.days !== 1 ? "s" : ""}`,
+      title: `Cumpleaños de ${soon.first_name}`,
+      subtitle: `${soon.first_name} ${soon.last_name} cumple años pronto. ¿Ya le preparaste algo?`,
+      href: `/persona/${soon.person_id}`,
+    };
+    // 4. Evento futuro próximo
+    const nextEvent = events.filter(e => new Date(e.event_date) > new Date()).sort((a, b) => new Date(a.event_date).getTime() - new Date(b.event_date).getTime())[0];
+    if (nextEvent) return {
+      type: "evento", label: "Próximamente",
+      title: nextEvent.title,
+      subtitle: nextEvent.description?.slice(0, 80) ?? "Un evento importante se acerca.",
+      href: "/events",
+    };
+    // 5. Fallback — mensaje del contexto
+    return {
+      type: "mensaje", label: "Hoy",
+      title: "Tu historia continúa",
+      subtitle: contextMessage,
+      href: "/events",
+    };
   })();
 
   return (
@@ -499,20 +564,20 @@ export default function HomePage() {
         background: "linear-gradient(to bottom, rgba(6,3,24,0.6) 0%, transparent 100%)" }}>
         <div style={s3dChip()}>
           <span style={{ fontSize: 15, fontWeight: 800, color: "#d4af37", lineHeight: 1 }}>{visibleCount}</span>
-          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.55)", fontWeight: 500 }}>
+          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", fontWeight: 500 }}>
             familiar{visibleCount !== 1 ? "es" : ""}
           </span>
         </div>
         <div style={s3dChip()}>
-          <span style={{ fontSize: 15, fontWeight: 800, color: "#d4af37", lineHeight: 1 }}>{events.length}</span>
-          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.55)", fontWeight: 500 }}>
-            {events.length === 1 ? "momento" : "momentos"}
+          <span style={{ fontSize: 15, fontWeight: 800, color: "#d4af37", lineHeight: 1 }}>{birthdaysThisMonth}</span>
+          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", fontWeight: 500 }}>
+            {birthdaysThisMonth === 1 ? "cumpleaños" : "cumpleaños"} este mes
           </span>
         </div>
         <div style={s3dChip()}>
-          <span style={{ fontSize: 15, fontWeight: 800, color: "#d4af37", lineHeight: 1 }}>{photos.length}</span>
-          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.55)", fontWeight: 500 }}>
-            {photos.length === 1 ? "foto" : "fotos"}
+          <span style={{ fontSize: 15, fontWeight: 800, color: "#d4af37", lineHeight: 1 }}>{recentMemories}</span>
+          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", fontWeight: 500 }}>
+            {recentMemories === 1 ? "recuerdo nuevo" : "recuerdos nuevos"}
           </span>
         </div>
       </div>
@@ -710,7 +775,7 @@ export default function HomePage() {
                 animation: "twinkle-a 4s ease-in-out infinite" }}>✦</div>
               <div style={{ fontSize: 16, fontWeight: 700, color: "rgba(255,255,255,0.82)",
                 lineHeight: 1.4, marginBottom: 8 }}>
-                {dailyMessage}
+                {contextMessage}
               </div>
               <div style={{ fontSize: 11, color: "rgba(212,175,55,0.4)", letterSpacing: "0.03em" }}>
                 {visibleCount > 0 ? `${visibleCount} familiares en tu árbol` : "Agrega tu primera persona"}
@@ -722,33 +787,58 @@ export default function HomePage() {
 
       {/* ══ ACCESOS RÁPIDOS ══════════════════════════════════════════════ */}
       <div style={{ padding: "18px 14px 0" }}>
-        <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4,
-          scrollbarWidth: "none", msOverflowStyle: "none" }}>
-          {[
-            { href: "/tree",   Icon: TreePine,    label: "Árbol",    color: "#d4af37", bg: "rgba(212,175,55,0.1)",  border: "rgba(212,175,55,0.28)" },
-            { href: "/photos", Icon: Camera,      label: "Álbum",    color: "#c87830", bg: "rgba(160,100,40,0.1)",  border: "rgba(160,100,40,0.28)" },
-            { href: "/events", Icon: BookOpen,    label: "Historia", color: "#c87830", bg: "rgba(160,100,40,0.1)",  border: "rgba(160,100,40,0.28)" },
-            { href: "/feed",   Icon: Cake,        label: "Fechas",   color: "#d4af37", bg: "rgba(212,175,55,0.1)",  border: "rgba(212,175,55,0.28)" },
-            { href: "/chat",   Icon: MessageCircle,label:"Chat",     color: "#9898b8", bg: "rgba(130,130,160,0.1)", border: "rgba(130,130,160,0.22)" },
-            { href: "/mapa",   Icon: Map,         label: "Mapa",     color: "#9898b8", bg: "rgba(130,130,160,0.1)", border: "rgba(130,130,160,0.22)" },
-          ].map(({ href, Icon, label, color, bg, border }) => (
-            <Link key={href} href={href} style={{ textDecoration: "none", flexShrink: 0 }}>
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 7, width: 68 }}>
-                <div style={{
-                  width: 60, height: 60, borderRadius: 19, background: bg, flexShrink: 0,
-                  border: `1.5px solid ${border}`,
-                  boxShadow: `0 5px 0 rgba(0,0,0,0.65), 0 8px 18px rgba(0,0,0,0.75)`,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  transition: "transform 0.12s ease",
-                }}>
-                  <Icon size={24} style={{ color }} />
+        {/* Conectar */}
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase",
+            color: "rgba(212,175,55,0.38)", marginBottom: 10, paddingLeft: 2 }}>Conectar</div>
+          <div style={{ display: "flex", gap: 10 }}>
+            {[
+              { href: "/tree",    Icon: TreePine,     label: "Árbol",   color: "#d4af37", bg: "rgba(212,175,55,0.1)",  border: "rgba(212,175,55,0.28)" },
+              { href: "/chat",    Icon: MessageCircle, label: "Chat",   color: "#9898b8", bg: "rgba(130,130,160,0.1)", border: "rgba(130,130,160,0.22)" },
+              { href: "/invitar", Icon: Send,          label: "Invitar", color: "#d4af37", bg: "rgba(212,175,55,0.1)",  border: "rgba(212,175,55,0.22)" },
+            ].map(({ href, Icon, label, color, bg, border }) => (
+              <Link key={href} href={href} style={{ textDecoration: "none", flex: 1 }}>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 7 }}>
+                  <div style={{ width: 64, height: 64, borderRadius: 20, background: bg,
+                    border: `1.5px solid ${border}`,
+                    boxShadow: `0 5px 0 rgba(0,0,0,0.65), 0 8px 18px rgba(0,0,0,0.75)`,
+                    display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Icon size={26} style={{ color }} />
+                  </div>
+                  <span style={{ fontSize: 10, fontWeight: 500, color: "rgba(255,255,255,0.3)", letterSpacing: "0.02em" }}>
+                    {label}
+                  </span>
                 </div>
-                <span style={{ fontSize: 10, fontWeight: 500, color: "rgba(255,255,255,0.32)", textAlign: "center", letterSpacing: "0.02em" }}>
-                  {label}
-                </span>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* Recordar */}
+        <div>
+          <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase",
+            color: "rgba(200,120,48,0.38)", marginBottom: 10, paddingLeft: 2 }}>Recordar</div>
+          <div style={{ display: "flex", gap: 10 }}>
+            {[
+              { href: "/events", Icon: BookOpen, label: "Historia", color: "#c87830", bg: "rgba(160,100,40,0.1)", border: "rgba(160,100,40,0.28)" },
+              { href: "/photos", Icon: Camera,   label: "Álbum",   color: "#c87830", bg: "rgba(160,100,40,0.1)", border: "rgba(160,100,40,0.28)" },
+              { href: "/mapa",   Icon: Map,      label: "Mapa",    color: "#9898b8", bg: "rgba(130,130,160,0.1)", border: "rgba(130,130,160,0.22)" },
+            ].map(({ href, Icon, label, color, bg, border }) => (
+              <Link key={href} href={href} style={{ textDecoration: "none", flex: 1 }}>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 7 }}>
+                  <div style={{ width: 64, height: 64, borderRadius: 20, background: bg,
+                    border: `1.5px solid ${border}`,
+                    boxShadow: `0 5px 0 rgba(0,0,0,0.65), 0 8px 18px rgba(0,0,0,0.75)`,
+                    display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Icon size={26} style={{ color }} />
+                  </div>
+                  <span style={{ fontSize: 10, fontWeight: 500, color: "rgba(255,255,255,0.3)", letterSpacing: "0.02em" }}>
+                    {label}
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -764,37 +854,40 @@ export default function HomePage() {
             textTransform: "uppercase" }}>Tu familia</span>
         </div>
 
-        {/* Mensajes — neutro oscuro */}
-        <Link href="/chat">
-          <div style={{ ...s3dCard("#0a0a14","130,130,160","#03030a"), marginBottom: 9 }}>
-            <div style={{ position: "absolute", top: 0, left: "25%", right: "25%", height: 1,
-              background: "rgba(130,130,160,0.25)" }} />
-            <div style={{ padding: "13px 14px", display: "flex", alignItems: "center", gap: 12, position: "relative" }}>
-              <div style={{ width: 40, height: 40, borderRadius: 13, background: "#0c0c1c",
-                borderTop: "1.5px solid rgba(130,130,160,0.32)", borderBottom: "2px solid #03030a",
-                borderLeft: "1px solid rgba(130,130,160,0.14)", borderRight: "1px solid rgba(0,0,0,0.55)",
-                boxShadow: "0 4px 0 #03030a, 0 6px 10px rgba(0,0,0,0.65)",
-                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <MessageCircle size={19} style={{ color: "#9898b8" }} />
+        {/* ── Tarjeta dinámica — siempre contenido, nunca función ──────── */}
+        <Link href={dynamicCard.href}>
+          <div style={{ ...s3dCard(
+              dynamicCard.type === "mensaje" ? "#080610" : "#09090f",
+              dynamicCard.type === "foto" || dynamicCard.type === "evento" ? "200,150,60" : "152,152,184",
+              "#03030a",
+              dynamicCard.type === "mensaje" ? 0.06 : 0.12,
+            ), marginBottom: 9 }}>
+            <CardShine ar={dynamicCard.type === "foto" || dynamicCard.type === "evento" ? "200,150,60" : "152,152,184"} />
+            {/* Foto de fondo si hay imagen */}
+            {dynamicCard.imageUrl && (
+              <div style={{ position: "absolute", inset: 0, borderRadius: 18, overflow: "hidden", zIndex: 0 }}>
+                <img src={dynamicCard.imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.18 }} />
               </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#fff", marginBottom: 2 }}>Mensajes familiares</div>
-                <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                  {onlineFamily.length > 0 && (
-                    <>
-                      <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e",
-                        animation: "home-online-pulse 2s infinite" }} />
-                      <span style={{ fontSize: 10, color: "rgba(34,197,94,0.7)" }}>
-                        {onlineFamily.length} familiar{onlineFamily.length > 1 ? "es" : ""} en línea
-                      </span>
-                    </>
-                  )}
-                  {onlineFamily.length === 0 && (
-                    <span style={{ fontSize: 10, color: "rgba(255,255,255,0.25)" }}>Chat privado familiar</span>
-                  )}
-                </div>
+            )}
+            <div style={{ padding: "14px 14px 13px", position: "relative", zIndex: 1 }}>
+              <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.16em", textTransform: "uppercase",
+                color: dynamicCard.type === "mensaje" ? "rgba(152,152,184,0.5)" : "rgba(212,175,55,0.55)",
+                marginBottom: 7 }}>
+                {dynamicCard.label}
               </div>
-              <ChevronRight size={18} style={{ color: "rgba(255,255,255,0.2)" }} />
+              <div style={{ fontSize: 14, fontWeight: 800, color: "#fff", marginBottom: 5, lineHeight: 1.3 }}>
+                {dynamicCard.title}
+              </div>
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.38)", lineHeight: 1.5 }}>
+                {dynamicCard.subtitle}
+              </div>
+              <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 4 }}>
+                <span style={{ fontSize: 10, fontWeight: 600,
+                  color: dynamicCard.type === "mensaje" ? "rgba(152,152,184,0.45)" : "rgba(212,175,55,0.5)" }}>
+                  Ver más
+                </span>
+                <ChevronRight size={11} style={{ color: dynamicCard.type === "mensaje" ? "rgba(152,152,184,0.35)" : "rgba(212,175,55,0.4)" }} />
+              </div>
             </div>
           </div>
         </Link>
