@@ -175,7 +175,7 @@ function GalaxyHero({ children, avatarInitial, avatarUrl, firstName, lastName }:
       {children}
 
       {/* Galactic core behind avatar */}
-      <div style={{ position:"relative", display:"inline-block", marginBottom:16, zIndex:5 }}>
+      <div style={{ position:"relative", display:"inline-block", marginBottom:10, zIndex:5 }}>
         {/* Outer ambient glow — very large, very soft */}
         <div style={{ position:"absolute", top:"50%", left:"50%",
           transform:"translate(-50%,-50%)",
@@ -203,7 +203,7 @@ function GalaxyHero({ children, avatarInitial, avatarUrl, firstName, lastName }:
         <div style={{ position:"absolute", inset:-2, borderRadius:"50%", background:"#030208", pointerEvents:"none" }} />
 
         {/* Avatar body */}
-        <div style={{ width:120, height:120, borderRadius:"50%", background:"#0c0a18",
+        <div style={{ width:100, height:100, borderRadius:"50%", background:"#0c0a18",
           display:"flex", alignItems:"center", justifyContent:"center", position:"relative", zIndex:2,
           boxShadow:"inset 0 3px 28px rgba(120,60,220,0.3), inset 0 -3px 14px rgba(0,0,0,0.7), 0 0 0 1px rgba(212,175,55,0.12)" }}>
           <div style={{ position:"absolute", inset:0, borderRadius:"50%",
@@ -211,9 +211,9 @@ function GalaxyHero({ children, avatarInitial, avatarUrl, firstName, lastName }:
           {avatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={avatarUrl} alt={firstName}
-              style={{ width:120, height:120, borderRadius:"50%", objectFit:"cover", position:"relative" }} />
+              style={{ width:100, height:100, borderRadius:"50%", objectFit:"cover", position:"relative" }} />
           ) : (
-            <span style={{ fontSize:46, color:"#d4af37", fontWeight:800, position:"relative",
+            <span style={{ fontSize:38, color:"#d4af37", fontWeight:800, position:"relative",
               textShadow:"0 0 20px rgba(212,175,55,0.6)" }}>
               {avatarInitial}
             </span>
@@ -229,7 +229,7 @@ function GalaxyHero({ children, avatarInitial, avatarUrl, firstName, lastName }:
 
       {/* Tagline */}
       <div style={{ fontSize:10.5, color:"rgba(212,175,55,0.6)", fontStyle:"italic",
-        marginBottom:20, position:"relative", zIndex:5, letterSpacing:"0.06em" }}>
+        marginBottom:12, position:"relative", zIndex:5, letterSpacing:"0.06em" }}>
         ✦ Guardián de la memoria familiar ✦
       </div>
     </div>
@@ -574,35 +574,35 @@ export default function HomePage() {
         </div>
       </GalaxyHero>
 
-      {/* Chips de estadísticas — invitan a explorar */}
-      <div style={{ display: "flex", gap: 7, flexWrap: "wrap", justifyContent: "center",
-        padding: "0 20px 20px", position: "relative", zIndex: 5,
-        marginTop: -8,
+      {/* Estadísticas — tarjetas verticales con número protagonista */}
+      <div style={{ display: "flex", gap: 8, padding: "0 14px 20px", position: "relative", zIndex: 5, marginTop: -8,
         background: "linear-gradient(to bottom, rgba(6,3,24,0.6) 0%, transparent 100%)" }}>
-        <Link href="/tree" style={{ textDecoration: "none" }}>
-          <div style={s3dChip()}>
-            <span style={{ fontSize: 15, fontWeight: 800, color: "#d4af37", lineHeight: 1 }}>{visibleCount}</span>
-            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", fontWeight: 500 }}>
-              Familiar{visibleCount !== 1 ? "es" : ""}
-            </span>
-          </div>
-        </Link>
-        <Link href="/events" style={{ textDecoration: "none" }}>
-          <div style={s3dChip()}>
-            <span style={{ fontSize: 15, fontWeight: 800, color: "#d4af37", lineHeight: 1 }}>{historyCount}</span>
-            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", fontWeight: 500 }}>
-              {historyCount === 1 ? "Historia" : "Historias"}
-            </span>
-          </div>
-        </Link>
-        <Link href="/feed" style={{ textDecoration: "none" }}>
-          <div style={s3dChip()}>
-            <span style={{ fontSize: 15, fontWeight: 800, color: "#d4af37", lineHeight: 1 }}>{birthdaysThisMonth}</span>
-            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", fontWeight: 500 }}>
-              Cumple próximos
-            </span>
-          </div>
-        </Link>
+        {[
+          { href: "/tree",   value: visibleCount,      label: "Familiares",           sub: "" },
+          { href: "/events", value: historyCount,       label: "Recuerdos",            sub: "este mes" },
+          { href: "/feed",   value: birthdaysThisMonth, label: "Cumpleaños",           sub: "esta semana" },
+        ].map(({ href, value, label, sub }) => (
+          <Link key={href} href={href} style={{ textDecoration: "none", flex: 1 }}>
+            <div style={{
+              background: "#0c0a18",
+              borderTop: "1px solid rgba(212,175,55,0.18)", borderLeft: "1px solid rgba(212,175,55,0.08)",
+              borderBottom: "2px solid #02010a", borderRight: "1px solid rgba(0,0,0,0.5)",
+              boxShadow: "0 4px 0 #02010a, 0 6px 16px rgba(0,0,0,0.6)",
+              borderRadius: 14, padding: "12px 8px 10px", textAlign: "center",
+            }}>
+              <div style={{ fontSize: 26, fontWeight: 800, color: "#d4af37", lineHeight: 1, marginBottom: 5,
+                textShadow: "0 0 18px rgba(212,175,55,0.35)" }}>
+                {value}
+              </div>
+              <div style={{ fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.45)", lineHeight: 1.3 }}>
+                {label}
+              </div>
+              {sub && (
+                <div style={{ fontSize: 9, color: "rgba(255,255,255,0.22)", marginTop: 2 }}>{sub}</div>
+              )}
+            </div>
+          </Link>
+        ))}
       </div>
 
       {/* ── EN LÍNEA AHORA ──────────────────────────────────────────────── */}
@@ -850,19 +850,18 @@ export default function HomePage() {
             color: "rgba(212,175,55,0.38)", marginBottom: 10, paddingLeft: 2 }}>Conectar</div>
           <div style={{ display: "flex", gap: 10 }}>
             {[
-              { href: "/tree",    Icon: TreePine,     label: "Árbol",   color: "#d4af37", bg: "rgba(212,175,55,0.1)",  border: "rgba(212,175,55,0.28)" },
-              { href: "/chat",    Icon: MessageCircle, label: "Chat",   color: "#9898b8", bg: "rgba(130,130,160,0.1)", border: "rgba(130,130,160,0.22)" },
-              { href: "/invitar", Icon: Send,          label: "Invitar", color: "#d4af37", bg: "rgba(212,175,55,0.1)",  border: "rgba(212,175,55,0.22)" },
-            ].map(({ href, Icon, label, color, bg, border }) => (
+              { href: "/tree",    Icon: TreePine,      label: "Árbol",   color: "#d4af37", border: "rgba(212,175,55,0.2)" },
+              { href: "/chat",    Icon: MessageCircle, label: "Chat",    color: "#9898b8", border: "rgba(130,130,160,0.16)" },
+              { href: "/invitar", Icon: Send,          label: "Invitar", color: "#d4af37", border: "rgba(212,175,55,0.18)" },
+            ].map(({ href, Icon, label, color, border }) => (
               <Link key={href} href={href} style={{ textDecoration: "none", flex: 1 }}>
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 7 }}>
-                  <div style={{ width: 52, height: 52, borderRadius: 16, background: bg,
-                    border: `1px solid ${border}`,
-                    boxShadow: `0 3px 0 rgba(0,0,0,0.55), 0 6px 14px rgba(0,0,0,0.65)`,
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 13,
+                    background: "rgba(255,255,255,0.03)", border: `1px solid ${border}`,
                     display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <Icon size={22} style={{ color }} />
+                    <Icon size={16} style={{ color, opacity: 0.85 }} />
                   </div>
-                  <span style={{ fontSize: 10, fontWeight: 500, color: "rgba(255,255,255,0.3)", letterSpacing: "0.02em" }}>
+                  <span style={{ fontSize: 9, fontWeight: 500, color: "rgba(255,255,255,0.25)", letterSpacing: "0.04em" }}>
                     {label}
                   </span>
                 </div>
@@ -877,19 +876,18 @@ export default function HomePage() {
             color: "rgba(200,120,48,0.38)", marginBottom: 10, paddingLeft: 2 }}>Recordar</div>
           <div style={{ display: "flex", gap: 10 }}>
             {[
-              { href: "/events", Icon: BookOpen, label: "Historia", color: "#c87830", bg: "rgba(160,100,40,0.1)", border: "rgba(160,100,40,0.28)" },
-              { href: "/photos", Icon: Camera,   label: "Álbum",   color: "#c87830", bg: "rgba(160,100,40,0.1)", border: "rgba(160,100,40,0.28)" },
-              { href: "/mapa",   Icon: Map,      label: "Mapa",    color: "#9898b8", bg: "rgba(130,130,160,0.1)", border: "rgba(130,130,160,0.22)" },
-            ].map(({ href, Icon, label, color, bg, border }) => (
+              { href: "/events", Icon: BookOpen, label: "Historia", color: "#c87830", border: "rgba(160,100,40,0.22)" },
+              { href: "/photos", Icon: Camera,   label: "Álbum",   color: "#c87830", border: "rgba(160,100,40,0.22)" },
+              { href: "/mapa",   Icon: Map,      label: "Mapa",    color: "#9898b8", border: "rgba(130,130,160,0.16)" },
+            ].map(({ href, Icon, label, color, border }) => (
               <Link key={href} href={href} style={{ textDecoration: "none", flex: 1 }}>
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 7 }}>
-                  <div style={{ width: 52, height: 52, borderRadius: 16, background: bg,
-                    border: `1px solid ${border}`,
-                    boxShadow: `0 3px 0 rgba(0,0,0,0.55), 0 6px 14px rgba(0,0,0,0.65)`,
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 13,
+                    background: "rgba(255,255,255,0.03)", border: `1px solid ${border}`,
                     display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <Icon size={22} style={{ color }} />
+                    <Icon size={16} style={{ color, opacity: 0.85 }} />
                   </div>
-                  <span style={{ fontSize: 10, fontWeight: 500, color: "rgba(255,255,255,0.3)", letterSpacing: "0.02em" }}>
+                  <span style={{ fontSize: 9, fontWeight: 500, color: "rgba(255,255,255,0.25)", letterSpacing: "0.04em" }}>
                     {label}
                   </span>
                 </div>
