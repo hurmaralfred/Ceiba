@@ -1144,13 +1144,10 @@ function TreePageContent() {
                         members={members}
                         extendedMembers={extendedMembers}
                         memberLinks={memberLinks}
+                        onViewMember={(memberId) => router.push(`/member/${memberId}`)}
                         onEditMember={(memberId) => {
                           const member = resolveMemberForEdit(memberId, members, extendedMembers);
-                          if (member) {
-                            openEdit(member);
-                          } else {
-                            toast.error('No pudimos abrir este familiar para editarlo');
-                          }
+                          if (member) openEdit(member);
                         }}
                         onInviteMember={(memberId) => {
                           const member = resolveMemberForEdit(memberId, members, extendedMembers);
