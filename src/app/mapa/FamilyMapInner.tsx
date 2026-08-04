@@ -7,37 +7,42 @@ import "leaflet/dist/leaflet.css";
 interface Person { name: string; birth_year: string | null; }
 interface Pin { lat: number; lng: number; city: string; country: string; people: Person[]; }
 
-// ── Gold galaxy pin icon ──────────────────────────────────────────────────────
+// ── Luminous orb pin — same planet visual language as the tree universe ───────
 function makePin(count: number): L.DivIcon {
-  const size = count > 1 ? 44 : 36;
+  // Scale orb by population density
+  const sz = count >= 20 ? 52 : count >= 10 ? 46 : count >= 5 ? 40 : count >= 2 ? 34 : 28;
   const badge = count > 1
-    ? `<div style="position:absolute;top:-4px;right:-4px;width:18px;height:18px;border-radius:50%;
+    ? `<div style="position:absolute;top:-7px;right:-7px;min-width:18px;height:18px;border-radius:9px;
         background:#d4af37;border:2px solid #030208;display:flex;align-items:center;justify-content:center;
-        font-size:9px;font-weight:900;color:#030208;z-index:2;">${count}</div>`
+        font-size:9px;font-weight:900;color:#030208;padding:0 4px;z-index:3;
+        box-shadow:0 0 8px rgba(212,175,55,0.7);">${count}</div>`
     : "";
   return L.divIcon({
     className: "",
     html: `
-      <div style="position:relative;width:${size}px;height:${size}px;">
+      <div style="position:relative;width:${sz}px;height:${sz}px;">
         ${badge}
-        <div style="
-          width:${size}px;height:${size}px;border-radius:50% 50% 50% 4px;
-          background:radial-gradient(circle at 35% 30%,#f5e060 0%,#c9a820 45%,#7a5c00 100%);
-          border:2px solid rgba(255,240,100,0.8);
-          box-shadow:0 4px 16px rgba(212,175,55,0.6),0 0 0 3px rgba(212,175,55,0.15),inset 0 1px 0 rgba(255,255,255,0.3);
-          display:flex;align-items:center;justify-content:center;
-          transform:rotate(-45deg);
-        ">
-          <div style="transform:rotate(45deg);color:#030208;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-            </svg>
-          </div>
+        <!-- Ambient pulse glow -->
+        <div style="position:absolute;inset:-${Math.round(sz * 0.35)}px;border-radius:50%;
+          background:radial-gradient(circle,rgba(242,180,60,0.30) 0%,transparent 62%);
+          filter:blur(${Math.round(sz * 0.18)}px);
+          animation:pin-orb-pulse 3.2s ease-in-out infinite;pointer-events:none;"></div>
+        <!-- Orb core -->
+        <div style="width:${sz}px;height:${sz}px;border-radius:50%;position:relative;overflow:hidden;
+          background:radial-gradient(circle at 33% 27%,#f5e060 0%,#c9a820 46%,#7a5c00 100%);
+          border:1.5px solid rgba(255,240,100,0.60);
+          box-shadow:0 0 ${Math.round(sz*0.55)}px rgba(212,175,55,0.72),
+                     0 4px 14px rgba(0,0,0,0.70),
+                     inset 0 1px 0 rgba(255,255,255,0.25);">
+          <!-- Specular highlight -->
+          <div style="position:absolute;top:${Math.round(sz*0.11)}px;left:${Math.round(sz*0.16)}px;
+            width:${Math.round(sz*0.32)}px;height:${Math.round(sz*0.22)}px;border-radius:50%;
+            background:rgba(255,255,255,0.52);filter:blur(1.5px);"></div>
         </div>
       </div>`,
-    iconSize: [size, size],
-    iconAnchor: [size / 2, size],
-    popupAnchor: [0, -(size + 4)],
+    iconSize: [sz, sz],
+    iconAnchor: [sz / 2, sz / 2],
+    popupAnchor: [0, -(sz / 2 + 14)],
   });
 }
 
@@ -74,6 +79,7 @@ const DARK_CSS = `
   .leaflet-control-attribution a { color: rgba(212,175,55,0.5) !important; }
   .leaflet-control-zoom a { background: #0c0a18 !important; color: #d4af37 !important; border-color: rgba(212,175,55,0.2) !important; }
   .leaflet-control-zoom a:hover { background: #18102a !important; }
+  @keyframes pin-orb-pulse { 0%,100%{opacity:0.55;transform:scale(1)} 50%{opacity:1;transform:scale(1.12)} }
 `;
 
 // ── Main exported component ───────────────────────────────────────────────────

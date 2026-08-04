@@ -68,12 +68,17 @@ export default function MapaPage() {
           </div>
         </Link>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 16, fontWeight: 700, color: "#fff" }}>Mapa familiar</div>
-          {!loading && (
-            <div style={{ fontSize: 11, color: "rgba(212,175,55,0.5)", marginTop: 1 }}>
-              {pins.length} {pins.length === 1 ? "lugar" : "lugares"} ·{" "}
-              {pins.reduce((n, p) => n + p.people.length, 0)} personas
-            </div>
+          {!loading && pins.length > 0 ? (
+            <>
+              <div style={{ fontSize: 15, fontWeight: 700, color: "#fff", letterSpacing: "-0.01em" }}>
+                Tu historia se extiende por {pins.length} {pins.length === 1 ? "lugar" : "lugares"}
+              </div>
+              <div style={{ fontSize: 10, color: "rgba(242,180,60,0.45)", marginTop: 2, letterSpacing: "0.04em" }}>
+                {pins.reduce((n, p) => n + p.people.length, 0)} familiares en el mapa
+              </div>
+            </>
+          ) : (
+            <div style={{ fontSize: 16, fontWeight: 700, color: "#fff" }}>Mapa familiar</div>
           )}
         </div>
         <div style={{ width: 36, height: 36, borderRadius: 11, background: "#0c0a1a",
@@ -101,63 +106,97 @@ export default function MapaPage() {
           <FamilyMap pins={pins} onSelect={setSelected} />
         )}
 
-        {/* Selected pin sheet */}
+        {/* Selected pin panel — premium cosmic glass */}
         {selected && (
           <div style={{
             position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 1000,
-            background: "#0c0a18", borderRadius: "20px 20px 0 0",
-            borderTop: "1px solid rgba(212,175,55,0.22)",
-            boxShadow: "0 -8px 40px rgba(0,0,0,0.8)",
-            padding: "0 0 40px",
-            maxHeight: "55vh", overflow: "hidden",
+            background: "rgba(5,3,14,0.97)",
+            backdropFilter: "blur(36px)", WebkitBackdropFilter: "blur(36px)",
+            borderRadius: "24px 24px 0 0",
+            borderTop: "0.5px solid rgba(242,180,60,0.40)",
+            boxShadow: "0 -20px 60px rgba(0,0,0,0.92), 0 0 80px rgba(242,180,60,0.06)",
+            padding: "0 0 48px",
+            maxHeight: "60vh", overflow: "hidden",
             display: "flex", flexDirection: "column",
           }}>
+            {/* Nebula accent inside panel */}
+            <div style={{ position: "absolute", top: -10, left: "25%", width: 200, height: 80,
+              borderRadius: "50%", background: "radial-gradient(ellipse, rgba(212,175,55,0.07) 0%, transparent 65%)",
+              filter: "blur(14px)", pointerEvents: "none" }} />
+
             {/* Drag handle */}
-            <div style={{ display: "flex", justifyContent: "center", padding: "10px 0 4px" }}>
-              <div style={{ width: 36, height: 4, borderRadius: 2, background: "rgba(212,175,55,0.25)" }} />
+            <div style={{ display: "flex", justifyContent: "center", padding: "10px 0 6px" }}>
+              <div style={{ width: 32, height: 3, borderRadius: 2, background: "rgba(242,180,60,0.30)" }} />
             </div>
+
             {/* Title row */}
-            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 18px 12px" }}>
-              <div style={{ width: 36, height: 36, borderRadius: 11, background: "#160e02",
-                borderTop: "1.5px solid rgba(212,175,55,0.4)", borderBottom: "2px solid #060300",
-                borderLeft: "1px solid rgba(212,175,55,0.18)", borderRight: "1px solid rgba(0,0,0,0.5)",
-                boxShadow: "0 4px 0 #060300", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <MapPin size={17} style={{ color: "#d4af37" }} />
+            <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "6px 20px 14px" }}>
+              <div style={{ position: "relative", width: 44, height: 44, flexShrink: 0 }}>
+                <div style={{ position: "absolute", inset: -8, borderRadius: "50%",
+                  background: "radial-gradient(circle, rgba(242,180,60,0.22) 0%, transparent 65%)",
+                  filter: "blur(6px)" }} />
+                <div style={{ width: 44, height: 44, borderRadius: "50%", position: "relative",
+                  background: "radial-gradient(circle at 35% 28%, rgba(242,180,60,0.22) 0%, rgba(8,5,18,0.97) 65%)",
+                  border: "1px solid rgba(242,180,60,0.30)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  boxShadow: "0 0 16px rgba(242,180,60,0.15), inset 0 2px 10px rgba(120,60,220,0.18)" }}>
+                  <MapPin size={18} style={{ color: "#d4af37" }} />
+                </div>
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 15, fontWeight: 700, color: "#fff" }}>{selected.city}</div>
-                <div style={{ fontSize: 11, color: "rgba(212,175,55,0.55)", marginTop: 1 }}>{selected.country}</div>
+                <div style={{ fontSize: 17, fontWeight: 700, color: "#F5EDD8", letterSpacing: "-0.01em" }}>
+                  {selected.city}
+                </div>
+                <div style={{ fontSize: 10, color: "rgba(242,180,60,0.50)", marginTop: 2,
+                  letterSpacing: "0.10em", textTransform: "uppercase" }}>
+                  {selected.country}
+                </div>
               </div>
               <button onClick={() => setSelected(null)} style={{ background: "none", border: "none",
-                cursor: "pointer", padding: 6 }}>
-                <X size={18} style={{ color: "rgba(255,255,255,0.4)" }} />
+                cursor: "pointer", padding: 6, color: "rgba(255,255,255,0.30)" }}>
+                <X size={18} />
               </button>
             </div>
+
             {/* Divider */}
-            <div style={{ height: 0.5, background: "rgba(212,175,55,0.1)", margin: "0 18px 12px" }} />
+            <div style={{ height: 0.5,
+              background: "linear-gradient(90deg, transparent, rgba(242,180,60,0.18), transparent)",
+              margin: "0 20px 14px" }} />
+
+            {/* People count eyebrow */}
+            <div style={{ padding: "0 20px 10px", display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.14em",
+                textTransform: "uppercase", color: "rgba(242,180,60,0.45)" }}>
+                {selected.people.length} {selected.people.length === 1 ? "familiar" : "familiares"}
+              </span>
+              <div style={{ flex: 1, height: 0.5, background: "rgba(242,180,60,0.08)" }} />
+            </div>
+
             {/* People list */}
-            <div style={{ overflowY: "auto", padding: "0 18px", flex: 1 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 10 }}>
-                <Users size={12} style={{ color: "rgba(212,175,55,0.5)" }} />
-                <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em",
-                  textTransform: "uppercase", color: "rgba(212,175,55,0.5)" }}>
-                  {selected.people.length} {selected.people.length === 1 ? "familiar" : "familiares"}
-                </span>
-              </div>
+            <div style={{ overflowY: "auto", padding: "0 20px", flex: 1 }}>
               {selected.people.map((p, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: 10,
-                  padding: "9px 0", borderBottom: i < selected.people.length - 1
-                    ? "0.5px solid rgba(212,175,55,0.07)" : "none" }}>
-                  <div style={{ width: 34, height: 34, borderRadius: "50%", background: "#18102a",
-                    border: "1.5px solid rgba(212,175,55,0.2)", flexShrink: 0,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 12, fontWeight: 800, color: "#d4af37" }}>
-                    {p.name[0]?.toUpperCase() ?? "?"}
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 12,
+                  padding: "10px 0",
+                  borderBottom: i < selected.people.length - 1
+                    ? "0.5px solid rgba(242,180,60,0.06)" : "none" }}>
+                  {/* Luminous sphere avatar */}
+                  <div style={{ position: "relative", width: 40, height: 40, flexShrink: 0 }}>
+                    <div style={{ position: "absolute", inset: -6, borderRadius: "50%",
+                      background: "radial-gradient(circle, rgba(242,180,60,0.18) 0%, transparent 68%)",
+                      filter: "blur(5px)" }} />
+                    <div style={{ width: 40, height: 40, borderRadius: "50%", position: "relative",
+                      background: "radial-gradient(circle at 35% 27%, rgba(242,180,60,0.22) 0%, rgba(8,5,18,0.97) 65%)",
+                      border: "1px solid rgba(242,180,60,0.24)",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: 14, fontWeight: 400, color: "#F2B43C", letterSpacing: "0.04em" }}>
+                      {p.name[0]?.toUpperCase() ?? "?"}
+                    </div>
                   </div>
                   <div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: "#fff" }}>{p.name}</div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: "#F5EDD8" }}>{p.name}</div>
                     {p.birth_year && (
-                      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 1 }}>
+                      <div style={{ fontSize: 10, color: "rgba(255,255,255,0.28)", marginTop: 2,
+                        letterSpacing: "0.04em" }}>
                         n. {p.birth_year}
                       </div>
                     )}
