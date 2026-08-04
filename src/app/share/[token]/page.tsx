@@ -1,8 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import Link from "next/link";
-import { TreePine, MapPin, Users, User } from "lucide-react";
+import { TreePine, MapPin, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { RELATION_LABELS, RelationType } from "@/lib/types";
 
@@ -19,9 +19,22 @@ interface TreeRow {
   member_has_profile: boolean;
 }
 
+const GOLD = "#d4af37";
+const BG = "#030208";
+const CARD = "#0c0a18";
+const BORDER = "rgba(212,175,55,0.18)";
+const MUTED = "rgba(255,255,255,0.45)";
+
+const BLOOD_RELATIONS = new Set([
+  "father","mother","son","daughter","brother","sister",
+  "half_brother","half_sister","nephew","niece",
+  "grandfather_paternal","grandmother_paternal",
+  "grandfather_maternal","grandmother_maternal",
+  "grandson","granddaughter","uncle","aunt","cousin",
+]);
+
 export default function SharePage() {
   const params = useParams();
-  const router = useRouter();
   const supabase = createClient();
   const [rows, setRows] = useState<TreeRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,67 +50,90 @@ export default function SharePage() {
   };
 
   if (loading) return (
-    <div className="min-h-screen bg-gradient-to-b from-ceiba-950 to-ceiba-800 flex items-center justify-center">
-      <TreePine size={40} className="text-ceiba-300 animate-pulse" />
+    <div style={{ minHeight: "100svh", background: BG, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <TreePine size={40} style={{ color: GOLD, opacity: 0.7, animation: "pulse 2s infinite" }} />
     </div>
   );
 
   if (notFound) return (
-    <main className="min-h-screen bg-gradient-to-b from-ceiba-950 to-ceiba-800 flex items-center justify-center px-4">
-      <div className="text-center text-white">
-        <TreePine size={48} className="text-ceiba-300 mx-auto mb-4" />
-        <h1 className="text-2xl font-bold mb-2">Árbol no encontrado</h1>
-        <p className="text-ceiba-300 mb-6">Este link no existe o ya expiró.</p>
-        <Link href="/" className="btn-primary">Ir a Ceiba</Link>
+    <main style={{ minHeight: "100svh", background: BG, display: "flex", alignItems: "center", justifyContent: "center", padding: "24px" }}>
+      <div style={{ textAlign: "center", color: "#fff" }}>
+        <TreePine size={48} style={{ color: GOLD, margin: "0 auto 16px" }} />
+        <h1 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: 8 }}>Árbol no encontrado</h1>
+        <p style={{ color: MUTED, marginBottom: 24 }}>Este link no existe o ya expiró.</p>
+        <Link href="/" style={{ background: GOLD, color: "#000", padding: "10px 24px", borderRadius: 10, fontWeight: 700, textDecoration: "none" }}>
+          Ir a Ceiba
+        </Link>
       </div>
     </main>
   );
 
   const owner = rows[0];
   const members = rows.filter(r => r.member_first_name);
-  const bloodMembers = members.filter(m => {
-    const rel = m.member_relation_type as RelationType;
-    return ["father","mother","son","daughter","brother","sister","half_brother","half_sister",
-      "nephew","niece","grandfather_paternal","grandmother_paternal","grandfather_maternal",
-      "grandmother_maternal","grandson","granddaughter","uncle","aunt","cousin"].includes(rel);
-  });
-  const affinityMembers = members.filter(m => !bloodMembers.includes(m));
+  const bloodMembers = members.filter(m => BLOOD_RELATIONS.has(m.member_relation_type as RelationType));
+  const affinityMembers = members.filter(m => !BLOOD_RELATIONS.has(m.member_relation_type as RelationType));
+  const registeredCount = members.filter(m => m.member_has_profile).length;
 
   return (
-    <main className="min-h-screen bg-cream-100">
-      {/* Header */}
-      <nav className="bg-ceiba-800 text-white px-4 py-4 flex items-center justify-between shadow-lg">
-        <div className="flex items-center gap-2 font-display text-xl font-bold">
-          <TreePine size={22} className="text-ceiba-300" /> Ceiba
+    <main style={{ minHeight: "100svh", background: BG, color: "#fff" }}>
+      {/* Nav */}
+      <nav style={{
+        padding: "14px 20px", display: "flex", alignItems: "center",
+        justifyContent: "space-between",
+        borderBottom: `1px solid ${BORDER}`,
+        background: "rgba(12,10,24,0.95)",
+        backdropFilter: "blur(12px)",
+        position: "sticky", top: 0, zIndex: 10,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 800, fontSize: "1.1rem", color: GOLD }}>
+          <TreePine size={20} style={{ color: GOLD }} />
+          Ceiba
         </div>
-        <Link href="/auth/register" className="btn-primary text-sm py-1.5 px-4">
+        <Link href="/auth/register" style={{
+          background: GOLD, color: "#000", padding: "8px 18px",
+          borderRadius: 10, fontWeight: 700, fontSize: "0.85rem", textDecoration: "none",
+        }}>
           Únete gratis
         </Link>
       </nav>
 
-      <div className="max-w-md mx-auto px-4 py-6 space-y-4">
+      <div style={{ maxWidth: 440, margin: "0 auto", padding: "24px 16px 48px", display: "flex", flexDirection: "column", gap: 16 }}>
+
         {/* Owner card */}
-        <div className="card flex items-center gap-4">
-          <div className="w-16 h-16 rounded-2xl bg-ceiba-700 flex-shrink-0 overflow-hidden">
+        <div style={{
+          background: CARD, border: `1px solid ${BORDER}`, borderRadius: 18,
+          padding: "20px", display: "flex", alignItems: "center", gap: 16,
+        }}>
+          <div style={{
+            width: 64, height: 64, borderRadius: 16, background: "rgba(212,175,55,0.15)",
+            border: `2px solid ${BORDER}`, flexShrink: 0, overflow: "hidden",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: "1.5rem", fontWeight: 800, color: GOLD,
+          }}>
             {owner.owner_avatar_url ? (
-              <img src={owner.owner_avatar_url} alt={owner.owner_first_name} className="w-full h-full object-cover" />
+              <img src={owner.owner_avatar_url} alt={owner.owner_first_name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-white text-2xl font-bold">
-                {owner.owner_first_name[0]}{owner.owner_last_name?.[0]}
-              </div>
+              `${owner.owner_first_name[0]}${owner.owner_last_name?.[0] ?? ""}`
             )}
           </div>
           <div>
-            <h1 className="text-xl font-bold text-gray-900">
+            <h1 style={{ fontSize: "1.2rem", fontWeight: 700, marginBottom: 4, color: "#fff" }}>
               {owner.owner_first_name} {owner.owner_last_name}
             </h1>
             {owner.owner_city && (
-              <p className="text-gray-500 text-sm flex items-center gap-1">
-                <MapPin size={13} /> {owner.owner_city}{owner.owner_country ? `, ${owner.owner_country}` : ""}
+              <p style={{ color: MUTED, fontSize: "0.8rem", display: "flex", alignItems: "center", gap: 4, marginBottom: 4 }}>
+                <MapPin size={12} />
+                {owner.owner_city}{owner.owner_country ? `, ${owner.owner_country}` : ""}
               </p>
             )}
-            <p className="text-ceiba-700 text-sm font-medium flex items-center gap-1 mt-1">
-              <Users size={13} /> {members.length} familiar{members.length !== 1 ? "es" : ""} en Ceiba
+            <p style={{ color: GOLD, fontSize: "0.8rem", fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
+              <Users size={12} />
+              {members.length} familiar{members.length !== 1 ? "es" : ""} en Ceiba
+              {registeredCount > 0 && (
+                <span style={{ color: MUTED, fontWeight: 400 }}>
+                  · {registeredCount} registrado{registeredCount !== 1 ? "s" : ""}
+                </span>
+              )}
             </p>
           </div>
         </div>
@@ -111,15 +147,31 @@ export default function SharePage() {
         )}
 
         {/* CTA */}
-        <div className="card bg-ceiba-50 border border-ceiba-200 text-center py-8">
-          <TreePine size={32} className="text-ceiba-600 mx-auto mb-3" />
-          <h2 className="text-lg font-bold text-ceiba-900 mb-2">
+        <div style={{
+          background: "linear-gradient(135deg, rgba(212,175,55,0.12) 0%, rgba(12,10,24,0.9) 100%)",
+          border: `1px solid ${BORDER}`,
+          borderRadius: 18, padding: "32px 24px", textAlign: "center",
+        }}>
+          <div style={{
+            width: 52, height: 52, borderRadius: 14,
+            background: "rgba(212,175,55,0.15)", border: `1px solid ${BORDER}`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            margin: "0 auto 16px",
+          }}>
+            <TreePine size={26} style={{ color: GOLD }} />
+          </div>
+          <h2 style={{ fontSize: "1.15rem", fontWeight: 700, marginBottom: 8 }}>
             ¿Eres parte de esta familia?
           </h2>
-          <p className="text-ceiba-700 text-sm mb-5">
-            Únete a Ceiba gratis y conecta con tu familia, cerca o lejos.
+          <p style={{ color: MUTED, fontSize: "0.875rem", marginBottom: 24, lineHeight: 1.6 }}>
+            Crea tu propio árbol en Ceiba —gratis— y conecta con tu familia, cerca o lejos.
           </p>
-          <Link href="/auth/register" className="btn-primary inline-block">
+          <Link href="/auth/register" style={{
+            background: GOLD, color: "#000",
+            padding: "12px 28px", borderRadius: 12,
+            fontWeight: 800, fontSize: "0.95rem", textDecoration: "none",
+            display: "inline-block",
+          }}>
             Crear mi árbol familiar
           </Link>
         </div>
@@ -130,23 +182,36 @@ export default function SharePage() {
 
 function MemberGroup({ title, members }: { title: string; members: TreeRow[] }) {
   return (
-    <div className="card">
-      <h2 className="font-bold text-gray-800 mb-3">{title}</h2>
-      <div className="divide-y divide-gray-100">
+    <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 18, padding: "16px 20px" }}>
+      <h2 style={{ fontWeight: 700, fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "0.08em", color: MUTED, marginBottom: 12 }}>
+        {title}
+      </h2>
+      <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
         {members.map((m, i) => (
-          <div key={i} className="py-3 flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold flex-shrink-0 ${
-              m.member_has_profile ? "bg-ceiba-700 text-white" : "bg-gray-200 text-gray-600"
-            }`}>
-              {m.member_first_name![0]}{m.member_last_name?.[0] || ""}
+          <div key={i} style={{
+            padding: "12px 0",
+            borderBottom: i < members.length - 1 ? `1px solid rgba(255,255,255,0.06)` : "none",
+            display: "flex", alignItems: "center", gap: 12,
+          }}>
+            <div style={{
+              width: 40, height: 40, borderRadius: 10, flexShrink: 0,
+              background: m.member_has_profile ? "rgba(212,175,55,0.2)" : "rgba(255,255,255,0.06)",
+              border: m.member_has_profile ? `1px solid ${BORDER}` : "1px solid rgba(255,255,255,0.08)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: "0.85rem", fontWeight: 700,
+              color: m.member_has_profile ? GOLD : MUTED,
+            }}>
+              {m.member_first_name![0]}{m.member_last_name?.[0] ?? ""}
             </div>
             <div>
-              <div className="font-semibold text-gray-900">
+              <div style={{ fontWeight: 600, fontSize: "0.9rem", color: "#fff" }}>
                 {m.member_first_name} {m.member_last_name}
               </div>
-              <div className="text-xs text-gray-500 flex items-center gap-1">
-                {RELATION_LABELS[m.member_relation_type as RelationType] || m.member_relation_type}
-                {m.member_has_profile && <span className="text-ceiba-600 font-medium ml-1">· En Ceiba</span>}
+              <div style={{ fontSize: "0.75rem", color: MUTED, marginTop: 2 }}>
+                {RELATION_LABELS[m.member_relation_type as RelationType] ?? m.member_relation_type}
+                {m.member_has_profile && (
+                  <span style={{ color: GOLD, fontWeight: 600, marginLeft: 6 }}>· En Ceiba</span>
+                )}
               </div>
             </div>
           </div>

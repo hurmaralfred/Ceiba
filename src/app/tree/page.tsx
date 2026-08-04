@@ -191,25 +191,17 @@ function TreePageContent() {
     fetch("/api/presence", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) }).catch(() => {});
 
     // -- Nuevo grafo familiar ------------------------------------------------
-    console.log("① Antes RPC");
-const { data: graphData, error: graphError } = await supabase.rpc("get_my_family_graph", { p_depth: 4 });
-console.log("② Después RPC");
+    const { data: graphData, error: graphError } = await supabase.rpc("get_my_family_graph", { p_depth: 4 });
     if (graphError) throw graphError;
 
-    console.log("get_my_family_graph response:", graphData);
-
-    console.log("③ Antes adaptGraph");
-const graph = graphData as FamilyGraph | null;
+    const graph = graphData as FamilyGraph | null;
     if (!graph || !graph.me) {
-      // Usuario nuevo sin nodo en persons todavía — mostrar árbol vacío
       setLoading(false);
       return;
     }
 
     const { profile, members, extendedMembers, memberLinks } = adaptGraph(graph, user.id);
-console.log("④ Después adaptGraph");
     const unified = buildVisibleMembers(members, extendedMembers);
-console.log("④.5 Conjunto unificado:", unified.length, "miembros");
     // Load avatar_config separately (not in adaptGraph)
     const { data: avatarRow } = await supabase
       .from('profiles')
@@ -224,7 +216,6 @@ console.log("④.5 Conjunto unificado:", unified.length, "miembros");
     setExtendedMembers(extendedMembers);
     setMemberLinks(memberLinks);
     setVisibleMembers(unified);
-console.log("⑤ Datos cargados");
 
     // Ubicación del usuario (de persons)
     const myNode = (graph.nodes || []).find((n: any) => n.id === graph.me);
@@ -350,7 +341,7 @@ console.log("⑤ Datos cargados");
 
   const saveMember = async (force = false) => {
     if (!form.primer_nombre.trim()) { toast.error("El primer nombre es obligatorio"); return; }
-    if (!form.primer_apellido.trim()) { toast.error("El primer apellido es obligatorio"); return; }    if (!form.birth_date) { toast.error("La fecha de nacimiento es obligatoria"); return; }
+    if (!form.primer_apellido.trim()) { toast.error("El primer apellido es obligatorio"); return; }
     // Catálogo genealógico v1: abuelos/bisabuelos/nietos/bisnietos exigen el
     // familiar conector (no se crean personas intermedias ficticias).
     if (relationRequiresConnector(form.relation_type as RelationType) && !form.parent_member_id) {
@@ -739,7 +730,6 @@ console.log("⑤ Datos cargados");
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // Get existing token or create one
     let { data: existing } = await supabase
       .from("shared_trees")
       .select("token")
@@ -757,6 +747,22 @@ console.log("⑤ Datos cargados");
     }
 
     const link = `${window.location.origin}/share/${existing.token}`;
+
+    // Usar Web Share API en móvil (abre WhatsApp, Instagram, etc.)
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({
+          title: "Mi árbol familiar en Ceiba",
+          text: "Te comparto mi árbol familiar 🌳 — únete para ver toda la familia conectada.",
+          url: link,
+        });
+        return;
+      } catch (err) {
+        if ((err as Error).name === "AbortError") return; // usuario canceló
+      }
+    }
+
+    // Fallback: copiar al clipboard
     await navigator.clipboard.writeText(link);
     toast.success("¡Link copiado! Compártelo con tu familia.");
   };

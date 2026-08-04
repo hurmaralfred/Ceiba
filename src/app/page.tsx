@@ -221,7 +221,7 @@ export default function LandingPage() {
 
           {/* Social proof */}
           <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
-            {[["100%","gratis"],["0","anuncios"],["∞","familiares"]].map(([n, l], i) => (
+            {[["100%","gratis"],["0","anuncios"],["85+","personas"],["14+","familias"]].map(([n, l], i) => (
               <span key={i} style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
                 <span style={{ color: "#fff", fontWeight: 800, fontSize: 18 }}>{n}</span>
                 <span style={{ color: "rgba(255,255,255,0.25)", fontSize: 12 }}>{l}</span>
