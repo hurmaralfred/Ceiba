@@ -88,55 +88,86 @@ function ConnectionOverlay() {
 
 const GOLD = "#d4af37";
 
-function FamilyTreeSVG() {
+function DemoFamilyTree() {
+  // Familia Reyes — árbol ficticio de 3 generaciones creado para la landing
   const nodes = [
-    { id: "tu",      x: 190, y: 185, name: "Tú",     rel: "",         reg: true,  root: true  },
-    { id: "mama",    x: 82,  y: 105, name: "Mamá",   rel: "Madre",    reg: true,  root: false },
-    { id: "papa",    x: 285, y: 108, name: "Carlos", rel: "Padre",    reg: false, root: false },
-    { id: "hermano", x: 78,  y: 270, name: "Luis",   rel: "Hermano",  reg: true,  root: false },
-    { id: "abuelo",  x: 28,  y: 30,  name: "José",   rel: "Abuelo",   reg: true,  root: false },
-    { id: "abuela",  x: 160, y: 22,  name: "María",  rel: "Abuela",   reg: false, root: false },
-    { id: "cunada",  x: 52,  y: 345, name: "Sofía",  rel: "Cuñada",   reg: true,  root: false },
-    { id: "sobrino", x: 188, y: 340, name: "Mateo",  rel: "Sobrino",  reg: false, root: false },
+    // Generación 1 — Abuelos
+    { id: "ag1", x: 52,  y: 48,  name: "Ramón",   rel: "Abuelo",    reg: true,  root: false },
+    { id: "ag2", x: 152, y: 32,  name: "Carmen",  rel: "Abuela",    reg: true,  root: false },
+    { id: "ag3", x: 268, y: 36,  name: "Héctor",  rel: "Abuelo",    reg: false, root: false },
+    { id: "ag4", x: 368, y: 55,  name: "Lidia",   rel: "Abuela",    reg: true,  root: false },
+    // Generación 2 — Padres y tíos
+    { id: "mama",    x: 100, y: 148, name: "Lucía",   rel: "Madre",     reg: true,  root: false },
+    { id: "papa",    x: 210, y: 155, name: "Andrés",  rel: "Padre",     reg: true,  root: false },
+    { id: "tio",     x: 340, y: 170, name: "Julián",  rel: "Tío",       reg: true,  root: false },
+    // Generación 3 — Tú, hermanos, primos
+    { id: "tu",      x: 155, y: 268, name: "Tú",      rel: "",          reg: true,  root: true  },
+    { id: "hermana", x: 52,  y: 290, name: "Sofía",   rel: "Hermana",   reg: true,  root: false },
+    { id: "prima1",  x: 305, y: 282, name: "Paula",   rel: "Prima",     reg: true,  root: false },
+    { id: "primo2",  x: 398, y: 270, name: "Marco",   rel: "Primo",     reg: false, root: false },
+    // Generación 4 — Sobrinos e hijos de primos
+    { id: "sobrino", x: 40,  y: 392, name: "Mateo",   rel: "Sobrino",   reg: false, root: false },
+    { id: "nino2",   x: 290, y: 395, name: "Valeria", rel: "Sobrina",   reg: false, root: false },
   ];
+
   const edges: [string, string][] = [
-    ["tu", "mama"], ["tu", "papa"], ["tu", "hermano"],
-    ["mama", "abuelo"], ["mama", "abuela"],
-    ["hermano", "cunada"], ["hermano", "sobrino"],
+    ["mama", "ag1"], ["mama", "ag2"],
+    ["papa", "ag3"], ["papa", "ag4"],
+    ["tu", "mama"], ["tu", "papa"],
+    ["tu", "hermana"],
+    ["papa", "tio"],
+    ["tio", "prima1"], ["tio", "primo2"],
+    ["hermana", "sobrino"],
+    ["prima1", "nino2"],
   ];
+
   const map = Object.fromEntries(nodes.map(n => [n.id, n]));
 
   return (
-    <svg viewBox="0 0 370 390" style={{ width: "100%", maxHeight: 390, display: "block" }}>
+    <svg viewBox="0 0 440 430" style={{ width: "100%", display: "block" }}>
       <defs>
-        <filter id="ft-glow">
-          <feGaussianBlur stdDeviation="2.5" result="b"/>
+        <filter id="dm-glow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="3" result="b"/>
           <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
         </filter>
+        <filter id="dm-glow-sm" x="-60%" y="-60%" width="220%" height="220%">
+          <feGaussianBlur stdDeviation="2" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <radialGradient id="dm-nebula" cx="35%" cy="50%" r="70%">
+          <stop offset="0%" stopColor="rgba(30,60,20,0.18)" />
+          <stop offset="60%" stopColor="rgba(20,10,50,0.08)" />
+          <stop offset="100%" stopColor="transparent" />
+        </radialGradient>
         <style>{`
-          @keyframes ft-flow  { from{stroke-dashoffset:16} to{stroke-dashoffset:0} }
-          @keyframes ft-ring  { 0%{r:26;opacity:.5} 100%{r:38;opacity:0} }
-          @keyframes ft-pulse { 0%,100%{opacity:.9} 50%{opacity:1} }
-          .ft-flow  { animation: ft-flow  3s linear infinite }
-          .ft-flow2 { animation: ft-flow  3s linear infinite .8s }
-          .ft-flow3 { animation: ft-flow  3s linear infinite 1.6s }
-          .ft-ring  { animation: ft-ring  2.8s ease-out infinite }
-          .ft-pulse { animation: ft-pulse 3s ease-in-out infinite }
-          .ft-notif { animation: ft-pulse 2.5s ease-in-out infinite }
+          @keyframes dm-flow  { from{stroke-dashoffset:18} to{stroke-dashoffset:0} }
+          @keyframes dm-ring  { 0%{r:28;opacity:.45} 100%{r:42;opacity:0} }
+          @keyframes dm-pulse { 0%,100%{opacity:.88} 50%{opacity:1} }
+          @keyframes dm-badge { 0%,100%{opacity:.85} 50%{opacity:1} }
+          .dm-f0 { animation: dm-flow 3.2s linear infinite }
+          .dm-f1 { animation: dm-flow 3.2s linear infinite .6s }
+          .dm-f2 { animation: dm-flow 3.2s linear infinite 1.2s }
+          .dm-f3 { animation: dm-flow 3.2s linear infinite 1.8s }
+          .dm-ring { animation: dm-ring 3s ease-out infinite }
+          .dm-pulse { animation: dm-pulse 3s ease-in-out infinite }
+          .dm-badge { animation: dm-badge 2.4s ease-in-out infinite }
         `}</style>
       </defs>
+
+      {/* Nebula de fondo */}
+      <ellipse cx="180" cy="220" rx="260" ry="200" fill="url(#dm-nebula)" />
 
       {/* Edges */}
       {edges.map(([a, b], i) => {
         const na = map[a], nb = map[b];
         const active = na.reg && nb.reg;
-        const cls = i % 3 === 0 ? "ft-flow" : i % 3 === 1 ? "ft-flow2" : "ft-flow3";
+        const cls = ["dm-f0","dm-f1","dm-f2","dm-f3"][i % 4];
         return (
           <line key={i} x1={na.x} y1={na.y} x2={nb.x} y2={nb.y}
-            stroke={active ? "#d4af37" : "rgba(255,255,255,0.12)"}
-            strokeWidth={active ? 0.9 : 0.6}
-            strokeDasharray={active ? "5,3" : "3,4"}
-            opacity={active ? 0.85 : 0.35}
+            stroke={active ? "#d4af37" : "rgba(255,255,255,0.13)"}
+            strokeWidth={active ? 1.1 : 0.65}
+            strokeDasharray={active ? "6,3.5" : "3,4"}
+            opacity={active ? 0.9 : 0.4}
             className={active ? cls : undefined}
           />
         );
@@ -144,36 +175,35 @@ function FamilyTreeSVG() {
 
       {/* Nodes */}
       {nodes.map((n) => {
-        const r = n.root ? 23 : n.reg ? 18 : 15;
+        const r = n.root ? 25 : n.reg ? 19 : 15;
+        const filt = n.root ? "url(#dm-glow)" : n.reg ? "url(#dm-glow-sm)" : undefined;
         return (
           <g key={n.id}>
             {n.root && (
-              <circle cx={n.x} cy={n.y} r={30} fill="none"
-                stroke="#d4af37" strokeWidth="0.6" opacity="0.35" className="ft-ring" />
+              <circle cx={n.x} cy={n.y} r={33} fill="none"
+                stroke="#d4af37" strokeWidth="0.7" opacity="0.3" className="dm-ring" />
             )}
             <circle cx={n.x} cy={n.y} r={r}
-              fill={n.root ? "#d4af37" : n.reg ? "rgba(212,175,55,0.12)" : "rgba(255,255,255,0.04)"}
-              stroke={n.root ? "#f5e070" : n.reg ? "#d4af37" : "rgba(255,255,255,0.18)"}
-              strokeWidth={n.root ? 2 : n.reg ? 1.2 : 0.7}
+              fill={n.root ? "#d4af37" : n.reg ? "rgba(212,175,55,0.13)" : "rgba(255,255,255,0.04)"}
+              stroke={n.root ? "#f5e070" : n.reg ? "#d4af37" : "rgba(255,255,255,0.2)"}
+              strokeWidth={n.root ? 2.2 : n.reg ? 1.3 : 0.8}
               strokeDasharray={n.reg ? undefined : "2.5,2"}
-              filter={n.reg ? "url(#ft-glow)" : undefined}
-              className={n.root ? "ft-pulse" : undefined}
+              filter={filt}
+              className={n.root ? "dm-pulse" : undefined}
             />
-            {/* Initial / label inside */}
             <text x={n.x} y={n.y} textAnchor="middle" dominantBaseline="central"
-              fontSize={n.root ? 9 : 7.5} fontWeight="700"
-              fill={n.root ? "#000" : n.reg ? "#d4af37" : "rgba(255,255,255,0.25)"}>
+              fontSize={n.root ? 10 : 7.5} fontWeight="800"
+              fill={n.root ? "#030208" : n.reg ? "#d4af37" : "rgba(255,255,255,0.22)"}>
               {n.root ? "Tú" : n.name[0]}
             </text>
-            {/* Name below */}
-            <text x={n.x} y={n.y + r + 9} textAnchor="middle"
-              fontSize="7" fontWeight="600"
-              fill={n.reg ? "rgba(255,255,255,0.88)" : "rgba(255,255,255,0.3)"}>
+            <text x={n.x} y={n.y + r + 10} textAnchor="middle"
+              fontSize="7.2" fontWeight="600"
+              fill={n.reg ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.28)"}>
               {n.name}
             </text>
             {n.rel && (
-              <text x={n.x} y={n.y + r + 17} textAnchor="middle"
-                fontSize="6" fill={n.reg ? "rgba(212,175,55,0.65)" : "rgba(255,255,255,0.18)"}>
+              <text x={n.x} y={n.y + r + 19} textAnchor="middle" fontSize="6"
+                fill={n.reg ? "rgba(212,175,55,0.7)" : "rgba(255,255,255,0.16)"}>
                 {n.rel}
               </text>
             )}
@@ -181,12 +211,20 @@ function FamilyTreeSVG() {
         );
       })}
 
-      {/* Birthday notification badge on Mamá */}
-      <g className="ft-notif">
-        <rect x="96" y="73" width="44" height="14" rx="5"
-          fill="rgba(0,0,0,0.82)" stroke="#d4af37" strokeWidth="0.6" strokeOpacity="0.6" />
-        <text x="118" y="80.5" textAnchor="middle" dominantBaseline="central"
-          fontSize="5.5" fill="#d4af37">🎂 mañana</text>
+      {/* Notificación de cumpleaños en Carmen/Abuela */}
+      <g className="dm-badge">
+        <rect x="163" y="1" width="48" height="15" rx="5.5"
+          fill="rgba(0,0,0,0.85)" stroke="#d4af37" strokeWidth="0.65" strokeOpacity="0.7"/>
+        <text x="187" y="9" textAnchor="middle" dominantBaseline="central"
+          fontSize="5.8" fill="#d4af37">🎂 mañana</text>
+      </g>
+
+      {/* Notificación "Se unió hoy" en Julián/Tío */}
+      <g className="dm-badge" style={{ animationDelay: "1.2s" }}>
+        <rect x="355" y="140" width="52" height="15" rx="5.5"
+          fill="rgba(0,0,0,0.85)" stroke="rgba(80,200,120,0.7)" strokeWidth="0.65"/>
+        <text x="381" y="148" textAnchor="middle" dominantBaseline="central"
+          fontSize="5.8" fill="rgba(80,220,130,1)">✓ Se unió hoy</text>
       </g>
     </svg>
   );
@@ -366,60 +404,91 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── VISTA PREVIA DEL ÁRBOL ── */}
-      <section style={{ position: "relative", zIndex: 10, maxWidth: 960, margin: "0 auto", padding: "0 24px 80px" }}>
-        <p style={{ textAlign: "center", color: GOLD_DIM, fontSize: 10, letterSpacing: "0.2em",
-          textTransform: "uppercase", marginBottom: 14 }}>Vista real de la app</p>
-        <h2 style={{ textAlign: "center", fontSize: "clamp(1.5rem,4vw,2rem)", fontWeight: 800,
-          marginBottom: 10, letterSpacing: "-0.02em" }}>
-          Así se ve tu familia en Ceiba
-        </h2>
-        <p style={{ textAlign: "center", fontSize: 13, color: "rgba(255,255,255,0.4)",
-          marginBottom: 36, maxWidth: 380, margin: "0 auto 36px" }}>
-          Cada círculo es un familiar. Las líneas doradas, los lazos que los unen.
-          Los grises, familiares que aún no se han registrado — pero ya están en tu árbol.
-        </p>
+      {/* ── DEMO DEL ÁRBOL ── */}
+      <section style={{ position: "relative", zIndex: 10, padding: "0 0 88px" }}>
+        {/* Encabezado */}
+        <div style={{ textAlign: "center", padding: "0 24px 44px", maxWidth: 560, margin: "0 auto" }}>
+          <p style={{ color: GOLD_DIM, fontSize: 10, letterSpacing: "0.2em",
+            textTransform: "uppercase", marginBottom: 14 }}>Familia de ejemplo</p>
+          <h2 style={{ fontSize: "clamp(1.7rem,4.5vw,2.4rem)", fontWeight: 900,
+            marginBottom: 14, letterSpacing: "-0.025em", lineHeight: 1.1 }}>
+            Así se ve una familia<br />
+            <span style={{ color: GOLD }}>conectada en Ceiba</span>
+          </h2>
+          <p style={{ fontSize: 14, color: "rgba(255,255,255,0.38)", lineHeight: 1.7 }}>
+            13 miembros · 3 generaciones · todo conectado automáticamente.
+            Dorado: ya en Ceiba. Gris: aún no se registra, pero ya aparece en el árbol.
+          </p>
+        </div>
 
-        <div style={{ position: "relative", maxWidth: 600, margin: "0 auto",
-          borderRadius: 24, overflow: "hidden",
-          background: "radial-gradient(ellipse at 50% 40%, rgba(30,20,60,0.9) 0%, #030208 80%)",
-          border: "1px solid rgba(212,175,55,0.15)",
-          boxShadow: "0 24px 60px rgba(0,0,0,0.8), 0 0 0 1px rgba(212,175,55,0.08)",
-          padding: "28px 8px 16px" }}>
+        {/* Área del árbol — full bleed con gradiente galaxy */}
+        <div style={{
+          maxWidth: 760, margin: "0 auto", padding: "0 16px",
+        }}>
+          <div style={{
+            borderRadius: 28,
+            background: "radial-gradient(ellipse at 38% 45%, rgba(25,15,55,0.95) 0%, rgba(8,5,18,0.98) 70%, #030208 100%)",
+            border: "1px solid rgba(212,175,55,0.18)",
+            boxShadow: "0 32px 80px rgba(0,0,0,0.9), 0 0 0 1px rgba(212,175,55,0.06), inset 0 1px 0 rgba(212,175,55,0.12)",
+            overflow: "hidden",
+            position: "relative",
+          }}>
+            {/* Barra superior tipo app */}
+            <div style={{
+              borderBottom: "1px solid rgba(212,175,55,0.1)",
+              padding: "13px 20px",
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{ width: 28, height: 28, borderRadius: 8,
+                  background: "rgba(212,175,55,0.12)", border: "1px solid rgba(212,175,55,0.2)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 14 }}>🌳</div>
+                <div>
+                  <p style={{ fontSize: 12, fontWeight: 700, color: "#fff", margin: 0 }}>Familia Reyes</p>
+                  <p style={{ fontSize: 10, color: GOLD_DIM, margin: 0 }}>3 generaciones · Bogotá, Colombia</p>
+                </div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6,
+                background: "rgba(212,175,55,0.06)", border: "1px solid rgba(212,175,55,0.15)",
+                borderRadius: 100, padding: "4px 10px" }}>
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: GOLD,
+                  boxShadow: `0 0 5px ${GOLD}`, flexShrink: 0 }} />
+                <span style={{ fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.6)" }}>
+                  9 en Ceiba · 4 pendientes
+                </span>
+              </div>
+            </div>
 
-          {/* Badge "en vivo" */}
-          <div style={{ position: "absolute", top: 14, left: "50%", transform: "translateX(-50%)",
-            display: "flex", alignItems: "center", gap: 6,
-            background: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)",
-            border: "1px solid rgba(212,175,55,0.2)", borderRadius: 100,
-            padding: "4px 12px", whiteSpace: "nowrap" }}>
-            <span style={{ width: 6, height: 6, borderRadius: "50%", background: GOLD,
-              boxShadow: `0 0 6px ${GOLD}`, flexShrink: 0 }} />
-            <span style={{ fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.7)" }}>
-              Vista real · Familia Hurtado
-            </span>
-          </div>
+            {/* El árbol */}
+            <div style={{ padding: "12px 8px 4px" }}>
+              <DemoFamilyTree />
+            </div>
 
-          <FamilyTreeSVG />
-
-          {/* Legend */}
-          <div style={{ display: "flex", justifyContent: "center", gap: 24, paddingTop: 8 }}>
-            <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "rgba(255,255,255,0.5)" }}>
-              <span style={{ width: 8, height: 8, borderRadius: "50%", border: `1.5px solid ${GOLD}`, background: "rgba(212,175,55,0.15)", display: "inline-block" }} />
-              En Ceiba
-            </span>
-            <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "rgba(255,255,255,0.3)" }}>
-              <span style={{ width: 8, height: 8, borderRadius: "50%", border: "1.5px dashed rgba(255,255,255,0.25)", display: "inline-block" }} />
-              Aún no se registra
-            </span>
-          </div>
-
-          {/* Insight */}
-          <div style={{ margin: "16px 16px 0", borderRadius: 12, padding: "12px 16px",
-            background: "rgba(212,175,55,0.05)", border: "1px solid rgba(212,175,55,0.1)",
-            fontSize: 12, color: "rgba(255,255,255,0.45)", textAlign: "center", lineHeight: 1.6 }}>
-            Cuando <span style={{ color: GOLD, fontWeight: 600 }}>Luis</span> se registró, Ceiba ya sabía que <span style={{ color: GOLD, fontWeight: 600 }}>Sofía</span> era tu cuñada
-            y que <span style={{ color: GOLD, fontWeight: 600 }}>Mateo</span> era tu sobrino — sin que nadie tuviera que decírselo.
+            {/* Leyenda y insight */}
+            <div style={{ borderTop: "1px solid rgba(212,175,55,0.08)", padding: "16px 20px 20px",
+              display: "flex", flexDirection: "column", gap: 14 }}>
+              <div style={{ display: "flex", justifyContent: "center", gap: 28 }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 11, color: "rgba(255,255,255,0.5)" }}>
+                  <span style={{ width: 10, height: 10, borderRadius: "50%",
+                    border: `1.5px solid ${GOLD}`, background: "rgba(212,175,55,0.15)", flexShrink: 0 }} />
+                  En Ceiba
+                </span>
+                <span style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 11, color: "rgba(255,255,255,0.3)" }}>
+                  <span style={{ width: 10, height: 10, borderRadius: "50%",
+                    border: "1.5px dashed rgba(255,255,255,0.22)", flexShrink: 0 }} />
+                  Aún no se registra
+                </span>
+              </div>
+              <div style={{ borderRadius: 12, padding: "12px 16px",
+                background: "rgba(212,175,55,0.04)", border: "1px solid rgba(212,175,55,0.09)",
+                fontSize: 12, color: "rgba(255,255,255,0.42)", textAlign: "center", lineHeight: 1.7 }}>
+                Cuando <span style={{ color: GOLD, fontWeight: 600 }}>Julián</span> se registró,
+                Ceiba ya detectó que <span style={{ color: GOLD, fontWeight: 600 }}>Paula</span> y{" "}
+                <span style={{ color: GOLD, fontWeight: 600 }}>Marco</span> eran tus primos
+                — sin que nadie los agregara manualmente.
+              </div>
+            </div>
           </div>
         </div>
       </section>
