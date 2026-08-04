@@ -174,7 +174,7 @@ const SHOTS = [
 
 // ── Component ─────────────────────────────────────────────────────────────────
 export function GalaxyOrbitView({
-  profile, members, extendedMembers,
+  profile, members, extendedMembers, memberLinks,
   onViewMember, onEditMember, onInviteMember, onAddMember,
 }: GalaxyOrbitViewProps) {
   const canvasRef   = useRef<HTMLCanvasElement>(null);
@@ -187,8 +187,30 @@ export function GalaxyOrbitView({
   const [selectedNode, setSelectedNode] = useState<OrbitNode | null>(null);
   const [overrides, setOverrides] = useState<Record<string, 1 | 2 | 3>>({});
   const [selPos, setSelPos] = useState<{ x: number; y: number; r: number } | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const activeSetRef = useRef<Set<string>>(new Set());
 
   useEffect(() => { if (profile.avatar_url) loadImg(profile.avatar_url); }, [profile.avatar_url]);
+
+  // Recompute which nodes are "active" (foreground) vs "dormant" (ghost)
+  useEffect(() => {
+    const orbit1Ids = new Set(nodesRef.current.filter(n => n.orbit === 1).map(n => n.id));
+    if (!expandedId) {
+      // Default: only direct family is active
+      activeSetRef.current = orbit1Ids;
+      return;
+    }
+    // Expanded: orbit1 + the expanded node + its connections
+    const connected = new Set<string>([expandedId]);
+    memberLinks.forEach(lk => {
+      if (lk.fromMemberId === expandedId) connected.add(lk.toMemberId);
+      if (lk.toMemberId   === expandedId) connected.add(lk.fromMemberId);
+    });
+    extendedMembers.forEach(e => {
+      if (e.parentMemberId === expandedId) connected.add(e.member.id);
+    });
+    activeSetRef.current = new Set([...orbit1Ids, ...connected]);
+  }, [expandedId, memberLinks, extendedMembers]);
 
   // Recompute overlay position whenever selected node or its orbit changes
   useEffect(() => {
@@ -273,6 +295,8 @@ export function GalaxyOrbitView({
       }
     }
     nodesRef.current = raw;
+    // Seed initial active set: orbit 1 always active by default
+    activeSetRef.current = new Set(raw.filter(n => n.orbit === 1).map(n => n.id));
   }, [members, extendedMembers, overrides]);
 
   // ── Draw loop ─────────────────────────────────────────────────────────────
@@ -375,12 +399,13 @@ export function GalaxyOrbitView({
       });
 
       // ── Phase 1: compute base positions & advance angles ─────────────────────
+      const activeSet = activeSetRef.current;
       const raw = nodesRef.current.map(n => {
         const { nx: nxPre, ny: nyPre } = nodePos(n, cx, cy, w, t - 1);
         const depth = depthOf(n.angle);
-        const nr    = scaledNR(n.orbit, depth);
-        // Hover uses last frame's visual position (includes repulsion offset)
-        const hov = Math.hypot(
+        const ghost = activeSet.size > 0 && !activeSet.has(n.id);
+        const nr    = scaledNR(n.orbit, depth) * (ghost ? 0.40 : 1);
+        const hov = !ghost && Math.hypot(
           mouseRef.current.x - (nxPre + n.repX),
           mouseRef.current.y - (nyPre + n.repY),
         ) < nr + 22;
@@ -388,7 +413,7 @@ export function GalaxyOrbitView({
         const eff = sel ? 0 : hov ? n.baseSpeed * 0.04 : n.speed;
         n.angle += eff;
         const { nx, ny } = nodePos(n, cx, cy, w, t);
-        return { n, nx, ny, depth, nr, hov, sel };
+        return { n, nx, ny, depth, nr, hov, sel, ghost };
       });
 
       // ── Phase 2: separation force (prevents collisions) ──────────────────────
@@ -423,7 +448,17 @@ export function GalaxyOrbitView({
         .map(r => ({ ...r, nx: r.nx + r.n.repX, ny: r.ny + r.n.repY }))
         .sort((a, b) => a.ny - b.ny);
 
-      all.forEach(({ n, nx, ny, depth, nr, hov, sel }) => {
+      all.forEach(({ n, nx, ny, depth, nr, hov, sel, ghost }) => {
+        // Ghost nodes: faint distant star, no name, still tappable
+        if (ghost) {
+          const ga = 0.10 + depth * 0.08;
+          ctx.save(); ctx.globalAlpha = ga;
+          drawGlow(ctx, nx, ny, nr * 3, "180,160,255", .30);
+          ctx.fillStyle = "rgba(200,185,255,0.70)";
+          ctx.beginPath(); ctx.arc(nx, ny, nr, 0, Math.PI*2); ctx.fill();
+          ctx.restore();
+          return;
+        }
         const dAlpha = 0.25 + depth * 0.75;
         const img = n.avatarUrl ? loadImg(n.avatarUrl) : null;
         const spikeLen = nr * (sel ? 6.5 : hov ? 5.5 : 3.8);
@@ -779,14 +814,18 @@ export function GalaxyOrbitView({
           </div>
 
 
-          {/* Primary action — full width, unmistakable */}
-          <button onClick={() => { onViewMember(selectedNode.id); close(); }} style={{
+          {/* Expandir / Contraer — primary action */}
+          <button onClick={() => {
+            const isExp = expandedId === selectedNode.id;
+            setExpandedId(isExp ? null : selectedNode.id);
+          }} style={{
             width:"100%", padding:"14px 0", borderRadius:14, cursor:"pointer",
             fontSize:15, fontWeight:700, marginBottom:8,
-            background:"rgba(212,175,55,0.14)",
+            background: expandedId === selectedNode.id
+              ? "rgba(212,175,55,0.22)" : "rgba(212,175,55,0.10)",
             border:"1px solid rgba(212,175,55,0.50)", color:GOLD,
           }}>
-            Ver perfil
+            {expandedId === selectedNode.id ? "✦ Contraer familia" : "✦ Expandir familia"}
           </button>
           <div style={{ display:"flex", gap:8 }}>
             <button onClick={() => { onEditMember(selectedNode.id); close(); }} style={{
