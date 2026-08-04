@@ -46,49 +46,51 @@ function UniversePersonCard({
       style={{
         position: 'fixed',
         left: safeX,
-        top: anchor.below ? anchor.y + 8 : anchor.y - 8,
+        top: anchor.below ? anchor.y + 10 : anchor.y - 10,
         transform: baseTransform,
-        width: 216,
+        width: 240,
         zIndex: 700,
-        background: 'rgba(10,6,3,0.94)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        border: '1px solid rgba(242,180,60,0.28)',
-        borderRadius: 18,
-        boxShadow: '0 12px 40px rgba(0,0,0,0.7), 0 0 0 0.5px rgba(242,180,60,0.10)',
-        padding: '14px 14px 12px',
-        animation: `${animName} 0.22s cubic-bezier(0.34,1.22,0.64,1) both`,
+        background: 'rgba(6,4,16,0.97)',
+        backdropFilter: 'blur(32px)',
+        WebkitBackdropFilter: 'blur(32px)',
+        border: '0.5px solid rgba(242,180,60,0.24)',
+        borderTop: '0.5px solid rgba(242,180,60,0.40)',
+        borderRadius: 22,
+        boxShadow: '0 24px 64px rgba(0,0,0,0.85), 0 0 0 0.5px rgba(242,180,60,0.08), inset 0 1px 0 rgba(255,255,255,0.04)',
+        padding: '20px 18px 16px',
+        animation: `${animName} 0.26s cubic-bezier(0.34,1.22,0.64,1) both`,
         pointerEvents: 'auto',
       }}
       onClick={e => e.stopPropagation()}
       onPointerDown={e => e.stopPropagation()}
     >
-      {/* Relation */}
+      {/* Relation eyebrow */}
       <div style={{
-        fontSize: 10, letterSpacing: '0.08em', fontWeight: 700,
-        color: '#F2B43C', textTransform: 'uppercase', marginBottom: 5,
+        fontSize: 9, letterSpacing: '0.14em', fontWeight: 600,
+        color: 'rgba(242,180,60,0.65)', textTransform: 'uppercase', marginBottom: 8,
       }}>
         {node.relation}
       </div>
 
       {/* Name */}
       <div style={{
-        fontSize: 15, fontWeight: 700, color: '#F2E8D0',
-        lineHeight: 1.25, marginBottom: 10,
+        fontSize: 18, fontWeight: 700, color: '#F5EDD8',
+        lineHeight: 1.2, marginBottom: 14,
         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        letterSpacing: '-0.01em',
       }}>
         {node.name}
       </div>
 
       {/* Status chips */}
-      <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 10 }}>
+      <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 14 }}>
         {node.isJoined  && <CardChip color="#2A6B3A" text="En Ceiba" />}
         {!node.isJoined && <CardChip color="#5C4A20" text="Sin cuenta" />}
         {node.isDeceased && <CardChip color="#4A4040" text="Fallecido/a" />}
       </div>
 
       {/* Actions */}
-      <div style={{ display: 'flex', gap: 6 }}>
+      <div style={{ display: 'flex', gap: 7 }}>
         <CardBtn primary label="Centrar" onClick={() => { onRefocus?.(node.id); onClose() }} />
         {node.memberId && onEdit && (
           <CardBtn label="Editar" onClick={() => { onClose(); onEdit(node.memberId!) }} />
@@ -107,9 +109,9 @@ function UniversePersonCard({
 function CardChip({ color, text }: { color: string; text: string }) {
   return (
     <span style={{
-      background: color + '38', border: `1px solid ${color}70`,
-      color: '#F2E8D0', borderRadius: 20, fontSize: 10,
-      padding: '2px 8px', letterSpacing: '0.02em',
+      background: color + '28', border: `0.5px solid ${color}60`,
+      color: 'rgba(255,255,255,0.65)', borderRadius: 20, fontSize: 9,
+      padding: '3px 9px', letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 500,
     }}>{text}</span>
   )
 }
@@ -118,13 +120,13 @@ function CardBtn({ label, onClick, primary }: { label: string; onClick: () => vo
   return (
     <button onClick={onClick} style={{
       flex: primary ? 1 : undefined,
-      padding: '8px 12px', minHeight: 36,
-      borderRadius: 10, cursor: 'pointer',
-      border: primary ? '1px solid rgba(242,180,60,0.45)' : '1px solid rgba(255,255,255,0.13)',
-      background: primary ? 'rgba(242,180,60,0.10)' : 'rgba(255,255,255,0.05)',
-      color: primary ? '#F2B43C' : 'rgba(255,255,255,0.72)',
+      padding: '9px 14px', minHeight: 38,
+      borderRadius: 12, cursor: 'pointer',
+      border: primary ? '0.5px solid rgba(242,180,60,0.50)' : '0.5px solid rgba(255,255,255,0.12)',
+      background: primary ? 'rgba(242,180,60,0.12)' : 'rgba(255,255,255,0.04)',
+      color: primary ? '#F2B43C' : 'rgba(255,255,255,0.60)',
       fontSize: 12, fontWeight: primary ? 600 : 400,
-      whiteSpace: 'nowrap', letterSpacing: '0.02em',
+      whiteSpace: 'nowrap', letterSpacing: '0.04em',
     }}>{label}</button>
   )
 }
@@ -375,7 +377,7 @@ export function FamilyUniverse({
         style={{ position: 'relative', width: '100%', height: '100%' }}
         onClick={handleClose}
       >
-        <UniverseViewport nodes={nodes} onFocusChange={handleRefocus} viewScale={viewScale}>
+        <UniverseViewport nodes={nodes} onFocusChange={handleRefocus} viewScale={viewScale} selectedId={selectedNode?.id}>
           {/* Orbit guide rings (sit behind avatars) */}
           <OrbitRings width={containerSize.w} height={containerSize.h} />
 
@@ -385,6 +387,7 @@ export function FamilyUniverse({
               key={node.id}
               node={node}
               selected={selectedNode?.id === node.id}
+              dimmed={selectedNode !== null && selectedNode.id !== node.id && !node.isFocal}
               onClick={handleAvatarClick}
               viewScale={viewScale}
               isNew={newNodeIds.has(node.id)}
@@ -581,10 +584,11 @@ export function FamilyUniverse({
 // ─── Avatar slot: positioned absolutely in viewport ───────────────────────────
 
 function AvatarSlot({
-  node, selected, onClick, viewScale = 1, isNew = false, showExpand = false, onExpand, isExpanded = false,
+  node, selected, dimmed = false, onClick, viewScale = 1, isNew = false, showExpand = false, onExpand, isExpanded = false,
 }: {
   node: UniverseNode
   selected: boolean
+  dimmed?: boolean
   onClick: (node: UniverseNode, anchor: CardAnchor) => void
   viewScale?: number
   isNew?: boolean
@@ -624,13 +628,15 @@ function AvatarSlot({
         position: 'absolute',
         left: '50%',
         top:  '50%',
-        transform: `translate(calc(-50% + ${node.cx}px), calc(-50% + ${node.cy}px)) scale(${appeared ? node.scale : node.scale * 0.35})`,
+        transform: `translate(calc(-50% + ${node.cx}px), calc(-50% + ${node.cy}px)) scale(${appeared ? node.scale * (selected ? 1.14 : 1) : node.scale * 0.35})`,
         transformOrigin: 'center center',
-        opacity: appeared ? node.opacity : 0,
+        opacity: appeared ? (dimmed ? Math.min(node.opacity * 0.18, 0.18) : node.opacity) : 0,
         zIndex: selected ? 350 : node.zIndex,
+        filter: dimmed ? 'blur(0.4px)' : undefined,
         transition: [
-          'transform 0.65s cubic-bezier(0.34,1.22,0.64,1)',
-          'opacity  0.45s ease',
+          'transform 0.5s cubic-bezier(0.34,1.22,0.64,1)',
+          'opacity  0.4s ease',
+          'filter   0.4s ease',
         ].join(', '),
       }}
       onClick={e => e.stopPropagation()}

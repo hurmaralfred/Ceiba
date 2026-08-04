@@ -298,7 +298,9 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
 
   const deceasedFilter = node.isDeceased ? `url(#${uid}ds)` : undefined
   const dropShadow     = showGlow
-    ? `drop-shadow(0 0 ${node.isFocal ? 18 : 9}px ${glowColor}${node.isFocal ? 'ee' : 'aa'})`
+    ? highlighted && !node.isFocal
+      ? `drop-shadow(0 0 26px ${glowColor}ff) drop-shadow(0 0 60px ${glowColor}55)`
+      : `drop-shadow(0 0 ${node.isFocal ? 22 : 8}px ${glowColor}${node.isFocal ? 'ff' : '99'})`
     : undefined
 
   return (
@@ -615,30 +617,34 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
         return (
           <div
             style={{
-              marginTop: 3,
-              lineHeight: 1.2,
+              marginTop: 10,
+              lineHeight: 1.5,
               pointerEvents: 'none',
               userSelect: 'none',
               opacity: showLabel ? 1 : 0,
-              transition: 'opacity 0.2s ease',
+              transition: 'opacity 0.3s ease',
             }}
           >
             <div
               style={{
-                fontSize: 10,
-                fontWeight: 600,
+                fontSize: node.isFocal ? 13 : 11,
+                fontWeight: node.isFocal ? 600 : 400,
                 color: node.isDeceased
                   ? 'rgba(210,228,255,0.90)'
-                  : node.isFocal ? glowColor : 'rgba(255,255,255,0.92)',
-                letterSpacing: '0.01em',
+                  : node.isFocal ? glowColor : 'rgba(255,255,255,0.88)',
+                letterSpacing: '0.06em',
                 overflow: 'hidden',
-                maxWidth: node.isFocal ? 110 : 72,
+                maxWidth: node.isFocal ? 120 : 80,
                 margin: '0 auto',
                 whiteSpace: 'nowrap',
                 textOverflow: 'ellipsis',
                 textShadow: node.isDeceased
-                  ? '0 0 8px rgba(180,210,255,0.60)'
-                  : node.isFocal ? `0 0 8px ${glowColor}80` : undefined,
+                  ? '0 0 10px rgba(180,210,255,0.70)'
+                  : node.isFocal
+                    ? `0 0 12px ${glowColor}90`
+                    : highlighted
+                      ? `0 0 10px ${glowColor}80`
+                      : '0 1px 4px rgba(0,0,0,0.8)',
               }}
             >
               {node.shortName.split(' ')[0]}
@@ -646,15 +652,18 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
             {(highlighted || hovered || focused) && (
               <div
                 style={{
-                  fontSize: 8.5,
+                  fontSize: 10,
+                  fontWeight: 300,
                   color: node.isDeceased
-                    ? 'rgba(180,210,255,0.58)'
-                    : node.isFocal ? glowColor : 'rgba(255,255,255,0.48)',
-                  letterSpacing: '0.02em',
+                    ? 'rgba(180,210,255,0.55)'
+                    : node.isFocal ? `${glowColor}99` : 'rgba(255,255,255,0.40)',
+                  letterSpacing: '0.10em',
                   whiteSpace: 'nowrap',
+                  marginTop: 1,
+                  textTransform: 'uppercase',
                 }}
               >
-                {node.isDeceased ? `✦ ${node.relation || 'descansando'}` : node.isFocal && node.isRoot ? '·' : node.relation}
+                {node.isDeceased ? `✦ ${node.relation || 'descansando'}` : node.isFocal && node.isRoot ? '' : node.relation}
               </div>
             )}
           </div>

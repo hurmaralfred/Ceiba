@@ -8,6 +8,8 @@ interface Props {
   children: React.ReactNode
   /** Responsive base scale (not interactive). Default 1. */
   viewScale?: number
+  /** ID of the currently selected node — brightens its connections, dims others. */
+  selectedId?: string
 }
 
 const MIN_SCALE = 0.25
@@ -245,7 +247,7 @@ const CONN_STYLES = {
   political:{ stroke: '#B8A0D8', dash: '3 7', width: 0.6, opacity: 0.06 },
 } as const
 
-function ConnectionLines({ nodes, width, height }: { nodes: UniverseNode[]; width: number; height: number }) {
+function ConnectionLines({ nodes, width, height, selectedId }: { nodes: UniverseNode[]; width: number; height: number; selectedId?: string }) {
   const cx = width  / 2
   const cy = height / 2
   const nodeById = new Map(nodes.map(n => [n.id, n]))
@@ -282,9 +284,12 @@ function ConnectionLines({ nodes, width, height }: { nodes: UniverseNode[]; widt
         const my = (y1 + y2) / 2 + (cx - x1) * 0.08
         const d  = `M${x1},${y1} Q${mx},${my} ${x2},${y2}`
         const st = CONN_STYLES[channel]
-        const lineOpacity = st.opacity
+        const isRelated = selectedId ? (from.id === selectedId || to.id === selectedId) : false
+        const selFactor = selectedId ? (isRelated ? 4.0 : 0.12) : 1
+        const lineOpacity = Math.min(0.85, st.opacity
           * (to.isDeceased ? 0.45 : 1)
           * (to.isJoined === false ? 0.75 : 1)
+          * selFactor)
         const pathId = `cp-${from.id.slice(-6)}-${to.id.slice(-6)}`
         const dur = `${3.8 + (idx % 5) * 0.7}s`
         const delay = `${-(idx % 4) * 1.1}s`
@@ -320,6 +325,7 @@ export function UniverseViewport({
   onFocusChange: _onFocusChange,
   children,
   viewScale = 1,
+  selectedId,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState({ w: 375, h: 812 })
@@ -462,7 +468,7 @@ export function UniverseViewport({
         }}
       >
         {/* Connection lines in world space */}
-        <ConnectionLines nodes={nodes} width={size.w} height={size.h} />
+        <ConnectionLines nodes={nodes} width={size.w} height={size.h} selectedId={selectedId} />
 
         {/* Avatar slots + orbit rings */}
         {children}

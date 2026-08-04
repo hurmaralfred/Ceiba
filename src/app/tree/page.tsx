@@ -1132,7 +1132,7 @@ function TreePageContent() {
               <>
                 <TreeErrorBoundary>
                   {UNIVERSE_RENDERER_ENABLED ? (
-                    <div style={{ position: "relative", height: "calc(100svh - 80px)", overflow: "hidden", background: "#07111c" }}>
+                    <div style={{ position: "relative", height: "calc(100svh - 80px)", overflow: "hidden", background: "#030208" }}>
                       <FamilyUniverseComponent
                         profile={profile}
                         members={members}
