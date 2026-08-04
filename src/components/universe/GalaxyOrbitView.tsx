@@ -443,17 +443,17 @@ export function GalaxyOrbitView({
           }
 
           // Name pill — solid, always readable
-          ctx.save(); ctx.globalAlpha = dAlpha * (hov||sel ? 1 : .80);
+          ctx.save(); ctx.globalAlpha = dAlpha * (hov||sel ? 1 : .90);
           const lbl2 = hov||sel ? n.name : n.firstName;
-          ctx.font = `${hov||sel ? 700 : 500} ${hov||sel ? 12 : 11}px -apple-system,sans-serif`;
-          const lw2 = Math.min(ctx.measureText(lbl2).width + 14, 126);
-          ctx.fillStyle = "rgba(3,2,8,0.90)";
-          ctx.beginPath(); ctx.roundRect(nx - lw2/2, ny + nr + 5, lw2, 17, 5); ctx.fill();
+          ctx.font = `${hov||sel ? 700 : 600} ${hov||sel ? 14 : 13}px -apple-system,sans-serif`;
+          const lw2 = Math.min(ctx.measureText(lbl2).width + 16, 150);
+          ctx.fillStyle = "rgba(3,2,8,0.92)";
+          ctx.beginPath(); ctx.roundRect(nx - lw2/2, ny + nr + 5, lw2, 20, 6); ctx.fill();
           ctx.fillStyle = hov||sel
             ? "rgba(255,255,255,0.97)"
-            : (joined ? "rgba(245,220,100,0.92)" : "rgba(200,180,255,0.90)");
+            : (joined ? "rgba(245,220,100,0.95)" : "rgba(210,190,255,0.92)");
           ctx.textAlign = "center"; ctx.textBaseline = "middle";
-          ctx.fillText(lbl2, nx, ny + nr + 13); ctx.restore();
+          ctx.fillText(lbl2, nx, ny + nr + 15); ctx.restore();
         }
       });
 
@@ -463,9 +463,9 @@ export function GalaxyOrbitView({
 
       // Rotating decorative rings (3 independent, different tilts & speeds)
       const rings = [
-        { r: NR + 22, tilt: .38, speed: t * .006,  lw: 1.0, al: .32 },
-        { r: NR + 42, tilt: .55, speed: t * -.004, lw: .8,  al: .22 },
-        { r: NR + 64, tilt: .28, speed: t * .003,  lw: .6,  al: .14 },
+        { r: NR + 22, tilt: .38, speed: t * .0015,  lw: 1.0, al: .32 },
+        { r: NR + 42, tilt: .55, speed: t * -.001,  lw: .8,  al: .22 },
+        { r: NR + 64, tilt: .28, speed: t * .0007,  lw: .6,  al: .14 },
       ];
       rings.forEach(ring => {
         ctx.save();
