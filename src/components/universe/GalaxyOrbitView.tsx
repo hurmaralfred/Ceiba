@@ -72,7 +72,7 @@ const TILT   = 0.68;
 const BASE_ORBIT_FRACS = [0.195, 0.345, 0.475] as const;
 const BASE_SPEEDS      = [0.0085, 0.0058, 0.0032] as const;
 const SIGNS            = [1, -1, 1] as const;
-const BASE_NR          = [29, 22, 17] as const;
+const BASE_NR          = [36, 28, 22] as const;
 const DEPTH_SCALE      = 0.80;
 
 function baseOrbitR(orbit: 1 | 2 | 3, w: number) { return BASE_ORBIT_FRACS[orbit-1] * w; }
@@ -134,6 +134,22 @@ function drawGlow(ctx: CanvasRenderingContext2D, x: number, y: number, r: number
   const g = ctx.createRadialGradient(x, y, 0, x, y, r);
   g.addColorStop(0, `rgba(${rgb},${a.toFixed(2)})`); g.addColorStop(1, "transparent");
   ctx.fillStyle = g; ctx.fillRect(x-r, y-r, r*2, r*2);
+}
+function drawImgCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, cx: number, cy: number, r: number) {
+  const iw = img.naturalWidth || img.width;
+  const ih = img.naturalHeight || img.height;
+  if (!iw || !ih) { ctx.drawImage(img, cx-r, cy-r, r*2, r*2); return; }
+  const scale = Math.max((r*2)/iw, (r*2)/ih);
+  const sw = (r*2)/scale, sh = (r*2)/scale;
+  ctx.drawImage(img, (iw-sw)/2, (ih-sh)/2, sw, sh, cx-r, cy-r, r*2, r*2);
+}
+function drawSphere(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, alpha: number) {
+  const g = ctx.createRadialGradient(x - r*.30, y - r*.30, r*.02, x, y, r);
+  g.addColorStop(0,   `rgba(255,255,255,${(alpha*.44).toFixed(2)})`);
+  g.addColorStop(0.48,`rgba(255,255,255,${(alpha*.05).toFixed(2)})`);
+  g.addColorStop(1,   `rgba(0,0,0,${(alpha*.52).toFixed(2)})`);
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
 }
 
 // ── Moving dust clouds (6 independent, slow Lissajous drift) ─────────────────
@@ -418,10 +434,10 @@ export function GalaxyOrbitView({
 
           // Core (photo or bright star)
           ctx.save(); ctx.globalAlpha = dAlpha;
+          ctx.beginPath(); ctx.arc(nx, ny, nr, 0, Math.PI*2); ctx.clip();
+          ctx.fillStyle = "rgba(8,5,18,0.95)"; ctx.fillRect(nx-nr, ny-nr, nr*2, nr*2);
           if (img) {
-            ctx.beginPath(); ctx.arc(nx, ny, nr, 0, Math.PI*2); ctx.clip();
-            ctx.fillStyle = "rgba(8,5,18,0.95)"; ctx.fillRect(nx-nr, ny-nr, nr*2, nr*2);
-            ctx.drawImage(img, nx-nr, ny-nr, nr*2, nr*2);
+            drawImgCover(ctx, img, nx, ny, nr);
           } else {
             drawGlow(ctx, nx, ny, nr * .95, rgb, .92);
             ctx.fillStyle = "rgba(255,255,255,0.96)";
@@ -431,6 +447,10 @@ export function GalaxyOrbitView({
             ctx.textAlign = "center"; ctx.textBaseline = "middle";
             ctx.fillText(n.firstName[0]?.toUpperCase() || "?", nx, ny);
           }
+          ctx.restore();
+          // 3D sphere highlight
+          ctx.save(); ctx.globalAlpha = dAlpha;
+          drawSphere(ctx, nx, ny, nr, 1);
           ctx.restore();
 
           // Photo ring
@@ -463,9 +483,9 @@ export function GalaxyOrbitView({
 
       // Rotating decorative rings (3 independent, different tilts & speeds)
       const rings = [
-        { r: NR + 22, tilt: .38, speed: t * .0015,  lw: 1.0, al: .32 },
-        { r: NR + 42, tilt: .55, speed: t * -.001,  lw: .8,  al: .22 },
-        { r: NR + 64, tilt: .28, speed: t * .0007,  lw: .6,  al: .14 },
+        { r: NR + 22, tilt: .38, speed: t * .00035,  lw: 1.0, al: .32 },
+        { r: NR + 42, tilt: .55, speed: t * -.00022, lw: .8,  al: .22 },
+        { r: NR + 64, tilt: .28, speed: t * .00015,  lw: .6,  al: .14 },
       ];
       rings.forEach(ring => {
         ctx.save();
@@ -497,7 +517,7 @@ export function GalaxyOrbitView({
       ctx.beginPath(); ctx.arc(cx, cy, NR, 0, Math.PI*2); ctx.clip();
       ctx.fillStyle = "rgba(28,16,4,0.98)"; ctx.fillRect(cx-NR, cy-NR, NR*2, NR*2);
       if (profileImg) {
-        ctx.drawImage(profileImg, cx-NR, cy-NR, NR*2, NR*2);
+        drawImgCover(ctx, profileImg, cx, cy, NR);
       } else {
         ctx.fillStyle = BG;
         ctx.font = `bold ${Math.round(NR * .55)}px -apple-system,sans-serif`;
@@ -505,6 +525,8 @@ export function GalaxyOrbitView({
         ctx.fillText(profile.first_name[0]?.toUpperCase() || "?", cx, cy);
       }
       ctx.restore();
+      // 3D sphere highlight on nucleus
+      ctx.save(); drawSphere(ctx, cx, cy, NR, 1); ctx.restore();
       ctx.save(); ctx.strokeStyle = "#ffe060"; ctx.lineWidth = 3;
       ctx.beginPath(); ctx.arc(cx, cy, NR, 0, Math.PI*2); ctx.stroke(); ctx.restore();
 
