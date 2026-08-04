@@ -429,40 +429,57 @@ export default function HomePage() {
   const firstName = profile?.first_name ?? "";
   const avatarInitial = firstName[0]?.toUpperCase() ?? "?";
 
-  // Mensaje del día — primero basado en eventos reales, luego rotativo
+  // Momento del día — aniversario primero, luego frases específicas con datos reales
   const contextMessage = (() => {
     const today  = new Date();
     const todayM = today.getMonth();
     const todayD = today.getDate();
 
-    // Aniversario: un evento cuyo mes/día coincide hoy pero año pasado
+    // 1. Aniversario exacto hoy
     const anniversary = events.find(e => {
       const ed = new Date(e.event_date);
       return ed.getMonth() === todayM && ed.getDate() === todayD && ed.getFullYear() < today.getFullYear();
     });
     if (anniversary) {
       const years = today.getFullYear() - new Date(anniversary.event_date).getFullYear();
-      return `Hoy hace ${years} año${years !== 1 ? "s" : ""}: "${anniversary.title}". Un momento para recordar.`;
+      return `Hoy hace ${years} año${years !== 1 ? "s" : ""}: "${anniversary.title}".`;
     }
 
-    const fallbacks = [
-      "Es un buen día para recordar algo.",
-      "La historia de tu familia merece ser contada.",
-      "Cada momento que documentas, permanece para siempre.",
-      "Tu árbol crece cada vez que alguien más entra.",
-      "Hay algo esperando ser añadido a tu historia.",
-      "Los recuerdos no se crean solos.",
-      "¿Cuándo fue la última vez que le escribiste a alguien?",
-      "Una foto hoy, un recuerdo para siempre.",
-      "Tu familia es más grande de lo que crees.",
-      "Hoy es un buen día para conectar.",
-    ];
+    // 2. Cumpleaños próximo dentro de 3 días (aún no cubierto por Caso C en el hero)
+    const verySoon = allBirthdays.filter(b => b.days > 0 && b.days <= 3).sort((a, b) => a.days - b.days)[0];
+    if (verySoon) {
+      return verySoon.days === 1
+        ? `Mañana es el cumpleaños de ${verySoon.first_name}. ¿Ya sabes qué le vas a decir?`
+        : `En ${verySoon.days} días cumple años ${verySoon.first_name} ${verySoon.last_name}.`;
+    }
+
+    // 3. Evento reciente esta semana
+    const freshEvent = events.find(e => (Date.now() - new Date(e.created_at).getTime()) < 7 * 86_400_000);
+    if (freshEvent) {
+      return `Esta semana se añadió una nueva historia: "${freshEvent.title}".`;
+    }
+
+    // 4. Fallbacks específicos con datos reales de la familia
+    const n = visibleCount;
+    const h = events.length;
+    const p = photos.length;
     const dayIndex = Math.floor(Date.now() / 86_400_000);
-    return fallbacks[dayIndex % fallbacks.length];
+
+    const pool: string[] = [
+      n > 1 ? `Tu familia tiene ${n} personas. Cada una guarda una historia única.` : "Empieza construyendo tu árbol. La primera persona lo cambia todo.",
+      h > 0 ? `${h} historia${h !== 1 ? "s" : ""} documentada${h !== 1 ? "s" : ""} en tu árbol. Cada una, un regalo para el futuro.` : "La primera historia que escribas será el inicio de algo que vivirá para siempre.",
+      p > 0 ? `${p} foto${p !== 1 ? "s" : ""} en tu álbum. Los recuerdos visuales son los que más duran.` : "Una foto hoy se convierte en un tesoro en veinte años.",
+      n > 5 ? `¿Cuándo fue la última vez que hablaste con alguien de tu árbol de ${n} personas?` : "Cada persona que añades es una raíz más en el árbol.",
+      "Los momentos que no se documentan desaparecen. Los que sí, permanecen.",
+      h > 0 ? `Tu familia ya ha escrito ${h} capítulo${h !== 1 ? "s" : ""} de su historia.` : "Escribe el primer capítulo de la historia de tu familia.",
+    ].filter(Boolean);
+
+    return pool[dayIndex % pool.length];
   })();
 
-  // Stats útiles
-  const birthdaysThisMonth = allBirthdays.filter(b => b.days <= 30).length;
+  // Stats — invitan a explorar, no describen el vacío
+  const birthdaysThisMonth = allBirthdays.filter(b => b.days > 0 && b.days <= 30).length;
+  const historyCount = events.length;
   const recentMemories = [
     ...photos.filter(p => (Date.now() - new Date(p.created_at).getTime()) < 7 * 86_400_000),
     ...events.filter(e => (Date.now() - new Date(e.created_at).getTime()) < 7 * 86_400_000),
@@ -557,29 +574,35 @@ export default function HomePage() {
         </div>
       </GalaxyHero>
 
-      {/* Chips de estadísticas 3D */}
+      {/* Chips de estadísticas — invitan a explorar */}
       <div style={{ display: "flex", gap: 7, flexWrap: "wrap", justifyContent: "center",
         padding: "0 20px 20px", position: "relative", zIndex: 5,
         marginTop: -8,
         background: "linear-gradient(to bottom, rgba(6,3,24,0.6) 0%, transparent 100%)" }}>
-        <div style={s3dChip()}>
-          <span style={{ fontSize: 15, fontWeight: 800, color: "#d4af37", lineHeight: 1 }}>{visibleCount}</span>
-          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", fontWeight: 500 }}>
-            familiar{visibleCount !== 1 ? "es" : ""}
-          </span>
-        </div>
-        <div style={s3dChip()}>
-          <span style={{ fontSize: 15, fontWeight: 800, color: "#d4af37", lineHeight: 1 }}>{birthdaysThisMonth}</span>
-          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", fontWeight: 500 }}>
-            {birthdaysThisMonth === 1 ? "cumpleaños" : "cumpleaños"} este mes
-          </span>
-        </div>
-        <div style={s3dChip()}>
-          <span style={{ fontSize: 15, fontWeight: 800, color: "#d4af37", lineHeight: 1 }}>{recentMemories}</span>
-          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", fontWeight: 500 }}>
-            {recentMemories === 1 ? "recuerdo nuevo" : "recuerdos nuevos"}
-          </span>
-        </div>
+        <Link href="/tree" style={{ textDecoration: "none" }}>
+          <div style={s3dChip()}>
+            <span style={{ fontSize: 15, fontWeight: 800, color: "#d4af37", lineHeight: 1 }}>{visibleCount}</span>
+            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", fontWeight: 500 }}>
+              Familiar{visibleCount !== 1 ? "es" : ""}
+            </span>
+          </div>
+        </Link>
+        <Link href="/events" style={{ textDecoration: "none" }}>
+          <div style={s3dChip()}>
+            <span style={{ fontSize: 15, fontWeight: 800, color: "#d4af37", lineHeight: 1 }}>{historyCount}</span>
+            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", fontWeight: 500 }}>
+              {historyCount === 1 ? "Historia" : "Historias"}
+            </span>
+          </div>
+        </Link>
+        <Link href="/feed" style={{ textDecoration: "none" }}>
+          <div style={s3dChip()}>
+            <span style={{ fontSize: 15, fontWeight: 800, color: "#d4af37", lineHeight: 1 }}>{birthdaysThisMonth}</span>
+            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", fontWeight: 500 }}>
+              Cumple próximos
+            </span>
+          </div>
+        </Link>
       </div>
 
       {/* ── EN LÍNEA AHORA ──────────────────────────────────────────────── */}
@@ -619,15 +642,32 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Divisor atmosférico */}
-      <div style={{ position: "relative", margin: "0 0 2px", height: 24, overflow: "hidden" }}>
+      {/* Divisor atmosférico — nebula + línea + constelación */}
+      <div style={{ position: "relative", margin: "0 0 2px", height: 48, overflow: "hidden" }}>
+        {/* Capa de luz nebulosa */}
         <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
-          width: 220, height: 30, borderRadius: "50%", pointerEvents: "none",
-          background: "radial-gradient(ellipse, rgba(212,175,55,0.18) 0%, transparent 70%)",
-          filter: "blur(6px)" }} />
-        <div style={{ position: "absolute", top: "50%", left: "15%", right: "15%",
-          height: 0.5, background: "linear-gradient(90deg,transparent,rgba(212,175,55,0.35),transparent)",
+          width: 280, height: 48, borderRadius: "50%", pointerEvents: "none",
+          background: "radial-gradient(ellipse at 50% 50%, rgba(212,175,55,0.12) 0%, rgba(80,30,120,0.06) 40%, transparent 70%)",
+          filter: "blur(8px)" }} />
+        {/* Línea divisoria */}
+        <div style={{ position: "absolute", top: "50%", left: "12%", right: "12%",
+          height: 0.5, background: "linear-gradient(90deg,transparent,rgba(212,175,55,0.28),transparent)",
           transform: "translateY(-50%)" }} />
+        {/* Partículas decorativas — 5 estrellas pequeñas */}
+        {[
+          { l: "18%", t: "28%", s: 7, a: "twinkle-a", d: "0s",   op: 0.30 },
+          { l: "35%", t: "62%", s: 6, a: "twinkle-c", d: "-1.2s", op: 0.22 },
+          { l: "50%", t: "22%", s: 9, a: "twinkle-b", d: "-0.7s", op: 0.40 },
+          { l: "67%", t: "68%", s: 6, a: "twinkle-a", d: "-2.1s", op: 0.20 },
+          { l: "82%", t: "30%", s: 7, a: "twinkle-c", d: "-1.5s", op: 0.28 },
+        ].map((p, i) => (
+          <span key={i} style={{
+            position: "absolute", left: p.l, top: p.t,
+            fontSize: p.s, color: "#d4af37", opacity: p.op,
+            animation: `${p.a} ${3.5 + i * 0.8}s ease-in-out ${p.d} infinite`,
+            pointerEvents: "none",
+          }}>✦</span>
+        ))}
       </div>
 
       {/* ══ MOMENTO DEL DÍA ══════════════════════════════════════════════ */}
@@ -758,30 +798,47 @@ export default function HomePage() {
           </Link>
         )}
 
-        {/* — Caso D: Silencio familiar — estado tranquilo con mensaje personal */}
+        {/* — Caso D: Momento del día — siempre específico, nunca genérico */}
         {!todayBirthday && !(photos.find(p => (Date.now() - new Date(p.created_at).getTime()) < 86_400_000)) && !(upcomingBirthday && upcomingBirthday.days <= 7) && (
-          <div style={{
-            borderRadius: 22, background: "linear-gradient(145deg,#09080f 0%,#060510 100%)",
-            position: "relative", overflow: "hidden", minHeight: 155,
-            borderTop: "1.5px solid rgba(212,175,55,0.2)", borderLeft: "1px solid rgba(212,175,55,0.08)",
-            borderBottom: "4px solid #020108", borderRight: "1px solid rgba(0,0,0,0.65)",
-            boxShadow: "0 8px 0 #020108, 0 16px 32px rgba(0,0,0,0.88), 0 0 40px rgba(212,175,55,0.04)",
-          }}>
-            <div style={{ position: "absolute", inset: 0, pointerEvents: "none",
-              background: "radial-gradient(ellipse at 20% 60%, rgba(212,175,55,0.07) 0%, transparent 55%)" }} />
-            <div style={{ padding: "26px 22px", position: "relative" }}>
-              {/* Estrella animada en lugar de hoja */}
-              <div style={{ fontSize: 28, lineHeight: 1, marginBottom: 14, color: "#d4af37",
-                animation: "twinkle-a 4s ease-in-out infinite" }}>✦</div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: "rgba(255,255,255,0.82)",
-                lineHeight: 1.4, marginBottom: 8 }}>
-                {contextMessage}
+          <Link href={events.length > 0 ? "/events" : "/tree"} style={{ textDecoration: "none" }}>
+            <div style={{
+              borderRadius: 22,
+              background: "linear-gradient(145deg,#09080f 0%,#060510 80%,#08060e 100%)",
+              position: "relative", overflow: "hidden", minHeight: 170,
+              borderTop: "1.5px solid rgba(212,175,55,0.22)", borderLeft: "1px solid rgba(212,175,55,0.09)",
+              borderBottom: "4px solid #020108", borderRight: "1px solid rgba(0,0,0,0.65)",
+              boxShadow: "0 8px 0 #020108, 0 16px 32px rgba(0,0,0,0.92), 0 0 60px rgba(212,175,55,0.05)",
+            }}>
+              {/* Nebula de fondo — atmosférica */}
+              <div style={{ position: "absolute", inset: 0, pointerEvents: "none",
+                background: "radial-gradient(ellipse at 18% 55%, rgba(212,175,55,0.09) 0%, transparent 52%), radial-gradient(ellipse at 82% 30%, rgba(80,30,120,0.07) 0%, transparent 45%)" }} />
+              {/* Constelación decorativa — tres estrellas con tamaño variado */}
+              <div style={{ position: "absolute", top: 22, right: 22, display: "flex", gap: 5, alignItems: "center" }}>
+                <span style={{ fontSize: 7, color: "rgba(212,175,55,0.25)", animation: "twinkle-b 5.1s ease-in-out infinite" }}>✦</span>
+                <span style={{ fontSize: 11, color: "rgba(212,175,55,0.35)", animation: "twinkle-a 3.8s ease-in-out infinite" }}>✦</span>
+                <span style={{ fontSize: 6, color: "rgba(212,175,55,0.18)", animation: "twinkle-c 6.3s ease-in-out infinite" }}>✦</span>
               </div>
-              <div style={{ fontSize: 11, color: "rgba(212,175,55,0.4)", letterSpacing: "0.03em" }}>
-                {visibleCount > 0 ? `${visibleCount} familiares en tu árbol` : "Agrega tu primera persona"}
+              <div style={{ padding: "26px 22px 22px", position: "relative" }}>
+                {/* Etiqueta de contexto */}
+                <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.18em",
+                  textTransform: "uppercase", color: "rgba(212,175,55,0.42)", marginBottom: 14 }}>
+                  Momento del día
+                </div>
+                {/* Mensaje principal — grande, emocional */}
+                <div style={{ fontSize: 17, fontWeight: 700, color: "rgba(255,255,255,0.88)",
+                  lineHeight: 1.45, marginBottom: 16, maxWidth: 280 }}>
+                  {contextMessage}
+                </div>
+                {/* Call to action sutil */}
+                <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                  <span style={{ fontSize: 11, color: "rgba(212,175,55,0.45)", fontWeight: 600 }}>
+                    {events.length > 0 ? "Ver historias" : "Empezar a escribir"}
+                  </span>
+                  <ChevronRight size={11} style={{ color: "rgba(212,175,55,0.35)" }} />
+                </div>
               </div>
             </div>
-          </div>
+          </Link>
         )}
       </div>
 
@@ -799,11 +856,11 @@ export default function HomePage() {
             ].map(({ href, Icon, label, color, bg, border }) => (
               <Link key={href} href={href} style={{ textDecoration: "none", flex: 1 }}>
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 7 }}>
-                  <div style={{ width: 64, height: 64, borderRadius: 20, background: bg,
-                    border: `1.5px solid ${border}`,
-                    boxShadow: `0 5px 0 rgba(0,0,0,0.65), 0 8px 18px rgba(0,0,0,0.75)`,
+                  <div style={{ width: 52, height: 52, borderRadius: 16, background: bg,
+                    border: `1px solid ${border}`,
+                    boxShadow: `0 3px 0 rgba(0,0,0,0.55), 0 6px 14px rgba(0,0,0,0.65)`,
                     display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <Icon size={26} style={{ color }} />
+                    <Icon size={22} style={{ color }} />
                   </div>
                   <span style={{ fontSize: 10, fontWeight: 500, color: "rgba(255,255,255,0.3)", letterSpacing: "0.02em" }}>
                     {label}
@@ -826,11 +883,11 @@ export default function HomePage() {
             ].map(({ href, Icon, label, color, bg, border }) => (
               <Link key={href} href={href} style={{ textDecoration: "none", flex: 1 }}>
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 7 }}>
-                  <div style={{ width: 64, height: 64, borderRadius: 20, background: bg,
-                    border: `1.5px solid ${border}`,
-                    boxShadow: `0 5px 0 rgba(0,0,0,0.65), 0 8px 18px rgba(0,0,0,0.75)`,
+                  <div style={{ width: 52, height: 52, borderRadius: 16, background: bg,
+                    border: `1px solid ${border}`,
+                    boxShadow: `0 3px 0 rgba(0,0,0,0.55), 0 6px 14px rgba(0,0,0,0.65)`,
                     display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <Icon size={26} style={{ color }} />
+                    <Icon size={22} style={{ color }} />
                   </div>
                   <span style={{ fontSize: 10, fontWeight: 500, color: "rgba(255,255,255,0.3)", letterSpacing: "0.02em" }}>
                     {label}
