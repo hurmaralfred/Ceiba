@@ -74,25 +74,45 @@ function daysUntil(birth_date: string): number {
 }
 
 // ── Fondo galáctico completo ──────────────────────────────────────────────────
-function GalaxyHero({ children, avatarInitial, avatarUrl, firstName, lastName }: {
+// Constellation node positions (relative to center 140,140 in 280×280 SVG)
+const CONSTELLATION_NODES = [
+  { x: 140, y: 58,  r: 3.0, op: 0.38, tw: "twinkle-a", td: "0s"   },
+  { x: 211, y: 76,  r: 2.4, op: 0.28, tw: "twinkle-b", td: "0.8s" },
+  { x: 222, y: 173, r: 2.8, op: 0.34, tw: "twinkle-c", td: "1.6s" },
+  { x: 179, y: 237, r: 2.2, op: 0.24, tw: "twinkle-a", td: "0.4s" },
+  { x: 101, y: 223, r: 2.6, op: 0.30, tw: "twinkle-b", td: "2.1s" },
+  { x:  49, y: 177, r: 2.2, op: 0.22, tw: "twinkle-c", td: "1.0s" },
+  { x:  67, y:  94, r: 2.8, op: 0.32, tw: "twinkle-a", td: "1.8s" },
+  { x: 126, y:  39, r: 2.0, op: 0.20, tw: "twinkle-b", td: "0.6s" },
+  { x: 226, y: 112, r: 2.4, op: 0.26, tw: "twinkle-c", td: "2.4s" },
+] as const
+
+function GalaxyHero({ children, avatarInitial, avatarUrl, firstName, lastName, visibleCount, historyCount, birthdaysThisMonth }: {
   children: React.ReactNode;
   avatarInitial: string;
   avatarUrl?: string | null;
   firstName: string;
   lastName: string;
+  visibleCount: number;
+  historyCount: number;
+  birthdaysThisMonth: number;
 }) {
+  const statsLine = birthdaysThisMonth > 0
+    ? `${visibleCount} personas  ·  🎂 ${birthdaysThisMonth} cumpleaños próximos`
+    : historyCount > 0
+      ? `${visibleCount} personas  ·  ✨ ${historyCount} ${historyCount === 1 ? "recuerdo" : "recuerdos"}`
+      : `${visibleCount} personas en tu constelación`
+
   return (
-    <div style={{ position: "relative", overflow: "hidden", paddingBottom: 32, textAlign: "center",
+    <div style={{ position: "relative", overflow: "hidden", paddingBottom: 36, textAlign: "center",
       background: "radial-gradient(ellipse 120% 80% at 50% 0%, #12082a 0%, #060318 45%, #030208 100%)" }}>
 
       <style>{`
         @keyframes twinkle-a { 0%,100%{opacity:.9;transform:scale(1)} 50%{opacity:.25;transform:scale(.7)} }
         @keyframes twinkle-b { 0%,100%{opacity:.6;transform:scale(1)} 40%{opacity:.1;transform:scale(.6)} }
         @keyframes twinkle-c { 0%,100%{opacity:.75;transform:scale(1)} 60%{opacity:.3;transform:scale(.8)} }
-        @keyframes ring-spin  { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
-        @keyframes ring-spin-r{ from{transform:rotate(0deg)} to{transform:rotate(-360deg)} }
-        @keyframes core-pulse { 0%,100%{opacity:.55;transform:scale(1)} 50%{opacity:.85;transform:scale(1.12)} }
-        @keyframes dust-float { 0%,100%{opacity:0;transform:translateY(0) translateX(0)} 25%{opacity:.6} 50%{opacity:.3;transform:translateY(-18px) translateX(6px)} 75%{opacity:.5;transform:translateY(-8px) translateX(-4px)} }
+        @keyframes core-pulse { 0%,100%{opacity:.55;transform:scale(1)} 50%{opacity:.85;transform:scale(1.08)} }
+        @keyframes slow-drift { 0%{transform:translateY(0) translateX(0) scale(1)} 33%{transform:translateY(-14px) translateX(8px) scale(1.15)} 66%{transform:translateY(-6px) translateX(-5px) scale(0.9)} 100%{transform:translateY(0) translateX(0) scale(1)} }
         @keyframes shoot { 0%{opacity:0;transform:translateX(0) translateY(0)} 5%{opacity:1} 100%{opacity:0;transform:translateX(-160px) translateY(60px)} }
         @keyframes name-glow { 0%,100%{text-shadow:0 0 20px rgba(212,175,55,0.0)} 50%{text-shadow:0 0 28px rgba(212,175,55,0.45)} }
         @keyframes bday-glow { 0%,100%{box-shadow:0 8px 0 #040300,0 16px 32px rgba(0,0,0,0.92),0 0 28px rgba(212,175,55,0.22)} 50%{box-shadow:0 8px 0 #040300,0 16px 32px rgba(0,0,0,0.92),0 0 55px rgba(212,175,55,0.5),0 0 90px rgba(212,175,55,0.15)} }
@@ -111,109 +131,86 @@ function GalaxyHero({ children, avatarInitial, avatarUrl, firstName, lastName }:
       <div style={{ position:"absolute", bottom:-20, left:"10%", width:260, height:140, borderRadius:"50%", pointerEvents:"none",
         background:"radial-gradient(ellipse,rgba(80,20,160,0.14) 0%,transparent 70%)", filter:"blur(18px)" }} />
 
-      {/* Star field — layered with twinkle animations */}
+      {/* Star field */}
       <svg style={{ position:"absolute", inset:0, width:"100%", height:"100%", pointerEvents:"none" }} aria-hidden>
-        {/* Static dim stars */}
         {[
           [22,18,0.5],[58,32,0.4],[110,8,0.55],[178,22,0.42],[230,14,0.5],[280,28,0.38],[318,12,0.48],
           [8,65,0.45],[44,78,0.38],[92,54,0.5],[148,68,0.4],[196,44,0.45],[248,72,0.35],[302,58,0.48],
           [18,120,0.4],[62,108,0.38],[120,132,0.42],[168,98,0.5],[222,118,0.36],[274,104,0.44],[312,128,0.4],
           [30,170,0.45],[78,158,0.38],[136,182,0.42],[184,162,0.48],[238,176,0.35],[290,164,0.44],
-          [14,220,0.4],[66,208,0.38],[126,228,0.45],[182,212,0.42],[240,224,0.36],[296,216,0.44],
         ].map(([x,y,o],i) => <circle key={i} cx={x} cy={y} r="0.65" fill="white" opacity={o} />)}
-
-        {/* Twinkling white stars */}
-        <circle cx="40"  cy="24"  r="1.1" fill="white" opacity="0.9" style={{ animation:"twinkle-a 3.1s ease-in-out infinite" }} />
-        <circle cx="288" cy="18"  r="1.0" fill="white" opacity="0.8" style={{ animation:"twinkle-b 2.7s ease-in-out infinite 0.4s" }} />
-        <circle cx="72"  cy="140" r="0.9" fill="white" opacity="0.75" style={{ animation:"twinkle-c 3.5s ease-in-out infinite 0.9s" }} />
-        <circle cx="256" cy="152" r="1.0" fill="white" opacity="0.7" style={{ animation:"twinkle-a 2.9s ease-in-out infinite 1.3s" }} />
-        <circle cx="20"  cy="190" r="0.9" fill="white" opacity="0.8" style={{ animation:"twinkle-b 3.3s ease-in-out infinite 0.6s" }} />
-        <circle cx="310" cy="178" r="1.0" fill="white" opacity="0.75" style={{ animation:"twinkle-c 2.8s ease-in-out infinite 1.1s" }} />
-        <circle cx="140" cy="30"  r="0.8" fill="white" opacity="0.7" style={{ animation:"twinkle-a 3.6s ease-in-out infinite 0.3s" }} />
-
-        {/* Gold stars */}
+        <circle cx="40"  cy="24"  r="1.1" fill="white"   opacity="0.9"  style={{ animation:"twinkle-a 3.1s ease-in-out infinite" }} />
+        <circle cx="288" cy="18"  r="1.0" fill="white"   opacity="0.8"  style={{ animation:"twinkle-b 2.7s ease-in-out infinite 0.4s" }} />
+        <circle cx="72"  cy="140" r="0.9" fill="white"   opacity="0.75" style={{ animation:"twinkle-c 3.5s ease-in-out infinite 0.9s" }} />
+        <circle cx="310" cy="178" r="1.0" fill="white"   opacity="0.75" style={{ animation:"twinkle-c 2.8s ease-in-out infinite 1.1s" }} />
         <circle cx="160" cy="12"  r="1.4" fill="#d4af37" opacity="0.95" style={{ animation:"twinkle-b 4.1s ease-in-out infinite" }} />
-        <circle cx="96"  cy="10"  r="1.1" fill="#d4af37" opacity="0.85" style={{ animation:"twinkle-c 3.8s ease-in-out infinite 0.7s" }} />
         <circle cx="228" cy="16"  r="1.2" fill="#f0d060" opacity="0.88" style={{ animation:"twinkle-a 3.4s ease-in-out infinite 1.5s" }} />
-        <circle cx="52"  cy="196" r="1.0" fill="#d4af37" opacity="0.7" style={{ animation:"twinkle-b 4.3s ease-in-out infinite 0.2s" }} />
-        <circle cx="268" cy="200" r="1.1" fill="#d4af37" opacity="0.72" style={{ animation:"twinkle-c 3.9s ease-in-out infinite 1.8s" }} />
-
-        {/* Cross sparkles */}
-        <g style={{ animation:"twinkle-a 5s ease-in-out infinite" }}>
-          <circle cx="32" cy="50" r="1.5" fill="white" opacity="0.85" />
-          <line x1="32" y1="46" x2="32" y2="54" stroke="white" strokeWidth="0.5" opacity="0.6"/>
-          <line x1="28" y1="50" x2="36" y2="50" stroke="white" strokeWidth="0.5" opacity="0.6"/>
-        </g>
-        <g style={{ animation:"twinkle-b 4.5s ease-in-out infinite 1.2s" }}>
-          <circle cx="300" cy="44" r="1.4" fill="white" opacity="0.8" />
-          <line x1="300" y1="40" x2="300" y2="48" stroke="white" strokeWidth="0.45" opacity="0.55"/>
-          <line x1="296" y1="44" x2="304" y2="44" stroke="white" strokeWidth="0.45" opacity="0.55"/>
-        </g>
-        <g style={{ animation:"twinkle-c 5.2s ease-in-out infinite 2.1s" }}>
-          <circle cx="162" cy="13" r="1.3" fill="#f5e060" opacity="0.9" />
-          <line x1="162" y1="9"  x2="162" y2="17" stroke="#f5e060" strokeWidth="0.55" opacity="0.7"/>
-          <line x1="158" y1="13" x2="166" y2="13" stroke="#f5e060" strokeWidth="0.55" opacity="0.7"/>
-        </g>
-
-        {/* Shooting stars */}
         <line x1="260" y1="40" x2="295" y2="28" stroke="white" strokeWidth="0.8" opacity="0"
           style={{ animation:"shoot 8s linear infinite 2s", transformOrigin:"260px 40px" }} />
         <line x1="80"  y1="18" x2="118" y2="6"  stroke="white" strokeWidth="0.7" opacity="0"
           style={{ animation:"shoot 8s linear infinite 5.5s", transformOrigin:"80px 18px" }} />
       </svg>
 
-      {/* Dust particles */}
+      {/* Slow-drift particles — imperceptible until ~10s */}
       {[
-        [30,160,2.8],[55,110,3.4],[240,130,2.6],[275,170,3.1],[150,200,2.9],[100,180,3.6],
-      ].map(([x,y,d],i) => (
-        <div key={i} style={{ position:"absolute", left:x, top:y, width:2, height:2, borderRadius:"50%",
-          background:"rgba(212,175,55,0.5)", pointerEvents:"none",
-          animation:`dust-float ${d}s ease-in-out infinite ${i*0.6}s` }} />
+        { x: 42,  y: 165, d: 48 }, { x: 72,  y: 108, d: 55 },
+        { x: 252, y: 132, d: 43 }, { x: 284, y: 172, d: 61 },
+        { x: 158, y: 198, d: 50 }, { x: 108, y: 184, d: 57 },
+        { x: 22,  y: 220, d: 44 }, { x: 296, y: 210, d: 53 },
+      ].map(({ x, y, d }, i) => (
+        <div key={i} style={{ position:"absolute", left:x, top:y, width:1.5, height:1.5, borderRadius:"50%",
+          background:"rgba(212,175,55,0.45)", pointerEvents:"none",
+          animation:`slow-drift ${d}s ease-in-out infinite ${i * 5.5}s` }} />
       ))}
 
       {/* Top bar */}
       {children}
 
-      {/* Galactic core behind avatar */}
-      <div style={{ position:"relative", display:"inline-block", marginBottom:10, zIndex:5 }}>
-        {/* Outer ambient glow — very large, very soft */}
-        <div style={{ position:"absolute", top:"50%", left:"50%",
-          transform:"translate(-50%,-50%)",
-          width:260, height:260, borderRadius:"50%", pointerEvents:"none",
-          background:"radial-gradient(circle,rgba(130,60,230,0.18) 0%,rgba(212,175,55,0.08) 40%,transparent 70%)",
-          filter:"blur(16px)", animation:"core-pulse 4s ease-in-out infinite" }} />
-        {/* Mid glow */}
-        <div style={{ position:"absolute", top:"50%", left:"50%",
-          transform:"translate(-50%,-50%)",
-          width:170, height:170, borderRadius:"50%", pointerEvents:"none",
-          background:"radial-gradient(circle,rgba(212,175,55,0.22) 0%,rgba(100,40,200,0.15) 50%,transparent 70%)",
-          filter:"blur(10px)", animation:"core-pulse 3.2s ease-in-out infinite 0.5s" }} />
+      {/* Avatar + family constellation */}
+      <div style={{ position:"relative", display:"inline-block", marginBottom:14, zIndex:5 }}>
 
-        {/* Outer slow-spinning ring */}
-        <div style={{ position:"absolute", inset:-22, borderRadius:"50%", pointerEvents:"none",
-          background:"conic-gradient(from 0deg,rgba(212,175,55,0.0) 0%,rgba(212,175,55,0.3) 25%,rgba(130,60,230,0.25) 50%,rgba(40,80,220,0.2) 75%,rgba(212,175,55,0.0) 100%)",
-          animation:"ring-spin 18s linear infinite", filter:"blur(4px)" }} />
+        {/* Ambient core glow */}
+        <div style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-50%)",
+          width:240, height:240, borderRadius:"50%", pointerEvents:"none",
+          background:"radial-gradient(circle,rgba(130,60,230,0.16) 0%,rgba(212,175,55,0.07) 40%,transparent 70%)",
+          filter:"blur(16px)", animation:"core-pulse 4.5s ease-in-out infinite" }} />
 
-        {/* Inner sharp ring — faster, opposite direction */}
-        <div style={{ position:"absolute", inset:-8, borderRadius:"50%", pointerEvents:"none",
-          background:"conic-gradient(from 15deg,#d4af37 0%,#f5e070 12%,rgba(212,175,55,0.1) 25%,#7040c0 38%,#2050c8 52%,rgba(40,80,220,0.1) 65%,#18b0c0 76%,#f0d060 88%,#d4af37 100%)",
-          animation:"ring-spin-r 9s linear infinite" }} />
+        {/* Family constellation — nodes + lines, no text */}
+        <svg width="280" height="280" viewBox="0 0 280 280"
+          style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-50%)",
+            pointerEvents:"none", overflow:"visible" }} aria-hidden>
+          {/* Lines from center to each node */}
+          {CONSTELLATION_NODES.map((n, i) => (
+            <line key={`l${i}`} x1="140" y1="140" x2={n.x} y2={n.y}
+              stroke="#d4af37" strokeWidth="0.5" opacity="0.08" />
+          ))}
+          {/* Peripheral arcs connecting adjacent nodes */}
+          {[[0,1],[1,8],[8,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,0]].map(([a,b],i) => (
+            <line key={`a${i}`}
+              x1={CONSTELLATION_NODES[a].x} y1={CONSTELLATION_NODES[a].y}
+              x2={CONSTELLATION_NODES[b].x} y2={CONSTELLATION_NODES[b].y}
+              stroke="#d4af37" strokeWidth="0.4" opacity="0.06" />
+          ))}
+          {/* Nodes */}
+          {CONSTELLATION_NODES.map((n, i) => (
+            <circle key={`n${i}`} cx={n.x} cy={n.y} r={n.r}
+              fill="#d4af37" opacity={n.op}
+              style={{ animation:`${n.tw} ${3.2 + i * 0.45}s ease-in-out ${n.td} infinite` }} />
+          ))}
+        </svg>
 
-        {/* Gap ring */}
-        <div style={{ position:"absolute", inset:-2, borderRadius:"50%", background:"#030208", pointerEvents:"none" }} />
-
-        {/* Avatar body */}
-        <div style={{ width:100, height:100, borderRadius:"50%", background:"#0c0a18",
+        {/* Avatar */}
+        <div style={{ width:104, height:104, borderRadius:"50%", background:"#0c0a18",
           display:"flex", alignItems:"center", justifyContent:"center", position:"relative", zIndex:2,
-          boxShadow:"inset 0 3px 28px rgba(120,60,220,0.3), inset 0 -3px 14px rgba(0,0,0,0.7), 0 0 0 1px rgba(212,175,55,0.12)" }}>
+          boxShadow:"inset 0 3px 28px rgba(120,60,220,0.3), inset 0 -3px 14px rgba(0,0,0,0.7), 0 0 0 1.5px rgba(212,175,55,0.18)" }}>
           <div style={{ position:"absolute", inset:0, borderRadius:"50%",
-            background:"radial-gradient(circle at 35% 25%,rgba(212,175,55,0.2) 0%,transparent 55%)" }} />
+            background:"radial-gradient(circle at 35% 25%,rgba(212,175,55,0.18) 0%,transparent 55%)" }} />
           {avatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={avatarUrl} alt={firstName}
-              style={{ width:100, height:100, borderRadius:"50%", objectFit:"cover", position:"relative" }} />
+              style={{ width:104, height:104, borderRadius:"50%", objectFit:"cover", position:"relative" }} />
           ) : (
-            <span style={{ fontSize:38, color:"#d4af37", fontWeight:800, position:"relative",
+            <span style={{ fontSize:40, color:"#d4af37", fontWeight:800, position:"relative",
               textShadow:"0 0 20px rgba(212,175,55,0.6)" }}>
               {avatarInitial}
             </span>
@@ -222,15 +219,21 @@ function GalaxyHero({ children, avatarInitial, avatarUrl, firstName, lastName }:
       </div>
 
       {/* Name */}
-      <div style={{ fontSize:23, fontWeight:800, color:"#fff", letterSpacing:0.4, marginBottom:4,
+      <div style={{ fontSize:22, fontWeight:800, color:"#fff", letterSpacing:0.3, marginBottom:5,
         position:"relative", zIndex:5, animation:"name-glow 5s ease-in-out infinite" }}>
-        {firstName || lastName ? `${firstName} ${lastName}`.trim() : "Cargando..."}
+        {firstName || "Cargando..."}
       </div>
 
-      {/* Tagline */}
-      <div style={{ fontSize:10.5, color:"rgba(212,175,55,0.6)", fontStyle:"italic",
-        marginBottom:12, position:"relative", zIndex:5, letterSpacing:"0.06em" }}>
-        ✦ Guardián de la memoria familiar ✦
+      {/* Universe label */}
+      <div style={{ fontSize:10, color:"rgba(212,175,55,0.55)", fontStyle:"italic",
+        marginBottom:10, position:"relative", zIndex:5, letterSpacing:"0.08em" }}>
+        Tu universo familiar
+      </div>
+
+      {/* Narrative stats */}
+      <div style={{ fontSize:11, color:"rgba(255,255,255,0.35)", position:"relative", zIndex:5,
+        letterSpacing:"0.03em" }}>
+        {statsLine}
       </div>
     </div>
   );
@@ -538,6 +541,9 @@ export default function HomePage() {
         avatarUrl={profile?.avatar_url}
         firstName={profile?.first_name ?? ""}
         lastName={profile?.last_name ?? ""}
+        visibleCount={visibleCount}
+        historyCount={historyCount}
+        birthdaysThisMonth={birthdaysThisMonth}
       >
         {/* Barra de navegación superior */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -574,36 +580,7 @@ export default function HomePage() {
         </div>
       </GalaxyHero>
 
-      {/* Estadísticas — tarjetas verticales con número protagonista */}
-      <div style={{ display: "flex", gap: 8, padding: "0 14px 20px", position: "relative", zIndex: 5, marginTop: -8,
-        background: "linear-gradient(to bottom, rgba(6,3,24,0.6) 0%, transparent 100%)" }}>
-        {[
-          { href: "/tree",   value: visibleCount,      label: "Familiares",           sub: "" },
-          { href: "/events", value: historyCount,       label: "Recuerdos",            sub: "este mes" },
-          { href: "/feed",   value: birthdaysThisMonth, label: "Cumpleaños",           sub: "esta semana" },
-        ].map(({ href, value, label, sub }) => (
-          <Link key={href} href={href} style={{ textDecoration: "none", flex: 1 }}>
-            <div style={{
-              background: "#0c0a18",
-              borderTop: "1px solid rgba(212,175,55,0.18)", borderLeft: "1px solid rgba(212,175,55,0.08)",
-              borderBottom: "2px solid #02010a", borderRight: "1px solid rgba(0,0,0,0.5)",
-              boxShadow: "0 4px 0 #02010a, 0 6px 16px rgba(0,0,0,0.6)",
-              borderRadius: 14, padding: "12px 8px 10px", textAlign: "center",
-            }}>
-              <div style={{ fontSize: 26, fontWeight: 800, color: "#d4af37", lineHeight: 1, marginBottom: 5,
-                textShadow: "0 0 18px rgba(212,175,55,0.35)" }}>
-                {value}
-              </div>
-              <div style={{ fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.45)", lineHeight: 1.3 }}>
-                {label}
-              </div>
-              {sub && (
-                <div style={{ fontSize: 9, color: "rgba(255,255,255,0.22)", marginTop: 2 }}>{sub}</div>
-              )}
-            </div>
-          </Link>
-        ))}
-      </div>
+      {/* Stats integradas en hero — sin cajas */}
 
       {/* ── EN LÍNEA AHORA ──────────────────────────────────────────────── */}
       {onlineFamily.length > 0 && (
@@ -904,44 +881,54 @@ export default function HomePage() {
           width: 300, height: 300, borderRadius: "50%", pointerEvents: "none", zIndex: 0,
           background: "radial-gradient(circle, rgba(212,175,55,0.07) 0%, rgba(80,30,160,0.04) 40%, transparent 70%)",
           filter: "blur(24px)", animation: "section-glow 6s ease-in-out infinite" }} />
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 13 }}>
-          <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.3)", letterSpacing: "0.1em",
-            textTransform: "uppercase" }}>Tu familia</span>
-        </div>
-
-        {/* ── Tarjeta dinámica — siempre contenido, nunca función ──────── */}
-        <Link href={dynamicCard.href}>
-          <div style={{ ...s3dCard(
-              dynamicCard.type === "mensaje" ? "#080610" : "#09090f",
-              dynamicCard.type === "foto" || dynamicCard.type === "evento" ? "200,150,60" : "152,152,184",
-              "#03030a",
-              dynamicCard.type === "mensaje" ? 0.06 : 0.12,
-            ), marginBottom: 9 }}>
-            <CardShine ar={dynamicCard.type === "foto" || dynamicCard.type === "evento" ? "200,150,60" : "152,152,184"} />
-            {/* Foto de fondo si hay imagen */}
+        {/* ── Momento del día — tratamiento editorial ─────────────────── */}
+        <Link href={dynamicCard.href} style={{ display: "block", marginBottom: 9 }}>
+          <div style={{
+            borderRadius: 20,
+            background: dynamicCard.type === "mensaje" ? "#07050f" : "#08070e",
+            position: "relative", overflow: "hidden", minHeight: 160,
+            border: "1px solid rgba(212,175,55,0.10)",
+            boxShadow: "0 12px 40px rgba(0,0,0,0.7), 0 0 0 0.5px rgba(212,175,55,0.06)",
+          }}>
+            {/* Foto de fondo — mucho más presente si existe */}
             {dynamicCard.imageUrl && (
-              <div style={{ position: "absolute", inset: 0, borderRadius: 18, overflow: "hidden", zIndex: 0 }}>
-                <img src={dynamicCard.imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.18 }} />
-              </div>
+              <>
+                <div style={{ position: "absolute", inset: 0, borderRadius: 20, overflow: "hidden", zIndex: 0 }}>
+                  <img src={dynamicCard.imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.32 }} />
+                </div>
+                <div style={{ position: "absolute", inset: 0, borderRadius: 20, zIndex: 1,
+                  background: "linear-gradient(to bottom, rgba(7,5,15,0.3) 0%, rgba(7,5,15,0.85) 70%)" }} />
+              </>
             )}
-            <div style={{ padding: "14px 14px 13px", position: "relative", zIndex: 1 }}>
-              <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.16em", textTransform: "uppercase",
-                color: dynamicCard.type === "mensaje" ? "rgba(152,152,184,0.5)" : "rgba(212,175,55,0.55)",
-                marginBottom: 7 }}>
-                {dynamicCard.label}
+            {/* Nebula de fondo cuando no hay foto */}
+            {!dynamicCard.imageUrl && (
+              <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0,
+                background: "radial-gradient(ellipse at 20% 40%, rgba(212,175,55,0.07) 0%, transparent 55%), radial-gradient(ellipse at 85% 70%, rgba(80,30,120,0.08) 0%, transparent 45%)" }} />
+            )}
+            <div style={{ padding: "22px 20px 20px", position: "relative", zIndex: 2 }}>
+              {/* Eyebrow */}
+              <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase",
+                color: dynamicCard.type === "mensaje" ? "rgba(152,152,184,0.45)" : "rgba(212,175,55,0.5)",
+                marginBottom: 12 }}>
+                {dynamicCard.type === "mensaje" ? "Momento del día" : dynamicCard.label}
               </div>
-              <div style={{ fontSize: 14, fontWeight: 800, color: "#fff", marginBottom: 5, lineHeight: 1.3 }}>
+              {/* Título editorial */}
+              <div style={{ fontSize: 19, fontWeight: 800, color: "#fff", marginBottom: 10, lineHeight: 1.25,
+                letterSpacing: "-0.01em" }}>
                 {dynamicCard.title}
               </div>
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.38)", lineHeight: 1.5 }}>
+              {/* Cuerpo con más aire */}
+              <div style={{ fontSize: 13, color: "rgba(255,255,255,0.42)", lineHeight: 1.75, marginBottom: 18 }}>
                 {dynamicCard.subtitle}
               </div>
-              <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 4 }}>
-                <span style={{ fontSize: 10, fontWeight: 600,
-                  color: dynamicCard.type === "mensaje" ? "rgba(152,152,184,0.45)" : "rgba(212,175,55,0.5)" }}>
-                  Ver más
+              {/* CTA mínimo */}
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.04em",
+                  color: dynamicCard.type === "mensaje" ? "rgba(152,152,184,0.5)" : "rgba(212,175,55,0.6)",
+                  borderBottom: `1px solid ${dynamicCard.type === "mensaje" ? "rgba(152,152,184,0.2)" : "rgba(212,175,55,0.2)"}`,
+                  paddingBottom: 1 }}>
+                  Abrir
                 </span>
-                <ChevronRight size={11} style={{ color: dynamicCard.type === "mensaje" ? "rgba(152,152,184,0.35)" : "rgba(212,175,55,0.4)" }} />
               </div>
             </div>
           </div>
