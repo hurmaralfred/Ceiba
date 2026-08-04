@@ -429,6 +429,24 @@ export default function HomePage() {
   const firstName = profile?.first_name ?? "";
   const avatarInitial = firstName[0]?.toUpperCase() ?? "?";
 
+  // Mensaje diario rotativo — cambia cada día
+  const dailyMessage = (() => {
+    const msgs = [
+      "Es un buen día para recordar algo.",
+      "La historia de tu familia merece ser contada.",
+      "Cada momento que documentas, permanece para siempre.",
+      "Tu árbol crece cada vez que alguien más entra.",
+      "Hay algo esperando ser añadido a tu historia.",
+      "Los recuerdos no se crean solos.",
+      "¿Cuándo fue la última vez que le escribiste a alguien?",
+      "Una foto hoy, un recuerdo para siempre.",
+      "Tu familia es más grande de lo que crees.",
+      "Hoy es un buen día para conectar.",
+    ];
+    const dayIndex = Math.floor(Date.now() / 86_400_000);
+    return msgs[dayIndex % msgs.length];
+  })();
+
   return (
     <div style={{ minHeight: "100vh", background: "#030208", paddingBottom: 100, color: "#fff" }}>
 
@@ -452,13 +470,13 @@ export default function HomePage() {
             </div>
           </Link>
           <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 5, justifyContent: "center" }}>
-              <TreePine size={13} style={{ color: "#d4af37" }} />
-              <span style={{ fontSize: 17, fontWeight: 700, color: "#d4af37", letterSpacing: 2 }}>CEIBA</span>
-              <span style={{ fontSize: 11, color: "#f0d060" }}>✦</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "center" }}>
+              <TreePine size={15} style={{ color: "#d4af37" }} />
+              <span style={{ fontSize: 21, fontWeight: 700, color: "#d4af37", letterSpacing: 2.5 }}>CEIBA</span>
+              <span style={{ fontSize: 12, color: "#f0d060" }}>✦</span>
             </div>
-            <div style={{ fontSize: 7.5, fontWeight: 700, letterSpacing: "0.22em",
-              color: "rgba(212,175,55,0.45)", textTransform: "uppercase", marginTop: 1 }}>
+            <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: "0.24em",
+              color: "rgba(212,175,55,0.45)", textTransform: "uppercase", marginTop: 2 }}>
               Nuestras raíces
             </div>
           </div>
@@ -480,21 +498,21 @@ export default function HomePage() {
         marginTop: -8,
         background: "linear-gradient(to bottom, rgba(6,3,24,0.6) 0%, transparent 100%)" }}>
         <div style={s3dChip()}>
-          <Users size={12} style={{ color: "#d4af37" }} />
-          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.85)", fontWeight: 600 }}>
-            {visibleCount} familiares
+          <span style={{ fontSize: 15, fontWeight: 800, color: "#d4af37", lineHeight: 1 }}>{visibleCount}</span>
+          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.55)", fontWeight: 500 }}>
+            familiar{visibleCount !== 1 ? "es" : ""}
           </span>
         </div>
         <div style={s3dChip()}>
-          <GitBranch size={12} style={{ color: "#d4af37" }} />
-          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.85)", fontWeight: 600 }}>
-            {events.length} momentos
+          <span style={{ fontSize: 15, fontWeight: 800, color: "#d4af37", lineHeight: 1 }}>{events.length}</span>
+          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.55)", fontWeight: 500 }}>
+            {events.length === 1 ? "momento" : "momentos"}
           </span>
         </div>
         <div style={s3dChip()}>
-          <ImageIcon size={12} style={{ color: "#d4af37" }} />
-          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.85)", fontWeight: 600 }}>
-            {photos.length} fotos
+          <span style={{ fontSize: 15, fontWeight: 800, color: "#d4af37", lineHeight: 1 }}>{photos.length}</span>
+          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.55)", fontWeight: 500 }}>
+            {photos.length === 1 ? "foto" : "fotos"}
           </span>
         </div>
       </div>
@@ -675,22 +693,26 @@ export default function HomePage() {
           </Link>
         )}
 
-        {/* — Caso D: Silencio familiar — estado neutro */}
+        {/* — Caso D: Silencio familiar — estado tranquilo con mensaje personal */}
         {!todayBirthday && !(photos.find(p => (Date.now() - new Date(p.created_at).getTime()) < 86_400_000)) && !(upcomingBirthday && upcomingBirthday.days <= 7) && (
           <div style={{
-            borderRadius: 22, background: "#09080f", position: "relative", overflow: "hidden", minHeight: 140,
-            borderTop: "1.5px solid rgba(152,152,184,0.25)", borderLeft: "1px solid rgba(152,152,184,0.1)",
-            borderBottom: "4px solid #030208", borderRight: "1px solid rgba(0,0,0,0.6)",
-            boxShadow: "0 8px 0 #030208, 0 16px 32px rgba(0,0,0,0.85)",
+            borderRadius: 22, background: "linear-gradient(145deg,#09080f 0%,#060510 100%)",
+            position: "relative", overflow: "hidden", minHeight: 155,
+            borderTop: "1.5px solid rgba(212,175,55,0.2)", borderLeft: "1px solid rgba(212,175,55,0.08)",
+            borderBottom: "4px solid #020108", borderRight: "1px solid rgba(0,0,0,0.65)",
+            boxShadow: "0 8px 0 #020108, 0 16px 32px rgba(0,0,0,0.88), 0 0 40px rgba(212,175,55,0.04)",
           }}>
             <div style={{ position: "absolute", inset: 0, pointerEvents: "none",
-              background: "radial-gradient(ellipse at 50% 50%, rgba(152,152,184,0.06) 0%, transparent 65%)" }} />
-            <div style={{ padding: "24px 20px", position: "relative", textAlign: "center" }}>
-              <div style={{ fontSize: 32, lineHeight: 1, marginBottom: 10 }}>🌿</div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: "rgba(255,255,255,0.7)", marginBottom: 4 }}>
-                Tu familia está tranquila hoy
+              background: "radial-gradient(ellipse at 20% 60%, rgba(212,175,55,0.07) 0%, transparent 55%)" }} />
+            <div style={{ padding: "26px 22px", position: "relative" }}>
+              {/* Estrella animada en lugar de hoja */}
+              <div style={{ fontSize: 28, lineHeight: 1, marginBottom: 14, color: "#d4af37",
+                animation: "twinkle-a 4s ease-in-out infinite" }}>✦</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: "rgba(255,255,255,0.82)",
+                lineHeight: 1.4, marginBottom: 8 }}>
+                {dailyMessage}
               </div>
-              <div style={{ fontSize: 12, color: "rgba(152,152,184,0.6)" }}>
+              <div style={{ fontSize: 11, color: "rgba(212,175,55,0.4)", letterSpacing: "0.03em" }}>
                 {visibleCount > 0 ? `${visibleCount} familiares en tu árbol` : "Agrega tu primera persona"}
               </div>
             </div>
@@ -711,17 +733,17 @@ export default function HomePage() {
             { href: "/mapa",   Icon: Map,         label: "Mapa",     color: "#9898b8", bg: "rgba(130,130,160,0.1)", border: "rgba(130,130,160,0.22)" },
           ].map(({ href, Icon, label, color, bg, border }) => (
             <Link key={href} href={href} style={{ textDecoration: "none", flexShrink: 0 }}>
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, width: 60 }}>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 7, width: 68 }}>
                 <div style={{
-                  width: 52, height: 52, borderRadius: 16, background: bg, flexShrink: 0,
+                  width: 60, height: 60, borderRadius: 19, background: bg, flexShrink: 0,
                   border: `1.5px solid ${border}`,
-                  boxShadow: `0 4px 0 rgba(0,0,0,0.6), 0 6px 14px rgba(0,0,0,0.7)`,
+                  boxShadow: `0 5px 0 rgba(0,0,0,0.65), 0 8px 18px rgba(0,0,0,0.75)`,
                   display: "flex", alignItems: "center", justifyContent: "center",
                   transition: "transform 0.12s ease",
                 }}>
-                  <Icon size={22} style={{ color }} />
+                  <Icon size={24} style={{ color }} />
                 </div>
-                <span style={{ fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.45)", textAlign: "center" }}>
+                <span style={{ fontSize: 10, fontWeight: 500, color: "rgba(255,255,255,0.32)", textAlign: "center", letterSpacing: "0.02em" }}>
                   {label}
                 </span>
               </div>
