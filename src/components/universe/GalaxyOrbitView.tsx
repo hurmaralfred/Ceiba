@@ -71,7 +71,7 @@ export interface GalaxyOrbitViewProps {
 const GOLD   = "#d4af37";
 const BG     = "#030208";
 const TILT   = 0.68;
-const BASE_ORBIT_FRACS = [0.195, 0.345, 0.475] as const;
+const BASE_ORBIT_FRACS = [0.21, 0.375, 0.52] as const;
 const BASE_SPEEDS      = [0.0085, 0.0058, 0.0032] as const;
 // Direction is now per-node (from hash), not per-orbit
 const BASE_NR          = [36, 28, 22] as const;
@@ -383,19 +383,37 @@ export function GalaxyOrbitView({
         ctx.restore();
       });
 
-      // ── Orbit guide rings (faint, dashed ellipses per orbit level)
-      ([1, 2, 3] as const).forEach(orbit => {
-        const r = baseOrbitR(orbit, w);
-        const al = [.10, .06, .04][orbit-1];
+      // ── Galactic core nebula — warm glow emanating from the center
+      const gc = ctx.createRadialGradient(cx, cy, 0, cx, cy, w * 0.52);
+      gc.addColorStop(0,    "rgba(255,210,80,0.26)");
+      gc.addColorStop(0.07, "rgba(195,130,45,0.14)");
+      gc.addColorStop(0.20, "rgba(85,40,130,0.09)");
+      gc.addColorStop(0.42, "rgba(22,10,58,0.05)");
+      gc.addColorStop(1,    "transparent");
+      ctx.save(); ctx.fillStyle = gc; ctx.fillRect(0, 0, w, h); ctx.restore();
+
+      // ── Per-node true orbital paths (unique ellipse per star, very faint)
+      const activeSet2 = activeSetRef.current;
+      nodesRef.current.forEach(n => {
+        const isActive = activeSet2.size === 0 || activeSet2.has(n.id);
+        const rgb2 = n.joined ? "212,175,55" : "185,158,235";
+        const baseAl = [0.060, 0.036, 0.020][n.orbit - 1];
+        const al2 = isActive ? baseAl : baseAl * 0.35;
+        const r2 = baseOrbitR(n.orbit, w) * n.rVar;
+        const tilt2 = TILT + n.tiltVar;
         ctx.save();
-        ctx.strokeStyle = `rgba(212,175,55,${al})`;
-        ctx.lineWidth = .6; ctx.setLineDash([2, 12]);
-        ctx.beginPath(); ctx.ellipse(cx, cy, r, r * TILT, 0, 0, Math.PI * 2); ctx.stroke();
-        ctx.setLineDash([]);
-        ctx.fillStyle = `rgba(212,175,55,${al * 1.4})`;
-        ctx.font = "6px -apple-system,sans-serif"; ctx.textAlign = "center";
-        ctx.fillText(["DIRECTA","EXTENDIDA","AFINIDAD"][orbit-1], cx, cy - r * TILT - 7);
-        ctx.restore();
+        ctx.globalAlpha = al2;
+        ctx.strokeStyle = `rgba(${rgb2},1)`;
+        ctx.lineWidth = 0.45;
+        ctx.beginPath();
+        const STEPS = 60;
+        for (let i = 0; i <= STEPS; i++) {
+          const a = (i / STEPS) * Math.PI * 2;
+          const ox = cx + n.offX + r2 * Math.cos(a);
+          const oy = cy + n.offY + r2 * tilt2 * Math.sin(a);
+          i === 0 ? ctx.moveTo(ox, oy) : ctx.lineTo(ox, oy);
+        }
+        ctx.closePath(); ctx.stroke(); ctx.restore();
       });
 
       // ── Phase 1: compute base positions & advance angles ─────────────────────
@@ -523,25 +541,41 @@ export function GalaxyOrbitView({
             ctx.fillStyle = "rgba(8,5,18,0.95)"; ctx.fillRect(nx-nr, ny-nr, nr*2, nr*2);
             drawImgCover(ctx, img, nx, ny, nr);
           } else {
-            // Translucent body — radial gradient fading to transparent at edge
+            // No photo — elegant person silhouette, no letter placeholder
+            // Sphere body
             const sg = ctx.createRadialGradient(nx, ny, 0, nx, ny, nr);
-            sg.addColorStop(0,    `rgba(${rgb},0.88)`);
-            sg.addColorStop(0.52, `rgba(${rgb},0.32)`);
-            sg.addColorStop(1,    `rgba(${rgb},0.04)`);
+            sg.addColorStop(0,    `rgba(${rgb},0.80)`);
+            sg.addColorStop(0.50, `rgba(${rgb},0.26)`);
+            sg.addColorStop(1,    `rgba(${rgb},0.03)`);
             ctx.fillStyle = sg;
             ctx.beginPath(); ctx.arc(nx, ny, nr, 0, Math.PI*2); ctx.fill();
-            // Luminous inner core — offset highlight
-            const cg = ctx.createRadialGradient(nx - nr*.24, ny - nr*.24, 0, nx, ny, nr*.70);
-            cg.addColorStop(0,    "rgba(255,255,255,0.98)");
-            cg.addColorStop(0.38, `rgba(${rgb},0.72)`);
-            cg.addColorStop(1,    "transparent");
+            // Clip to sphere for silhouette
+            ctx.save();
+            ctx.beginPath(); ctx.arc(nx, ny, nr, 0, Math.PI*2); ctx.clip();
+            // Head
+            const headR = nr * 0.27, headY = ny - nr * 0.15;
+            const hg = ctx.createRadialGradient(nx - headR*.3, headY - headR*.3, 0, nx, headY, headR);
+            hg.addColorStop(0,   "rgba(255,255,255,0.97)");
+            hg.addColorStop(0.40,`rgba(${rgb},0.78)`);
+            hg.addColorStop(1,   `rgba(${rgb},0.22)`);
+            ctx.fillStyle = hg;
+            ctx.beginPath(); ctx.arc(nx, headY, headR, 0, Math.PI*2); ctx.fill();
+            // Shoulders
+            const shY = ny + nr * 0.24;
+            const shG = ctx.createRadialGradient(nx, shY - nr*.05, 0, nx, shY, nr * 0.65);
+            shG.addColorStop(0,   `rgba(${rgb},0.62)`);
+            shG.addColorStop(0.55,`rgba(${rgb},0.28)`);
+            shG.addColorStop(1,   "transparent");
+            ctx.fillStyle = shG;
+            ctx.beginPath(); ctx.ellipse(nx, shY, nr*.60, nr*.42, 0, 0, Math.PI); ctx.fill();
+            ctx.restore(); // end clip
+            // Inner luminous overlay (subtle specular)
+            const cg = ctx.createRadialGradient(nx - nr*.24, ny - nr*.24, 0, nx, ny, nr*.75);
+            cg.addColorStop(0,   "rgba(255,255,255,0.48)");
+            cg.addColorStop(0.4, `rgba(${rgb},0.16)`);
+            cg.addColorStop(1,   "transparent");
             ctx.fillStyle = cg;
             ctx.beginPath(); ctx.arc(nx, ny, nr, 0, Math.PI*2); ctx.fill();
-            // Initial letter floating in the light — no background
-            ctx.fillStyle = "rgba(255,255,255,0.93)";
-            ctx.font = `700 ${Math.max(8, Math.round(nr*.50))}px -apple-system,sans-serif`;
-            ctx.textAlign = "center"; ctx.textBaseline = "middle";
-            ctx.fillText(n.firstName[0]?.toUpperCase() || "?", nx, ny);
           }
           ctx.restore();
           // 3D sphere highlight
@@ -600,15 +634,37 @@ export function GalaxyOrbitView({
         ctx.restore();
       });
 
-      // Outer pulse halo
-      ctx.save(); ctx.globalAlpha = .12 + pulse * .12;
-      ctx.strokeStyle = GOLD; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.arc(cx, cy, NR + 14 + pulse * 8, 0, Math.PI*2); ctx.stroke(); ctx.restore();
+      // Solar corona — multi-layer radial glow
+      ctx.save(); drawGlow(ctx, cx, cy, w * .38, "212,175,55", .12 + pulse * .05); ctx.restore();
+      ctx.save(); drawGlow(ctx, cx, cy, NR * 5.5, "240,200,80", .28 + pulse * .10); ctx.restore();
+      ctx.save(); drawGlow(ctx, cx, cy, NR * 2.8, "255,232,120", .55 + pulse * .18); ctx.restore();
 
-      // Large glow + spikes
-      ctx.save(); drawGlow(ctx, cx, cy, NR * 3.5, "212,175,55", .35 + pulse * .15); ctx.restore();
-      ctx.save(); drawSpikes(ctx, cx, cy, NR * 2.8 + pulse * 10, "248,230,140", .95); ctx.restore();
-      ctx.save(); drawGlow(ctx, cx, cy, NR * 1.2, "255,242,160", .75); ctx.restore();
+      // 8-pointed star polygon (slowly rotating behind photo)
+      ctx.save();
+      ctx.translate(cx, cy); ctx.rotate(t * 0.00025);
+      const pts = 8, ro2 = NR * 2.5, ri2 = NR * 1.55;
+      ctx.beginPath();
+      for (let i = 0; i < pts * 2; i++) {
+        const a = (i * Math.PI / pts) - Math.PI / 2;
+        const r2 = i % 2 === 0 ? ro2 : ri2;
+        i === 0 ? ctx.moveTo(r2 * Math.cos(a), r2 * Math.sin(a))
+                : ctx.lineTo(r2 * Math.cos(a), r2 * Math.sin(a));
+      }
+      ctx.closePath();
+      const starG = ctx.createRadialGradient(0, 0, NR, 0, 0, ro2);
+      starG.addColorStop(0,   "rgba(255,230,100,0.50)");
+      starG.addColorStop(0.55,"rgba(212,175,55,0.18)");
+      starG.addColorStop(1,   "transparent");
+      ctx.fillStyle = starG; ctx.fill(); ctx.restore();
+
+      // Diffraction spikes
+      ctx.save(); drawSpikes(ctx, cx, cy, NR * 3.2 + pulse * 12, "255,240,150", .98); ctx.restore();
+      ctx.save(); drawGlow(ctx, cx, cy, NR * 1.35, "255,245,180", .82); ctx.restore();
+
+      // Pulse halo ring
+      ctx.save(); ctx.globalAlpha = .14 + pulse * .14;
+      ctx.strokeStyle = GOLD; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(cx, cy, NR + 18 + pulse * 10, 0, Math.PI*2); ctx.stroke(); ctx.restore();
 
       // Photo circle
       const profileImg = profile.avatar_url ? loadImg(profile.avatar_url) : null;
@@ -618,10 +674,18 @@ export function GalaxyOrbitView({
       if (profileImg) {
         drawImgCover(ctx, profileImg, cx, cy, NR);
       } else {
-        ctx.fillStyle = BG;
-        ctx.font = `bold ${Math.round(NR * .55)}px -apple-system,sans-serif`;
-        ctx.textAlign = "center"; ctx.textBaseline = "middle";
-        ctx.fillText(profile.first_name[0]?.toUpperCase() || "?", cx, cy);
+        // Nucleus without photo — same silhouette approach, warmer tones
+        const nsg = ctx.createRadialGradient(cx, cy, 0, cx, cy, NR);
+        nsg.addColorStop(0, "rgba(212,175,55,0.80)"); nsg.addColorStop(1, "rgba(120,90,10,0.15)");
+        ctx.fillStyle = nsg; ctx.fillRect(cx-NR, cy-NR, NR*2, NR*2);
+        const nHead = NR * 0.27, nHeadY = cy - NR * 0.15;
+        const nhg = ctx.createRadialGradient(cx - nHead*.3, nHeadY - nHead*.3, 0, cx, nHeadY, nHead);
+        nhg.addColorStop(0, "rgba(255,255,255,0.97)"); nhg.addColorStop(0.40,"rgba(212,175,55,0.80)"); nhg.addColorStop(1,"rgba(180,140,30,0.25)");
+        ctx.fillStyle = nhg; ctx.beginPath(); ctx.arc(cx, nHeadY, nHead, 0, Math.PI*2); ctx.fill();
+        const nShY = cy + NR * 0.24;
+        const nShG = ctx.createRadialGradient(cx, nShY - NR*.05, 0, cx, nShY, NR * 0.65);
+        nShG.addColorStop(0,"rgba(212,175,55,0.62)"); nShG.addColorStop(0.55,"rgba(212,175,55,0.28)"); nShG.addColorStop(1,"transparent");
+        ctx.fillStyle = nShG; ctx.beginPath(); ctx.ellipse(cx, nShY, NR*.60, NR*.42, 0, 0, Math.PI); ctx.fill();
       }
       ctx.restore();
       // 3D sphere highlight on nucleus
@@ -864,14 +928,13 @@ export function GalaxyOrbitView({
         </div>
       )}
 
-      {/* ── Add member — subtle, doesn't compete with nucleus ── */}
+      {/* ── Add member — almost invisible, never competes ── */}
       <button onClick={onAddMember} aria-label="Agregar familiar" style={{
-        position:"absolute", bottom:20, right:16,
-        width:38, height:38, borderRadius:"50%",
-        background:"rgba(212,175,55,0.12)",
-        border:"1px solid rgba(212,175,55,0.38)",
-        boxShadow:"0 2px 12px rgba(0,0,0,0.55)",
-        color:"rgba(212,175,55,0.85)", fontSize:22, fontWeight:600,
+        position:"absolute", bottom:18, right:14,
+        width:32, height:32, borderRadius:"50%",
+        background:"transparent",
+        border:"1px solid rgba(212,175,55,0.20)",
+        color:"rgba(212,175,55,0.40)", fontSize:18, fontWeight:400,
         cursor:"pointer", display:"flex", alignItems:"center",
         justifyContent:"center", zIndex:20, lineHeight:1,
       }}>
