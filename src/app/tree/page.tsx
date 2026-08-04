@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import lazyLoad from "next/dynamic";
@@ -74,7 +74,11 @@ const UNSUPPORTED_SUFFIX = " — próximamente";
 
 const EMPTY_FORM = { primer_nombre: "", segundo_nombre: "", primer_apellido: "", segundo_apellido: "", first_name: "", last_name: "", email: "", birth_date: "", birth_city: "", birth_country: "", relation_type: "father" as RelationType, is_deceased: false, parent_member_id: "" };
 export default function TreePage() {
-  return <TreePageContent />;
+  return (
+    <Suspense>
+      <TreePageContent />
+    </Suspense>
+  );
 }
 
 function TreePageContent() {
