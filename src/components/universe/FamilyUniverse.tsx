@@ -282,13 +282,25 @@ export function FamilyUniverse({
     return halfWidth >= 240 ? 1 : Math.max(0.72, halfWidth / 240)
   }, [containerSize.w])
 
+  const [showExtended, setShowExtended] = useState(false)
+
   const allNodes = useUniverseLayout(
     focalId, profile, members, extendedMembers, memberLinks,
   )
 
+  const hasTier2Nodes = useMemo(() => allNodes.some(n => n.relevanceTier === 2), [allNodes])
+
+  // Hide extended family (tier 2) until user taps "Revelar"
+  const baseNodes = useMemo(() =>
+    showExtended
+      ? allNodes
+      : allNodes.map(n => n.relevanceTier === 2 ? { ...n, relevanceTier: 3 as const, opacity: 0, scale: 0 } : n),
+    [allNodes, showExtended],
+  )
+
   const { visible: nodes, hiddenCount, hiddenNodes: hiddenNodesList, maxExpansionReached } = useMemo(
-    () => selectVisibleUniverseNodes(allNodes, containerSize.w, 0, expandedIds),
-    [allNodes, containerSize.w, expandedIds],
+    () => selectVisibleUniverseNodes(baseNodes, containerSize.w, 0, expandedIds),
+    [baseNodes, containerSize.w, expandedIds],
   )
 
   // The shallowest hop level among all currently hidden nodes.
@@ -386,6 +398,44 @@ export function FamilyUniverse({
             />
           ))}
         </UniverseViewport>
+
+        {/* Revelar familia extendida — visible when tier 2 nodes exist and are hidden */}
+        {hasTier2Nodes && !showExtended && focalId === 'root' && !selectedNode && (
+          <button
+            onPointerDown={e => e.stopPropagation()}
+            onClick={e => { e.stopPropagation(); setShowExtended(true) }}
+            style={{
+              position: 'absolute',
+              bottom: 130,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '8px 18px',
+              borderRadius: 20,
+              background: 'rgba(12,10,24,0.82)',
+              border: '1px solid rgba(212,175,55,0.22)',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+              backdropFilter: 'blur(10px)',
+              cursor: 'pointer',
+              color: 'rgba(212,175,55,0.75)',
+              fontSize: 11,
+              fontWeight: 600,
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+              zIndex: 40,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+              <circle cx="8" cy="8" r="6" stroke="rgba(212,175,55,0.6)" strokeWidth="1.5"/>
+              <line x1="8" y1="5" x2="8" y2="11" stroke="rgba(212,175,55,0.6)" strokeWidth="1.5" strokeLinecap="round"/>
+              <line x1="5" y1="8" x2="11" y2="8" stroke="rgba(212,175,55,0.6)" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+            Revelar familia extendida
+          </button>
+        )}
 
         {/* Back-to-root pill — visible when a non-root person is the focal */}
         <button

@@ -631,32 +631,32 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
                   ? 'rgba(210,228,255,0.90)'
                   : node.isFocal ? glowColor : 'rgba(255,255,255,0.92)',
                 letterSpacing: '0.01em',
-                display: '-webkit-box',
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: 'vertical' as const,
                 overflow: 'hidden',
-                maxWidth: node.isFocal ? 110 : 84,
+                maxWidth: node.isFocal ? 110 : 72,
                 margin: '0 auto',
-                wordBreak: 'break-word' as const,
+                whiteSpace: 'nowrap',
+                textOverflow: 'ellipsis',
                 textShadow: node.isDeceased
                   ? '0 0 8px rgba(180,210,255,0.60)'
                   : node.isFocal ? `0 0 8px ${glowColor}80` : undefined,
               }}
             >
-              {node.shortName}
+              {node.shortName.split(' ')[0]}
             </div>
-            <div
-              style={{
-                fontSize: 8.5,
-                color: node.isDeceased
-                  ? 'rgba(180,210,255,0.58)'
-                  : node.isFocal ? glowColor : 'rgba(255,255,255,0.48)',
-                letterSpacing: '0.02em',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {node.isDeceased ? `✦ ${node.relation || 'descansando'}` : node.isFocal && node.isRoot ? '·' : node.relation}
-            </div>
+            {(highlighted || hovered || focused) && (
+              <div
+                style={{
+                  fontSize: 8.5,
+                  color: node.isDeceased
+                    ? 'rgba(180,210,255,0.58)'
+                    : node.isFocal ? glowColor : 'rgba(255,255,255,0.48)',
+                  letterSpacing: '0.02em',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {node.isDeceased ? `✦ ${node.relation || 'descansando'}` : node.isFocal && node.isRoot ? '·' : node.relation}
+              </div>
+            )}
           </div>
         )
       })()}

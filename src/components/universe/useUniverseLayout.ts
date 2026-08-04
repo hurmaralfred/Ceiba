@@ -27,14 +27,15 @@ const SIBLING_SCALE_RELS = new Set([
 const SPOUSE_SCALE_RELS = new Set(['spouse','partner','husband','wife'])
 
 function resolveNodeScale(relationType: string, tier: 0 | 1 | 2 | 3): number {
-  if (tier === 0) return 1.30   // focal — 100%
+  if (tier === 0) return 1.65   // focal — 100%
   if (tier >= 3) return 0.0
-  if (tier === 2) return 0.715  // extended family — 55% of 1.30
-  // Tier 1: relation-specific hierarchy (user: Padres/Pareja 85%, Hijos 80%, Hermanos 70%, Resto 75%)
-  if (PARENT_SCALE_RELS.has(relationType) || SPOUSE_SCALE_RELS.has(relationType)) return 1.105  // 85%
-  if (CHILD_SCALE_RELS.has(relationType))  return 1.04   // 80%
-  if (SIBLING_SCALE_RELS.has(relationType)) return 0.91  // 70%
-  return 0.975  // in-laws, etc → 75%
+  if (tier === 2) return 0.58   // extended family — 35% of focal
+  // Tier 1: dramatic hierarchy (Pareja 80%, Padres 70%, Hijos 65%, Hermanos 55%, Resto 50%)
+  if (SPOUSE_SCALE_RELS.has(relationType))  return 1.32  // 80%
+  if (PARENT_SCALE_RELS.has(relationType))  return 1.16  // 70%
+  if (CHILD_SCALE_RELS.has(relationType))   return 1.07  // 65%
+  if (SIBLING_SCALE_RELS.has(relationType)) return 0.91  // 55%
+  return 0.83  // in-laws, etc → 50%
 }
 
 // Preferred angle (°) per relation type, measured from 3 o'clock, clockwise positive.

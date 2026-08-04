@@ -1165,27 +1165,14 @@ function TreePageContent() {
                         padding: "5px 16px", zIndex: 900, pointerEvents: "none",
                         whiteSpace: "nowrap",
                       }}>
+                        <span style={{ fontSize: 11, color: "rgba(242,228,208,0.65)", letterSpacing: "0.04em" }}>
+                          Tu universo familiar
+                        </span>
+                        <span style={{ color: "rgba(242,180,60,0.25)", fontSize: 14, lineHeight: 1 }}>·</span>
                         <span style={{ fontSize: 11, color: "rgba(242,228,208,0.75)", letterSpacing: "0.02em" }}>
                           <span style={{ color: "#F2B43C", fontWeight: 700 }}>{visibleMembers.length}</span>
-                          {" familiares · "}
-                          <span style={{ color: "#F2B43C", fontWeight: 700 }}>{joinedMembers.length}</span>
-                          {" en Ceiba"}
+                          {" personas"}
                         </span>
-                        {growthStats && (
-                          <>
-                            <span style={{ color: "rgba(242,180,60,0.25)", fontSize: 14, lineHeight: 1 }}>|</span>
-                            <span style={{ fontSize: 11, color: "rgba(242,228,208,0.42)", letterSpacing: "0.02em" }}>
-                              <span style={{ color: "rgba(242,228,208,0.65)", fontWeight: 500 }}>
-                                {growthStats.totalActivePersons.toLocaleString("es")}
-                              </span>
-                              {" personas · "}
-                              <span style={{ color: "rgba(242,228,208,0.65)", fontWeight: 500 }}>
-                                {growthStats.totalRegisteredUsers.toLocaleString("es")}
-                              </span>
-                              {" registrados"}
-                            </span>
-                          </>
-                        )}
                       </div>
                     </div>
                   ) : PREMIUM_TREE_RENDERER_ENABLED ? (
