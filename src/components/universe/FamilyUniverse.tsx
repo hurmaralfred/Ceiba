@@ -543,6 +543,7 @@ function AvatarSlot({
   isExpanded?: boolean
 }) {
   const divRef = useRef<HTMLDivElement>(null)
+  const [hovered, setHovered] = useState(false)
 
   // New nodes enter with fade + scale animation
   const [appeared, setAppeared] = useState(!isNew)
@@ -567,6 +568,8 @@ function AvatarSlot({
     <div
       ref={divRef}
       data-avatar="true"
+      onPointerEnter={() => setHovered(true)}
+      onPointerLeave={() => setHovered(false)}
       style={{
         position: 'absolute',
         left: '50%',
@@ -589,7 +592,7 @@ function AvatarSlot({
         hitAreaScale={node.scale * viewScale}
         labelVisible={node.relevanceTier <= 2}
       />
-      {showExpand && (
+      {showExpand && (selected || hovered) && (
         <button
           data-avatar="true"
           onPointerDown={e => e.stopPropagation()}

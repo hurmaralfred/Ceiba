@@ -24,15 +24,17 @@ const SIBLING_SCALE_RELS = new Set([
   'brother','sister','half_brother','half_sister',
 ])
 
+const SPOUSE_SCALE_RELS = new Set(['spouse','partner','husband','wife'])
+
 function resolveNodeScale(relationType: string, tier: 0 | 1 | 2 | 3): number {
   if (tier === 0) return 1.30   // focal — 100%
   if (tier >= 3) return 0.0
-  if (tier === 2) return 0.72   // extended family — 55% of 1.30
-  // Tier 1: relation-specific hierarchy
-  if (PARENT_SCALE_RELS.has(relationType)) return 1.04   // 80%
-  if (CHILD_SCALE_RELS.has(relationType))  return 0.975  // 75%
+  if (tier === 2) return 0.715  // extended family — 55% of 1.30
+  // Tier 1: relation-specific hierarchy (user: Padres/Pareja 85%, Hijos 80%, Hermanos 70%, Resto 75%)
+  if (PARENT_SCALE_RELS.has(relationType) || SPOUSE_SCALE_RELS.has(relationType)) return 1.105  // 85%
+  if (CHILD_SCALE_RELS.has(relationType))  return 1.04   // 80%
   if (SIBLING_SCALE_RELS.has(relationType)) return 0.91  // 70%
-  return 0.975  // spouse, in-laws, etc → 75%
+  return 0.975  // in-laws, etc → 75%
 }
 
 // Preferred angle (°) per relation type, measured from 3 o'clock, clockwise positive.
@@ -918,8 +920,9 @@ export function useUniverseLayout(
         const a = angles.get(n.id) ?? 0
         n.angleDeg = a
         const rad = a * Math.PI / 180
-        n.cx = n.orbitRadius * Math.cos(rad)
-        n.cy = n.orbitRadius * Math.sin(rad)
+        const jitter1 = 1 + (hashId(n.id) % 25 - 12) / 100  // ±12% radial offset
+        n.cx = n.orbitRadius * jitter1 * Math.cos(rad)
+        n.cy = n.orbitRadius * jitter1 * Math.sin(rad)
         orbit1AngleById.set(n.id, a)
         n.orbitParentId = focal.id
       }
@@ -965,8 +968,9 @@ export function useUniverseLayout(
         const a = angles.get(n.id) ?? 0
         n.angleDeg = a
         const rad = a * Math.PI / 180
-        n.cx = n.orbitRadius * Math.cos(rad)
-        n.cy = n.orbitRadius * Math.sin(rad)
+        const jitterN = 1 + ((hashId(n.id) * 7) % 25 - 12) / 100  // ±12% radial offset
+        n.cx = n.orbitRadius * jitterN * Math.cos(rad)
+        n.cy = n.orbitRadius * jitterN * Math.sin(rad)
         orbit1AngleById.set(n.id, a) // expose to next orbit
         const p = parentOf(n)
         n.orbitParentId = p?.id ?? null

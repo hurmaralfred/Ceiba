@@ -240,9 +240,9 @@ function AmbientLayer({ width, height }: { width: number; height: number }) {
 // political: violet dotted — político-legal
 
 const CONN_STYLES = {
-  blood:    { stroke: '#F2B43C', dash: '',    width: 0.8, opacity: 0.18 },
-  marriage: { stroke: '#7BAFD4', dash: '7 5', width: 0.8, opacity: 0.14 },
-  political:{ stroke: '#B8A0D8', dash: '3 7', width: 0.6, opacity: 0.10 },
+  blood:    { stroke: '#F2B43C', dash: '',    width: 0.8, opacity: 0.11 },
+  marriage: { stroke: '#7BAFD4', dash: '7 5', width: 0.8, opacity: 0.08 },
+  political:{ stroke: '#B8A0D8', dash: '3 7', width: 0.6, opacity: 0.06 },
 } as const
 
 function ConnectionLines({ nodes, width, height }: { nodes: UniverseNode[]; width: number; height: number }) {
