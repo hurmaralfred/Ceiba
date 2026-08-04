@@ -40,7 +40,7 @@ const PremiumFamilyTree = lazyLoad(
 
 const PREMIUM_TREE_RENDERER_ENABLED = true;
 const UNIVERSE_RENDERER_ENABLED = true;
-const GALAXY_ORBIT_ENABLED = true;
+const GALAXY_ORBIT_ENABLED = false; // temporalmente desactivado — volvemos a FamilyUniverse
 
 const MapView = lazyLoad(
   () => import("@/components/map/MapView"),
