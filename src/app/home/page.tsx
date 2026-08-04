@@ -74,17 +74,31 @@ function daysUntil(birth_date: string): number {
 }
 
 // ── Fondo galáctico completo ──────────────────────────────────────────────────
-// Constellation node positions (relative to center 140,140 in 280×280 SVG)
-const CONSTELLATION_NODES = [
-  { x: 140, y: 58,  r: 3.0, op: 0.38, tw: "twinkle-a", td: "0s"   },
-  { x: 211, y: 76,  r: 2.4, op: 0.28, tw: "twinkle-b", td: "0.8s" },
-  { x: 222, y: 173, r: 2.8, op: 0.34, tw: "twinkle-c", td: "1.6s" },
-  { x: 179, y: 237, r: 2.2, op: 0.24, tw: "twinkle-a", td: "0.4s" },
-  { x: 101, y: 223, r: 2.6, op: 0.30, tw: "twinkle-b", td: "2.1s" },
-  { x:  49, y: 177, r: 2.2, op: 0.22, tw: "twinkle-c", td: "1.0s" },
-  { x:  67, y:  94, r: 2.8, op: 0.32, tw: "twinkle-a", td: "1.8s" },
-  { x: 126, y:  39, r: 2.0, op: 0.20, tw: "twinkle-b", td: "0.6s" },
-  { x: 226, y: 112, r: 2.4, op: 0.26, tw: "twinkle-c", td: "2.4s" },
+// ── Family constellation: 3 orbital rings, each slowly rotating ─────────────
+// dx/dy are offsets from SVG center (150,150). Colors signal family line.
+// Gold=#F2B43C (focal line), Blue=#7BAFD4 (maternal/paternal), Copper=#c87830 (siblings), Lavender=#B8A0D8 (extended)
+const ORBIT_INNER = [
+  { dx:  40, dy: -55, r: 6.5, color: '#F2B43C', glow: 'rgba(242,180,60,0.75)'  },
+  { dx:  60, dy:  32, r: 6.0, color: '#7BAFD4', glow: 'rgba(123,175,212,0.70)' },
+  { dx: -52, dy:  45, r: 6.5, color: '#F2B43C', glow: 'rgba(242,180,60,0.75)'  },
+  { dx: -65, dy: -22, r: 5.5, color: '#c87830', glow: 'rgba(200,120,48,0.70)'  },
+] as const
+
+const ORBIT_MID = [
+  { dx: 105, dy:   0, r: 4.5, color: '#F2B43C', glow: 'rgba(242,180,60,0.60)'  },
+  { dx:  32, dy:  99, r: 4.0, color: '#c87830', glow: 'rgba(200,120,48,0.60)'  },
+  { dx: -95, dy:  42, r: 4.5, color: '#7BAFD4', glow: 'rgba(123,175,212,0.60)' },
+  { dx: -58, dy: -88, r: 4.0, color: '#F2B43C', glow: 'rgba(242,180,60,0.60)'  },
+  { dx:  80, dy: -68, r: 3.8, color: '#B8A0D8', glow: 'rgba(184,160,216,0.55)' },
+] as const
+
+const ORBIT_OUTER = [
+  { dx:   0, dy:-132, r: 2.8, color: '#d4af37', glow: 'rgba(212,175,55,0.50)'  },
+  { dx:  98, dy: -86, r: 2.5, color: '#B8A0D8', glow: 'rgba(184,160,216,0.50)' },
+  { dx: 132, dy:   0, r: 3.0, color: '#7BAFD4', glow: 'rgba(123,175,212,0.50)' },
+  { dx:  88, dy: 100, r: 2.5, color: '#d4af37', glow: 'rgba(212,175,55,0.50)'  },
+  { dx: -75, dy: 108, r: 2.8, color: '#B8A0D8', glow: 'rgba(184,160,216,0.50)' },
+  { dx:-132, dy:   0, r: 2.2, color: '#d4af37', glow: 'rgba(212,175,55,0.50)'  },
 ] as const
 
 function GalaxyHero({ children, avatarInitial, avatarUrl, firstName, lastName, visibleCount, historyCount, birthdaysThisMonth }: {
@@ -117,6 +131,9 @@ function GalaxyHero({ children, avatarInitial, avatarUrl, firstName, lastName, v
         @keyframes name-glow { 0%,100%{text-shadow:0 0 20px rgba(212,175,55,0.0)} 50%{text-shadow:0 0 28px rgba(212,175,55,0.45)} }
         @keyframes bday-glow { 0%,100%{box-shadow:0 8px 0 #040300,0 16px 32px rgba(0,0,0,0.92),0 0 28px rgba(212,175,55,0.22)} 50%{box-shadow:0 8px 0 #040300,0 16px 32px rgba(0,0,0,0.92),0 0 55px rgba(212,175,55,0.5),0 0 90px rgba(212,175,55,0.15)} }
         @keyframes section-glow { 0%,100%{opacity:.5} 50%{opacity:.85} }
+        @keyframes orbit-ring-cw  { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+        @keyframes orbit-ring-ccw { from{transform:rotate(0deg)} to{transform:rotate(-360deg)} }
+        @keyframes corona-pulse   { 0%,100%{opacity:0.35;transform:scale(1)} 50%{opacity:1;transform:scale(1.05)} }
         a:active > div { transform: scale(0.97) translateY(1px) !important; }
         button:active { transform: scale(0.97) !important; }
       `}</style>
@@ -175,28 +192,70 @@ function GalaxyHero({ children, avatarInitial, avatarUrl, firstName, lastName, v
           background:"radial-gradient(circle,rgba(130,60,230,0.16) 0%,rgba(212,175,55,0.07) 40%,transparent 70%)",
           filter:"blur(16px)", animation:"core-pulse 4.5s ease-in-out infinite" }} />
 
-        {/* Family constellation — nodes + lines, no text */}
-        <svg width="280" height="280" viewBox="0 0 280 280"
+        {/* Family constellation — 3 orbital rings, each slowly rotating */}
+        <svg width="300" height="300" viewBox="0 0 300 300"
           style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-50%)",
             pointerEvents:"none", overflow:"visible" }} aria-hidden>
-          {/* Lines from center to each node */}
-          {CONSTELLATION_NODES.map((n, i) => (
-            <line key={`l${i}`} x1="140" y1="140" x2={n.x} y2={n.y}
-              stroke="#d4af37" strokeWidth="0.5" opacity="0.08" />
-          ))}
-          {/* Peripheral arcs connecting adjacent nodes */}
-          {[[0,1],[1,8],[8,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,0]].map(([a,b],i) => (
-            <line key={`a${i}`}
-              x1={CONSTELLATION_NODES[a].x} y1={CONSTELLATION_NODES[a].y}
-              x2={CONSTELLATION_NODES[b].x} y2={CONSTELLATION_NODES[b].y}
-              stroke="#d4af37" strokeWidth="0.4" opacity="0.06" />
-          ))}
-          {/* Nodes */}
-          {CONSTELLATION_NODES.map((n, i) => (
-            <circle key={`n${i}`} cx={n.x} cy={n.y} r={n.r}
-              fill="#d4af37" opacity={n.op}
-              style={{ animation:`${n.tw} ${3.2 + i * 0.45}s ease-in-out ${n.td} infinite` }} />
-          ))}
+          <defs>
+            <filter id="sglow" x="-200%" y="-200%" width="500%" height="500%">
+              <feGaussianBlur stdDeviation="3.5" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+            <filter id="cglow" x="-150%" y="-150%" width="400%" height="400%">
+              <feGaussianBlur stdDeviation="10"/>
+            </filter>
+          </defs>
+          {/* Avatar corona — gravitational center, breathes outward */}
+          <circle cx="150" cy="150" r="72" fill="rgba(212,175,55,0.11)" filter="url(#cglow)"/>
+          <circle cx="150" cy="150" r="56" fill="none" stroke="rgba(242,180,60,0.24)" strokeWidth="0.7"
+            style={{ animation:"corona-pulse 4s ease-in-out infinite" }}/>
+          <circle cx="150" cy="150" r="66" fill="none" stroke="rgba(242,180,60,0.11)" strokeWidth="0.5"
+            style={{ animation:"corona-pulse 4s ease-in-out infinite 1.5s" }}/>
+          <circle cx="150" cy="150" r="78" fill="none" stroke="rgba(242,180,60,0.06)" strokeWidth="0.4"
+            style={{ animation:"corona-pulse 4s ease-in-out infinite 3s" }}/>
+          {/* Orbital paths — gravitational trajectories, barely visible */}
+          <circle cx="150" cy="150" r="68"  fill="none" stroke="rgba(212,175,55,0.04)" strokeWidth="0.45"
+            style={{ animation:"section-glow 9s ease-in-out infinite" }}/>
+          <circle cx="150" cy="150" r="105" fill="none" stroke="rgba(212,175,55,0.03)" strokeWidth="0.35"
+            style={{ animation:"section-glow 12s ease-in-out infinite 3s" }}/>
+          <circle cx="150" cy="150" r="132" fill="none" stroke="rgba(212,175,55,0.02)" strokeWidth="0.3"
+            style={{ animation:"section-glow 15s ease-in-out infinite 6s" }}/>
+          {/* Inner orbit — 4 intimate planets, 65s CW */}
+          <g transform="translate(150,150)" style={{ transformOrigin:"0px 0px", animation:"orbit-ring-cw 65s linear infinite" }}>
+            {ORBIT_INNER.map((n,i) => (
+              <g key={i}>
+                <circle cx={n.dx} cy={n.dy} r={n.r*4.5} fill={n.color} opacity="0.10" filter="url(#sglow)"/>
+                <circle cx={n.dx} cy={n.dy} r={n.r*2}   fill={n.color} opacity="0.07"/>
+                <circle cx={n.dx} cy={n.dy} r={n.r}      fill={n.color} opacity="0.94"
+                  style={{ filter:`drop-shadow(0 0 ${Math.round(n.r*1.5)}px ${n.glow})` }}/>
+                <circle cx={n.dx - n.r*0.35} cy={n.dy - n.r*0.38} r={n.r*0.28} fill="white" opacity="0.55"/>
+              </g>
+            ))}
+          </g>
+          {/* Mid orbit — 5 close family planets, 95s CCW */}
+          <g transform="translate(150,150)" style={{ transformOrigin:"0px 0px", animation:"orbit-ring-ccw 95s linear infinite" }}>
+            {ORBIT_MID.map((n,i) => (
+              <g key={i}>
+                <circle cx={n.dx} cy={n.dy} r={n.r*4.5} fill={n.color} opacity="0.09" filter="url(#sglow)"/>
+                <circle cx={n.dx} cy={n.dy} r={n.r*2}   fill={n.color} opacity="0.06"/>
+                <circle cx={n.dx} cy={n.dy} r={n.r}      fill={n.color} opacity="0.90"
+                  style={{ filter:`drop-shadow(0 0 ${Math.round(n.r*1.2)}px ${n.glow})` }}/>
+                <circle cx={n.dx - n.r*0.32} cy={n.dy - n.r*0.35} r={n.r*0.25} fill="white" opacity="0.45"/>
+              </g>
+            ))}
+          </g>
+          {/* Outer orbit — 6 extended planets, 135s CW */}
+          <g transform="translate(150,150)" style={{ transformOrigin:"0px 0px", animation:"orbit-ring-cw 135s linear infinite" }}>
+            {ORBIT_OUTER.map((n,i) => (
+              <g key={i}>
+                <circle cx={n.dx} cy={n.dy} r={n.r*5}   fill={n.color} opacity="0.08" filter="url(#sglow)"/>
+                <circle cx={n.dx} cy={n.dy} r={n.r*2}   fill={n.color} opacity="0.05"/>
+                <circle cx={n.dx} cy={n.dy} r={n.r}      fill={n.color} opacity="0.85"
+                  style={{ filter:`drop-shadow(0 0 ${Math.round(n.r)}px ${n.glow})` }}/>
+                <circle cx={n.dx - n.r*0.28} cy={n.dy - n.r*0.32} r={n.r*0.22} fill="white" opacity="0.38"/>
+              </g>
+            ))}
+          </g>
         </svg>
 
         {/* Avatar */}

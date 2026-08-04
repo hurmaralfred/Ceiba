@@ -188,6 +188,10 @@ export default function ProfilePage() {
 
   return (
     <div style={{ minHeight: "100vh", background: C.bg, color: "#fff", paddingBottom: 100 }}>
+      <style>{`
+        @keyframes ring-spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+        @keyframes ring-breathe { 0%,100%{opacity:0.85;box-shadow:0 0 28px rgba(212,175,55,0.35)} 50%{opacity:1;box-shadow:0 0 55px rgba(212,175,55,0.65),0 0 90px rgba(212,175,55,0.2)} }
+      `}</style>
       <CosmicHeader title="Mi perfil" backHref="/settings" />
 
       <div style={{ padding: "20px 16px", maxWidth: 480, margin: "0 auto", display: "flex", flexDirection: "column", gap: 16 }}>
@@ -195,16 +199,16 @@ export default function ProfilePage() {
         {/* Avatar */}
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, paddingTop: 8 }}>
           <div onClick={() => fileInputRef.current?.click()}
-            style={{ width: 88, height: 88, borderRadius: "50%", background: "#0c0a18", cursor: "pointer",
+            style={{ width: 112, height: 112, borderRadius: "50%", background: "#0c0a18", cursor: "pointer",
               padding: 3, position: "relative",
               backgroundImage: "conic-gradient(from 15deg,#d4af37 0%,#f5e070 16%,#8a6012 32%,#6030b0 48%,#2044c0 64%,#18b0c0 76%,#f0d060 88%,#d4af37 100%)",
-              boxShadow: "0 0 20px rgba(212,175,55,0.25)" }}>
+              animation: "ring-spin 7s linear infinite, ring-breathe 3.5s ease-in-out infinite" }}>
             <div style={{ width: "100%", height: "100%", borderRadius: "50%", background: "#0c0a18",
               overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
               {avatarPreview
                 // eslint-disable-next-line @next/next/no-img-element
                 ? <img src={avatarPreview} alt="Avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                : <span style={{ fontSize: 26, fontWeight: 800, color: "#d4af37" }}>{initials || <User size={26} style={{ color: "#d4af37" }} />}</span>}
+                : <span style={{ fontSize: 32, fontWeight: 800, color: "#d4af37" }}>{initials || <User size={32} style={{ color: "#d4af37" }} />}</span>}
             </div>
             <div style={{ position: "absolute", bottom: 4, right: 4, width: 24, height: 24, borderRadius: "50%",
               background: "#0c0a18", border: "1.5px solid rgba(212,175,55,0.3)",
