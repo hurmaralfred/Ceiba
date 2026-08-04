@@ -578,58 +578,58 @@ export default function HomePage() {
         {/* Grid 2×2 */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 9, marginBottom: 9 }}>
 
-          {/* Mi Árbol — verde */}
+          {/* Mi Árbol — oro */}
           <Link href="/tree">
-            <div style={{ ...s3dCard("#071410","70,200,100","#020704"), minHeight: 110 }}>
-              <CardShine ar="70,200,100" />
+            <div style={{ ...s3dCard("#0c0a02","212,175,55","#040300",0.16), minHeight: 110 }}>
+              <CardShine ar="212,175,55" />
               <div style={{ padding: "12px 12px 10px", position: "relative" }}>
-                <div style={s3dIcon("#091c12","70,200,100","#020704")}>
-                  <TreePine size={19} style={{ color: "#50d070" }} />
+                <div style={s3dIcon("#100c02","212,175,55","#040300")}>
+                  <TreePine size={19} style={{ color: "#d4af37" }} />
                 </div>
                 <div style={{ fontSize: 13, fontWeight: 700, color: "#fff", marginBottom: 2 }}>Mi Árbol</div>
-                <div style={{ fontSize: 10, color: "rgba(70,200,100,0.65)" }}>{visibleCount} familiares</div>
+                <div style={{ fontSize: 10, color: "rgba(212,175,55,0.6)" }}>{visibleCount} familiares</div>
               </div>
             </div>
           </Link>
 
-          {/* Álbum Familiar — ámbar */}
+          {/* Álbum Familiar — cobre */}
           <Link href="/photos">
-            <div style={{ ...s3dCard("#160c02","220,140,40","#060300"), minHeight: 110 }}>
-              <CardShine ar="220,140,40" />
+            <div style={{ ...s3dCard("#0e0902","160,100,40","#050200"), minHeight: 110 }}>
+              <CardShine ar="160,100,40" />
               <div style={{ padding: "12px 12px 10px", position: "relative" }}>
-                <div style={s3dIcon("#1a1004","220,140,40","#060300")}>
-                  <Camera size={19} style={{ color: "#dc9030" }} />
+                <div style={s3dIcon("#120a02","160,100,40","#050200")}>
+                  <Camera size={19} style={{ color: "#c87830" }} />
                 </div>
                 <div style={{ fontSize: 13, fontWeight: 700, color: "#fff", marginBottom: 2 }}>Álbum Familiar</div>
-                <div style={{ fontSize: 10, color: "rgba(220,140,40,0.7)" }}>{photos.length} recuerdos</div>
+                <div style={{ fontSize: 10, color: "rgba(160,100,40,0.75)" }}>{photos.length} recuerdos</div>
               </div>
             </div>
           </Link>
 
-          {/* Historia Familiar — púrpura */}
+          {/* Historia Familiar — cobre */}
           <Link href="/events">
-            <div style={{ ...s3dCard("#0e0618","160,80,240","#050310"), minHeight: 110 }}>
-              <CardShine ar="160,80,240" />
+            <div style={{ ...s3dCard("#0e0902","160,100,40","#050200"), minHeight: 110 }}>
+              <CardShine ar="160,100,40" />
               <div style={{ padding: "12px 12px 10px", position: "relative" }}>
-                <div style={s3dIcon("#120820","160,80,240","#060412")}>
-                  <BookOpen size={19} style={{ color: "#a050f0" }} />
+                <div style={s3dIcon("#120a02","160,100,40","#050200")}>
+                  <BookOpen size={19} style={{ color: "#c87830" }} />
                 </div>
                 <div style={{ fontSize: 13, fontWeight: 700, color: "#fff", marginBottom: 2 }}>Historia Familiar</div>
-                <div style={{ fontSize: 10, color: "rgba(160,80,240,0.7)" }}>{events.length} momentos</div>
+                <div style={{ fontSize: 10, color: "rgba(160,100,40,0.75)" }}>{events.length} momentos</div>
               </div>
             </div>
           </Link>
 
-          {/* Cumpleaños — rosa */}
+          {/* Cumpleaños — oro */}
           <Link href="/feed">
-            <div style={{ ...s3dCard("#160208","220,60,120","#050102"), minHeight: 110 }}>
-              <CardShine ar="220,60,120" />
+            <div style={{ ...s3dCard("#0c0a02","212,175,55","#040300",0.12), minHeight: 110 }}>
+              <CardShine ar="212,175,55" />
               <div style={{ padding: "12px 12px 10px", position: "relative" }}>
-                <div style={s3dIcon("#1c0610","220,60,120","#080104")}>
-                  <Cake size={19} style={{ color: "#dc3c78" }} />
+                <div style={s3dIcon("#100c02","212,175,55","#040300")}>
+                  <Cake size={19} style={{ color: "#d4af37" }} />
                 </div>
                 <div style={{ fontSize: 13, fontWeight: 700, color: "#fff", marginBottom: 2 }}>Cumpleaños</div>
-                <div style={{ fontSize: 10, color: "rgba(220,60,120,0.7)" }}>
+                <div style={{ fontSize: 10, color: "rgba(212,175,55,0.6)" }}>
                   {allBirthdays.filter(b => b.days <= 30).length} próximos
                 </div>
               </div>
@@ -637,18 +637,18 @@ export default function HomePage() {
           </Link>
         </div>
 
-        {/* Mensajes — ancho completo, índigo */}
+        {/* Mensajes — neutro oscuro */}
         <Link href="/chat">
-          <div style={{ ...s3dCard("#04050f","100,120,240","#010108"), marginBottom: 9 }}>
+          <div style={{ ...s3dCard("#0a0a14","130,130,160","#03030a"), marginBottom: 9 }}>
             <div style={{ position: "absolute", top: 0, left: "25%", right: "25%", height: 1,
-              background: "rgba(100,120,240,0.38)" }} />
+              background: "rgba(130,130,160,0.25)" }} />
             <div style={{ padding: "13px 14px", display: "flex", alignItems: "center", gap: 12, position: "relative" }}>
-              <div style={{ width: 40, height: 40, borderRadius: 13, background: "#060718",
-                borderTop: "1.5px solid rgba(100,120,240,0.48)", borderBottom: "2px solid #010108",
-                borderLeft: "1px solid rgba(100,120,240,0.2)", borderRight: "1px solid rgba(0,0,0,0.55)",
-                boxShadow: "0 4px 0 #010108, 0 6px 10px rgba(0,0,0,0.65)",
+              <div style={{ width: 40, height: 40, borderRadius: 13, background: "#0c0c1c",
+                borderTop: "1.5px solid rgba(130,130,160,0.32)", borderBottom: "2px solid #03030a",
+                borderLeft: "1px solid rgba(130,130,160,0.14)", borderRight: "1px solid rgba(0,0,0,0.55)",
+                boxShadow: "0 4px 0 #03030a, 0 6px 10px rgba(0,0,0,0.65)",
                 display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <MessageCircle size={19} style={{ color: "#6478f0" }} />
+                <MessageCircle size={19} style={{ color: "#9898b8" }} />
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: "#fff", marginBottom: 2 }}>Mensajes familiares</div>
@@ -663,59 +663,56 @@ export default function HomePage() {
                     </>
                   )}
                   {onlineFamily.length === 0 && (
-                    <span style={{ fontSize: 10, color: "rgba(100,120,240,0.6)" }}>Chat privado familiar</span>
+                    <span style={{ fontSize: 10, color: "rgba(255,255,255,0.25)" }}>Chat privado familiar</span>
                   )}
                 </div>
               </div>
-              <ChevronRight size={18} style={{ color: "rgba(100,120,240,0.5)" }} />
+              <ChevronRight size={18} style={{ color: "rgba(255,255,255,0.2)" }} />
             </div>
           </div>
         </Link>
 
-        {/* Mapa familiar — ancho completo, cian */}
+        {/* Mapa familiar — neutro oscuro */}
         <Link href="/mapa">
-          <div style={{ ...s3dCard("#021416","40,200,200","#000a0a"), marginBottom: 9 }}>
+          <div style={{ ...s3dCard("#0a0a14","130,130,160","#03030a"), marginBottom: 9 }}>
             <div style={{ position: "absolute", top: 0, left: "25%", right: "25%", height: 1,
-              background: "rgba(40,200,200,0.38)" }} />
-            <div style={{ position: "absolute", top: -10, right: -10, width: 80, height: 80,
-              borderRadius: "50%", background: "radial-gradient(circle,rgba(40,200,200,0.16) 0%,transparent 70%)",
-              pointerEvents: "none" }} />
+              background: "rgba(130,130,160,0.25)" }} />
             <div style={{ padding: "13px 14px", display: "flex", alignItems: "center", gap: 12, position: "relative" }}>
-              <div style={{ width: 40, height: 40, borderRadius: 13, background: "#041a1a",
-                borderTop: "1.5px solid rgba(40,200,200,0.48)", borderBottom: "2px solid #000a0a",
-                borderLeft: "1px solid rgba(40,200,200,0.2)", borderRight: "1px solid rgba(0,0,0,0.55)",
-                boxShadow: "0 4px 0 #000a0a, 0 6px 10px rgba(0,0,0,0.65)",
+              <div style={{ width: 40, height: 40, borderRadius: 13, background: "#0c0c1c",
+                borderTop: "1.5px solid rgba(130,130,160,0.32)", borderBottom: "2px solid #03030a",
+                borderLeft: "1px solid rgba(130,130,160,0.14)", borderRight: "1px solid rgba(0,0,0,0.55)",
+                boxShadow: "0 4px 0 #03030a, 0 6px 10px rgba(0,0,0,0.65)",
                 display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <Map size={19} style={{ color: "#28c8c8" }} />
+                <Map size={19} style={{ color: "#9898b8" }} />
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: "#fff", marginBottom: 2 }}>Mapa familiar</div>
-                <div style={{ fontSize: 10, color: "rgba(40,200,200,0.6)" }}>
+                <div style={{ fontSize: 10, color: "rgba(255,255,255,0.25)" }}>
                   De dónde venimos · ciudades de origen
                 </div>
               </div>
-              <ChevronRight size={18} style={{ color: "rgba(40,200,200,0.45)" }} />
+              <ChevronRight size={18} style={{ color: "rgba(255,255,255,0.2)" }} />
             </div>
           </div>
         </Link>
 
-        {/* Invitar — ancho completo, azul */}
+        {/* Invitar — oro (acción principal) */}
         <Link href="/invitar">
-          <div style={{ ...s3dCard("#040616","60,120,240","#010208"), marginBottom: 9 }}>
+          <div style={{ ...s3dCard("#0c0a02","212,175,55","#040300",0.14), marginBottom: 9 }}>
             <div style={{ position: "absolute", top: 0, left: "25%", right: "25%", height: 1,
-              background: "rgba(60,120,240,0.38)" }} />
+              background: "rgba(212,175,55,0.4)" }} />
             <div style={{ position: "absolute", top: -8, right: -8, width: 70, height: 70,
-              borderRadius: "50%", background: "radial-gradient(circle,rgba(60,120,240,0.22) 0%,transparent 70%)",
+              borderRadius: "50%", background: "radial-gradient(circle,rgba(212,175,55,0.14) 0%,transparent 70%)",
               pointerEvents: "none" }} />
             <div style={{ padding: "13px 14px", display: "flex", alignItems: "center", gap: 12, position: "relative" }}>
-              <div style={{ ...s3dIcon("#06081c","60,120,240","#010210"), marginBottom: 0, width: 40, height: 40, borderRadius: 13 }}>
-                <Send size={19} style={{ color: "#4080f0" }} />
+              <div style={{ ...s3dIcon("#100c02","212,175,55","#040300"), marginBottom: 0, width: 40, height: 40, borderRadius: 13 }}>
+                <Send size={19} style={{ color: "#d4af37" }} />
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: "#fff", marginBottom: 2 }}>Invitar a mi familia</div>
-                <div style={{ fontSize: 10, color: "rgba(60,120,240,0.65)" }}>Haz crecer tu árbol familiar</div>
+                <div style={{ fontSize: 10, color: "rgba(212,175,55,0.55)" }}>Haz crecer tu árbol familiar</div>
               </div>
-              <ChevronRight size={18} style={{ color: "rgba(60,120,240,0.5)" }} />
+              <ChevronRight size={18} style={{ color: "rgba(212,175,55,0.45)" }} />
             </div>
           </div>
         </Link>
@@ -724,8 +721,8 @@ export default function HomePage() {
         {suggestions.filter(s => !dismissedIds.has(s.id)).length > 0 && (
           <div style={{ marginBottom: 9 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 9, paddingTop: 6 }}>
-              <Sparkles size={12} style={{ color: "#64c878" }} />
-              <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(100,200,120,0.75)",
+              <Sparkles size={12} style={{ color: "#d4af37" }} />
+              <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(212,175,55,0.65)",
                 letterSpacing: "0.1em", textTransform: "uppercase" }}>
                 Posibles conexiones
               </span>
@@ -742,24 +739,21 @@ export default function HomePage() {
                 };
                 return (
                   <div key={s.id} style={{
-                    borderRadius: 18, background: "#050e07", position: "relative", overflow: "hidden",
-                    borderTop: "1.5px solid rgba(100,200,120,0.35)", borderLeft: "1px solid rgba(100,200,120,0.15)",
-                    borderBottom: "3px solid #000c04", borderRight: "1px solid rgba(0,0,0,0.6)",
-                    boxShadow: "0 7px 0 #000c04, 0 12px 22px rgba(0,0,0,0.85), 0 0 18px rgba(100,200,120,0.07)",
+                    ...s3dCard("#0c0a02","212,175,55","#040300",0.08),
                     padding: "13px 13px 11px",
                   }}>
                     <div style={{ position: "absolute", top: 0, left: "18%", right: "18%",
-                      height: 1, background: "rgba(100,200,120,0.4)" }} />
+                      height: 1, background: "rgba(212,175,55,0.35)" }} />
 
                     {/* header */}
                     <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 9 }}>
-                      <Sparkles size={12} style={{ color: "#64c878" }} />
+                      <Sparkles size={12} style={{ color: "#d4af37" }} />
                       <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.11em",
-                        textTransform: "uppercase", color: "rgba(100,200,120,0.65)", flex: 1 }}>
+                        textTransform: "uppercase", color: "rgba(212,175,55,0.55)", flex: 1 }}>
                         Posible conexión
                       </span>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: "#64c878",
-                        background: "rgba(100,200,120,0.12)", padding: "2px 8px", borderRadius: 20 }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: "#d4af37",
+                        background: "rgba(212,175,55,0.1)", padding: "2px 8px", borderRadius: 20 }}>
                         {pct}% coincidencia
                       </span>
                       <button onClick={() => handleDismiss(s.id)}
@@ -775,14 +769,14 @@ export default function HomePage() {
                         <div key={i} style={{ flex: 1, display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
                           {i === 1 && (
                             <div style={{ width: 22, height: 22, borderRadius: "50%", flexShrink: 0,
-                              background: "rgba(100,200,120,0.12)", border: "1px dashed rgba(100,200,120,0.4)",
+                              background: "rgba(212,175,55,0.08)", border: "1px dashed rgba(212,175,55,0.3)",
                               display: "flex", alignItems: "center", justifyContent: "center",
-                              fontSize: 10, fontWeight: 800, color: "rgba(100,200,120,0.55)" }}>?</div>
+                              fontSize: 10, fontWeight: 800, color: "rgba(212,175,55,0.4)" }}>?</div>
                           )}
                           <div style={{ width: 30, height: 30, borderRadius: "50%", flexShrink: 0,
-                            background: "rgba(100,200,120,0.14)", border: "1.5px solid rgba(100,200,120,0.35)",
+                            background: "rgba(212,175,55,0.1)", border: "1.5px solid rgba(212,175,55,0.3)",
                             display: "flex", alignItems: "center", justifyContent: "center",
-                            fontSize: 11, fontWeight: 800, color: "#64c878" }}>
+                            fontSize: 11, fontWeight: 800, color: "#d4af37" }}>
                             {p.name.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase()}
                           </div>
                           <div style={{ minWidth: 0 }}>
@@ -801,9 +795,9 @@ export default function HomePage() {
                     {top && (
                       <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", margin: "0 0 10px" }}>
                         {EVIDENCE[top.type] || top.type}:&nbsp;
-                        <span style={{ color: "#64c878", fontWeight: 600 }}>{top.detail}</span>
+                        <span style={{ color: "#d4af37", fontWeight: 600 }}>{top.detail}</span>
                         {s.evidence.length > 1 && (
-                          <span style={{ color: "rgba(100,200,120,0.4)" }}> +{s.evidence.length - 1} más</span>
+                          <span style={{ color: "rgba(212,175,55,0.35)" }}> +{s.evidence.length - 1} más</span>
                         )}
                       </p>
                     )}
@@ -812,10 +806,10 @@ export default function HomePage() {
                     <div style={{ display: "flex", gap: 7 }}>
                       <Link href={`/sugerencias/${s.id}`} style={{ textDecoration: "none", flex: 1 }}>
                         <button style={{ width: "100%", padding: "8px 0", borderRadius: 10, cursor: "pointer",
-                          background: "#18a836", border: "none",
-                          borderTop: "1.5px solid rgba(100,230,130,0.5)", borderBottom: "2.5px solid #0a5c1c",
-                          boxShadow: "0 5px 0 #073d13, 0 8px 16px rgba(0,0,0,0.6)",
-                          color: "#fff", fontSize: 12, fontWeight: 700 }}>
+                          background: "#c9a820", border: "none",
+                          borderTop: "1.5px solid rgba(255,240,100,0.45)", borderBottom: "2.5px solid #6a5600",
+                          boxShadow: "0 5px 0 #4a3c00, 0 8px 16px rgba(0,0,0,0.6)",
+                          color: "#030208", fontSize: 12, fontWeight: 700 }}>
                           Ver y confirmar
                         </button>
                       </Link>
