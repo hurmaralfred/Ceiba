@@ -541,41 +541,22 @@ export function GalaxyOrbitView({
             ctx.fillStyle = "rgba(8,5,18,0.95)"; ctx.fillRect(nx-nr, ny-nr, nr*2, nr*2);
             drawImgCover(ctx, img, nx, ny, nr);
           } else {
-            // No photo — elegant person silhouette, no letter placeholder
-            // Sphere body
-            const sg = ctx.createRadialGradient(nx, ny, 0, nx, ny, nr);
-            sg.addColorStop(0,    `rgba(${rgb},0.80)`);
-            sg.addColorStop(0.50, `rgba(${rgb},0.26)`);
-            sg.addColorStop(1,    `rgba(${rgb},0.03)`);
-            ctx.fillStyle = sg;
-            ctx.beginPath(); ctx.arc(nx, ny, nr, 0, Math.PI*2); ctx.fill();
-            // Clip to sphere for silhouette
+            // No photo — avatar con inicial, claro y personal
             ctx.save();
             ctx.beginPath(); ctx.arc(nx, ny, nr, 0, Math.PI*2); ctx.clip();
-            // Head
-            const headR = nr * 0.27, headY = ny - nr * 0.15;
-            const hg = ctx.createRadialGradient(nx - headR*.3, headY - headR*.3, 0, nx, headY, headR);
-            hg.addColorStop(0,   "rgba(255,255,255,0.97)");
-            hg.addColorStop(0.40,`rgba(${rgb},0.78)`);
-            hg.addColorStop(1,   `rgba(${rgb},0.22)`);
-            ctx.fillStyle = hg;
-            ctx.beginPath(); ctx.arc(nx, headY, headR, 0, Math.PI*2); ctx.fill();
-            // Shoulders
-            const shY = ny + nr * 0.24;
-            const shG = ctx.createRadialGradient(nx, shY - nr*.05, 0, nx, shY, nr * 0.65);
-            shG.addColorStop(0,   `rgba(${rgb},0.62)`);
-            shG.addColorStop(0.55,`rgba(${rgb},0.28)`);
-            shG.addColorStop(1,   "transparent");
-            ctx.fillStyle = shG;
-            ctx.beginPath(); ctx.ellipse(nx, shY, nr*.60, nr*.42, 0, 0, Math.PI); ctx.fill();
-            ctx.restore(); // end clip
-            // Inner luminous overlay (subtle specular)
-            const cg = ctx.createRadialGradient(nx - nr*.24, ny - nr*.24, 0, nx, ny, nr*.75);
-            cg.addColorStop(0,   "rgba(255,255,255,0.48)");
-            cg.addColorStop(0.4, `rgba(${rgb},0.16)`);
-            cg.addColorStop(1,   "transparent");
-            ctx.fillStyle = cg;
-            ctx.beginPath(); ctx.arc(nx, ny, nr, 0, Math.PI*2); ctx.fill();
+            // Fondo esférico
+            const sg = ctx.createRadialGradient(nx - nr*.28, ny - nr*.28, nr*.04, nx, ny, nr);
+            sg.addColorStop(0,    `rgba(${rgb},0.82)`);
+            sg.addColorStop(0.55, `rgba(${rgb},0.38)`);
+            sg.addColorStop(1,    `rgba(${rgb},0.06)`);
+            ctx.fillStyle = sg;
+            ctx.fillRect(nx - nr, ny - nr, nr * 2, nr * 2);
+            // Inicial centrada
+            ctx.font = `700 ${Math.round(nr * 0.76)}px -apple-system,sans-serif`;
+            ctx.textAlign = "center"; ctx.textBaseline = "middle";
+            ctx.fillStyle = joined ? "rgba(255,242,140,0.97)" : "rgba(218,200,255,0.93)";
+            ctx.fillText(n.firstName[0]?.toUpperCase() ?? "?", nx, ny + nr * 0.04);
+            ctx.restore();
           }
           ctx.restore();
           // 3D sphere highlight
@@ -674,18 +655,16 @@ export function GalaxyOrbitView({
       if (profileImg) {
         drawImgCover(ctx, profileImg, cx, cy, NR);
       } else {
-        // Nucleus without photo — same silhouette approach, warmer tones
-        const nsg = ctx.createRadialGradient(cx, cy, 0, cx, cy, NR);
-        nsg.addColorStop(0, "rgba(212,175,55,0.80)"); nsg.addColorStop(1, "rgba(120,90,10,0.15)");
+        // Núcleo sin foto — inicial grande, dorada
+        const nsg = ctx.createRadialGradient(cx - NR*.28, cy - NR*.28, NR*.04, cx, cy, NR);
+        nsg.addColorStop(0,    "rgba(212,175,55,0.82)");
+        nsg.addColorStop(0.55, "rgba(212,175,55,0.38)");
+        nsg.addColorStop(1,    "rgba(120,90,10,0.06)");
         ctx.fillStyle = nsg; ctx.fillRect(cx-NR, cy-NR, NR*2, NR*2);
-        const nHead = NR * 0.27, nHeadY = cy - NR * 0.15;
-        const nhg = ctx.createRadialGradient(cx - nHead*.3, nHeadY - nHead*.3, 0, cx, nHeadY, nHead);
-        nhg.addColorStop(0, "rgba(255,255,255,0.97)"); nhg.addColorStop(0.40,"rgba(212,175,55,0.80)"); nhg.addColorStop(1,"rgba(180,140,30,0.25)");
-        ctx.fillStyle = nhg; ctx.beginPath(); ctx.arc(cx, nHeadY, nHead, 0, Math.PI*2); ctx.fill();
-        const nShY = cy + NR * 0.24;
-        const nShG = ctx.createRadialGradient(cx, nShY - NR*.05, 0, cx, nShY, NR * 0.65);
-        nShG.addColorStop(0,"rgba(212,175,55,0.62)"); nShG.addColorStop(0.55,"rgba(212,175,55,0.28)"); nShG.addColorStop(1,"transparent");
-        ctx.fillStyle = nShG; ctx.beginPath(); ctx.ellipse(cx, nShY, NR*.60, NR*.42, 0, 0, Math.PI); ctx.fill();
+        ctx.font = `800 ${Math.round(NR * 0.80)}px -apple-system,sans-serif`;
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillStyle = "rgba(255,242,140,0.97)";
+        ctx.fillText(profile.first_name[0]?.toUpperCase() ?? "?", cx, cy + NR * 0.04);
       }
       ctx.restore();
       // 3D sphere highlight on nucleus
