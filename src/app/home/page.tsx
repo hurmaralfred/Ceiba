@@ -134,6 +134,8 @@ function GalaxyHero({ children, avatarInitial, avatarUrl, firstName, lastName, v
         @keyframes orbit-ring-cw  { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
         @keyframes orbit-ring-ccw { from{transform:rotate(0deg)} to{transform:rotate(-360deg)} }
         @keyframes corona-pulse   { 0%,100%{opacity:0.35;transform:scale(1)} 50%{opacity:1;transform:scale(1.05)} }
+        @keyframes home-ring-spin    { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+        @keyframes home-ring-breathe { 0%,100%{opacity:0.72;transform:scale(1)} 50%{opacity:1;transform:scale(1.055)} }
         a:active > div { transform: scale(0.97) translateY(1px) !important; }
         button:active { transform: scale(0.97) !important; }
       `}</style>
@@ -205,13 +207,13 @@ function GalaxyHero({ children, avatarInitial, avatarUrl, firstName, lastName, v
               <feGaussianBlur stdDeviation="10"/>
             </filter>
           </defs>
-          {/* Avatar corona — gravitational center, breathes outward */}
-          <circle cx="150" cy="150" r="72" fill="rgba(212,175,55,0.11)" filter="url(#cglow)"/>
-          <circle cx="150" cy="150" r="56" fill="none" stroke="rgba(242,180,60,0.24)" strokeWidth="0.7"
+          {/* Avatar corona — gravitational center, breathes outward — radii tuned for 135px avatar (r≈67.5) */}
+          <circle cx="150" cy="150" r="90"  fill="rgba(212,175,55,0.09)" filter="url(#cglow)"/>
+          <circle cx="150" cy="150" r="82"  fill="none" stroke="rgba(242,180,60,0.22)" strokeWidth="0.7"
             style={{ animation:"corona-pulse 4s ease-in-out infinite" }}/>
-          <circle cx="150" cy="150" r="66" fill="none" stroke="rgba(242,180,60,0.11)" strokeWidth="0.5"
+          <circle cx="150" cy="150" r="96"  fill="none" stroke="rgba(242,180,60,0.10)" strokeWidth="0.5"
             style={{ animation:"corona-pulse 4s ease-in-out infinite 1.5s" }}/>
-          <circle cx="150" cy="150" r="78" fill="none" stroke="rgba(242,180,60,0.06)" strokeWidth="0.4"
+          <circle cx="150" cy="150" r="110" fill="none" stroke="rgba(242,180,60,0.05)" strokeWidth="0.4"
             style={{ animation:"corona-pulse 4s ease-in-out infinite 3s" }}/>
           {/* Orbital paths — gravitational trajectories, barely visible */}
           <circle cx="150" cy="150" r="68"  fill="none" stroke="rgba(212,175,55,0.04)" strokeWidth="0.45"
@@ -258,22 +260,37 @@ function GalaxyHero({ children, avatarInitial, avatarUrl, firstName, lastName, v
           </g>
         </svg>
 
-        {/* Avatar */}
-        <div style={{ width:104, height:104, borderRadius:"50%", background:"#0c0a18",
-          display:"flex", alignItems:"center", justifyContent:"center", position:"relative", zIndex:2,
-          boxShadow:"inset 0 3px 28px rgba(120,60,220,0.3), inset 0 -3px 14px rgba(0,0,0,0.7), 0 0 0 1.5px rgba(212,175,55,0.18)" }}>
-          <div style={{ position:"absolute", inset:0, borderRadius:"50%",
-            background:"radial-gradient(circle at 35% 25%,rgba(212,175,55,0.18) 0%,transparent 55%)" }} />
-          {avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={avatarUrl} alt={firstName}
-              style={{ width:104, height:104, borderRadius:"50%", objectFit:"cover", position:"relative" }} />
-          ) : (
-            <span style={{ fontSize:40, color:"#d4af37", fontWeight:800, position:"relative",
-              textShadow:"0 0 20px rgba(212,175,55,0.6)" }}>
-              {avatarInitial}
-            </span>
-          )}
+        {/* Avatar — 30% larger (104→135px) with living animated ring */}
+        <div style={{ position:"relative", width:135, height:135, zIndex:2 }}>
+          {/* Pulse glow — breathes independently */}
+          <div style={{ position:"absolute", inset:-16, borderRadius:"50%",
+            background:"radial-gradient(circle, rgba(242,180,60,0.30) 0%, rgba(130,60,230,0.10) 40%, transparent 70%)",
+            animation:"home-ring-breathe 3.5s ease-in-out infinite", pointerEvents:"none" }} />
+          {/* Conic ring — rotates continuously */}
+          <div style={{ position:"absolute", inset:-7, borderRadius:"50%",
+            background:"conic-gradient(from 0deg, rgba(242,180,60,0.95) 0deg, rgba(200,120,48,0.55) 80deg, rgba(184,160,216,0.30) 160deg, rgba(123,175,212,0.55) 230deg, rgba(242,180,60,0.80) 295deg, rgba(242,180,60,0.95) 360deg)",
+            animation:"home-ring-spin 7s linear infinite",
+            filter:"blur(1.5px)", pointerEvents:"none" }} />
+          {/* Dark gap between ring and photo */}
+          <div style={{ position:"absolute", inset:-1, borderRadius:"50%",
+            background:"#030208", pointerEvents:"none", zIndex:1 }} />
+          {/* Photo */}
+          <div style={{ width:135, height:135, borderRadius:"50%", background:"#0c0a18",
+            display:"flex", alignItems:"center", justifyContent:"center", position:"relative", zIndex:2,
+            boxShadow:"inset 0 3px 28px rgba(120,60,220,0.3), inset 0 -3px 14px rgba(0,0,0,0.7)" }}>
+            <div style={{ position:"absolute", inset:0, borderRadius:"50%",
+              background:"radial-gradient(circle at 35% 25%,rgba(212,175,55,0.18) 0%,transparent 55%)" }} />
+            {avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={avatarUrl} alt={firstName}
+                style={{ width:135, height:135, borderRadius:"50%", objectFit:"cover", position:"relative" }} />
+            ) : (
+              <span style={{ fontSize:52, color:"#d4af37", fontWeight:800, position:"relative",
+                textShadow:"0 0 20px rgba(212,175,55,0.6)" }}>
+                {avatarInitial}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
