@@ -72,7 +72,7 @@ const TILT   = 0.68;
 const BASE_ORBIT_FRACS = [0.195, 0.345, 0.475] as const;
 const BASE_SPEEDS      = [0.0085, 0.0058, 0.0032] as const;
 const SIGNS            = [1, -1, 1] as const;
-const BASE_NR          = [15, 12, 9] as const;
+const BASE_NR          = [22, 17, 13] as const;
 const DEPTH_SCALE      = 0.80;
 
 function baseOrbitR(orbit: 1 | 2 | 3, w: number) { return BASE_ORBIT_FRACS[orbit-1] * w; }
@@ -457,38 +457,66 @@ export function GalaxyOrbitView({
         }
       });
 
-      // ── Nucleus (user star — brightest, center)
+      // ── Nucleus (user — dominant center star)
+      const NR = 38; // nucleus radius — big and clear
       const pulse = (Math.sin(t * .038) + 1) / 2;
-      ctx.save(); ctx.globalAlpha = .13 + pulse * .13;
+
+      // Rotating decorative rings (3 independent, different tilts & speeds)
+      const rings = [
+        { r: NR + 22, tilt: .38, speed: t * .006,  lw: 1.0, al: .32 },
+        { r: NR + 42, tilt: .55, speed: t * -.004, lw: .8,  al: .22 },
+        { r: NR + 64, tilt: .28, speed: t * .003,  lw: .6,  al: .14 },
+      ];
+      rings.forEach(ring => {
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(ring.speed);
+        ctx.strokeStyle = `rgba(212,175,55,${ring.al})`;
+        ctx.lineWidth = ring.lw;
+        ctx.setLineDash([5, 9]);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, ring.r, ring.r * ring.tilt, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+      });
+
+      // Outer pulse halo
+      ctx.save(); ctx.globalAlpha = .12 + pulse * .12;
       ctx.strokeStyle = GOLD; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.arc(cx, cy, 42 + pulse * 8, 0, Math.PI*2); ctx.stroke(); ctx.restore();
-      ctx.save(); drawGlow(ctx, cx, cy, 70, "212,175,55", .32 + pulse * .14); ctx.restore();
-      ctx.save(); drawSpikes(ctx, cx, cy, 62 + pulse * 7, "248,230,140", .95); ctx.restore();
-      ctx.save(); drawGlow(ctx, cx, cy, 30, "255,242,160", .72); ctx.restore();
+      ctx.beginPath(); ctx.arc(cx, cy, NR + 14 + pulse * 8, 0, Math.PI*2); ctx.stroke(); ctx.restore();
+
+      // Large glow + spikes
+      ctx.save(); drawGlow(ctx, cx, cy, NR * 3.5, "212,175,55", .35 + pulse * .15); ctx.restore();
+      ctx.save(); drawSpikes(ctx, cx, cy, NR * 2.8 + pulse * 10, "248,230,140", .95); ctx.restore();
+      ctx.save(); drawGlow(ctx, cx, cy, NR * 1.2, "255,242,160", .75); ctx.restore();
+
+      // Photo circle
       const profileImg = profile.avatar_url ? loadImg(profile.avatar_url) : null;
       ctx.save();
-      ctx.beginPath(); ctx.arc(cx, cy, 22, 0, Math.PI*2); ctx.clip();
-      ctx.fillStyle = "rgba(28,16,4,0.98)"; ctx.fillRect(cx-22, cy-22, 44, 44);
+      ctx.beginPath(); ctx.arc(cx, cy, NR, 0, Math.PI*2); ctx.clip();
+      ctx.fillStyle = "rgba(28,16,4,0.98)"; ctx.fillRect(cx-NR, cy-NR, NR*2, NR*2);
       if (profileImg) {
-        ctx.drawImage(profileImg, cx-22, cy-22, 44, 44);
+        ctx.drawImage(profileImg, cx-NR, cy-NR, NR*2, NR*2);
       } else {
         ctx.fillStyle = BG;
-        ctx.font = "bold 12px -apple-system,sans-serif";
+        ctx.font = `bold ${Math.round(NR * .55)}px -apple-system,sans-serif`;
         ctx.textAlign = "center"; ctx.textBaseline = "middle";
         ctx.fillText(profile.first_name[0]?.toUpperCase() || "?", cx, cy);
       }
       ctx.restore();
-      ctx.save(); ctx.strokeStyle = "#ffe060"; ctx.lineWidth = 2.5;
-      ctx.beginPath(); ctx.arc(cx, cy, 22, 0, Math.PI*2); ctx.stroke(); ctx.restore();
+      ctx.save(); ctx.strokeStyle = "#ffe060"; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(cx, cy, NR, 0, Math.PI*2); ctx.stroke(); ctx.restore();
+
       // Name pill
-      ctx.save(); ctx.font = "600 11px -apple-system,sans-serif";
+      ctx.save(); ctx.font = "700 12px -apple-system,sans-serif";
       const pl = profile.first_name;
-      const plw = ctx.measureText(pl).width + 14;
-      ctx.fillStyle = "rgba(3,2,8,0.90)";
-      ctx.beginPath(); ctx.roundRect(cx - plw/2, cy + 28, plw, 17, 5); ctx.fill();
-      ctx.fillStyle = "rgba(245,220,100,0.92)";
+      const plw = ctx.measureText(pl).width + 16;
+      ctx.fillStyle = "rgba(3,2,8,0.92)";
+      ctx.beginPath(); ctx.roundRect(cx - plw/2, cy + NR + 7, plw, 18, 5); ctx.fill();
+      ctx.fillStyle = "rgba(245,220,100,0.95)";
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.fillText(pl, cx, cy + 36); ctx.restore();
+      ctx.fillText(pl, cx, cy + NR + 17); ctx.restore();
 
       animRef.current = requestAnimationFrame(draw);
     };
