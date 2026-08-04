@@ -4,9 +4,10 @@ import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import {
   Home, TreePine, BookOpen, Camera, User, Bell, Menu,
-  Users, GitBranch, Image as ImageIcon, Gift, Send,
+  Users, GitBranch, Image as ImageIcon, Send,
   Trophy, ChevronRight, Cake, Sparkles, X, MessageCircle, Map,
 } from "lucide-react";
+import BirthdayCardFeed from "@/components/BirthdayCardFeed";
 import { useFamilyPresence } from "@/hooks/useFamilyPresence";
 import { createClient } from "@/lib/supabase/client";
 import { adaptGraph, type FamilyGraph } from "@/lib/graphAdapter";
@@ -504,7 +505,7 @@ export default function HomePage() {
   const upcomingBirthday = !todayBirthday
     ? allBirthdays.filter(b => b.days > 0).sort((a, b) => a.days - b.days)[0] ?? null
     : null;
-  const spotlightBirthday = todayBirthday ?? upcomingBirthday;
+  const rosterPersonIds = new Set(roster.map(m => m.person_id));
   const firstName = profile?.first_name ?? "";
   const avatarInitial = firstName[0]?.toUpperCase() ?? "?";
 
@@ -1165,40 +1166,8 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* Spotlight de cumpleaños — oro */}
-        {spotlightBirthday && (
-          <Link href={`/persona/${spotlightBirthday.person_id}`}>
-            <div style={{ ...s3dCard("#100c02","212,175,55","#040300",0.14), marginBottom: 9 }}>
-              <div style={{ position: "absolute", top: 0, left: "20%", right: "20%", height: 1,
-                background: "rgba(212,175,55,0.5)" }} />
-              <div style={{ position: "absolute", top: -6, left: -6, width: 55, height: 55,
-                borderRadius: "50%", background: "radial-gradient(circle,rgba(212,175,55,0.25) 0%,transparent 70%)",
-                pointerEvents: "none" }} />
-              <div style={{ padding: "12px 14px", display: "flex", alignItems: "center", gap: 11, position: "relative" }}>
-                <div style={{ width: 42, height: 42, borderRadius: 13, background: "#181202", flexShrink: 0,
-                  borderTop: "1.5px solid rgba(212,175,55,0.5)", borderLeft: "1px solid rgba(212,175,55,0.22)",
-                  borderBottom: "2px solid #040300", borderRight: "1px solid rgba(0,0,0,0.5)",
-                  boxShadow: "0 5px 0 #040300, 0 8px 14px rgba(0,0,0,0.6), 0 0 12px rgba(212,175,55,0.18)",
-                  display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <Gift size={20} style={{ color: "#d4af37" }} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.09em",
-                    textTransform: "uppercase", color: "#d4af37", marginBottom: 2 }}>
-                    {spotlightBirthday.days === 0 ? "¡Hoy!" : `En ${spotlightBirthday.days} días`}
-                  </div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "#fff", marginBottom: 1 }}>
-                    Cumpleaños de {spotlightBirthday.first_name} {spotlightBirthday.last_name}
-                  </div>
-                  <div style={{ fontSize: 10, color: "rgba(212,175,55,0.5)" }}>
-                    {new Date().getFullYear() - new Date(spotlightBirthday.birth_date).getFullYear()} años
-                  </div>
-                </div>
-                <ChevronRight size={17} style={{ color: "rgba(212,175,55,0.4)" }} />
-              </div>
-            </div>
-          </Link>
-        )}
+        {/* Feed de cumpleaños — Sprint 0 */}
+        <BirthdayCardFeed birthdays={allBirthdays} rosterPersonIds={rosterPersonIds} />
 
         {/* Logros — oro oscuro */}
         <Link href="/profile">
