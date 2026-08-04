@@ -72,7 +72,7 @@ const TILT   = 0.68;
 const BASE_ORBIT_FRACS = [0.195, 0.345, 0.475] as const;
 const BASE_SPEEDS      = [0.0085, 0.0058, 0.0032] as const;
 const SIGNS            = [1, -1, 1] as const;
-const BASE_NR          = [22, 17, 13] as const;
+const BASE_NR          = [29, 22, 17] as const;
 const DEPTH_SCALE      = 0.80;
 
 function baseOrbitR(orbit: 1 | 2 | 3, w: number) { return BASE_ORBIT_FRACS[orbit-1] * w; }
@@ -668,20 +668,20 @@ export function GalaxyOrbitView({
           </div>
 
           {/* Orbit controls */}
-          <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:8, justifyContent:"center" }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8, justifyContent:"center" }}>
             {(["in","out"] as const).map(dir => {
               const disabled = dir==="in" ? selectedNode.orbit===1 : selectedNode.orbit===3;
               return (
                 <button key={dir} onClick={() => !disabled && shift(selectedNode.id, dir)}
                   style={{
-                    padding:"4px 12px", fontSize:10, fontWeight:600, letterSpacing:"0.06em",
+                    width:36, height:36, borderRadius:"50%", fontSize:22, lineHeight:"36px",
+                    textAlign:"center", padding:0,
                     cursor: disabled ? "default" : "pointer",
-                    color:`rgba(212,175,55,${disabled ? .18 : .75})`,
-                    background:"transparent",
-                    border:`0.5px solid rgba(212,175,55,${disabled ? .08 : .22})`,
-                    borderRadius:8,
+                    color:`rgba(212,175,55,${disabled ? .18 : .90})`,
+                    background:`rgba(212,175,55,${disabled ? .04 : .10})`,
+                    border:`1px solid rgba(212,175,55,${disabled ? .08 : .30})`,
                   }}>
-                  {dir==="in" ? "← acercar" : "alejar →"}
+                  {dir==="in" ? "−" : "+"}
                 </button>
               );
             })}
