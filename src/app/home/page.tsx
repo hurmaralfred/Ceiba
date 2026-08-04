@@ -547,116 +547,199 @@ export default function HomePage() {
           transform: "translateY(-50%)" }} />
       </div>
 
-      {/* ── CUMPLEAÑOS HOY (prioridad máxima) ───────────────────────────── */}
-      {todayBirthday && (
-        <div style={{ padding: "14px 14px 0" }}>
+      {/* ══ MOMENTO DEL DÍA ══════════════════════════════════════════════ */}
+      <div style={{ padding: "14px 14px 0" }}>
+
+        {/* — Caso A: Cumpleaños HOY — card dominante */}
+        {todayBirthday && (
           <Link href={`/persona/${todayBirthday.person_id}`}>
             <div style={{
-              borderRadius: 18, background: "#100c02", position: "relative", overflow: "hidden",
-              borderTop: "2px solid rgba(212,175,55,0.7)", borderLeft: "1px solid rgba(212,175,55,0.3)",
-              borderBottom: "4px solid #040300", borderRight: "1px solid rgba(0,0,0,0.65)",
+              borderRadius: 22, background: "linear-gradient(145deg,#1a0f00 0%,#0f0800 60%,#0a0500 100%)",
+              position: "relative", overflow: "hidden", minHeight: 200,
+              borderTop: "2px solid rgba(212,175,55,0.75)", borderLeft: "1px solid rgba(212,175,55,0.32)",
+              borderBottom: "5px solid #040200", borderRight: "1px solid rgba(0,0,0,0.7)",
               animation: "bday-glow 3s ease-in-out infinite",
             }}>
-              <div style={{ position: "absolute", top: 0, left: "20%", right: "20%", height: 1,
+              {/* Nebula de fondo */}
+              <div style={{ position: "absolute", inset: 0, pointerEvents: "none",
+                background: "radial-gradient(ellipse at 20% 60%, rgba(212,175,55,0.18) 0%, transparent 55%), radial-gradient(ellipse at 80% 20%, rgba(200,120,48,0.12) 0%, transparent 45%)" }} />
+              {/* Línea superior */}
+              <div style={{ position: "absolute", top: 0, left: "10%", right: "10%", height: 1,
                 background: "rgba(212,175,55,0.7)" }} />
-              <div style={{ position: "absolute", inset: 0, borderRadius: 18, pointerEvents: "none",
-                background: "radial-gradient(circle at 10% 50%,rgba(212,175,55,0.14) 0%,transparent 55%)" }} />
-              <div style={{ padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, position: "relative" }}>
-                <div style={{ fontSize: 34, lineHeight: 1 }}>🎂</div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.16em",
-                    textTransform: "uppercase", color: "#d4af37", marginBottom: 2 }}>
-                    ¡Cumpleaños hoy!
-                  </div>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: "#fff", marginBottom: 2 }}>
-                    {todayBirthday.first_name} {todayBirthday.last_name}
-                  </div>
-                  <div style={{ fontSize: 11, color: "rgba(212,175,55,0.55)" }}>
-                    {new Date().getFullYear() - new Date(todayBirthday.birth_date).getFullYear()} años · Toca para felicitar
-                  </div>
+              {/* Etiqueta */}
+              <div style={{ position: "absolute", top: 16, right: 16,
+                background: "rgba(212,175,55,0.12)", border: "1px solid rgba(212,175,55,0.35)",
+                borderRadius: 100, padding: "3px 10px",
+                fontSize: 9, fontWeight: 800, letterSpacing: "0.14em", color: "#d4af37",
+                textTransform: "uppercase" }}>Hoy</div>
+              <div style={{ padding: "22px 20px 20px", position: "relative" }}>
+                <div style={{ fontSize: 52, lineHeight: 1, marginBottom: 12 }}>🎂</div>
+                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em",
+                  textTransform: "uppercase", color: "rgba(212,175,55,0.65)", marginBottom: 6 }}>
+                  Cumpleaños de hoy
                 </div>
-                <ChevronRight size={18} style={{ color: "rgba(212,175,55,0.5)", flexShrink: 0 }} />
+                <div style={{ fontSize: 26, fontWeight: 800, color: "#fff", lineHeight: 1.1, marginBottom: 6 }}>
+                  {todayBirthday.first_name} {todayBirthday.last_name}
+                </div>
+                <div style={{ fontSize: 13, color: "rgba(212,175,55,0.6)", marginBottom: 20 }}>
+                  {new Date().getFullYear() - new Date(todayBirthday.birth_date).getFullYear()} años
+                </div>
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 8,
+                  background: "#d4af37", color: "#030208", borderRadius: 12,
+                  padding: "10px 22px", fontSize: 13, fontWeight: 800,
+                  boxShadow: "0 4px 0 #6a5600, 0 8px 20px rgba(212,175,55,0.4)" }}>
+                  🎉 Felicitar ahora
+                </div>
               </div>
             </div>
           </Link>
+        )}
+
+        {/* — Caso B: Foto reciente (últimas 24h) — card dominante */}
+        {!todayBirthday && photos.length > 0 && (() => {
+          const recent = photos.find(p => (Date.now() - new Date(p.created_at).getTime()) < 86_400_000);
+          if (!recent) return null;
+          return (
+            <Link href="/photos">
+              <div style={{
+                borderRadius: 22, background: "#0a060e", position: "relative", overflow: "hidden", minHeight: 200,
+                borderTop: "2px solid rgba(160,100,40,0.6)", borderLeft: "1px solid rgba(160,100,40,0.25)",
+                borderBottom: "5px solid #030104", borderRight: "1px solid rgba(0,0,0,0.7)",
+                boxShadow: "0 8px 0 #030104, 0 16px 32px rgba(0,0,0,0.92), 0 0 32px rgba(160,100,40,0.12)",
+              }}>
+                {recent.url && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={recent.url} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.35 }} />
+                )}
+                <div style={{ position: "absolute", inset: 0,
+                  background: "linear-gradient(to top, rgba(10,6,14,0.95) 0%, rgba(10,6,14,0.5) 50%, transparent 100%)" }} />
+                <div style={{ position: "absolute", top: 16, right: 16,
+                  background: "rgba(200,120,48,0.15)", border: "1px solid rgba(200,120,48,0.4)",
+                  borderRadius: 100, padding: "3px 10px",
+                  fontSize: 9, fontWeight: 800, letterSpacing: "0.14em", color: "#c87830",
+                  textTransform: "uppercase" }}>Nueva foto</div>
+                <div style={{ position: "absolute", bottom: 20, left: 20, right: 20 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
+                    textTransform: "uppercase", color: "rgba(200,120,48,0.7)", marginBottom: 6 }}>📸 Foto nueva en el álbum</div>
+                  {recent.caption && (
+                    <div style={{ fontSize: 16, fontWeight: 700, color: "#fff", marginBottom: 14, lineHeight: 1.3 }}>
+                      {recent.caption}
+                    </div>
+                  )}
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: 8,
+                    background: "rgba(200,120,48,0.15)", border: "1px solid rgba(200,120,48,0.4)",
+                    color: "#c87830", borderRadius: 12, padding: "8px 18px", fontSize: 12, fontWeight: 700 }}>
+                    Ver foto →
+                  </div>
+                </div>
+              </div>
+            </Link>
+          );
+        })()}
+
+        {/* — Caso C: Próximo cumpleaños (≤ 7 días) — card dominante */}
+        {!todayBirthday && !(photos.find(p => (Date.now() - new Date(p.created_at).getTime()) < 86_400_000)) && upcomingBirthday && upcomingBirthday.days <= 7 && (
+          <Link href={`/persona/${upcomingBirthday.person_id}`}>
+            <div style={{
+              borderRadius: 22, background: "linear-gradient(145deg,#0e0a00 0%,#080600 100%)",
+              position: "relative", overflow: "hidden", minHeight: 180,
+              borderTop: "2px solid rgba(212,175,55,0.45)", borderLeft: "1px solid rgba(212,175,55,0.2)",
+              borderBottom: "5px solid #030200", borderRight: "1px solid rgba(0,0,0,0.7)",
+              boxShadow: "0 8px 0 #030200, 0 16px 32px rgba(0,0,0,0.92), 0 0 32px rgba(212,175,55,0.1)",
+            }}>
+              <div style={{ position: "absolute", inset: 0, pointerEvents: "none",
+                background: "radial-gradient(ellipse at 15% 50%, rgba(212,175,55,0.1) 0%, transparent 55%)" }} />
+              <div style={{ position: "absolute", top: 16, right: 16,
+                background: "rgba(212,175,55,0.08)", border: "1px solid rgba(212,175,55,0.25)",
+                borderRadius: 100, padding: "3px 10px",
+                fontSize: 9, fontWeight: 800, letterSpacing: "0.14em", color: "rgba(212,175,55,0.75)",
+                textTransform: "uppercase" }}>
+                En {upcomingBirthday.days} {upcomingBirthday.days === 1 ? "día" : "días"}
+              </div>
+              <div style={{ padding: "22px 20px 20px", position: "relative" }}>
+                <div style={{ fontSize: 42, lineHeight: 1, marginBottom: 10 }}>🎁</div>
+                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em",
+                  textTransform: "uppercase", color: "rgba(212,175,55,0.5)", marginBottom: 6 }}>
+                  Próximo cumpleaños
+                </div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: "#fff", lineHeight: 1.2, marginBottom: 14 }}>
+                  {upcomingBirthday.first_name} {upcomingBirthday.last_name}
+                </div>
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 8,
+                  background: "rgba(212,175,55,0.1)", border: "1px solid rgba(212,175,55,0.3)",
+                  color: "#d4af37", borderRadius: 12, padding: "8px 18px", fontSize: 12, fontWeight: 700 }}>
+                  Preparar mensaje →
+                </div>
+              </div>
+            </div>
+          </Link>
+        )}
+
+        {/* — Caso D: Silencio familiar — estado neutro */}
+        {!todayBirthday && !(photos.find(p => (Date.now() - new Date(p.created_at).getTime()) < 86_400_000)) && !(upcomingBirthday && upcomingBirthday.days <= 7) && (
+          <div style={{
+            borderRadius: 22, background: "#09080f", position: "relative", overflow: "hidden", minHeight: 140,
+            borderTop: "1.5px solid rgba(152,152,184,0.25)", borderLeft: "1px solid rgba(152,152,184,0.1)",
+            borderBottom: "4px solid #030208", borderRight: "1px solid rgba(0,0,0,0.6)",
+            boxShadow: "0 8px 0 #030208, 0 16px 32px rgba(0,0,0,0.85)",
+          }}>
+            <div style={{ position: "absolute", inset: 0, pointerEvents: "none",
+              background: "radial-gradient(ellipse at 50% 50%, rgba(152,152,184,0.06) 0%, transparent 65%)" }} />
+            <div style={{ padding: "24px 20px", position: "relative", textAlign: "center" }}>
+              <div style={{ fontSize: 32, lineHeight: 1, marginBottom: 10 }}>🌿</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: "rgba(255,255,255,0.7)", marginBottom: 4 }}>
+                Tu familia está tranquila hoy
+              </div>
+              <div style={{ fontSize: 12, color: "rgba(152,152,184,0.6)" }}>
+                {visibleCount > 0 ? `${visibleCount} familiares en tu árbol` : "Agrega tu primera persona"}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ══ ACCESOS RÁPIDOS ══════════════════════════════════════════════ */}
+      <div style={{ padding: "18px 14px 0" }}>
+        <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4,
+          scrollbarWidth: "none", msOverflowStyle: "none" }}>
+          {[
+            { href: "/tree",   Icon: TreePine,    label: "Árbol",    color: "#d4af37", bg: "rgba(212,175,55,0.1)",  border: "rgba(212,175,55,0.28)" },
+            { href: "/photos", Icon: Camera,      label: "Álbum",    color: "#c87830", bg: "rgba(160,100,40,0.1)",  border: "rgba(160,100,40,0.28)" },
+            { href: "/events", Icon: BookOpen,    label: "Historia", color: "#c87830", bg: "rgba(160,100,40,0.1)",  border: "rgba(160,100,40,0.28)" },
+            { href: "/feed",   Icon: Cake,        label: "Fechas",   color: "#d4af37", bg: "rgba(212,175,55,0.1)",  border: "rgba(212,175,55,0.28)" },
+            { href: "/chat",   Icon: MessageCircle,label:"Chat",     color: "#9898b8", bg: "rgba(130,130,160,0.1)", border: "rgba(130,130,160,0.22)" },
+            { href: "/mapa",   Icon: Map,         label: "Mapa",     color: "#9898b8", bg: "rgba(130,130,160,0.1)", border: "rgba(130,130,160,0.22)" },
+          ].map(({ href, Icon, label, color, bg, border }) => (
+            <Link key={href} href={href} style={{ textDecoration: "none", flexShrink: 0 }}>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, width: 60 }}>
+                <div style={{
+                  width: 52, height: 52, borderRadius: 16, background: bg, flexShrink: 0,
+                  border: `1.5px solid ${border}`,
+                  boxShadow: `0 4px 0 rgba(0,0,0,0.6), 0 6px 14px rgba(0,0,0,0.7)`,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  transition: "transform 0.12s ease",
+                }}>
+                  <Icon size={22} style={{ color }} />
+                </div>
+                <span style={{ fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.45)", textAlign: "center" }}>
+                  {label}
+                </span>
+              </div>
+            </Link>
+          ))}
         </div>
-      )}
+      </div>
 
       {/* ── FUNCIONES ────────────────────────────────────────────────────── */}
       <div style={{ padding: "16px 14px 14px", position: "relative" }}>
-        {/* Glow atmosférico detrás del grid */}
+        {/* Glow atmosférico */}
         <div style={{ position: "absolute", top: "20%", left: "50%", transform: "translateX(-50%)",
           width: 300, height: 300, borderRadius: "50%", pointerEvents: "none", zIndex: 0,
           background: "radial-gradient(circle, rgba(212,175,55,0.07) 0%, rgba(80,30,160,0.04) 40%, transparent 70%)",
           filter: "blur(24px)", animation: "section-glow 6s ease-in-out infinite" }} />
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 13 }}>
-          <span style={{ fontSize: 11, fontWeight: 700, color: "#d4af37", letterSpacing: "0.1em",
-            textTransform: "uppercase" }}>Descubre tu historia</span>
-          <Link href="/events" style={{ textDecoration: "none" }}>
-            <span style={{ fontSize: 10, color: "rgba(212,175,55,0.42)" }}>Ver todo →</span>
-          </Link>
-        </div>
-
-        {/* Grid 2×2 */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 9, marginBottom: 9, position: "relative", zIndex: 1 }}>
-
-          {/* Mi Árbol — oro */}
-          <Link href="/tree">
-            <div style={{ ...s3dCard("#0c0a02","212,175,55","#040300",0.16), minHeight: 110 }}>
-              <CardShine ar="212,175,55" />
-              <div style={{ padding: "12px 12px 10px", position: "relative" }}>
-                <div style={s3dIcon("#100c02","212,175,55","#040300")}>
-                  <TreePine size={19} style={{ color: "#d4af37" }} />
-                </div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#fff", marginBottom: 2 }}>Mi Árbol</div>
-                <div style={{ fontSize: 10, color: "rgba(212,175,55,0.6)" }}>{visibleCount} familiares</div>
-              </div>
-            </div>
-          </Link>
-
-          {/* Álbum Familiar — cobre */}
-          <Link href="/photos">
-            <div style={{ ...s3dCard("#0e0902","160,100,40","#050200"), minHeight: 110 }}>
-              <CardShine ar="160,100,40" />
-              <div style={{ padding: "12px 12px 10px", position: "relative" }}>
-                <div style={s3dIcon("#120a02","160,100,40","#050200")}>
-                  <Camera size={19} style={{ color: "#c87830" }} />
-                </div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#fff", marginBottom: 2 }}>Álbum Familiar</div>
-                <div style={{ fontSize: 10, color: "rgba(160,100,40,0.75)" }}>{photos.length} recuerdos</div>
-              </div>
-            </div>
-          </Link>
-
-          {/* Historia Familiar — cobre */}
-          <Link href="/events">
-            <div style={{ ...s3dCard("#0e0902","160,100,40","#050200"), minHeight: 110 }}>
-              <CardShine ar="160,100,40" />
-              <div style={{ padding: "12px 12px 10px", position: "relative" }}>
-                <div style={s3dIcon("#120a02","160,100,40","#050200")}>
-                  <BookOpen size={19} style={{ color: "#c87830" }} />
-                </div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#fff", marginBottom: 2 }}>Historia Familiar</div>
-                <div style={{ fontSize: 10, color: "rgba(160,100,40,0.75)" }}>{events.length} momentos</div>
-              </div>
-            </div>
-          </Link>
-
-          {/* Cumpleaños — oro */}
-          <Link href="/feed">
-            <div style={{ ...s3dCard("#0c0a02","212,175,55","#040300",0.12), minHeight: 110 }}>
-              <CardShine ar="212,175,55" />
-              <div style={{ padding: "12px 12px 10px", position: "relative" }}>
-                <div style={s3dIcon("#100c02","212,175,55","#040300")}>
-                  <Cake size={19} style={{ color: "#d4af37" }} />
-                </div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#fff", marginBottom: 2 }}>Cumpleaños</div>
-                <div style={{ fontSize: 10, color: "rgba(212,175,55,0.6)" }}>
-                  {allBirthdays.filter(b => b.days <= 30).length} próximos
-                </div>
-              </div>
-            </div>
-          </Link>
+          <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.3)", letterSpacing: "0.1em",
+            textTransform: "uppercase" }}>Tu familia</span>
         </div>
 
         {/* Mensajes — neutro oscuro */}
