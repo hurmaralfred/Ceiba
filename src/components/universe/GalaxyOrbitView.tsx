@@ -516,53 +516,68 @@ export function GalaxyOrbitView({
           ctx.save(); ctx.globalAlpha = dAlpha;
           drawGlow(ctx, nx, ny, nr * 1.9, rgb, .72); ctx.restore();
 
-          // Core (photo or bright star)
+          // Core — photo clipped OR luminous sphere (no dark placeholder)
           ctx.save(); ctx.globalAlpha = dAlpha;
-          ctx.beginPath(); ctx.arc(nx, ny, nr, 0, Math.PI*2); ctx.clip();
-          ctx.fillStyle = "rgba(8,5,18,0.95)"; ctx.fillRect(nx-nr, ny-nr, nr*2, nr*2);
           if (img) {
+            ctx.beginPath(); ctx.arc(nx, ny, nr, 0, Math.PI*2); ctx.clip();
+            ctx.fillStyle = "rgba(8,5,18,0.95)"; ctx.fillRect(nx-nr, ny-nr, nr*2, nr*2);
             drawImgCover(ctx, img, nx, ny, nr);
           } else {
-            drawGlow(ctx, nx, ny, nr * .95, rgb, .92);
-            ctx.fillStyle = "rgba(255,255,255,0.96)";
-            ctx.beginPath(); ctx.arc(nx, ny, nr*.36, 0, Math.PI*2); ctx.fill();
-            ctx.fillStyle = "#030208";
-            ctx.font = `bold ${Math.max(7, Math.round(nr*.55))}px -apple-system,sans-serif`;
+            // Translucent body — radial gradient fading to transparent at edge
+            const sg = ctx.createRadialGradient(nx, ny, 0, nx, ny, nr);
+            sg.addColorStop(0,    `rgba(${rgb},0.88)`);
+            sg.addColorStop(0.52, `rgba(${rgb},0.32)`);
+            sg.addColorStop(1,    `rgba(${rgb},0.04)`);
+            ctx.fillStyle = sg;
+            ctx.beginPath(); ctx.arc(nx, ny, nr, 0, Math.PI*2); ctx.fill();
+            // Luminous inner core — offset highlight
+            const cg = ctx.createRadialGradient(nx - nr*.24, ny - nr*.24, 0, nx, ny, nr*.70);
+            cg.addColorStop(0,    "rgba(255,255,255,0.98)");
+            cg.addColorStop(0.38, `rgba(${rgb},0.72)`);
+            cg.addColorStop(1,    "transparent");
+            ctx.fillStyle = cg;
+            ctx.beginPath(); ctx.arc(nx, ny, nr, 0, Math.PI*2); ctx.fill();
+            // Initial letter floating in the light — no background
+            ctx.fillStyle = "rgba(255,255,255,0.93)";
+            ctx.font = `700 ${Math.max(8, Math.round(nr*.50))}px -apple-system,sans-serif`;
             ctx.textAlign = "center"; ctx.textBaseline = "middle";
             ctx.fillText(n.firstName[0]?.toUpperCase() || "?", nx, ny);
           }
           ctx.restore();
           // 3D sphere highlight
           ctx.save(); ctx.globalAlpha = dAlpha;
-          drawSphere(ctx, nx, ny, nr, 1);
+          drawSphere(ctx, nx, ny, nr, img ? 1 : 0.55);
           ctx.restore();
 
-          // Photo ring
+          // Rim — photo only (luminous sphere has no hard border)
           if (img) {
-            ctx.save(); ctx.globalAlpha = dAlpha * (hov||sel ? 1 : .85);
-            ctx.strokeStyle = joined ? (hov||sel ? "#ffe97a" : GOLD) : "rgba(200,180,255,0.75)";
-            ctx.lineWidth = hov||sel ? 2.5 : 1.8;
+            ctx.save(); ctx.globalAlpha = dAlpha * (hov||sel ? 1 : .82);
+            ctx.strokeStyle = joined ? (hov||sel ? "#ffe97a" : GOLD) : "rgba(200,180,255,0.72)";
+            ctx.lineWidth = hov||sel ? 2.5 : 1.6;
             ctx.beginPath(); ctx.arc(nx, ny, nr, 0, Math.PI*2); ctx.stroke();
             ctx.restore();
           }
 
-          // Name pill — solid, always readable
-          ctx.save(); ctx.globalAlpha = dAlpha * (hov||sel ? 1 : .90);
-          const lbl2 = hov||sel ? n.name : n.firstName;
-          ctx.font = `${hov||sel ? 700 : 600} ${hov||sel ? 14 : 13}px -apple-system,sans-serif`;
-          const lw2 = Math.min(ctx.measureText(lbl2).width + 16, 150);
-          ctx.fillStyle = "rgba(3,2,8,0.92)";
-          ctx.beginPath(); ctx.roundRect(nx - lw2/2, ny + nr + 5, lw2, 20, 6); ctx.fill();
-          ctx.fillStyle = hov||sel
-            ? "rgba(255,255,255,0.97)"
-            : (joined ? "rgba(245,220,100,0.95)" : "rgba(210,190,255,0.92)");
-          ctx.textAlign = "center"; ctx.textBaseline = "middle";
-          ctx.fillText(lbl2, nx, ny + nr + 15); ctx.restore();
+          // Name — hierarchy: selected always, orbit 1 always, rest only on hover
+          const showLabel = sel || hov || n.orbit === 1;
+          if (showLabel) {
+            ctx.save(); ctx.globalAlpha = dAlpha * (sel||hov ? 1 : 0.68);
+            const lbl2 = sel||hov ? n.name : n.firstName;
+            ctx.font = `${sel||hov ? 700 : 500} ${sel||hov ? 14 : 12}px -apple-system,sans-serif`;
+            const lw2 = Math.min(ctx.measureText(lbl2).width + 14, 150);
+            ctx.fillStyle = "rgba(3,2,8,0.88)";
+            ctx.beginPath(); ctx.roundRect(nx - lw2/2, ny + nr + 5, lw2, 19, 5); ctx.fill();
+            ctx.fillStyle = sel||hov
+              ? "rgba(255,255,255,0.97)"
+              : (joined ? "rgba(245,220,100,0.88)" : "rgba(210,190,255,0.88)");
+            ctx.textAlign = "center"; ctx.textBaseline = "middle";
+            ctx.fillText(lbl2, nx, ny + nr + 14); ctx.restore();
+          }
         }
       });
 
       // ── Nucleus (user — dominant center star)
-      const NR = 38; // nucleus radius — big and clear
+      const NR = 48; // nucleus — sun of the system
       const pulse = (Math.sin(t * .038) + 1) / 2;
 
       // Rotating decorative rings (3 independent, different tilts & speeds)
@@ -849,14 +864,14 @@ export function GalaxyOrbitView({
         </div>
       )}
 
-      {/* ── Add member ── */}
+      {/* ── Add member — subtle, doesn't compete with nucleus ── */}
       <button onClick={onAddMember} aria-label="Agregar familiar" style={{
-        position:"absolute", bottom:24, right:20,
-        width:48, height:48, borderRadius:"50%", background:"#c9a820",
-        borderTop:"2px solid #f5e060", borderLeft:"1.5px solid rgba(255,240,100,0.4)",
-        borderBottom:"4px solid #6a5600", borderRight:"1.5px solid rgba(0,0,0,0.4)",
-        boxShadow:"0 6px 0 #4a3c00, 0 10px 22px rgba(0,0,0,0.75)",
-        color:"#030208", fontSize:26, fontWeight:800,
+        position:"absolute", bottom:20, right:16,
+        width:38, height:38, borderRadius:"50%",
+        background:"rgba(212,175,55,0.12)",
+        border:"1px solid rgba(212,175,55,0.38)",
+        boxShadow:"0 2px 12px rgba(0,0,0,0.55)",
+        color:"rgba(212,175,55,0.85)", fontSize:22, fontWeight:600,
         cursor:"pointer", display:"flex", alignItems:"center",
         justifyContent:"center", zIndex:20, lineHeight:1,
       }}>
