@@ -71,7 +71,7 @@ const BG     = "#030208";
 const TILT   = 0.68;
 const BASE_ORBIT_FRACS = [0.195, 0.345, 0.475] as const;
 const BASE_SPEEDS      = [0.0085, 0.0058, 0.0032] as const;
-const SIGNS            = [1, -1, 1] as const;
+// Direction is now per-node (from hash), not per-orbit
 const BASE_NR          = [36, 28, 22] as const;
 const DEPTH_SCALE      = 0.80;
 
@@ -215,10 +215,11 @@ export function GalaxyOrbitView({
       seen.add(id);
       const orbit: 1 | 2 | 3 = overrides[id] ?? seedOrbit(relationType, relationKind);
       const h = hashId(id);
-      const baseSpd = BASE_SPEEDS[orbit-1] * SIGNS[orbit-1];
-      // Per-node speed variation ±22%
-      const speedVar = 0.78 + ((h >> 4) % 44) / 100;
-      const spd = baseSpd * speedVar;
+      // Per-node direction (CW or CCW) from hash bit
+      const sign = ((h >> 2) & 1) ? 1 : -1;
+      // Per-node speed variation ±35% on top of per-orbit base
+      const speedVar = 0.65 + ((h >> 4) % 70) / 100;
+      const spd = BASE_SPEEDS[orbit-1] * sign * speedVar;
       if (avatarUrl) loadImg(avatarUrl);
       raw.push({
         id,
@@ -228,12 +229,12 @@ export function GalaxyOrbitView({
         deceased: isDeceased, joined: !!profileId,
         relationType, avatarUrl,
         // Orbital character from hash
-        tiltVar:  ((h % 240) - 120) / 1000,       // ±0.12
-        rVar:     0.88 + ((h >> 8) % 240) / 1000,  // 0.88–1.12
-        offX:     ((h >> 12) % 56) - 28,            // ±28 px
-        offY:     ((h >> 16) % 36) - 18,            // ±18 px
-        wobAmp:   0.015 + ((h >> 20) % 50) / 1000, // 0.015–0.065
-        wobFreq:  0.0004 + ((h >> 24) % 80) / 100000, // 0.0004–0.0012
+        tiltVar:  ((h % 480) - 240) / 1000,           // ±0.24 — more path variety
+        rVar:     0.82 + ((h >> 8) % 360) / 1000,    // 0.82–1.18
+        offX:     ((h >> 12) % 72) - 36,              // ±36 px
+        offY:     ((h >> 16) % 48) - 24,              // ±24 px
+        wobAmp:   0.06 + ((h >> 20) % 120) / 1000,   // 0.06–0.18 — big wobble
+        wobFreq:  0.0002 + ((h >> 24) % 120) / 100000, // 0.0002–0.0014
         wobPhase: ((h >> 28) % 628) / 100,          // 0–2π
       });
     };
@@ -743,16 +744,18 @@ export function GalaxyOrbitView({
           </div>
 
 
+          {/* Primary action — full width, unmistakable */}
+          <button onClick={() => { onViewMember(selectedNode.id); close(); }} style={{
+            width:"100%", padding:"14px 0", borderRadius:14, cursor:"pointer",
+            fontSize:15, fontWeight:700, marginBottom:8,
+            background:"rgba(212,175,55,0.14)",
+            border:"1px solid rgba(212,175,55,0.50)", color:GOLD,
+          }}>
+            Ver perfil
+          </button>
           <div style={{ display:"flex", gap:8 }}>
-            <button onClick={() => { onViewMember(selectedNode.id); close(); }} style={{
-              flex:1, padding:"11px 0", borderRadius:13, cursor:"pointer",
-              fontSize:13, fontWeight:600, background:"rgba(212,175,55,0.08)",
-              border:"0.5px solid rgba(212,175,55,0.28)", color:GOLD,
-            }}>
-              Acercar
-            </button>
             <button onClick={() => { onEditMember(selectedNode.id); close(); }} style={{
-              flex:1, padding:"11px 0", borderRadius:13, cursor:"pointer",
+              flex:1, padding:"12px 0", borderRadius:13, cursor:"pointer",
               fontSize:13, fontWeight:600, background:"rgba(255,255,255,0.05)",
               border:"0.5px solid rgba(255,255,255,0.18)", color:"rgba(255,255,255,0.80)",
             }}>
@@ -760,7 +763,7 @@ export function GalaxyOrbitView({
             </button>
             {!selectedNode.joined && (
               <button onClick={() => { onInviteMember(selectedNode.id); close(); }} style={{
-                flex:1, padding:"11px 0", borderRadius:13, cursor:"pointer",
+                flex:1, padding:"12px 0", borderRadius:13, cursor:"pointer",
                 fontSize:13, fontWeight:700, background:"#c9a820",
                 borderTop:"1.5px solid #f5e060", borderBottom:"2.5px solid #6a5600",
                 border:"none", color:"#030208",
