@@ -179,6 +179,9 @@ function MemberCard({
   const handleInvite = async (e: React.MouseEvent) => {
     e.stopPropagation();
     setState("loading");
+    // Open blank window synchronously BEFORE any await — mobile browsers block
+    // window.open() called after an async gap because the user gesture is gone.
+    const win = typeof window !== "undefined" ? window.open("", "_blank") : null;
     try {
       const ctx = {
         inviterFirstName,
@@ -188,10 +191,11 @@ function MemberCard({
       };
       const result = await createInviteLink(supabase, member.id, template);
       const message = buildInviteMessage(template, ctx, result.universalLink);
-      await shareInviteWhatsApp(supabase, result.invitationId, message, phone || undefined);
+      await shareInviteWhatsApp(supabase, result.invitationId, message, phone || undefined, win);
       setState("sent");
       onSent(member.id, e);
     } catch (err: any) {
+      if (win && !win.closed) win.close();
       toast.error(err.message ?? "Error al enviar invitación");
       setState("idle");
     }

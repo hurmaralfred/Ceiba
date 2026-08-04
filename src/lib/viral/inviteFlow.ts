@@ -158,8 +158,24 @@ export async function shareInviteWhatsApp(
   invitationId: string,
   message: string,
   phoneNumber?: string,
+  preOpenedWindow?: Window | null,  // opened synchronously by caller to preserve user gesture on mobile
 ) {
-  // Marcar como enviada
+  // Build URL first (no async needed)
+  const encoded = encodeURIComponent(message);
+  const url = phoneNumber
+    ? `https://wa.me/${phoneNumber.replace(/[^\d]/g, "")}?text=${encoded}`
+    : `https://wa.me/?text=${encoded}`;
+
+  // Navigate pre-opened window (mobile-safe) or open now (desktop/batch fallback)
+  if (typeof window !== "undefined") {
+    if (preOpenedWindow && !preOpenedWindow.closed) {
+      preOpenedWindow.location.href = url;
+    } else {
+      window.open(url, "_blank");
+    }
+  }
+
+  // Mark as shared AFTER opening WhatsApp (not before)
   await supabase.rpc("mark_invitation_shared", {
     p_invitation: invitationId,
     p_channel: "whatsapp",
@@ -169,16 +185,6 @@ export async function shareInviteWhatsApp(
     invitation_id: invitationId,
     channel: "whatsapp",
   });
-
-  // Abrir WhatsApp con mensaje precargado
-  const encoded = encodeURIComponent(message);
-  const url = phoneNumber
-    ? `https://wa.me/${phoneNumber.replace(/[^\d]/g, "")}?text=${encoded}`
-    : `https://wa.me/?text=${encoded}`;
-
-  if (typeof window !== "undefined") {
-    window.open(url, "_blank");
-  }
 
   return url;
 }
