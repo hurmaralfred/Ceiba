@@ -157,7 +157,7 @@ const SHOTS = [
 // ── Component ─────────────────────────────────────────────────────────────────
 export function GalaxyOrbitView({
   profile, members, extendedMembers,
-  onViewMember, onInviteMember, onAddMember,
+  onViewMember, onEditMember, onInviteMember, onAddMember,
 }: GalaxyOrbitViewProps) {
   const canvasRef   = useRef<HTMLCanvasElement>(null);
   const animRef     = useRef<number>(0);
@@ -703,7 +703,14 @@ export function GalaxyOrbitView({
               fontSize:13, fontWeight:600, background:"rgba(212,175,55,0.08)",
               border:"0.5px solid rgba(212,175,55,0.28)", color:GOLD,
             }}>
-              Ver perfil
+              Acercar
+            </button>
+            <button onClick={() => { onEditMember(selectedNode.id); close(); }} style={{
+              flex:1, padding:"11px 0", borderRadius:13, cursor:"pointer",
+              fontSize:13, fontWeight:600, background:"rgba(255,255,255,0.05)",
+              border:"0.5px solid rgba(255,255,255,0.18)", color:"rgba(255,255,255,0.80)",
+            }}>
+              Editar
             </button>
             {!selectedNode.joined && (
               <button onClick={() => { onInviteMember(selectedNode.id); close(); }} style={{
