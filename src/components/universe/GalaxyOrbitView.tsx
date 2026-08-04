@@ -49,9 +49,11 @@ interface OrbitNode {
   rVar: number;      // 0.88–1.12 orbit radius multiplier
   offX: number;      // ±28px center offset X
   offY: number;      // ±18px center offset Y
-  wobAmp: number;    // 0.015–0.065 orbit wobble amplitude
-  wobFreq: number;   // 0.0004–0.0012 wobble frequency (per frame)
-  wobPhase: number;  // 0–2π
+  wobAmp: number;
+  wobFreq: number;
+  wobPhase: number;
+  repX: number;      // separation offset X (px) — updated each frame
+  repY: number;      // separation offset Y (px)
 }
 
 export interface GalaxyOrbitViewProps {
@@ -235,7 +237,8 @@ export function GalaxyOrbitView({
         offY:     ((h >> 16) % 48) - 24,              // ±24 px
         wobAmp:   0.06 + ((h >> 20) % 120) / 1000,   // 0.06–0.18 — big wobble
         wobFreq:  0.0002 + ((h >> 24) % 120) / 100000, // 0.0002–0.0014
-        wobPhase: ((h >> 28) % 628) / 100,          // 0–2π
+        wobPhase: ((h >> 28) % 628) / 100,
+        repX: 0, repY: 0,
       });
     };
 
@@ -371,22 +374,54 @@ export function GalaxyOrbitView({
         ctx.restore();
       });
 
-      // ── Compute all node screen positions, sort back-to-front
-      const all = nodesRef.current.map(n => {
-        // Hover check using CURRENT position (before advancing)
+      // ── Phase 1: compute base positions & advance angles ─────────────────────
+      const raw = nodesRef.current.map(n => {
         const { nx: nxPre, ny: nyPre } = nodePos(n, cx, cy, w, t - 1);
         const depth = depthOf(n.angle);
-        const nr = scaledNR(n.orbit, depth);
-        const hov = Math.hypot(mouseRef.current.x - nxPre, mouseRef.current.y - nyPre) < nr + 22;
+        const nr    = scaledNR(n.orbit, depth);
+        // Hover uses last frame's visual position (includes repulsion offset)
+        const hov = Math.hypot(
+          mouseRef.current.x - (nxPre + n.repX),
+          mouseRef.current.y - (nyPre + n.repY),
+        ) < nr + 22;
         const sel = selectedRef.current === n.id;
-        // Advance angle
         const eff = sel ? 0 : hov ? n.baseSpeed * 0.04 : n.speed;
         n.angle += eff;
         const { nx, ny } = nodePos(n, cx, cy, w, t);
         return { n, nx, ny, depth, nr, hov, sel };
       });
-      // Back-to-front by Y position
-      all.sort((a, b) => a.ny - b.ny);
+
+      // ── Phase 2: separation force (prevents collisions) ──────────────────────
+      const COMFORT = 1.9;   // comfort zone = 1.9× combined radii
+      const FORCE_K = 1.4;   // push strength per frame
+      const DAMP    = 0.78;  // velocity decay (< 1 prevents runaway)
+      const MAX_REP = 55;    // max pixel displacement
+      for (let i = 0; i < raw.length; i++) {
+        for (let j = i + 1; j < raw.length; j++) {
+          const a = raw[i], b = raw[j];
+          const ax = a.nx + a.n.repX, ay = a.ny + a.n.repY;
+          const bx = b.nx + b.n.repX, by = b.ny + b.n.repY;
+          const dx = ax - bx, dy = ay - by;
+          const dist = Math.hypot(dx, dy) || 0.01;
+          const minD = (a.nr + b.nr) * COMFORT;
+          if (dist < minD) {
+            const push = (minD - dist) / minD * FORCE_K;
+            const fx = (dx / dist) * push, fy = (dy / dist) * push;
+            // Paused (selected) nodes act as obstacles but don't move
+            if (!a.sel) { a.n.repX += fx; a.n.repY += fy; }
+            if (!b.sel) { b.n.repX -= fx; b.n.repY -= fy; }
+          }
+        }
+      }
+      raw.forEach(({ n }) => {
+        n.repX = Math.max(-MAX_REP, Math.min(MAX_REP, n.repX * DAMP));
+        n.repY = Math.max(-MAX_REP, Math.min(MAX_REP, n.repY * DAMP));
+      });
+
+      // ── Phase 3: apply offset, sort back-to-front ────────────────────────────
+      const all = raw
+        .map(r => ({ ...r, nx: r.nx + r.n.repX, ny: r.ny + r.n.repY }))
+        .sort((a, b) => a.ny - b.ny);
 
       all.forEach(({ n, nx, ny, depth, nr, hov, sel }) => {
         const dAlpha = 0.25 + depth * 0.75;
