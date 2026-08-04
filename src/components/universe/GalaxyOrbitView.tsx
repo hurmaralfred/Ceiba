@@ -184,8 +184,21 @@ export function GalaxyOrbitView({
 
   const [selectedNode, setSelectedNode] = useState<OrbitNode | null>(null);
   const [overrides, setOverrides] = useState<Record<string, 1 | 2 | 3>>({});
+  const [selPos, setSelPos] = useState<{ x: number; y: number; r: number } | null>(null);
 
   useEffect(() => { if (profile.avatar_url) loadImg(profile.avatar_url); }, [profile.avatar_url]);
+
+  // Recompute overlay position whenever selected node or its orbit changes
+  useEffect(() => {
+    if (!selectedNode) { setSelPos(null); return; }
+    const c = canvasRef.current;
+    if (!c) return;
+    const w = c.offsetWidth, h = c.offsetHeight;
+    const node = nodesRef.current.find(n => n.id === selectedNode.id);
+    if (!node) return;
+    const { nx, ny } = nodePos(node, w / 2, h / 2, w, node.angle);
+    setSelPos({ x: nx, y: ny, r: scaledNR(node.orbit, depthOf(node.angle)) });
+  }, [selectedNode]);
 
   // ── Build nodes ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -483,9 +496,9 @@ export function GalaxyOrbitView({
 
       // Rotating decorative rings (3 independent, different tilts & speeds)
       const rings = [
-        { r: NR + 22, tilt: .38, speed: t * .00035,  lw: 1.0, al: .32 },
-        { r: NR + 42, tilt: .55, speed: t * -.00022, lw: .8,  al: .22 },
-        { r: NR + 64, tilt: .28, speed: t * .00015,  lw: .6,  al: .14 },
+        { r: NR + 22, tilt: .38, speed: t * .000175,  lw: 1.0, al: .32 },
+        { r: NR + 42, tilt: .55, speed: t * -.00011,  lw: .8,  al: .22 },
+        { r: NR + 64, tilt: .28, speed: t * .000075,  lw: .6,  al: .14 },
       ];
       rings.forEach(ring => {
         ctx.save();
@@ -619,6 +632,46 @@ export function GalaxyOrbitView({
         onPointerLeave={() => { mouseRef.current = { x:-9999, y:-9999 }; }}
       />
 
+      {/* ── Orbit buttons on star ── */}
+      {selectedNode && selPos && (
+        <>
+          {selectedNode.orbit > 1 && (
+            <button
+              onClick={() => shift(selectedNode.id, "in")}
+              style={{
+                position:"absolute",
+                left: selPos.x - selPos.r - 36,
+                top:  selPos.y - 18,
+                width:32, height:32, borderRadius:"50%",
+                fontSize:20, fontWeight:700, lineHeight:"32px",
+                textAlign:"center", padding:0, cursor:"pointer",
+                color:"rgba(212,175,55,0.95)",
+                background:"rgba(5,2,12,0.85)",
+                border:"1px solid rgba(212,175,55,0.40)",
+                backdropFilter:"blur(8px)", WebkitBackdropFilter:"blur(8px)",
+                zIndex:40, pointerEvents:"auto",
+              }}>−</button>
+          )}
+          {selectedNode.orbit < 3 && (
+            <button
+              onClick={() => shift(selectedNode.id, "out")}
+              style={{
+                position:"absolute",
+                left: selPos.x + selPos.r + 4,
+                top:  selPos.y - 18,
+                width:32, height:32, borderRadius:"50%",
+                fontSize:20, fontWeight:700, lineHeight:"32px",
+                textAlign:"center", padding:0, cursor:"pointer",
+                color:"rgba(212,175,55,0.95)",
+                background:"rgba(5,2,12,0.85)",
+                border:"1px solid rgba(212,175,55,0.40)",
+                backdropFilter:"blur(8px)", WebkitBackdropFilter:"blur(8px)",
+                zIndex:40, pointerEvents:"auto",
+              }}>+</button>
+          )}
+        </>
+      )}
+
       {/* ── Member panel ── */}
       {selectedNode && (
         <div style={{
@@ -689,35 +742,6 @@ export function GalaxyOrbitView({
             }}>×</button>
           </div>
 
-          {/* Orbit controls */}
-          <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8, justifyContent:"center" }}>
-            {(["in","out"] as const).map(dir => {
-              const disabled = dir==="in" ? selectedNode.orbit===1 : selectedNode.orbit===3;
-              return (
-                <button key={dir} onClick={() => !disabled && shift(selectedNode.id, dir)}
-                  style={{
-                    width:36, height:36, borderRadius:"50%", fontSize:22, lineHeight:"36px",
-                    textAlign:"center", padding:0,
-                    cursor: disabled ? "default" : "pointer",
-                    color:`rgba(212,175,55,${disabled ? .18 : .90})`,
-                    background:`rgba(212,175,55,${disabled ? .04 : .10})`,
-                    border:`1px solid rgba(212,175,55,${disabled ? .08 : .30})`,
-                  }}>
-                  {dir==="in" ? "−" : "+"}
-                </button>
-              );
-            })}
-          </div>
-          <div style={{ display:"flex", gap:5, justifyContent:"center", marginBottom:12 }}>
-            {([1,2,3] as const).map(o => (
-              <div key={o} style={{
-                width: o===selectedNode.orbit ? 8 : 5, height: o===selectedNode.orbit ? 8 : 5,
-                borderRadius:"50%",
-                background: o===selectedNode.orbit ? GOLD : "rgba(212,175,55,0.18)",
-                transition:"all 0.2s ease",
-              }} />
-            ))}
-          </div>
 
           <div style={{ display:"flex", gap:8 }}>
             <button onClick={() => { onViewMember(selectedNode.id); close(); }} style={{
