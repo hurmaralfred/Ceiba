@@ -104,10 +104,14 @@ function TreePageContent() {
   // Error real de add_relative, visible en el propio modal (no solo en toast).
   const [saveError, setSaveError] = useState<string | null>(null);
   const [duplicateWarning, setDuplicateWarning] = useState<{
-    candidates: Array<{ person_id: string; first_name: string; first_surname: string; confidence: number }>;
+    candidates: Array<{ person_id: string; first_name: string; first_surname: string; confidence: number; is_claimed: boolean }>;
     matchedName: string;
     score: number;
   } | null>(null);
+  const [pendingConnectionRequests, setPendingConnectionRequests] = useState<Array<{
+    id: string; requester_person_id: string; relation_key: string; created_at: string;
+    requester: { first_name: string; first_surname: string } | null;
+  }>>([]);
   const modalPhotoRef = useRef<HTMLInputElement>(null);
   const [modalPhotoFile, setModalPhotoFile] = useState<File | null>(null);
   const [modalPhotoPreview, setModalPhotoPreview] = useState<string | null>(null);
@@ -232,6 +236,29 @@ console.log("⑤ Datos cargados");
     } finally {
       setLoading(false);
     }
+    // Cargar solicitudes de conexión familiar entrantes (el usuario es el destinatario)
+    try {
+      const { data: connReqs } = await supabase
+        .from("family_connection_requests")
+        .select("id, requester_person_id, relation_key, created_at")
+        .eq("status", "pending");
+      if (connReqs && connReqs.length > 0) {
+        const personIds = connReqs.map((r: any) => r.requester_person_id);
+        const { data: personRows } = await supabase
+          .from("persons")
+          .select("id, first_name, first_surname")
+          .in("id", personIds);
+        const personMap = new Map((personRows || []).map((p: any) => [p.id, p]));
+        setPendingConnectionRequests(connReqs.map((r: any) => ({
+          ...r,
+          requester: personMap.get(r.requester_person_id) || null,
+        })));
+      } else {
+        setPendingConnectionRequests([]);
+      }
+    } catch {
+      setPendingConnectionRequests([]);
+    }
   };
 
   // -- LEGACY: funciones que solo usaba el flujo antiguo (family_members) --
@@ -274,6 +301,50 @@ console.log("⑤ Datos cargados");
       toast.error(err?.message || "Error al vincular");
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Envía solicitud de conexión cuando el candidato ya tiene cuenta registrada.
+  // En lugar de vincular de inmediato, notifica al destinatario para que acepte.
+  const sendConnectionRequest = async () => {
+    if (!duplicateWarning?.candidates?.[0]) return;
+    setSaving(true);
+    try {
+      const top = duplicateWarning.candidates[0];
+      const relRequest = buildAddRelativeRequest(
+        form.relation_type as RelationType,
+        form.parent_member_id || null
+      );
+      const { error } = await supabase.rpc("request_family_connection", {
+        p_target_person_id:  top.person_id,
+        p_relation_key:      relRequest.backendRelationKey,
+        p_relationship_type: relRequest.primitive,
+        p_parent_kind:       relRequest.parentKind || "unknown",
+      });
+      if (error) throw error;
+      toast.success(`Solicitud enviada — ${top.first_name} debe confirmar`);
+      setShowModal(false);
+      setForm(EMPTY_FORM);
+      setDuplicateWarning(null);
+    } catch (err: any) {
+      toast.error(err?.message || "Error al enviar la solicitud");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Responde (aprueba o rechaza) una solicitud de conexión entrante.
+  const respondToConnectionRequest = async (requestId: string, action: "approve" | "reject") => {
+    try {
+      const { error } = await supabase.rpc("respond_to_family_request", {
+        p_request_id: requestId,
+        p_action:     action,
+      });
+      if (error) throw error;
+      toast.success(action === "approve" ? "Conexión aceptada — ya estás en el árbol" : "Solicitud rechazada");
+      loadData();
+    } catch (err: any) {
+      toast.error(err?.message || "Error al procesar la solicitud");
     }
   };
 
@@ -326,7 +397,7 @@ console.log("⑤ Datos cargados");
 
       // Si el RPC encontró duplicado fuerte → pedir confirmación al usuario
       if ((result as any)?.needs_confirmation) {
-        const candidates: Array<{ person_id: string; first_name: string; first_surname: string; confidence: number }> =
+        const candidates: Array<{ person_id: string; first_name: string; first_surname: string; confidence: number; is_claimed: boolean }> =
           (result as any).candidates || [];
         const top = candidates[0];
         const matchedName = top
@@ -730,6 +801,43 @@ console.log("⑤ Datos cargados");
 
   return (
     <div style={{ minHeight: "100vh", background: "#030208" }}>
+
+      {/* ── Solicitudes de conexión familiar entrantes ── */}
+      {pendingConnectionRequests.length > 0 && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, zIndex: 180,
+          background: "rgba(12,10,24,0.97)",
+          borderBottom: "1px solid rgba(212,175,55,0.35)",
+          padding: "10px 16px",
+        }}>
+          {pendingConnectionRequests.map(req => {
+            const name = req.requester
+              ? `${req.requester.first_name} ${req.requester.first_surname}`.trim()
+              : "Alguien";
+            return (
+              <div key={req.id} style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 13, color: "rgba(255,255,255,0.85)", flex: 1, minWidth: 0 }}>
+                  🔗 <strong style={{ color: "#d4af37" }}>{name}</strong> quiere conectarse contigo como familiar
+                </span>
+                <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                  <button
+                    onClick={() => respondToConnectionRequest(req.id, "reject")}
+                    style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", background: "transparent", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 8, padding: "5px 12px", cursor: "pointer" }}
+                  >
+                    Rechazar
+                  </button>
+                  <button
+                    onClick={() => respondToConnectionRequest(req.id, "approve")}
+                    style={{ fontSize: 12, fontWeight: 700, color: "#030208", background: "#d4af37", border: "none", borderRadius: 8, padding: "5px 14px", cursor: "pointer" }}
+                  >
+                    Aceptar
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* ── Overlay bienvenida primer uso ── */}
       {showWelcome && (
@@ -1475,30 +1583,51 @@ console.log("⑤ Datos cargados");
                     </div>
                   )}
                   {/* Duplicate warning */}
-                  {duplicateWarning && (
-                    <div className="w-full mb-2 bg-amber-50 border border-amber-200 rounded-xl p-3">
-                      <p className="text-xs font-semibold text-amber-800 mb-1">⚠️ Posible duplicado detectado</p>
-                      <p className="text-xs text-amber-700 leading-relaxed mb-3">
-                        <span className="font-bold">{duplicateWarning.matchedName}</span> ya existe en Ceiba.
-                        {" "}¿Es la misma persona que estás agregando?
-                      </p>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => { setDuplicateWarning(null); saveMember(true); }}
-                          className="flex-1 text-xs font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200 px-3 py-1.5 rounded-lg transition-colors"
-                        >
-                          No, son diferentes
-                        </button>
-                        <button
-                          onClick={saveLinkedMember}
-                          disabled={saving}
-                          className="flex-1 text-xs font-semibold bg-ceiba-700 text-white hover:bg-ceiba-800 px-3 py-1.5 rounded-lg transition-colors"
-                        >
-                          {saving ? "Vinculando..." : "Sí, es la misma"}
-                        </button>
+                  {duplicateWarning && (() => {
+                    const top = duplicateWarning.candidates[0];
+                    const isClaimed = top?.is_claimed ?? false;
+                    return (
+                      <div className="w-full mb-2 bg-amber-50 border border-amber-200 rounded-xl p-3">
+                        <p className="text-xs font-semibold text-amber-800 mb-1">⚠️ Posible duplicado detectado</p>
+                        <p className="text-xs text-amber-700 leading-relaxed mb-1">
+                          <span className="font-bold">{duplicateWarning.matchedName}</span>
+                          {isClaimed ? " ya tiene cuenta en Ceiba." : " ya existe en Ceiba."}
+                          {" "}¿Es la misma persona que estás agregando?
+                        </p>
+                        {isClaimed && (
+                          <p className="text-xs text-amber-600 mb-3">
+                            Tiene su propio perfil — recibirá una solicitud para confirmar el parentesco.
+                          </p>
+                        )}
+                        {!isClaimed && <div className="mb-3" />}
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => { setDuplicateWarning(null); saveMember(true); }}
+                            className="flex-1 text-xs font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200 px-3 py-1.5 rounded-lg transition-colors"
+                          >
+                            No, son diferentes
+                          </button>
+                          {isClaimed ? (
+                            <button
+                              onClick={sendConnectionRequest}
+                              disabled={saving}
+                              className="flex-1 text-xs font-semibold bg-ceiba-700 text-white hover:bg-ceiba-800 px-3 py-1.5 rounded-lg transition-colors"
+                            >
+                              {saving ? "Enviando..." : "Sí — enviar solicitud"}
+                            </button>
+                          ) : (
+                            <button
+                              onClick={saveLinkedMember}
+                              disabled={saving}
+                              className="flex-1 text-xs font-semibold bg-ceiba-700 text-white hover:bg-ceiba-800 px-3 py-1.5 rounded-lg transition-colors"
+                            >
+                              {saving ? "Vinculando..." : "Sí, es la misma"}
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
                   <button onClick={() => { setShowModal(false); setForm(EMPTY_FORM); setDuplicateWarning(null); }} className="flex-1 btn-secondary">
                     Cancelar
                   </button>

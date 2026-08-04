@@ -872,19 +872,9 @@ export function useUniverseLayout(
       })
     }
 
-    // D2: recompute relation labels from focal's perspective when focal is not root
-    if (focalId !== 'root') {
-      const focalNode = nodes.find(n => n.id === focalId)
-      const rootNode  = nodes.find(n => n.isRoot)
-      if (focalNode && focalNode.relationType && focalNode.relationType !== 'root' && rootNode) {
-        const graph: UniverseRelationGraph = { nodes, adj }
-        for (const n of nodes) {
-          if (n.isFocal) continue
-          const label = resolveRelationFromPerspective(focalNode, n, rootNode, graph)
-          if (label !== null) n.relation = label
-        }
-      }
-    }
+    // Labels stay fixed from the logged-in user's (root's) perspective regardless
+    // of which node is focal — navigating to Juan shows Enna as "Madre" and
+    // Alexander as "Hermano", not as Juan's daughter/grandson.
 
     // 4. Assign angles
     const focal = nodes.find(n => n.isFocal)
