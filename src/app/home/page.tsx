@@ -38,17 +38,18 @@ interface KinshipSuggestion {
 function s3dCard(bg: string, ar: string, sh: string, glow = 0.1): React.CSSProperties {
   return {
     borderRadius: 18, background: bg, position: "relative", overflow: "hidden",
-    borderTop: `1.5px solid rgba(${ar},0.4)`, borderLeft: `1px solid rgba(${ar},0.18)`,
-    borderBottom: `3px solid ${sh}`, borderRight: `1px solid rgba(0,0,0,0.6)`,
-    boxShadow: `0 7px 0 ${sh}, 0 12px 22px rgba(0,0,0,0.85), 0 0 20px rgba(${ar},${glow})`,
+    borderTop: `1.5px solid rgba(${ar},0.5)`, borderLeft: `1px solid rgba(${ar},0.22)`,
+    borderBottom: `4px solid ${sh}`, borderRight: `1px solid rgba(0,0,0,0.65)`,
+    boxShadow: `0 8px 0 ${sh}, 0 16px 32px rgba(0,0,0,0.92), 0 0 32px rgba(${ar},${glow})`,
+    transition: "transform 0.12s ease, box-shadow 0.12s ease",
   };
 }
 function s3dIcon(bg: string, ar: string, sh: string): React.CSSProperties {
   return {
     width: 36, height: 36, borderRadius: 11, background: bg, flexShrink: 0,
-    borderTop: `1.5px solid rgba(${ar},0.48)`, borderLeft: `1px solid rgba(${ar},0.2)`,
-    borderBottom: `2px solid ${sh}`, borderRight: `1px solid rgba(0,0,0,0.55)`,
-    boxShadow: `0 4px 0 ${sh}, 0 6px 10px rgba(0,0,0,0.65)`,
+    borderTop: `1.5px solid rgba(${ar},0.55)`, borderLeft: `1px solid rgba(${ar},0.22)`,
+    borderBottom: `2.5px solid ${sh}`, borderRight: `1px solid rgba(0,0,0,0.55)`,
+    boxShadow: `0 4px 0 ${sh}, 0 7px 14px rgba(0,0,0,0.75), 0 0 12px rgba(${ar},0.18)`,
     display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20,
   };
 }
@@ -94,6 +95,10 @@ function GalaxyHero({ children, avatarInitial, avatarUrl, firstName, lastName }:
         @keyframes dust-float { 0%,100%{opacity:0;transform:translateY(0) translateX(0)} 25%{opacity:.6} 50%{opacity:.3;transform:translateY(-18px) translateX(6px)} 75%{opacity:.5;transform:translateY(-8px) translateX(-4px)} }
         @keyframes shoot { 0%{opacity:0;transform:translateX(0) translateY(0)} 5%{opacity:1} 100%{opacity:0;transform:translateX(-160px) translateY(60px)} }
         @keyframes name-glow { 0%,100%{text-shadow:0 0 20px rgba(212,175,55,0.0)} 50%{text-shadow:0 0 28px rgba(212,175,55,0.45)} }
+        @keyframes bday-glow { 0%,100%{box-shadow:0 8px 0 #040300,0 16px 32px rgba(0,0,0,0.92),0 0 28px rgba(212,175,55,0.22)} 50%{box-shadow:0 8px 0 #040300,0 16px 32px rgba(0,0,0,0.92),0 0 55px rgba(212,175,55,0.5),0 0 90px rgba(212,175,55,0.15)} }
+        @keyframes section-glow { 0%,100%{opacity:.5} 50%{opacity:.85} }
+        a:active > div { transform: scale(0.97) translateY(1px) !important; }
+        button:active { transform: scale(0.97) !important; }
       `}</style>
 
       {/* Deep nebula layers */}
@@ -248,10 +253,16 @@ function NebulaOrb({ top, left, right, color, size = 220 }: {
 function CardShine({ ar }: { ar: string }) {
   return (
     <>
-      <div style={{ position: "absolute", top: 0, left: "18%", right: "18%",
-        height: 1, background: `rgba(${ar},0.42)` }} />
+      {/* Línea superior brillante */}
+      <div style={{ position: "absolute", top: 0, left: "10%", right: "10%",
+        height: 1, background: `rgba(${ar},0.6)` }} />
+      {/* Gradiente de luz entrando por arriba */}
+      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 50,
+        borderRadius: "18px 18px 0 0", pointerEvents: "none",
+        background: `linear-gradient(to bottom, rgba(${ar},0.12) 0%, transparent 100%)` }} />
+      {/* Reflejo esquina */}
       <div style={{ position: "absolute", inset: 0, borderRadius: 18, pointerEvents: "none",
-        background: `radial-gradient(circle at 85% 15%, rgba(${ar},0.22) 0%, transparent 50%)` }} />
+        background: `radial-gradient(circle at 88% 12%, rgba(${ar},0.2) 0%, transparent 45%)` }} />
     </>
   );
 }
@@ -525,10 +536,16 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Divisor dorado */}
-      <div style={{ height: 0.5,
-        background: "linear-gradient(90deg,transparent,rgba(212,175,55,0.3),transparent)",
-        margin: "0 20px" }} />
+      {/* Divisor atmosférico */}
+      <div style={{ position: "relative", margin: "0 0 2px", height: 24, overflow: "hidden" }}>
+        <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
+          width: 220, height: 30, borderRadius: "50%", pointerEvents: "none",
+          background: "radial-gradient(ellipse, rgba(212,175,55,0.18) 0%, transparent 70%)",
+          filter: "blur(6px)" }} />
+        <div style={{ position: "absolute", top: "50%", left: "15%", right: "15%",
+          height: 0.5, background: "linear-gradient(90deg,transparent,rgba(212,175,55,0.35),transparent)",
+          transform: "translateY(-50%)" }} />
+      </div>
 
       {/* ── CUMPLEAÑOS HOY (prioridad máxima) ───────────────────────────── */}
       {todayBirthday && (
@@ -536,9 +553,9 @@ export default function HomePage() {
           <Link href={`/persona/${todayBirthday.person_id}`}>
             <div style={{
               borderRadius: 18, background: "#100c02", position: "relative", overflow: "hidden",
-              borderTop: "1.5px solid rgba(212,175,55,0.6)", borderLeft: "1px solid rgba(212,175,55,0.22)",
-              borderBottom: "3px solid #040300", borderRight: "1px solid rgba(0,0,0,0.6)",
-              boxShadow: "0 7px 0 #040300, 0 12px 22px rgba(0,0,0,0.85), 0 0 28px rgba(212,175,55,0.22)",
+              borderTop: "2px solid rgba(212,175,55,0.7)", borderLeft: "1px solid rgba(212,175,55,0.3)",
+              borderBottom: "4px solid #040300", borderRight: "1px solid rgba(0,0,0,0.65)",
+              animation: "bday-glow 3s ease-in-out infinite",
             }}>
               <div style={{ position: "absolute", top: 0, left: "20%", right: "20%", height: 1,
                 background: "rgba(212,175,55,0.7)" }} />
@@ -566,7 +583,12 @@ export default function HomePage() {
       )}
 
       {/* ── FUNCIONES ────────────────────────────────────────────────────── */}
-      <div style={{ padding: "16px 14px 14px" }}>
+      <div style={{ padding: "16px 14px 14px", position: "relative" }}>
+        {/* Glow atmosférico detrás del grid */}
+        <div style={{ position: "absolute", top: "20%", left: "50%", transform: "translateX(-50%)",
+          width: 300, height: 300, borderRadius: "50%", pointerEvents: "none", zIndex: 0,
+          background: "radial-gradient(circle, rgba(212,175,55,0.07) 0%, rgba(80,30,160,0.04) 40%, transparent 70%)",
+          filter: "blur(24px)", animation: "section-glow 6s ease-in-out infinite" }} />
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 13 }}>
           <span style={{ fontSize: 11, fontWeight: 700, color: "#d4af37", letterSpacing: "0.1em",
             textTransform: "uppercase" }}>Descubre tu historia</span>
@@ -576,7 +598,7 @@ export default function HomePage() {
         </div>
 
         {/* Grid 2×2 */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 9, marginBottom: 9 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 9, marginBottom: 9, position: "relative", zIndex: 1 }}>
 
           {/* Mi Árbol — oro */}
           <Link href="/tree">
