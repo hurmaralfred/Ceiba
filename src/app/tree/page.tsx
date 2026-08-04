@@ -10,6 +10,7 @@ import { adaptGraph, buildAddRelativeRequest, isAddRelativeSupported, relationRe
 import { KINSHIP_CATALOG, type KinshipKey } from "@/domain/relationships";
 import type { ExtendedEntry, MemberLink } from "@/components/tree/FamilyTreeGraph";
 import { FamilyUniverse as FamilyUniverseComponent } from "@/components/universe/FamilyUniverse";
+import { GalaxyOrbitView } from "@/components/universe/GalaxyOrbitView";
 import { buildVisibleMembers } from "@/lib/visibleMembers";
 import { resolveMemberForEdit } from "@/lib/resolveMemberForEdit";
 import InstallBanner from "@/components/InstallBanner";
@@ -39,6 +40,7 @@ const PremiumFamilyTree = lazyLoad(
 
 const PREMIUM_TREE_RENDERER_ENABLED = true;
 const UNIVERSE_RENDERER_ENABLED = true;
+const GALAXY_ORBIT_ENABLED = true;
 
 const MapView = lazyLoad(
   () => import("@/components/map/MapView"),
@@ -95,6 +97,10 @@ function TreePageContent() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [view, setView] = useState<"graph" | "list" | "map">("graph");
+  const [useClassicView, setUseClassicView] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("ceiba_view") === "classic";
+  });
   const [myLocation, setMyLocation] = useState<[number, number] | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [showBroadcast, setShowBroadcast] = useState(false);
@@ -926,7 +932,7 @@ function TreePageContent() {
       }}>
         {/* Logo */}
         <Link href="/tree" style={{ display: "flex", alignItems: "center", gap: 7, textDecoration: "none" }}>
-          <TreePine size={20} style={{ color: "#d4af37" }} />
+          <span style={{ color: "#d4af37", fontSize: 18, lineHeight: 1 }}>✦</span>
           <span style={{ fontSize: 17, fontWeight: 800, color: "#d4af37", letterSpacing: "0.02em" }}>Ceiba</span>
         </Link>
 
@@ -1131,7 +1137,64 @@ function TreePageContent() {
             {view === "graph" && profile && (
               <>
                 <TreeErrorBoundary>
-                  {UNIVERSE_RENDERER_ENABLED ? (
+                  {GALAXY_ORBIT_ENABLED && !useClassicView ? (
+                    <div style={{ position: "relative", height: "calc(100svh - 80px)", overflow: "hidden", background: "#030208" }}>
+                      <GalaxyOrbitView
+                        profile={profile}
+                        members={members}
+                        extendedMembers={extendedMembers}
+                        memberLinks={memberLinks}
+                        onEditMember={(memberId) => {
+                          const member = resolveMemberForEdit(memberId, members, extendedMembers);
+                          if (member) {
+                            openEdit(member);
+                          } else {
+                            toast.error('No pudimos abrir este familiar para editarlo');
+                          }
+                        }}
+                        onInviteMember={(memberId) => {
+                          const member = resolveMemberForEdit(memberId, members, extendedMembers);
+                          if (member) sendInvite(member);
+                        }}
+                        onAddMember={() => setShowModal(true)}
+                      />
+                      {/* Stats pill */}
+                      <div style={{
+                        position: "absolute", top: 14, left: "50%", transform: "translateX(-50%)",
+                        display: "flex", alignItems: "center", gap: 10,
+                        background: "rgba(8,4,2,0.72)", backdropFilter: "blur(16px)",
+                        WebkitBackdropFilter: "blur(16px)",
+                        border: "1px solid rgba(242,180,60,0.22)", borderRadius: 30,
+                        padding: "5px 16px", zIndex: 900, pointerEvents: "none",
+                        whiteSpace: "nowrap",
+                      }}>
+                        <span style={{ fontSize: 11, color: "rgba(242,228,208,0.65)", letterSpacing: "0.04em" }}>
+                          Tu galaxia familiar
+                        </span>
+                        <span style={{ color: "rgba(242,180,60,0.25)", fontSize: 14, lineHeight: 1 }}>·</span>
+                        <span style={{ fontSize: 11, color: "rgba(242,228,208,0.75)", letterSpacing: "0.02em" }}>
+                          <span style={{ color: "#F2B43C", fontWeight: 700 }}>{visibleMembers.length}</span>
+                          {" personas"}
+                        </span>
+                      </div>
+                      {/* Classic view toggle — discrete, bottom-left */}
+                      <button
+                        onClick={() => {
+                          setUseClassicView(true);
+                          localStorage.setItem("ceiba_view", "classic");
+                        }}
+                        style={{
+                          position: "absolute", bottom: 24, left: 20, zIndex: 20,
+                          background: "rgba(8,5,18,0.72)", backdropFilter: "blur(12px)",
+                          border: "0.5px solid rgba(212,175,55,0.18)", borderRadius: 10,
+                          padding: "5px 10px", cursor: "pointer",
+                          color: "rgba(212,175,55,0.45)", fontSize: 9,
+                          letterSpacing: "0.10em", textTransform: "uppercase",
+                        }}>
+                        Vista clásica
+                      </button>
+                    </div>
+                  ) : UNIVERSE_RENDERER_ENABLED ? (
                     <div style={{ position: "relative", height: "calc(100svh - 80px)", overflow: "hidden", background: "#030208" }}>
                       <FamilyUniverseComponent
                         profile={profile}
@@ -1174,6 +1237,22 @@ function TreePageContent() {
                           {" personas"}
                         </span>
                       </div>
+                      {/* Return to galaxy view */}
+                      <button
+                        onClick={() => {
+                          setUseClassicView(false);
+                          localStorage.setItem("ceiba_view", "galaxy");
+                        }}
+                        style={{
+                          position: "absolute", bottom: 24, left: 20, zIndex: 20,
+                          background: "rgba(8,5,18,0.72)", backdropFilter: "blur(12px)",
+                          border: "0.5px solid rgba(212,175,55,0.18)", borderRadius: 10,
+                          padding: "5px 10px", cursor: "pointer",
+                          color: "rgba(212,175,55,0.45)", fontSize: 9,
+                          letterSpacing: "0.10em", textTransform: "uppercase",
+                        }}>
+                        ✦ Vista galaxia
+                      </button>
                     </div>
                   ) : PREMIUM_TREE_RENDERER_ENABLED ? (
                     <div style={{ margin: "0 -0.75rem" }}>
