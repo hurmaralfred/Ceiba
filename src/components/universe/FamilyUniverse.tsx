@@ -648,21 +648,23 @@ function AvatarSlot({
         hitAreaScale={node.scale * viewScale}
         labelVisible={node.relevanceTier <= 2}
       />
-      {showExpand && (selected || hovered) && (
+      {showExpand && (
         <button
           data-avatar="true"
           onPointerDown={e => e.stopPropagation()}
           onClick={e => { e.stopPropagation(); onExpand?.() }}
           style={{
             position: 'absolute',
-            top: -8,
-            right: -8,
-            width: 24,
-            height: 24,
+            top: -10,
+            right: -10,
+            width: 30,
+            height: 30,
             borderRadius: '50%',
-            background: 'radial-gradient(circle at 38% 32%, #f5e060 0%, #c9a820 55%, #7a5c00 100%)',
+            background: isExpanded
+              ? 'radial-gradient(circle at 38% 32%, #9b8a3a 0%, #6a5a18 55%, #3a3008 100%)'
+              : 'radial-gradient(circle at 38% 32%, #f5e060 0%, #c9a820 55%, #7a5c00 100%)',
             border: '2px solid rgba(3,2,8,0.92)',
-            boxShadow: '0 2px 7px rgba(0,0,0,0.7), 0 0 0 1.5px rgba(212,175,55,0.35)',
+            boxShadow: '0 3px 10px rgba(0,0,0,0.75), 0 0 0 1.5px rgba(212,175,55,0.45)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -670,9 +672,11 @@ function AvatarSlot({
             padding: 0,
             zIndex: 20,
             flexShrink: 0,
+            transition: 'background 0.2s ease',
           }}
+          aria-label={isExpanded ? 'Colapsar familiares' : 'Mostrar más familiares'}
         >
-          <svg width="11" height="11" viewBox="0 0 16 16" fill="none">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
             {!isExpanded && (
               <line x1="8" y1="3" x2="8" y2="13" stroke="#030208" strokeWidth="2.8" strokeLinecap="round"/>
             )}
