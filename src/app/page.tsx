@@ -87,6 +87,110 @@ function ConnectionOverlay() {
 }
 
 const GOLD = "#d4af37";
+
+function FamilyTreeSVG() {
+  const nodes = [
+    { id: "tu",      x: 190, y: 185, name: "Tú",     rel: "",         reg: true,  root: true  },
+    { id: "mama",    x: 82,  y: 105, name: "Mamá",   rel: "Madre",    reg: true,  root: false },
+    { id: "papa",    x: 285, y: 108, name: "Carlos", rel: "Padre",    reg: false, root: false },
+    { id: "hermano", x: 78,  y: 270, name: "Luis",   rel: "Hermano",  reg: true,  root: false },
+    { id: "abuelo",  x: 28,  y: 30,  name: "José",   rel: "Abuelo",   reg: true,  root: false },
+    { id: "abuela",  x: 160, y: 22,  name: "María",  rel: "Abuela",   reg: false, root: false },
+    { id: "cunada",  x: 52,  y: 345, name: "Sofía",  rel: "Cuñada",   reg: true,  root: false },
+    { id: "sobrino", x: 188, y: 340, name: "Mateo",  rel: "Sobrino",  reg: false, root: false },
+  ];
+  const edges: [string, string][] = [
+    ["tu", "mama"], ["tu", "papa"], ["tu", "hermano"],
+    ["mama", "abuelo"], ["mama", "abuela"],
+    ["hermano", "cunada"], ["hermano", "sobrino"],
+  ];
+  const map = Object.fromEntries(nodes.map(n => [n.id, n]));
+
+  return (
+    <svg viewBox="0 0 370 390" style={{ width: "100%", maxHeight: 390, display: "block" }}>
+      <defs>
+        <filter id="ft-glow">
+          <feGaussianBlur stdDeviation="2.5" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <style>{`
+          @keyframes ft-flow  { from{stroke-dashoffset:16} to{stroke-dashoffset:0} }
+          @keyframes ft-ring  { 0%{r:26;opacity:.5} 100%{r:38;opacity:0} }
+          @keyframes ft-pulse { 0%,100%{opacity:.9} 50%{opacity:1} }
+          .ft-flow  { animation: ft-flow  3s linear infinite }
+          .ft-flow2 { animation: ft-flow  3s linear infinite .8s }
+          .ft-flow3 { animation: ft-flow  3s linear infinite 1.6s }
+          .ft-ring  { animation: ft-ring  2.8s ease-out infinite }
+          .ft-pulse { animation: ft-pulse 3s ease-in-out infinite }
+          .ft-notif { animation: ft-pulse 2.5s ease-in-out infinite }
+        `}</style>
+      </defs>
+
+      {/* Edges */}
+      {edges.map(([a, b], i) => {
+        const na = map[a], nb = map[b];
+        const active = na.reg && nb.reg;
+        const cls = i % 3 === 0 ? "ft-flow" : i % 3 === 1 ? "ft-flow2" : "ft-flow3";
+        return (
+          <line key={i} x1={na.x} y1={na.y} x2={nb.x} y2={nb.y}
+            stroke={active ? "#d4af37" : "rgba(255,255,255,0.12)"}
+            strokeWidth={active ? 0.9 : 0.6}
+            strokeDasharray={active ? "5,3" : "3,4"}
+            opacity={active ? 0.85 : 0.35}
+            className={active ? cls : undefined}
+          />
+        );
+      })}
+
+      {/* Nodes */}
+      {nodes.map((n) => {
+        const r = n.root ? 23 : n.reg ? 18 : 15;
+        return (
+          <g key={n.id}>
+            {n.root && (
+              <circle cx={n.x} cy={n.y} r={30} fill="none"
+                stroke="#d4af37" strokeWidth="0.6" opacity="0.35" className="ft-ring" />
+            )}
+            <circle cx={n.x} cy={n.y} r={r}
+              fill={n.root ? "#d4af37" : n.reg ? "rgba(212,175,55,0.12)" : "rgba(255,255,255,0.04)"}
+              stroke={n.root ? "#f5e070" : n.reg ? "#d4af37" : "rgba(255,255,255,0.18)"}
+              strokeWidth={n.root ? 2 : n.reg ? 1.2 : 0.7}
+              strokeDasharray={n.reg ? undefined : "2.5,2"}
+              filter={n.reg ? "url(#ft-glow)" : undefined}
+              className={n.root ? "ft-pulse" : undefined}
+            />
+            {/* Initial / label inside */}
+            <text x={n.x} y={n.y} textAnchor="middle" dominantBaseline="central"
+              fontSize={n.root ? 9 : 7.5} fontWeight="700"
+              fill={n.root ? "#000" : n.reg ? "#d4af37" : "rgba(255,255,255,0.25)"}>
+              {n.root ? "Tú" : n.name[0]}
+            </text>
+            {/* Name below */}
+            <text x={n.x} y={n.y + r + 9} textAnchor="middle"
+              fontSize="7" fontWeight="600"
+              fill={n.reg ? "rgba(255,255,255,0.88)" : "rgba(255,255,255,0.3)"}>
+              {n.name}
+            </text>
+            {n.rel && (
+              <text x={n.x} y={n.y + r + 17} textAnchor="middle"
+                fontSize="6" fill={n.reg ? "rgba(212,175,55,0.65)" : "rgba(255,255,255,0.18)"}>
+                {n.rel}
+              </text>
+            )}
+          </g>
+        );
+      })}
+
+      {/* Birthday notification badge on Mamá */}
+      <g className="ft-notif">
+        <rect x="96" y="73" width="44" height="14" rx="5"
+          fill="rgba(0,0,0,0.82)" stroke="#d4af37" strokeWidth="0.6" strokeOpacity="0.6" />
+        <text x="118" y="80.5" textAnchor="middle" dominantBaseline="central"
+          fontSize="5.5" fill="#d4af37">🎂 mañana</text>
+      </g>
+    </svg>
+  );
+}
 const GOLD_DIM = "rgba(212,175,55,0.35)";
 const BG = "#030208";
 const CARD = "#0c0a18";
@@ -259,6 +363,64 @@ export default function LandingPage() {
           {/* Borde exterior dorado sutil */}
           <div style={{ position: "absolute", inset: -1, borderRadius: 25, pointerEvents: "none",
             background: "linear-gradient(135deg, rgba(212,175,55,0.18) 0%, transparent 50%, rgba(120,80,20,0.1) 100%)" }} />
+        </div>
+      </section>
+
+      {/* ── VISTA PREVIA DEL ÁRBOL ── */}
+      <section style={{ position: "relative", zIndex: 10, maxWidth: 960, margin: "0 auto", padding: "0 24px 80px" }}>
+        <p style={{ textAlign: "center", color: GOLD_DIM, fontSize: 10, letterSpacing: "0.2em",
+          textTransform: "uppercase", marginBottom: 14 }}>Vista real de la app</p>
+        <h2 style={{ textAlign: "center", fontSize: "clamp(1.5rem,4vw,2rem)", fontWeight: 800,
+          marginBottom: 10, letterSpacing: "-0.02em" }}>
+          Así se ve tu familia en Ceiba
+        </h2>
+        <p style={{ textAlign: "center", fontSize: 13, color: "rgba(255,255,255,0.4)",
+          marginBottom: 36, maxWidth: 380, margin: "0 auto 36px" }}>
+          Cada círculo es un familiar. Las líneas doradas, los lazos que los unen.
+          Los grises, familiares que aún no se han registrado — pero ya están en tu árbol.
+        </p>
+
+        <div style={{ position: "relative", maxWidth: 600, margin: "0 auto",
+          borderRadius: 24, overflow: "hidden",
+          background: "radial-gradient(ellipse at 50% 40%, rgba(30,20,60,0.9) 0%, #030208 80%)",
+          border: "1px solid rgba(212,175,55,0.15)",
+          boxShadow: "0 24px 60px rgba(0,0,0,0.8), 0 0 0 1px rgba(212,175,55,0.08)",
+          padding: "28px 8px 16px" }}>
+
+          {/* Badge "en vivo" */}
+          <div style={{ position: "absolute", top: 14, left: "50%", transform: "translateX(-50%)",
+            display: "flex", alignItems: "center", gap: 6,
+            background: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)",
+            border: "1px solid rgba(212,175,55,0.2)", borderRadius: 100,
+            padding: "4px 12px", whiteSpace: "nowrap" }}>
+            <span style={{ width: 6, height: 6, borderRadius: "50%", background: GOLD,
+              boxShadow: `0 0 6px ${GOLD}`, flexShrink: 0 }} />
+            <span style={{ fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.7)" }}>
+              Vista real · Familia Hurtado
+            </span>
+          </div>
+
+          <FamilyTreeSVG />
+
+          {/* Legend */}
+          <div style={{ display: "flex", justifyContent: "center", gap: 24, paddingTop: 8 }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "rgba(255,255,255,0.5)" }}>
+              <span style={{ width: 8, height: 8, borderRadius: "50%", border: `1.5px solid ${GOLD}`, background: "rgba(212,175,55,0.15)", display: "inline-block" }} />
+              En Ceiba
+            </span>
+            <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "rgba(255,255,255,0.3)" }}>
+              <span style={{ width: 8, height: 8, borderRadius: "50%", border: "1.5px dashed rgba(255,255,255,0.25)", display: "inline-block" }} />
+              Aún no se registra
+            </span>
+          </div>
+
+          {/* Insight */}
+          <div style={{ margin: "16px 16px 0", borderRadius: 12, padding: "12px 16px",
+            background: "rgba(212,175,55,0.05)", border: "1px solid rgba(212,175,55,0.1)",
+            fontSize: 12, color: "rgba(255,255,255,0.45)", textAlign: "center", lineHeight: 1.6 }}>
+            Cuando <span style={{ color: GOLD, fontWeight: 600 }}>Luis</span> se registró, Ceiba ya sabía que <span style={{ color: GOLD, fontWeight: 600 }}>Sofía</span> era tu cuñada
+            y que <span style={{ color: GOLD, fontWeight: 600 }}>Mateo</span> era tu sobrino — sin que nadie tuviera que decírselo.
+          </div>
         </div>
       </section>
 
