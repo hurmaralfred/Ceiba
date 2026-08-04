@@ -166,7 +166,7 @@ const NAV_ITEMS: Array<{ href: string; Icon: LucideIcon; label: string; center?:
   { href: "/tree",    Icon: TreePine, label: "Árbol"    },
   { href: "/feed",    Icon: BookOpen, label: "Actividad", center: true },
   { href: "/photos",  Icon: Camera,   label: "Álbumes"  },
-  { href: "/profile", Icon: User,     label: "Perfil"   },
+  { href: "/persona/me", Icon: User,     label: "Perfil"   },
 ];
 
 export function CosmicNav() {
@@ -206,7 +206,9 @@ export function CosmicNav() {
             </div>
           </Link>
         );
-        const active = pathname === href || pathname?.startsWith(href + "/");
+        const active = pathname === href
+          || pathname?.startsWith(href + "/")
+          || (href === "/persona/me" && pathname?.startsWith("/persona/"));
         const color = active ? "#d4af37" : "rgba(212,175,55,0.28)";
         const showBadge = href === "/home" && suggCount > 0;
         return (

@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
+import { getDiceBearUrl } from "@/lib/dicebear";
 import {
   Home, TreePine, BookOpen, Camera, User, Bell, Menu,
   Users, GitBranch, Image as ImageIcon, Send,
@@ -615,7 +616,7 @@ export default function HomePage() {
       {/* ── HERO ─────────────────────────────────────────────────────────── */}
       <GalaxyHero
         avatarInitial={avatarInitial}
-        avatarUrl={profile?.avatar_url}
+        avatarUrl={profile?.avatar_url ?? getDiceBearUrl(profile?.first_name ?? 'user')}
         firstName={profile?.first_name ?? ""}
         lastName={profile?.last_name ?? ""}
         visibleCount={visibleCount}

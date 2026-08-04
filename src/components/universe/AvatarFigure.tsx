@@ -235,14 +235,11 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
   const elder   = node.ageGroup === 'elder'
   const child   = node.ageGroup === 'child'
   const oKey    = getOutfitKey(node)
-  // When the user has set a custom drawn avatar, it takes priority over any uploaded photo
-  const hasPhoto = !!node.avatarUrl && !cfg
-
   const hairStyle  = cfg ? cfg.hairStyle % (female ? 4 : 5) : (seed >> 2) % (female ? 4 : 5)
   const faceShape  = cfg?.faceShape ?? 0
   const acc        = cfg?.accessories ?? -1 // -1 = hash-based
-  const hasGlasses = acc >= 0 ? (acc === 1 || acc === 3) : (!child && !hasPhoto && (seed >> 12) % 5 === 0)
-  const hasBeard   = acc >= 0 ? (!female && (acc === 2 || acc === 3)) : (!female && !child && !hasPhoto && (seed >> 16) % 4 === 0)
+  const hasGlasses = acc >= 0 ? (acc === 1 || acc === 3) : (!child && (seed >> 12) % 5 === 0)
+  const hasBeard   = acc >= 0 ? (!female && (acc === 2 || acc === 3)) : (!female && !child && (seed >> 16) % 4 === 0)
   const hasEarrings = acc >= 0 ? (female && !child && (acc === 2 || acc === 3)) : false
 
   const skin       = cfg ? SKIN_TONES[cfg.skinTone % 6] : SKIN_TONES[seed % 6]
@@ -389,7 +386,7 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
               <>
                 {/* Desaturate + tint toward silver-blue + reduce opacity */}
                 <filter id={`${uid}ds`} colorInterpolationFilters="sRGB">
-                  <feColorMatrix type="saturate" values="0" />
+                  <feColorMatrix type="saturate" values="0.1" />
                   {/* Tint toward cool luminous silver: lift R/B channels slightly */}
                   <feColorMatrix type="matrix" values="
                     0.82 0.06 0.14 0 0.07
@@ -469,23 +466,7 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
 
             {/* ══ PORTRAIT ══════════════════════════════════════════════════ */}
 
-            {hasPhoto ? (
-              <>
-                <circle cx={CX} cy={CY} r={R} fill="rgba(8,6,4,0.92)" />
-                <image
-                  href={node.avatarUrl ?? undefined}
-                  x={CX - R} y={CY - R}
-                  width={R * 2} height={R * 2}
-                  preserveAspectRatio="xMidYMid slice"
-                  clipPath={`url(#${uid}pc)`}
-                />
-                {/* Inner vignette */}
-                <circle cx={CX} cy={CY} r={R - 2}
-                  fill="none" stroke="rgba(0,0,0,0.25)"
-                  strokeWidth="5" clipPath={`url(#${uid}pc)`}
-                />
-              </>
-            ) : (
+            {(
               <g clipPath={`url(#${uid}pc)`}>
                 {/* Dark background */}
                 <circle cx={CX} cy={CY} r={R} fill={`url(#${uid}bg)`} />
@@ -527,8 +508,8 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
                   stroke={browColor} strokeWidth={female?1.3:1.9} strokeLinecap="round" fill="none" />
 
                 {/* Eye whites */}
-                <ellipse cx={CX-9} cy={eyeY} rx={eyeR-0.8} ry={eyeR-1.4} fill="rgba(248,244,238,0.97)" />
-                <ellipse cx={CX+9} cy={eyeY} rx={eyeR-0.8} ry={eyeR-1.4} fill="rgba(248,244,238,0.97)" />
+                <circle cx={CX-9} cy={eyeY} r={eyeR-0.6} fill="white" />
+                <circle cx={CX+9} cy={eyeY} r={eyeR-0.6} fill="white" />
 
                 {/* Iris */}
                 <circle cx={CX-8.5} cy={eyeY+0.5} r={eyeR*0.62} fill={`url(#${uid}el)`} />
@@ -544,11 +525,16 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
                 <circle cx={CX-9.5}  cy={eyeY+1.5} r={0.5} fill="rgba(255,255,255,0.55)" />
                 <circle cx={CX+7.5}  cy={eyeY+1.5} r={0.5} fill="rgba(255,255,255,0.55)" />
 
-                {/* Upper eyelid shadow */}
+                {/* Upper eyelid lash line */}
+                <path d={`M${CX-13},${eyeY-1} Q${CX-9},${eyeY-eyeR+0.5} ${CX-5},${eyeY-1}`}
+                  stroke="#0A0200" strokeWidth="1.1" fill="none" strokeLinecap="round" opacity="0.85" />
+                <path d={`M${CX+5},${eyeY-1} Q${CX+9},${eyeY-eyeR+0.5} ${CX+13},${eyeY-1}`}
+                  stroke="#0A0200" strokeWidth="1.1" fill="none" strokeLinecap="round" opacity="0.85" />
+                {/* Eyelid shadow */}
                 <path d={`M${CX-13},${eyeY-1.5} Q${CX-9},${eyeY-3.5} ${CX-5},${eyeY-1.5}`}
-                  stroke={skinDeep} strokeWidth="0.9" fill="none" opacity="0.45" />
+                  stroke={skinDeep} strokeWidth="0.9" fill="none" opacity="0.35" />
                 <path d={`M${CX+5},${eyeY-1.5} Q${CX+9},${eyeY-3.5} ${CX+13},${eyeY-1.5}`}
-                  stroke={skinDeep} strokeWidth="0.9" fill="none" opacity="0.45" />
+                  stroke={skinDeep} strokeWidth="0.9" fill="none" opacity="0.35" />
 
                 {/* Cheek blush */}
                 <ellipse cx={CX-11} cy={eyeY+9} rx={5} ry={2.5} fill="rgba(255,110,90,0.10)" />

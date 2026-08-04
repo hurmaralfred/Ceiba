@@ -1,10 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { MapPin, Cake, Calendar, Users, CheckCircle, BookOpen, TreePine } from "lucide-react";
-import { CosmicNav, CosmicHeader, CosmicSpinner, s3dCard, C } from "@/components/ui/cosmic";
+import { ArrowLeft, MoreHorizontal, MapPin, Settings } from "lucide-react";
+import { CosmicNav, CosmicSpinner, C } from "@/components/ui/cosmic";
+import { getDiceBearUrl } from "@/lib/dicebear";
 
+// ── Types ─────────────────────────────────────────────────────────────────────
 interface PersonData {
   id: string;
   first_name: string;
@@ -15,13 +17,17 @@ interface PersonData {
   birth_city?: string | null;
   birth_country?: string | null;
   avatarUrl?: string | null;
+  avatarConfig?: any;
   hasAccount: boolean;
+  is_deceased?: boolean;
 }
 
-interface FamilyMemberItem {
+interface RelativeItem {
   id: string;
   first_name: string;
   first_surname?: string | null;
+  birth_year?: number | null;
+  avatarUrl?: string | null;
 }
 
 interface EventItem {
@@ -32,284 +38,636 @@ interface EventItem {
   description?: string | null;
 }
 
+// ── Label maps ────────────────────────────────────────────────────────────────
+const RELATION_LABELS: Record<string, string> = {
+  father: "Padre", mother: "Madre", son: "Hijo", daughter: "Hija",
+  spouse: "Cónyuge", sibling: "Hermano/a", brother: "Hermano", sister: "Hermana",
+  grandfather_paternal: "Abuelo paterno", grandmother_paternal: "Abuela paterna",
+  grandfather_maternal: "Abuelo materno", grandmother_maternal: "Abuela materna",
+  uncle_paternal: "Tío paterno", aunt_paternal: "Tía paterna",
+  uncle_maternal: "Tío materno", aunt_maternal: "Tía materna",
+  cousin: "Primo/a", nephew: "Sobrino", niece: "Sobrina",
+  grandson: "Nieto", granddaughter: "Nieta",
+  father_in_law: "Suegro", mother_in_law: "Suegra",
+  root: "Tú", other: "Familiar",
+};
+
+const EVENT_SYMBOL: Record<string, string> = {
+  birth: "✦", marriage: "◎", death: "✦", graduation: "⬟",
+  reunion: "◈", anniversary: "★", other: "◇",
+};
+
 const EVENT_LABEL: Record<string, string> = {
-  birth: "Nacimiento", marriage: "Matrimonio", death: "Fallecimiento",
+  birth: "Nació", marriage: "Se casó", death: "Falleció",
   graduation: "Graduación", reunion: "Reunión", anniversary: "Aniversario", other: "Evento",
 };
 
-const EVENT_EMOJI: Record<string, string> = {
-  birth: "🐣", marriage: "💍", death: "🕊️",
-  graduation: "🎓", reunion: "🤗", anniversary: "🎉", other: "📅",
-};
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function birthYear(d?: string | null): number | null {
+  if (!d) return null;
+  return new Date(d + "T12:00:00").getFullYear();
+}
 
-const EVENT_COLOR: Record<string, string> = {
-  birth: "220,80,120", marriage: "220,60,80", death: "140,140,160",
-  graduation: "60,120,240", reunion: "40,180,120", anniversary: "212,175,55", other: "160,80,240",
-};
-
-function age(birthDate: string): number {
-  const bd = new Date(birthDate);
-  const now = new Date();
-  let a = now.getFullYear() - bd.getFullYear();
-  if (now.getMonth() < bd.getMonth() || (now.getMonth() === bd.getMonth() && now.getDate() < bd.getDate())) a--;
-  return a;
+function eventYear(d: string): number {
+  return new Date(d + "T12:00:00").getFullYear();
 }
 
 function formatDate(d: string): string {
-  return new Date(d + "T12:00:00").toLocaleDateString("es", { day: "numeric", month: "long", year: "numeric" });
+  return new Date(d + "T12:00:00").toLocaleDateString("es", {
+    day: "numeric", month: "long", year: "numeric",
+  });
 }
 
+function formatShortDate(d: string): string {
+  return new Date(d + "T12:00:00").toLocaleDateString("es", {
+    day: "numeric", month: "long",
+  });
+}
+
+// ── Sub-components ────────────────────────────────────────────────────────────
+function RelativeOrb({ rel, onClick }: { rel: RelativeItem; onClick: () => void }) {
+  const src = rel.avatarUrl ?? getDiceBearUrl(rel.id);
+  return (
+    <div onClick={onClick} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5, cursor: "pointer" }}>
+      <div style={{
+        width: 54, height: 54, borderRadius: "50%",
+        border: "1.5px solid rgba(212,175,55,0.35)",
+        boxShadow: "0 0 16px rgba(212,175,55,0.15)",
+        overflow: "hidden", background: "#0c0a18",
+      }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={src} alt={rel.first_name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+      </div>
+      <div style={{ textAlign: "center" }}>
+        <p style={{ fontSize: 10, fontWeight: 700, color: "#fff", lineHeight: 1.2 }}>{rel.first_name}</p>
+        {rel.birth_year && (
+          <p style={{ fontSize: 9, color: "rgba(212,175,55,0.5)" }}>{rel.birth_year}</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function EventOrb({ ev, birthCity }: { ev: EventItem; birthCity?: string | null }) {
+  return (
+    <div style={{
+      background: "rgba(8,6,18,0.94)",
+      border: "1px solid rgba(212,175,55,0.28)",
+      borderRadius: 16, padding: "9px 10px",
+      boxShadow: "0 0 18px rgba(212,175,55,0.1), 0 4px 14px rgba(0,0,0,0.7)",
+      backdropFilter: "blur(14px)",
+      width: 74, textAlign: "center",
+    }}>
+      <div style={{ fontSize: 14, color: "#d4af37", lineHeight: 1, marginBottom: 3 }}>
+        {EVENT_SYMBOL[ev.event_type] ?? "✦"}
+      </div>
+      <div style={{ fontSize: 14, fontWeight: 800, color: "#d4af37", lineHeight: 1 }}>
+        {eventYear(ev.event_date)}
+      </div>
+      <div style={{ fontSize: 9, color: "rgba(255,255,255,0.9)", lineHeight: 1.3, marginTop: 2 }}>
+        {EVENT_LABEL[ev.event_type] ?? "Evento"}
+      </div>
+      {ev.event_type === "birth" && birthCity && (
+        <div style={{ fontSize: 8, color: "rgba(212,175,55,0.45)", lineHeight: 1.2, marginTop: 1 }}>
+          {birthCity}
+        </div>
+      )}
+      {ev.event_type !== "birth" && (
+        <div style={{ fontSize: 8, color: "rgba(212,175,55,0.45)", lineHeight: 1.2, marginTop: 1 }}>
+          {formatShortDate(ev.event_date)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+type TabKey = "historia" | "galeria" | "recuerdos" | "atributos";
+const TAB_LABELS: Record<TabKey, string> = {
+  historia: "Historia", galeria: "Galería", recuerdos: "Recuerdos", atributos: "Atributos",
+};
+
+// ── Page ──────────────────────────────────────────────────────────────────────
 export default function PersonaPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isSelf = searchParams.get("self") === "true";
   const { personId } = useParams<{ personId: string }>();
+
   const [person, setPerson] = useState<PersonData | null>(null);
-  const [family, setFamily] = useState<FamilyMemberItem[]>([]);
+  const [relatives, setRelatives] = useState<RelativeItem[]>([]);
   const [events, setEvents] = useState<EventItem[]>([]);
-  const [totalInSpace, setTotalInSpace] = useState(0);
+  const [relationType, setRelationType] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [tab, setTab] = useState<TabKey>("historia");
+  const [moreOpen, setMoreOpen] = useState(false);
 
   useEffect(() => {
     if (!personId) return;
     fetch(`/api/persona/${personId}`)
       .then(r => { if (!r.ok) throw new Error("No autorizado"); return r.json(); })
-      .then(({ person: p, familyInCeiba, events: ev, totalInSpace: t }) => {
+      .then(({ person: p, relatives: rel, events: ev, relationType: rt }) => {
         setPerson(p);
-        setFamily(familyInCeiba ?? []);
+        setRelatives(rel ?? []);
         setEvents(ev ?? []);
-        setTotalInSpace(t ?? 0);
+        setRelationType(rt ?? null);
       })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
   }, [personId]);
 
+  const firstName = person?.first_name ?? "";
   const fullName = person
     ? [person.first_name, person.middle_name, person.first_surname, person.second_surname].filter(Boolean).join(" ")
     : "";
+  const bYear = birthYear(person?.birth_date);
+  const avatarSrc = person?.avatarUrl ?? (person ? getDiceBearUrl(person.id) : null);
+  const relationLabel = relationType ? (RELATION_LABELS[relationType] ?? relationType) : null;
 
-  const personAge = person?.birth_date ? age(person.birth_date) : null;
-  const initials = person ? `${person.first_name?.[0] ?? ""}${person.first_surname?.[0] ?? ""}` : "?";
+  // Years display
+  const yearsLine = person?.is_deceased
+    ? `${bYear ?? "?"} — †`
+    : bYear ? `${bYear} — Presente` : null;
+
+  // Build floating event orbs: birth first, then other events
+  const birthEvent: EventItem | null = bYear && person?.birth_date ? {
+    id: "birth", title: "Nacimiento", event_type: "birth",
+    event_date: person.birth_date, description: null,
+  } : null;
+
+  const floatingEvents: EventItem[] = [];
+  if (birthEvent) floatingEvents.push(birthEvent);
+  for (const ev of events) {
+    if (floatingEvents.length >= 3) break;
+    if (ev.event_type !== "birth") floatingEvents.push(ev);
+  }
+
+  const leftRel = relatives[0] ?? null;
+  const rightRel = relatives[1] ?? null;
 
   if (loading) return <CosmicSpinner />;
 
   return (
-    <div style={{ minHeight: "100vh", background: C.bg, color: "#fff", paddingBottom: 100 }}>
-      <CosmicHeader title="Historia familiar" backHref="/tree"
-        right={
-          <Link href="/tree">
-            <TreePine size={18} style={{ color: "rgba(212,175,55,0.5)" }} />
-          </Link>
-        }
-      />
+    <div style={{ minHeight: "100vh", background: C.bg, color: "#fff", paddingBottom: 100, overflowX: "hidden" }}>
+
+      {/* Floating header overlay */}
+      <div style={{
+        position: "fixed", top: 0, left: 0, right: 0, zIndex: 30,
+        padding: "52px 20px 14px",
+        display: "flex", justifyContent: "space-between", alignItems: "center",
+        background: "linear-gradient(180deg, rgba(3,2,8,0.82) 0%, transparent 100%)",
+        pointerEvents: "none",
+      }}>
+        <button onClick={() => router.back()} style={{
+          width: 38, height: 38, borderRadius: 12, background: "rgba(12,10,24,0.9)",
+          border: "1px solid rgba(212,175,55,0.22)", boxShadow: "0 4px 12px rgba(0,0,0,0.6)",
+          cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+          pointerEvents: "auto",
+        }}>
+          <ArrowLeft size={18} style={{ color: "rgba(212,175,55,0.8)" }} />
+        </button>
+
+        <div style={{ position: "relative" }}>
+          <button onClick={() => setMoreOpen(v => !v)} style={{
+            width: 38, height: 38, borderRadius: 12, background: "rgba(12,10,24,0.9)",
+            border: "1px solid rgba(212,175,55,0.22)", boxShadow: "0 4px 12px rgba(0,0,0,0.6)",
+            cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+            pointerEvents: "auto",
+          }}>
+            <MoreHorizontal size={18} style={{ color: "rgba(212,175,55,0.8)" }} />
+          </button>
+          {moreOpen && (
+            <div style={{
+              position: "absolute", top: 44, right: 0, zIndex: 50,
+              background: "#0c0a18", border: "1px solid rgba(212,175,55,0.2)",
+              borderRadius: 12, overflow: "hidden", boxShadow: "0 8px 24px rgba(0,0,0,0.8)",
+              minWidth: 160,
+            }}>
+              <Link href="/tree" style={{ textDecoration: "none" }}>
+                <div style={{ padding: "12px 16px", fontSize: 13, color: "#fff",
+                  borderBottom: "0.5px solid rgba(212,175,55,0.1)" }}>
+                  Ver en el árbol
+                </div>
+              </Link>
+              {isSelf && (
+                <Link href="/profile" style={{ textDecoration: "none" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8,
+                    padding: "12px 16px", fontSize: 13, color: "#fff" }}>
+                    <Settings size={13} style={{ color: "rgba(212,175,55,0.6)" }} />
+                    Ajustes de perfil
+                  </div>
+                </Link>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
 
       {error ? (
-        <div style={{ padding: "60px 20px", textAlign: "center" }}>
+        <div style={{ padding: "120px 20px", textAlign: "center" }}>
           <p style={{ fontWeight: 700, color: "#fff", marginBottom: 8 }}>No disponible</p>
           <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginBottom: 20 }}>{error}</p>
-          <button onClick={() => router.back()}
-            style={{ background: "#c9a820", border: "none", borderRadius: 12, padding: "11px 24px",
-              color: "#030208", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+          <button onClick={() => router.back()} style={{
+            background: "#c9a820", border: "none", borderRadius: 12, padding: "11px 24px",
+            color: "#030208", fontWeight: 700, fontSize: 13, cursor: "pointer",
+          }}>
             Volver
           </button>
         </div>
       ) : (
         <>
-          {/* Hero */}
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center",
-            textAlign: "center", padding: "28px 20px 24px",
-            background: "linear-gradient(180deg,rgba(12,10,24,0.8) 0%,transparent 100%)" }}>
-            {/* Avatar ring */}
-            <div style={{ width: 96, height: 96, borderRadius: "50%",
-              backgroundImage: "conic-gradient(from 15deg,#d4af37 0%,#f5e070 16%,#8a6012 32%,#6030b0 48%,#2044c0 64%,#18b0c0 76%,#f0d060 88%,#d4af37 100%)",
-              padding: 3, boxShadow: "0 0 32px rgba(212,175,55,0.22), 0 8px 24px rgba(0,0,0,0.6)",
-              marginBottom: 14, flexShrink: 0 }}>
-              <div style={{ width: "100%", height: "100%", borderRadius: "50%", background: "#0c0a18",
-                overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                {person?.avatarUrl
-                  // eslint-disable-next-line @next/next/no-img-element
-                  ? <img src={person.avatarUrl} alt={person.first_name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  : <span style={{ fontSize: 28, fontWeight: 800, color: "#d4af37" }}>{initials}</span>}
+          {/* ── HERO ─────────────────────────────────────────────────────────── */}
+          <div style={{
+            position: "relative", minHeight: 370, overflow: "hidden",
+            background: "radial-gradient(ellipse 80% 70% at 50% 45%, rgba(28,18,65,0.75) 0%, rgba(3,2,8,0) 100%)",
+          }}>
+            {/* Micro-stars */}
+            {[...Array(22)].map((_, i) => (
+              <div key={i} style={{
+                position: "absolute", borderRadius: "50%",
+                width: i % 4 === 0 ? 2 : 1, height: i % 4 === 0 ? 2 : 1,
+                background: "rgba(212,175,55,0.6)",
+                left: `${(i * 41 + 13) % 100}%`,
+                top: `${(i * 27 + 9) % 92}%`,
+                opacity: 0.25 + (i % 3) * 0.18,
+              }} />
+            ))}
+
+            {/* Constellation lines (SVG) */}
+            <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}>
+              {leftRel && (
+                <line x1="86" y1="175" x2="114" y2="175"
+                  stroke="rgba(212,175,55,0.22)" strokeWidth="0.7" strokeDasharray="4,7" />
+              )}
+              {rightRel && (
+                <line x1="276" y1="175" x2="304" y2="175"
+                  stroke="rgba(212,175,55,0.22)" strokeWidth="0.7" strokeDasharray="4,7" />
+              )}
+            </svg>
+
+            {/* Main layout */}
+            <div style={{ paddingTop: 108, display: "flex", flexDirection: "column", alignItems: "center" }}>
+
+              {/* Portrait row */}
+              <div style={{ display: "flex", alignItems: "center", width: "100%", padding: "0 16px" }}>
+
+                {/* Left relative */}
+                <div style={{ width: 72, display: "flex", justifyContent: "center" }}>
+                  {leftRel && (
+                    <RelativeOrb rel={leftRel} onClick={() => router.push(`/persona/${leftRel.id}`)} />
+                  )}
+                </div>
+
+                {/* Portrait */}
+                <div style={{ flex: 1, display: "flex", justifyContent: "center" }}>
+                  <div style={{ position: "relative", width: 160, height: 160 }}>
+                    {/* Outer halo */}
+                    <div style={{
+                      position: "absolute", inset: -20, borderRadius: "50%",
+                      border: "1px solid rgba(212,175,55,0.1)",
+                      boxShadow: "0 0 50px rgba(212,175,55,0.08), inset 0 0 30px rgba(212,175,55,0.04)",
+                    }} />
+                    {/* Mid ring */}
+                    <div style={{
+                      position: "absolute", inset: -10, borderRadius: "50%",
+                      border: "1px solid rgba(212,175,55,0.18)",
+                    }} />
+                    {/* Portrait ring */}
+                    <div style={{
+                      position: "absolute", inset: 0, borderRadius: "50%",
+                      background: "conic-gradient(from 15deg,#d4af37 0%,#f5e070 16%,#8a6012 32%,#6030b0 48%,#2044c0 64%,#18b0c0 76%,#f0d060 88%,#d4af37 100%)",
+                      padding: 3,
+                      boxShadow: "0 0 55px rgba(212,175,55,0.38), 0 8px 32px rgba(0,0,0,0.7)",
+                    }}>
+                      <div style={{
+                        width: "100%", height: "100%", borderRadius: "50%",
+                        background: "#0c0a18", overflow: "hidden",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                      }}>
+                        {avatarSrc ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={avatarSrc} alt={firstName}
+                            style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        ) : (
+                          <span style={{ fontSize: 44, fontWeight: 800, color: "#d4af37" }}>
+                            {firstName[0] ?? "?"}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right relative */}
+                <div style={{ width: 72, display: "flex", justifyContent: "center" }}>
+                  {rightRel && (
+                    <RelativeOrb rel={rightRel} onClick={() => router.push(`/persona/${rightRel.id}`)} />
+                  )}
+                </div>
+              </div>
+
+              {/* Name / years / relation */}
+              <div style={{ textAlign: "center", padding: "14px 24px 20px", zIndex: 5 }}>
+                <h1 style={{
+                  fontSize: 34, fontWeight: 800, color: "#fff",
+                  letterSpacing: "-0.02em", lineHeight: 1.1, marginBottom: 5,
+                  fontFamily: "Georgia, 'Times New Roman', serif",
+                }}>
+                  {fullName || firstName}
+                </h1>
+                {yearsLine && (
+                  <p style={{ fontSize: 15, color: "rgba(255,255,255,0.45)", marginBottom: 8, fontWeight: 500 }}>
+                    {yearsLine}
+                  </p>
+                )}
+                {isSelf && (
+                  <div style={{
+                    display: "inline-flex", alignItems: "center", gap: 6,
+                    background: "rgba(212,175,55,0.12)", border: "1px solid rgba(212,175,55,0.25)",
+                    borderRadius: 100, padding: "5px 14px", marginBottom: 4,
+                  }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: "#d4af37" }}>Tú</span>
+                  </div>
+                )}
+                {!isSelf && relationLabel && (
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
+                    <span style={{ fontSize: 11, color: "#d4af37", lineHeight: 1 }}>✦</span>
+                    <span style={{ fontSize: 15, fontWeight: 600, color: "#d4af37" }}>{relationLabel}</span>
+                  </div>
+                )}
+                {person?.birth_city && (
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
+                    marginTop: 6, color: "rgba(255,255,255,0.3)", fontSize: 12 }}>
+                    <MapPin size={10} />
+                    <span>{[person.birth_city, person.birth_country].filter(Boolean).join(", ")}</span>
+                  </div>
+                )}
               </div>
             </div>
 
-            <h1 style={{ fontSize: 22, fontWeight: 800, color: "#fff", letterSpacing: "-0.02em", lineHeight: 1.2, marginBottom: 8 }}>
-              {fullName}
-            </h1>
-
-            {person?.hasAccount && (
-              <div style={{ display: "flex", alignItems: "center", gap: 6,
-                background: "rgba(40,200,100,0.12)", border: "1px solid rgba(40,200,100,0.2)",
-                borderRadius: 100, padding: "4px 12px", marginBottom: 8 }}>
-                <CheckCircle size={11} style={{ color: "rgba(40,200,100,0.8)" }} />
-                <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(40,200,100,0.7)" }}>En Ceiba</span>
+            {/* Floating event orbs */}
+            {floatingEvents[0] && (
+              <div style={{ position: "absolute", top: 72, right: 8, zIndex: 5 }}>
+                <EventOrb ev={floatingEvents[0]} birthCity={person?.birth_city} />
               </div>
             )}
-
-            {person?.birth_date && (
-              <div style={{ display: "flex", alignItems: "center", gap: 6, color: "rgba(212,175,55,0.55)", fontSize: 12, marginTop: 4 }}>
-                <Cake size={12} />
-                <span>{formatDate(person.birth_date)}</span>
-                {personAge !== null && <span style={{ color: "rgba(212,175,55,0.35)" }}>· {personAge} años</span>}
+            {floatingEvents[1] && (
+              <div style={{ position: "absolute", top: 140, left: 2, zIndex: 5 }}>
+                <EventOrb ev={floatingEvents[1]} />
               </div>
             )}
-            {person?.birth_city && (
-              <div style={{ display: "flex", alignItems: "center", gap: 6, color: "rgba(212,175,55,0.4)", fontSize: 12, marginTop: 3 }}>
-                <MapPin size={12} />
-                <span>{[person.birth_city, person.birth_country].filter(Boolean).join(", ")}</span>
+            {floatingEvents[2] && (
+              <div style={{ position: "absolute", bottom: 56, right: 8, zIndex: 5 }}>
+                <EventOrb ev={floatingEvents[2]} />
               </div>
             )}
           </div>
 
-          {/* Cards */}
-          <div style={{ padding: "0 16px", maxWidth: 480, margin: "0 auto", display: "flex", flexDirection: "column", gap: 12 }}>
+          {/* ── TABS ─────────────────────────────────────────────────────────── */}
+          <div style={{
+            display: "flex", borderBottom: "0.5px solid rgba(212,175,55,0.14)",
+            padding: "0 12px", background: "rgba(3,2,8,0.98)",
+            position: "sticky", top: 0, zIndex: 20,
+          }}>
+            {(Object.keys(TAB_LABELS) as TabKey[]).map(t => {
+              const active = tab === t;
+              return (
+                <button key={t} onClick={() => setTab(t)} style={{
+                  flex: 1, padding: "13px 4px", background: "none", border: "none",
+                  cursor: "pointer", fontSize: 13, fontWeight: active ? 700 : 500,
+                  color: active ? "#d4af37" : "rgba(255,255,255,0.32)",
+                  borderBottom: active ? "2px solid #d4af37" : "2px solid transparent",
+                  transition: "color 0.15s ease, border-color 0.15s ease",
+                }}>
+                  {TAB_LABELS[t]}
+                </button>
+              );
+            })}
+          </div>
 
-            {/* Datos biográficos */}
-            <div style={{ ...s3dCard("#0c0a18","212,175,55","#040300"), padding: "16px" }}>
-              <div style={{ position: "absolute", top: 0, left: "18%", right: "18%", height: 1, background: "rgba(212,175,55,0.35)" }} />
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-                <BookOpen size={14} style={{ color: "rgba(212,175,55,0.6)" }} />
-                <span style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>Su historia</span>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                {person?.birth_date && (
-                  <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-                    <div style={{ width: 34, height: 34, borderRadius: 10, background: "#100808",
-                      border: "1px solid rgba(220,120,60,0.2)", display: "flex", alignItems: "center",
-                      justifyContent: "center", flexShrink: 0 }}>
-                      <Cake size={14} style={{ color: "rgba(220,120,60,0.7)" }} />
-                    </div>
+          {/* ── TAB CONTENT ──────────────────────────────────────────────────── */}
+          <div style={{ padding: "20px 16px", maxWidth: 500, margin: "0 auto" }}>
+
+            {/* HISTORIA TAB */}
+            {tab === "historia" && (
+              <div>
+                {isSelf && (
+                  <div style={{
+                    background: "rgba(212,175,55,0.06)", border: "1px solid rgba(212,175,55,0.15)",
+                    borderRadius: 16, padding: "14px 16px", marginBottom: 20,
+                    display: "flex", alignItems: "center", justifyContent: "space-between",
+                  }}>
                     <div>
-                      <p style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", textTransform: "uppercase",
-                        letterSpacing: "0.08em", fontWeight: 700, marginBottom: 2 }}>Fecha de nacimiento</p>
-                      <p style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>{formatDate(person.birth_date)}</p>
-                      {personAge !== null && <p style={{ fontSize: 11, color: "rgba(212,175,55,0.4)", marginTop: 1 }}>{personAge} años</p>}
-                    </div>
-                  </div>
-                )}
-                {person?.birth_city && (
-                  <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-                    <div style={{ width: 34, height: 34, borderRadius: 10, background: "#080b18",
-                      border: "1px solid rgba(60,120,220,0.2)", display: "flex", alignItems: "center",
-                      justifyContent: "center", flexShrink: 0 }}>
-                      <MapPin size={14} style={{ color: "rgba(60,120,220,0.7)" }} />
-                    </div>
-                    <div>
-                      <p style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", textTransform: "uppercase",
-                        letterSpacing: "0.08em", fontWeight: 700, marginBottom: 2 }}>Lugar de nacimiento</p>
-                      <p style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>
-                        {[person.birth_city, person.birth_country].filter(Boolean).join(", ")}
+                      <p style={{ fontSize: 13, fontWeight: 700, color: "#fff", marginBottom: 3 }}>
+                        Tu historia en Ceiba
+                      </p>
+                      <p style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", lineHeight: 1.5 }}>
+                        Conectado con {relatives.length} familiar{relatives.length !== 1 ? "es" : ""} en Ceiba.
                       </p>
                     </div>
+                    <Link href="/profile" style={{ textDecoration: "none",
+                      background: "rgba(212,175,55,0.12)", border: "1px solid rgba(212,175,55,0.25)",
+                      borderRadius: 10, padding: "7px 14px",
+                      fontSize: 11, fontWeight: 700, color: "#d4af37", flexShrink: 0 }}>
+                      Editar
+                    </Link>
                   </div>
                 )}
-                {!person?.birth_date && !person?.birth_city && (
-                  <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", fontStyle: "italic" }}>
-                    Aún no hay información biográfica registrada.
-                  </p>
-                )}
-              </div>
-            </div>
 
-            {/* Familia en Ceiba */}
-            {(family.length > 0 || totalInSpace > 1) && (
-              <div style={{ ...s3dCard("#0c0a18","60,180,120","#020c06"), padding: "16px" }}>
-                <div style={{ position: "absolute", top: 0, left: "18%", right: "18%", height: 1, background: "rgba(60,180,120,0.35)" }} />
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                  <Users size={14} style={{ color: "rgba(60,180,120,0.7)" }} />
-                  <span style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>Familia en Ceiba</span>
-                </div>
-                {family.length > 0 ? (
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                    {family.map(m => (
-                      <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 6,
-                        background: "rgba(60,180,120,0.1)", border: "1px solid rgba(60,180,120,0.2)",
-                        borderRadius: 100, padding: "5px 10px" }}>
-                        <div style={{ width: 20, height: 20, borderRadius: "50%", background: "rgba(60,180,120,0.2)",
-                          display: "flex", alignItems: "center", justifyContent: "center",
-                          fontSize: 9, fontWeight: 800, color: "rgba(60,180,120,0.9)" }}>
-                          {m.first_name[0]}
-                        </div>
-                        <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.75)" }}>
-                          {m.first_name} {m.first_surname || ""}
-                        </span>
-                      </div>
-                    ))}
+                {[...(birthEvent ? [birthEvent] : []), ...events].length === 0 ? (
+                  <div style={{ padding: "48px 0", textAlign: "center" }}>
+                    <div style={{ fontSize: 32, marginBottom: 14, opacity: 0.3 }}>✦</div>
+                    <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 14, fontWeight: 600, marginBottom: 6 }}>
+                      Sin momentos registrados
+                    </p>
+                    <p style={{ color: "rgba(255,255,255,0.22)", fontSize: 12, lineHeight: 1.5 }}>
+                      Agrega un primer momento para comenzar{"\n"}la historia de {firstName}.
+                    </p>
                   </div>
                 ) : (
-                  <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)" }}>
-                    Hay {totalInSpace - 1} familiar{totalInSpace - 1 !== 1 ? "es" : ""} en el árbol. Invítalos a unirse a Ceiba.
+                  <div style={{ position: "relative" }}>
+                    {/* Timeline vertical line */}
+                    <div style={{
+                      position: "absolute", left: 15, top: 20, bottom: 20,
+                      width: 1,
+                      background: "linear-gradient(180deg,rgba(212,175,55,0.45) 0%,rgba(212,175,55,0.06) 100%)",
+                    }} />
+                    {[...(birthEvent ? [birthEvent] : []), ...events.slice(0, 6)].map((ev) => {
+                      const isGold = ev.event_type === "birth";
+                      const col = isGold ? "212,175,55"
+                        : ev.event_type === "marriage" ? "220,120,60"
+                        : ev.event_type === "death" ? "160,160,190"
+                        : ev.event_type === "graduation" ? "60,130,240"
+                        : "160,80,240";
+                      return (
+                        <div key={ev.id} style={{ display: "flex", gap: 18, marginBottom: 18 }}>
+                          {/* Dot */}
+                          <div style={{
+                            position: "relative", zIndex: 2, flexShrink: 0,
+                            width: 30, display: "flex", alignItems: "flex-start", justifyContent: "center",
+                            paddingTop: 16,
+                          }}>
+                            <div style={{
+                              width: 18, height: 18, borderRadius: "50%",
+                              background: `rgba(${col},0.15)`,
+                              border: `1.5px solid rgba(${col},0.55)`,
+                              display: "flex", alignItems: "center", justifyContent: "center",
+                              fontSize: 8, color: `rgba(${col},0.9)`,
+                            }}>
+                              {EVENT_SYMBOL[ev.event_type] ?? "•"}
+                            </div>
+                          </div>
+                          {/* Card */}
+                          <div style={{
+                            flex: 1, background: "rgba(12,10,24,0.85)", borderRadius: 14,
+                            padding: "13px 15px",
+                            borderTop: `1.5px solid rgba(${col},0.22)`,
+                            borderLeft: `1px solid rgba(${col},0.1)`,
+                            borderBottom: "2px solid rgba(0,0,0,0.5)",
+                            borderRight: "1px solid rgba(0,0,0,0.4)",
+                          }}>
+                            <div style={{ fontSize: 16, fontWeight: 800, color: `rgb(${col})`, marginBottom: 3 }}>
+                              {eventYear(ev.event_date)}
+                            </div>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: "#fff", lineHeight: 1.35, marginBottom: 3 }}>
+                              {ev.event_type === "birth" && person?.birth_city
+                                ? `Nació en ${person.birth_city}${person.birth_country ? `, ${person.birth_country}` : ""}`
+                                : ev.title}
+                            </div>
+                            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.38)" }}>
+                              {formatDate(ev.event_date)}
+                            </div>
+                            {ev.description && (
+                              <div style={{
+                                fontSize: 11, color: "rgba(255,255,255,0.32)", marginTop: 7,
+                                fontStyle: "italic", lineHeight: 1.55,
+                              }}>
+                                {ev.description}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* GALERÍA TAB */}
+            {tab === "galeria" && (
+              <div style={{ padding: "48px 0", textAlign: "center" }}>
+                <div style={{ fontSize: 42, marginBottom: 16, opacity: 0.35 }}>◻</div>
+                <p style={{ color: "rgba(255,255,255,0.45)", fontSize: 14, fontWeight: 600, marginBottom: 6 }}>
+                  Galería no disponible aún
+                </p>
+                <p style={{ color: "rgba(255,255,255,0.25)", fontSize: 12, lineHeight: 1.6 }}>
+                  Las fotos de {firstName} aparecerán aquí<br />cuando se agreguen al álbum familiar.
+                </p>
+                <Link href="/photos" style={{
+                  display: "inline-block", marginTop: 22,
+                  background: "rgba(212,175,55,0.1)", border: "1px solid rgba(212,175,55,0.25)",
+                  borderRadius: 100, padding: "9px 22px", textDecoration: "none",
+                  fontSize: 12, fontWeight: 600, color: "#d4af37",
+                }}>
+                  Abrir álbum familiar
+                </Link>
+              </div>
+            )}
+
+            {/* RECUERDOS TAB */}
+            {tab === "recuerdos" && (() => {
+              const memories = events.filter(ev => ev.description && ev.description.length > 0);
+              return memories.length === 0 ? (
+                <div style={{ padding: "48px 0", textAlign: "center" }}>
+                  <div style={{ fontSize: 32, marginBottom: 14, opacity: 0.3 }}>◈</div>
+                  <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 14, fontWeight: 600, marginBottom: 6 }}>
+                    Sin recuerdos todavía
                   </p>
-                )}
-              </div>
-            )}
-
-            {/* Eventos */}
-            {events.length > 0 && (
-              <div style={{ ...s3dCard("#0c0a18","160,80,240","#060210"), padding: "16px" }}>
-                <div style={{ position: "absolute", top: 0, left: "18%", right: "18%", height: 1, background: "rgba(160,80,240,0.35)" }} />
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-                  <Calendar size={14} style={{ color: "rgba(160,80,240,0.7)" }} />
-                  <span style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>Momentos de la familia</span>
+                  <p style={{ color: "rgba(255,255,255,0.22)", fontSize: 12, lineHeight: 1.5 }}>
+                    Los momentos especiales de {firstName}<br />vivirán aquí.
+                  </p>
                 </div>
+              ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  {events.slice(0, 4).map(ev => {
-                    const col = EVENT_COLOR[ev.event_type] ?? "160,80,240";
-                    return (
-                      <div key={ev.id} style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-                        <div style={{ width: 32, height: 32, borderRadius: 9, flexShrink: 0,
-                          background: `rgba(${col},0.12)`, border: `1px solid rgba(${col},0.2)`,
-                          display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>
-                          {EVENT_EMOJI[ev.event_type] ?? "📅"}
-                        </div>
-                        <div>
-                          <p style={{ fontSize: 13, fontWeight: 700, color: "#fff", lineHeight: 1.3 }}>{ev.title}</p>
-                          <p style={{ fontSize: 11, color: `rgba(${col},0.5)`, marginTop: 2 }}>
-                            {EVENT_LABEL[ev.event_type] ?? "Evento"} · {formatDate(ev.event_date)}
-                          </p>
-                          {ev.description && (
-                            <p style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 3, fontStyle: "italic" }}>
-                              "{ev.description}"
-                            </p>
-                          )}
-                        </div>
+                  {memories.slice(0, 5).map(ev => (
+                    <div key={ev.id} style={{
+                      background: "rgba(12,10,24,0.85)", borderRadius: 14, padding: "15px 16px",
+                      border: "1px solid rgba(212,175,55,0.1)",
+                    }}>
+                      <div style={{ fontSize: 11, color: "rgba(212,175,55,0.55)", marginBottom: 4 }}>
+                        {formatDate(ev.event_date)} · {EVENT_LABEL[ev.event_type] ?? ev.event_type}
                       </div>
-                    );
-                  })}
+                      <div style={{ fontSize: 14, fontWeight: 700, color: "#fff", marginBottom: 7, lineHeight: 1.3 }}>
+                        {ev.title}
+                      </div>
+                      <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", lineHeight: 1.6, fontStyle: "italic" }}>
+                        "{ev.description}"
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                {events.length > 4 && (
-                  <Link href="/events" style={{ display: "block", textAlign: "center",
-                    fontSize: 11, color: "rgba(160,80,240,0.5)", fontWeight: 600, marginTop: 14,
-                    textDecoration: "none" }}>
-                    Ver todos los momentos →
-                  </Link>
+              );
+            })()}
+
+            {/* ATRIBUTOS TAB */}
+            {tab === "atributos" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {person?.birth_date && (
+                  <AttrRow icon="✦" iconColor="212,175,55" label="Fecha de nacimiento"
+                    value={formatDate(person.birth_date)} />
+                )}
+                {(person?.birth_city || person?.birth_country) && (
+                  <AttrRow icon="◎" iconColor="60,130,220" label="Lugar de nacimiento"
+                    value={[person.birth_city, person.birth_country].filter(Boolean).join(", ")} />
+                )}
+                {person?.hasAccount && (
+                  <AttrRow icon="✓" iconColor="40,200,100" label="Cuenta Ceiba" value="Conectado a Ceiba" />
+                )}
+                {!person?.birth_date && !person?.birth_city && !person?.hasAccount && (
+                  <div style={{ padding: "48px 0", textAlign: "center" }}>
+                    <div style={{ fontSize: 28, marginBottom: 12, opacity: 0.25 }}>◇</div>
+                    <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 13 }}>Sin atributos registrados</p>
+                  </div>
                 )}
               </div>
             )}
-
-            {/* CTAs */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, paddingBottom: 8 }}>
-              <Link href="/tree" style={{ textDecoration: "none" }}>
-                <div style={{ ...s3dCard("#0c0a18","212,175,55","#040300"),
-                  padding: "18px 12px", display: "flex", flexDirection: "column",
-                  alignItems: "center", gap: 8, textAlign: "center" }}>
-                  <TreePine size={18} style={{ color: "rgba(212,175,55,0.7)" }} />
-                  <span style={{ fontSize: 11, fontWeight: 700, color: "#fff" }}>Ver en el árbol</span>
-                </div>
-              </Link>
-              <Link href="/events" style={{ textDecoration: "none" }}>
-                <div style={{ ...s3dCard("#0c0a18","160,80,240","#060210"),
-                  padding: "18px 12px", display: "flex", flexDirection: "column",
-                  alignItems: "center", gap: 8, textAlign: "center" }}>
-                  <Calendar size={18} style={{ color: "rgba(160,80,240,0.7)" }} />
-                  <span style={{ fontSize: 11, fontWeight: 700, color: "#fff" }}>Agregar momento</span>
-                </div>
-              </Link>
-            </div>
           </div>
         </>
       )}
 
       <CosmicNav />
+    </div>
+  );
+}
+
+function AttrRow({ icon, iconColor, label, value }: {
+  icon: string; iconColor: string; label: string; value: string;
+}) {
+  return (
+    <div style={{
+      display: "flex", alignItems: "center", gap: 14,
+      background: "rgba(12,10,24,0.85)", borderRadius: 14, padding: "14px 16px",
+      border: `1px solid rgba(${iconColor},0.1)`,
+    }}>
+      <div style={{
+        width: 38, height: 38, borderRadius: 11, flexShrink: 0,
+        background: `rgba(${iconColor},0.08)`,
+        border: `1px solid rgba(${iconColor},0.15)`,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: 14, color: `rgba(${iconColor},0.8)`,
+      }}>
+        {icon}
+      </div>
+      <div>
+        <div style={{
+          fontSize: 9.5, fontWeight: 700, color: "rgba(212,175,55,0.45)",
+          textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 3,
+        }}>
+          {label}
+        </div>
+        <div style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>{value}</div>
+      </div>
     </div>
   );
 }

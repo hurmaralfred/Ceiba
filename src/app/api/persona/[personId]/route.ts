@@ -24,10 +24,7 @@ export async function GET(
     : [];
   const allPersonIds = myPersonId ? [myPersonId, ...familyPersonIds] : [];
 
-  // Allow viewing your own profile even without a claim (handled via claim check below)
-  // If we have a person identity, verify this person is in our family space
   if (myPersonId && !allPersonIds.includes(personId)) {
-    // Allow if the viewer IS the person (their own page via a claim)
     const { data: selfClaim } = await service
       .from("person_claims")
       .select("person_id")
@@ -57,25 +54,43 @@ export async function GET(
     .is("revoked_at", null)
     .maybeSingle();
 
-  // Get avatar URL if they have an account
+  // Get avatar URL + config + relation type + is_deceased from family_members (if account exists)
   let avatarUrl: string | null = null;
   let avatarConfig: any = null;
+  let is_deceased = false;
+  let relationType: string | null = null;
+
   if (claim?.user_id) {
-    const { data: profile } = await service
-      .from("profiles")
-      .select("avatar_path, avatar_config")
-      .eq("user_id", claim.user_id)
-      .maybeSingle();
+    const [{ data: profile }, { data: member }] = await Promise.all([
+      service
+        .from("profiles")
+        .select("avatar_path, avatar_config")
+        .eq("user_id", claim.user_id)
+        .maybeSingle(),
+      service
+        .from("family_members")
+        .select("is_deceased, relation_type")
+        .eq("profile_id", claim.user_id)
+        .maybeSingle(),
+    ]);
+
     if (profile?.avatar_path) {
       const { data: urlData } = service.storage.from("avatars").getPublicUrl(profile.avatar_path);
       avatarUrl = urlData.publicUrl;
     }
     avatarConfig = profile?.avatar_config ?? null;
+
+    if (member) {
+      is_deceased = member.is_deceased ?? false;
+      relationType = (member as any).relation_type ?? null;
+    }
   }
 
-  // Get other persons in the family space who have Ceiba accounts
+  // Get sibling persons in the family space who have Ceiba accounts (for relatives + familyInCeiba)
   const siblingPersonIds = allPersonIds.filter((id) => id !== personId);
   let familyInCeiba: any[] = [];
+  let relatives: any[] = [];
+
   if (siblingPersonIds.length > 0) {
     const { data: siblingClaims } = await service
       .from("person_claims")
@@ -86,16 +101,43 @@ export async function GET(
 
     if (siblingClaims && siblingClaims.length > 0) {
       const claimedPersonIds = (siblingClaims as any[]).map((c) => c.person_id);
-      const { data: siblingPersons } = await service
-        .from("persons")
-        .select("id, first_name, first_surname")
-        .in("id", claimedPersonIds);
+      const siblingUserIds = (siblingClaims as any[]).map((c) => c.user_id);
+
+      const [{ data: siblingPersons }, { data: siblingProfiles }] = await Promise.all([
+        service
+          .from("persons")
+          .select("id, first_name, first_surname, birth_date")
+          .in("id", claimedPersonIds),
+        service
+          .from("profiles")
+          .select("user_id, avatar_path")
+          .in("user_id", siblingUserIds),
+      ]);
+
       familyInCeiba = (siblingPersons ?? []) as any[];
+
+      relatives = (siblingPersons ?? []).slice(0, 4).map((sp: any) => {
+        const relClaim = (siblingClaims as any[]).find((c: any) => c.person_id === sp.id);
+        const relProfile = relClaim
+          ? (siblingProfiles ?? []).find((p: any) => p.user_id === relClaim.user_id)
+          : null;
+        let relAvatarUrl: string | null = null;
+        if (relProfile?.avatar_path) {
+          const { data: urlData } = service.storage.from("avatars").getPublicUrl(relProfile.avatar_path);
+          relAvatarUrl = urlData.publicUrl;
+        }
+        return {
+          id: sp.id,
+          first_name: sp.first_name,
+          first_surname: sp.first_surname ?? null,
+          birth_year: sp.birth_date ? new Date(sp.birth_date + "T12:00:00").getFullYear() : null,
+          avatarUrl: relAvatarUrl,
+        };
+      });
     }
   }
 
   // Get recent life events from the family space
-  // Find all user_ids in family space for events query
   const { data: allClaims } = await service
     .from("person_claims")
     .select("user_id")
@@ -109,8 +151,8 @@ export async function GET(
     .from("family_events")
     .select("id, title, event_type, event_date, description, created_at")
     .in("created_by", familyUserIds)
-    .order("event_date", { ascending: false })
-    .limit(6);
+    .order("event_date", { ascending: true })
+    .limit(8);
 
   return NextResponse.json({
     person: {
@@ -118,7 +160,10 @@ export async function GET(
       avatarUrl,
       avatarConfig,
       hasAccount: !!claim,
+      is_deceased,
     },
+    relationType,
+    relatives,
     familyInCeiba,
     totalInSpace: allPersonIds.length,
     events: (events ?? []) as any[],
