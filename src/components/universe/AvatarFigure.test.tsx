@@ -42,39 +42,47 @@ function makeNode(overrides: Partial<UniverseNode> = {}): UniverseNode {
 
 // ─── Photo vs SVG face ────────────────────────────────────────────────────────
 
-describe('AvatarFigure — avatar rendering (photos never shown on SVG)', () => {
-  it('always renders the generated SVG face — never an <image> element', () => {
+describe('AvatarFigure — avatar rendering', () => {
+  it('renders <image href> when avatarUrl is set (real user photo)', () => {
     const { container } = render(
       <AvatarFigure node={makeNode({ avatarUrl: 'https://example.com/photo.jpg' })} />,
     )
-    // Profile photos are intentionally NOT rendered inside the SVG avatar
-    expect(container.querySelector('image[href]')).toBeNull()
-    // The generated face is always present (eye sclera circles)
-    const whites = Array.from(container.querySelectorAll('circle')).filter(
-      c => c.getAttribute('fill') === 'white',
-    )
-    expect(whites.length).toBeGreaterThan(0)
+    const img = container.querySelector('image[href]')
+    expect(img).not.toBeNull()
+    expect(img!.getAttribute('href')).toBe('https://example.com/photo.jpg')
   })
 
-  it('renders SVG face when avatarUrl is null', () => {
+  it('renders SVG illustrated portrait when avatarUrl is null', () => {
     const { container } = render(
       <AvatarFigure node={makeNode({ avatarUrl: null })} />,
     )
+    // No photo element — the illustrated face is shown instead
     expect(container.querySelector('image[href]')).toBeNull()
+    // Eye whites are present
     const whites = Array.from(container.querySelectorAll('circle')).filter(
       c => c.getAttribute('fill') === 'white',
     )
     expect(whites.length).toBeGreaterThan(0)
   })
 
-  it('eyelid paths (stroke #0A0200) are always present', () => {
+  it('eyelid lash paths (stroke #0A0200) are present in illustrated portrait', () => {
     const { container } = render(
-      <AvatarFigure node={makeNode({ avatarUrl: 'https://example.com/photo.jpg' })} />,
+      <AvatarFigure node={makeNode({ avatarUrl: null })} />,
     )
     const eyelids = Array.from(container.querySelectorAll('path')).filter(
       p => p.getAttribute('stroke') === '#0A0200',
     )
     expect(eyelids.length).toBeGreaterThan(0)
+  })
+
+  it('avatarConfig takes priority over avatarUrl — renders portrait not photo', () => {
+    const { container } = render(
+      <AvatarFigure node={makeNode({
+        avatarUrl: 'https://example.com/photo.jpg',
+        avatarConfig: { gender: 'male', skinTone: 1, hairStyle: 0, hairColor: 0, eyeColor: 0, faceShape: 0, accessories: -1 },
+      })} />,
+    )
+    expect(container.querySelector('image[href]')).toBeNull()
   })
 })
 

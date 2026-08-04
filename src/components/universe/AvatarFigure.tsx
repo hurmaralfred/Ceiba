@@ -235,11 +235,13 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
   const elder   = node.ageGroup === 'elder'
   const child   = node.ageGroup === 'child'
   const oKey    = getOutfitKey(node)
+  // Real uploaded photo takes priority over illustrated portrait; avatarConfig overrides both
+  const hasPhoto = !!node.avatarUrl && !cfg
   const hairStyle  = cfg ? cfg.hairStyle % (female ? 4 : 5) : (seed >> 2) % (female ? 4 : 5)
   const faceShape  = cfg?.faceShape ?? 0
   const acc        = cfg?.accessories ?? -1 // -1 = hash-based
-  const hasGlasses = acc >= 0 ? (acc === 1 || acc === 3) : (!child && (seed >> 12) % 5 === 0)
-  const hasBeard   = acc >= 0 ? (!female && (acc === 2 || acc === 3)) : (!female && !child && (seed >> 16) % 4 === 0)
+  const hasGlasses = acc >= 0 ? (acc === 1 || acc === 3) : (!child && !hasPhoto && (seed >> 12) % 5 === 0)
+  const hasBeard   = acc >= 0 ? (!female && (acc === 2 || acc === 3)) : (!female && !child && !hasPhoto && (seed >> 16) % 4 === 0)
   const hasEarrings = acc >= 0 ? (female && !child && (acc === 2 || acc === 3)) : false
 
   const skin       = cfg ? SKIN_TONES[cfg.skinTone % 6] : SKIN_TONES[seed % 6]
@@ -466,7 +468,22 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
 
             {/* ══ PORTRAIT ══════════════════════════════════════════════════ */}
 
-            {(
+            {hasPhoto ? (
+              <>
+                <circle cx={CX} cy={CY} r={R} fill="rgba(8,6,4,0.92)" />
+                <image
+                  href={node.avatarUrl ?? undefined}
+                  x={CX - R} y={CY - R}
+                  width={R * 2} height={R * 2}
+                  preserveAspectRatio="xMidYMid slice"
+                  clipPath={`url(#${uid}pc)`}
+                />
+                <circle cx={CX} cy={CY} r={R - 2}
+                  fill="none" stroke="rgba(0,0,0,0.25)"
+                  strokeWidth="5" clipPath={`url(#${uid}pc)`}
+                />
+              </>
+            ) : (
               <g clipPath={`url(#${uid}pc)`}>
                 {/* Dark background */}
                 <circle cx={CX} cy={CY} r={R} fill={`url(#${uid}bg)`} />
