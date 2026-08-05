@@ -970,6 +970,8 @@ export function GalaxyOrbitView({
       nodesRef.current.forEach(n => { if (newFrozen.has(n.id)) n.speed = 0; });
       frozenIdsRef.current = newFrozen;
       selectedRef.current  = hit.id;
+      // Bring frozen nodes into activeSet so they render fully (not as ghost)
+      activeSetRef.current = new Set([...activeSetRef.current, ...newFrozen]);
       setSelectedNode({ ...hit, speed: 0 });
     } else {
       // Tap on empty space — unfreeze everything
@@ -979,11 +981,13 @@ export function GalaxyOrbitView({
       });
       frozenIdsRef.current = new Set();
       selectedRef.current  = null;
+      // Restore activeSet to default (orbit-1 only)
+      activeSetRef.current = new Set(nodesRef.current.filter(n => n.orbit === 1).map(n => n.id));
       setSelectedNode(null);
     }
   }, [getNodeAt]);
 
-  const handlePointerMove = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
     const rect = canvasRef.current!.getBoundingClientRect();
     mouseRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
   }, []);
@@ -1004,11 +1008,16 @@ export function GalaxyOrbitView({
     });
     frozenIdsRef.current = new Set();
     selectedRef.current  = null;
+    activeSetRef.current = new Set(nodesRef.current.filter(n => n.orbit === 1).map(n => n.id));
     setSelectedNode(null);
   }, []);
 
   return (
-    <div style={{ position:"relative", width:"100%", height:"100%", overflow:"hidden" }}>
+    <div
+      style={{ position:"relative", width:"100%", height:"100%", overflow:"hidden" }}
+      onPointerMove={handlePointerMove}
+      onPointerLeave={() => { mouseRef.current = { x:-9999, y:-9999 }; }}
+    >
       <style>{`
         @keyframes gov-up {
           from { opacity:0; transform:translateX(-50%) translateY(18px); }
@@ -1019,9 +1028,7 @@ export function GalaxyOrbitView({
       <canvas
         ref={canvasRef}
         style={{ width:"100%", height:"100%", display:"block", touchAction:"none", cursor:"pointer" }}
-        onPointerMove={handlePointerMove}
         onPointerDown={handlePointerDown}
-        onPointerLeave={() => { mouseRef.current = { x:-9999, y:-9999 }; }}
       />
 
       {/* ── Orbit buttons on star ── */}
