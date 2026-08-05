@@ -570,9 +570,9 @@ export function GalaxyOrbitView({
       let hoveredId: string | null = null;
       for (const n of nodesRef.current) {
         if (activeSet.size > 0 && !activeSet.has(n.id)) continue;
-        const { nx: px, ny: py } = nodePos(n, cx, cy, w, t - 1);
+        const { nx: px, ny: py } = nodePos(n, cx, cy, w, t);
         const nr0 = scaledNR(n.orbit, depthOf(n.angle));
-        if (Math.hypot(mouseRef.current.x - (px + n.repX), mouseRef.current.y - (py + n.repY)) < nr0 + 22) {
+        if (Math.hypot(mouseRef.current.x - (px + n.repX), mouseRef.current.y - (py + n.repY)) < nr0 + 28) {
           hoveredId = n.id; break;
         }
       }
@@ -1074,111 +1074,72 @@ export function GalaxyOrbitView({
         </>
       )}
 
-      {/* ── Member panel ── */}
-      {selectedNode && (
-        <div style={{
-          position:"absolute", bottom:84, left:"50%",
-          transform:"translateX(-50%)",
-          width:"min(304px, calc(100vw - 32px))",
-          background:"rgba(5,2,12,0.97)",
-          backdropFilter:"blur(28px)", WebkitBackdropFilter:"blur(28px)",
-          border:"0.5px solid rgba(212,175,55,0.30)",
-          borderTop:"1px solid rgba(212,175,55,0.55)",
-          borderRadius:22, padding:"16px 18px",
-          boxShadow:"0 24px 64px rgba(0,0,0,0.95)",
-          animation:"gov-up 0.20s cubic-bezier(.22,.8,.36,1)",
-          zIndex:30,
-        }}>
-          <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:12 }}>
-            <div style={{
-              width:48, height:48, borderRadius:"50%", flexShrink:0, overflow:"hidden",
-              border:`1.5px solid rgba(212,175,55,${selectedNode.joined ? "0.55" : "0.22"})`,
-              background: selectedNode.deceased ? "rgba(150,180,210,0.10)" : "rgba(212,175,55,0.08)",
-            }}>
-              {selectedNode.avatarUrl
-                ? <img src={selectedNode.avatarUrl} alt={selectedNode.firstName}
-                    style={{ width:"100%", height:"100%", objectFit:"cover" }} />
-                : <div style={{
-                    width:"100%", height:"100%", display:"flex",
-                    alignItems:"center", justifyContent:"center",
-                    fontSize:18, fontWeight:700,
-                    color: selectedNode.deceased ? "rgba(180,200,225,0.70)"
-                         : selectedNode.joined ? GOLD : "rgba(184,160,216,0.85)",
-                  }}>
-                    {selectedNode.deceased ? "✝" : selectedNode.firstName[0]?.toUpperCase()}
-                  </div>
-              }
-            </div>
-
-            <div style={{ flex:1, minWidth:0 }}>
-              <div style={{
-                fontSize:15, fontWeight:700,
-                color: selectedNode.deceased ? "rgba(180,200,225,0.85)" : "#fff",
-                overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
-                fontStyle: selectedNode.deceased ? "italic" : "normal",
-              }}>
-                {selectedNode.name}
-              </div>
-              <div style={{ marginTop:2 }}>
+      {/* ── Floating info card — anchored near the selected node ── */}
+      {selectedNode && selPos && (() => {
+        const cardW = 216;
+        const cw = canvasRef.current?.offsetWidth ?? 800;
+        const cardX = Math.max(12, Math.min(selPos.x - cardW / 2, cw - cardW - 12));
+        const aboveY = selPos.y - selPos.r - 126;
+        const cardY = aboveY > 56 ? aboveY : selPos.y + selPos.r + 14;
+        return (
+          <div style={{
+            position:"absolute", left:cardX, top:cardY, width:cardW,
+            background:"rgba(4,2,10,0.72)",
+            backdropFilter:"blur(22px)", WebkitBackdropFilter:"blur(22px)",
+            border:"0.5px solid rgba(212,175,55,0.28)",
+            borderTop:"1px solid rgba(212,175,55,0.48)",
+            borderRadius:16, padding:"11px 13px",
+            boxShadow:"0 12px 40px rgba(0,0,0,0.75)",
+            animation:"gov-up 0.18s cubic-bezier(.22,.8,.36,1)",
+            zIndex:30,
+          }}>
+            {/* Name + relation + close */}
+            <div style={{ display:"flex", alignItems:"flex-start", gap:8, marginBottom:9 }}>
+              <div style={{ flex:1, minWidth:0 }}>
                 <div style={{
-                  fontSize:12, fontWeight:600,
-                  color: selectedNode.deceased ? "rgba(180,200,225,0.65)"
-                       : selectedNode.joined ? "rgba(245,220,100,0.80)" : "rgba(200,180,255,0.75)",
+                  fontSize:14, fontWeight:700, color: selectedNode.deceased ? "rgba(175,205,235,0.90)" : "#fff",
+                  fontStyle: selectedNode.deceased ? "italic" : "normal",
+                  overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
                 }}>
+                  {selectedNode.name}
+                </div>
+                <div style={{ fontSize:11, fontWeight:600, marginTop:2,
+                  color: selectedNode.deceased ? "rgba(175,200,225,0.60)"
+                       : selectedNode.joined ? "rgba(245,220,100,0.78)" : "rgba(200,180,255,0.72)" }}>
                   {(RELATION_LABELS as Record<string, string>)[selectedNode.relationType] ?? selectedNode.relationType}
                   {selectedNode.deceased ? " · En memoria" : ""}
                   {selectedNode.joined && !selectedNode.deceased ? " · Conectado" : ""}
                 </div>
-                <div style={{
-                  fontSize:8, letterSpacing:"0.10em", textTransform:"uppercase", marginTop:2,
-                  color: selectedNode.deceased ? "rgba(150,180,210,0.38)" : "rgba(212,175,55,0.35)",
-                }}>
-                  {["Órbita directa","Órbita extendida","Órbita afinidad"][selectedNode.orbit-1]}
-                </div>
               </div>
+              <button onClick={close} style={{
+                background:"none", border:"none", cursor:"pointer",
+                color:"rgba(255,255,255,0.28)", fontSize:18, lineHeight:1, padding:0, flexShrink:0, marginTop:1,
+              }}>×</button>
             </div>
-
-            <button onClick={close} style={{
-              background:"none", border:"none", cursor:"pointer",
-              color:"rgba(255,255,255,0.22)", fontSize:22, lineHeight:1, padding:0, flexShrink:0,
-            }}>×</button>
-          </div>
-
-
-          {/* Expandir / Contraer — primary action */}
-          <button onClick={() => {
-            const isExp = expandedId === selectedNode.id;
-            setExpandedId(isExp ? null : selectedNode.id);
-          }} style={{
-            width:"100%", padding:"14px 0", borderRadius:14, cursor:"pointer",
-            fontSize:15, fontWeight:700, marginBottom:8,
-            background: expandedId === selectedNode.id
-              ? "rgba(212,175,55,0.22)" : "rgba(212,175,55,0.10)",
-            border:"1px solid rgba(212,175,55,0.50)", color:GOLD,
-          }}>
-            {expandedId === selectedNode.id ? "✦ Contraer familia" : "✦ Expandir familia"}
-          </button>
-          <div style={{ display:"flex", gap:8 }}>
-            <button onClick={() => { onEditMember(selectedNode.id); close(); }} style={{
-              flex:1, padding:"12px 0", borderRadius:13, cursor:"pointer",
-              fontSize:13, fontWeight:600, background:"rgba(255,255,255,0.05)",
-              border:"0.5px solid rgba(255,255,255,0.18)", color:"rgba(255,255,255,0.80)",
-            }}>
-              Editar
-            </button>
-            {!selectedNode.joined && (
-              <button onClick={() => { onInviteMember(selectedNode.id); close(); }} style={{
-                flex:1, padding:"12px 0", borderRadius:13, cursor:"pointer",
-                fontSize:13, fontWeight:700, background:"#c9a820",
-                borderTop:"1.5px solid #f5e060", borderBottom:"2.5px solid #6a5600",
-                border:"none", color:"#030208",
+            {/* Actions */}
+            <div style={{ display:"flex", gap:6 }}>
+              <button onClick={() => setExpandedId(expandedId === selectedNode.id ? null : selectedNode.id)} style={{
+                flex:1, padding:"7px 0", borderRadius:9, cursor:"pointer", fontSize:11, fontWeight:700,
+                background: expandedId === selectedNode.id ? "rgba(212,175,55,0.20)" : "rgba(212,175,55,0.09)",
+                border:"1px solid rgba(212,175,55,0.42)", color:GOLD,
               }}>
-                Invitar
+                {expandedId === selectedNode.id ? "Contraer" : "Ver familia"}
               </button>
-            )}
+              <button onClick={() => { onEditMember(selectedNode.id); close(); }} style={{
+                flex:1, padding:"7px 0", borderRadius:9, cursor:"pointer", fontSize:11, fontWeight:600,
+                background:"rgba(255,255,255,0.05)", border:"0.5px solid rgba(255,255,255,0.15)",
+                color:"rgba(255,255,255,0.78)",
+              }}>Editar</button>
+              {!selectedNode.joined && (
+                <button onClick={() => { onInviteMember(selectedNode.id); close(); }} style={{
+                  flex:1, padding:"7px 0", borderRadius:9, cursor:"pointer", fontSize:11, fontWeight:700,
+                  background:"#c9a820", border:"none", color:"#030208",
+                }}>Invitar</button>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ── Avatar HTML overlay (positioned above canvas, below panels) ── */}
       <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
