@@ -72,7 +72,7 @@ const GOLD   = "#d4af37";
 const BG     = "#030208";
 const TILT   = 0.68;
 const BASE_ORBIT_FRACS = [0.21, 0.375, 0.52] as const;
-const BASE_SPEEDS      = [0.0085, 0.0058, 0.0032] as const;
+const BASE_SPEEDS      = [0.00425, 0.0029, 0.0016] as const;
 // Direction is now per-node (from hash), not per-orbit
 const BASE_NR          = [36, 28, 22] as const;
 const DEPTH_SCALE      = 0.80;
@@ -82,6 +82,33 @@ function baseNodeR(orbit: 1 | 2 | 3) { return BASE_NR[orbit-1]; }
 function depthOf(angle: number) { return (Math.sin(angle) + 1) / 2; }
 function scaledNR(orbit: 1 | 2 | 3, depth: number) {
   return baseNodeR(orbit) * (1 - DEPTH_SCALE / 2 + depth * DEPTH_SCALE);
+}
+
+// ── Color by generational hierarchy ──────────────────────────────────────────
+function memberRgb(relationType: string): string {
+  if (relationType.includes('grandfather') || relationType.includes('grandmother') ||
+      relationType.includes('great_grandfather') || relationType.includes('great_grandmother'))
+    return '255,200,80';   // amber — grandparents / great-grandparents
+  if (relationType === 'father' || relationType === 'mother' ||
+      relationType === 'stepfather' || relationType === 'stepmother' ||
+      relationType === 'step_father' || relationType === 'step_mother')
+    return '255,155,60';   // orange — parents
+  if (relationType === 'spouse' || relationType === 'partner')
+    return '255,130,175';  // rose — partner
+  if (relationType === 'son' || relationType === 'daughter' ||
+      relationType === 'stepson' || relationType === 'stepdaughter' ||
+      relationType === 'step_son' || relationType === 'step_daughter')
+    return '100,230,150';  // mint — children
+  if (relationType === 'brother' || relationType === 'sister' ||
+      relationType === 'half_brother' || relationType === 'half_sister' ||
+      relationType === 'step_brother' || relationType === 'step_sister')
+    return '90,195,255';   // sky — siblings
+  if (relationType === 'uncle' || relationType === 'aunt' ||
+      relationType === 'nephew' || relationType === 'niece')
+    return '200,160,255';  // lavender — uncles/aunts/nephews/nieces
+  if (relationType.includes('grandson') || relationType.includes('granddaughter'))
+    return '80,220,180';   // teal — grandchildren
+  return '185,158,235';    // default purple
 }
 
 // Per-node position — unique ellipse per member
@@ -195,6 +222,7 @@ export function GalaxyOrbitView({
   const tRef        = useRef(0);
   const mouseRef    = useRef({ x: -9999, y: -9999 });
   const selectedRef    = useRef<string | null>(null);
+  const frozenIdsRef   = useRef<Set<string>>(new Set());
   const memberLinksRef = useRef(memberLinks);
   useEffect(() => { memberLinksRef.current = memberLinks; }, [memberLinks]);
 
@@ -508,7 +536,8 @@ export function GalaxyOrbitView({
           mouseRef.current.y - (nyPre + n.repY),
         ) < nr + 22;
         const sel = selectedRef.current === n.id;
-        const eff = sel ? 0 : hov ? n.baseSpeed * 0.04 : n.speed;
+        const frz = !sel && frozenIdsRef.current.has(n.id);
+        const eff = sel || frz ? 0 : hov ? n.baseSpeed * 0.04 : n.speed;
         n.angle += eff;
         const { nx, ny } = nodePos(n, cx, cy, w, t);
         return { n, nx, ny, depth, nr, hov, sel, ghost };
@@ -591,7 +620,7 @@ export function GalaxyOrbitView({
           ctx.fillText(lbl, nx, ny + nr + 13); ctx.restore();
         } else {
           const joined = n.joined;
-          const rgb = joined ? "245,220,100" : "185,158,235";
+          const rgb = memberRgb(n.relationType);
 
           // ── Generation decoration: grandparent corona / parent ring ──────────
           const isGrandparent = n.relationType.includes('grandfather') || n.relationType.includes('grandmother')
@@ -879,17 +908,29 @@ export function GalaxyOrbitView({
     const rect = canvasRef.current!.getBoundingClientRect();
     const hit  = getNodeAt(e.clientX - rect.left, e.clientY - rect.top);
     if (hit) {
+      // Unfreeze previous selection + its connections
+      const prevFrozen = frozenIdsRef.current;
       nodesRef.current.forEach(n => {
-        if (n.id === hit.id)                   n.speed = 0;
-        else if (n.id === selectedRef.current) n.speed = n.baseSpeed;
+        if (prevFrozen.has(n.id) || n.id === selectedRef.current) n.speed = n.baseSpeed;
       });
-      selectedRef.current = hit.id;
+      // Compute new frozen set: selected node + all directly connected members
+      const newFrozen = new Set<string>([hit.id]);
+      memberLinksRef.current.forEach(lk => {
+        if (lk.fromMemberId === hit.id) newFrozen.add(lk.toMemberId);
+        if (lk.toMemberId   === hit.id) newFrozen.add(lk.fromMemberId);
+      });
+      nodesRef.current.forEach(n => { if (newFrozen.has(n.id)) n.speed = 0; });
+      frozenIdsRef.current = newFrozen;
+      selectedRef.current  = hit.id;
       setSelectedNode({ ...hit, speed: 0 });
     } else {
+      // Tap on empty space — unfreeze everything
       nodesRef.current.forEach(n => {
-        if (n.id === selectedRef.current) n.speed = n.baseSpeed;
+        if (frozenIdsRef.current.has(n.id) || n.id === selectedRef.current)
+          n.speed = n.baseSpeed;
       });
-      selectedRef.current = null;
+      frozenIdsRef.current = new Set();
+      selectedRef.current  = null;
       setSelectedNode(null);
     }
   }, [getNodeAt]);
@@ -909,10 +950,12 @@ export function GalaxyOrbitView({
   }, []);
 
   const close = useCallback(() => {
+    const frozen = frozenIdsRef.current;
     nodesRef.current.forEach(n => {
-      if (n.id === selectedRef.current) n.speed = n.baseSpeed;
+      if (frozen.has(n.id) || n.id === selectedRef.current) n.speed = n.baseSpeed;
     });
-    selectedRef.current = null;
+    frozenIdsRef.current = new Set();
+    selectedRef.current  = null;
     setSelectedNode(null);
   }, []);
 
