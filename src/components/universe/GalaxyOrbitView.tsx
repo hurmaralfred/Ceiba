@@ -588,13 +588,14 @@ export function GalaxyOrbitView({
         const depth = depthOf(n.angle);
         const ghost = activeSet.size > 0 && !activeSet.has(n.id);
         const nr    = scaledNR(n.orbit, depth) * (ghost ? 0.40 : 1);
-        const hov   = n.id === hoveredId;
-        const sel   = selectedRef.current === n.id;
-        const frz   = !sel && (frozenIdsRef.current.has(n.id) || hovFrozen.has(n.id));
-        const eff   = sel || frz ? 0 : n.speed;
+        const hov    = n.id === hoveredId;
+        const hovFrz = hovFrozen.has(n.id);   // hovered node OR directly connected
+        const sel    = selectedRef.current === n.id;
+        const frz    = !sel && (frozenIdsRef.current.has(n.id) || hovFrz);
+        const eff    = sel || frz ? 0 : n.speed;
         n.angle += eff;
         const { nx, ny } = nodePos(n, cx, cy, w, t);
-        return { n, nx, ny, depth, nr, hov, sel, ghost };
+        return { n, nx, ny, depth, nr, hov, hovFrz, sel, ghost };
       });
 
       // ── Phase 2: separation force (prevents collisions) ──────────────────────
@@ -629,10 +630,14 @@ export function GalaxyOrbitView({
       // ── Phase 3: apply offset, sort back-to-front ────────────────────────────
       const all = raw
         .map(r => ({ ...r, nx: r.nx + r.n.repX, ny: r.ny + r.n.repY }))
-        .sort((a, b) => a.ny - b.ny);
+        .sort((a, b) => {
+          // hover group renders on top of everyone else
+          if (a.hovFrz !== b.hovFrz) return a.hovFrz ? 1 : -1;
+          return a.ny - b.ny;
+        });
 
       // Update HTML avatar overlay positions directly (no React re-render)
-      all.forEach(({ n, nx, ny, nr, ghost }) => {
+      all.forEach(({ n, nx, ny, nr, ghost, hovFrz }) => {
         const el = avatarElemRefs.current.get(n.id);
         if (!el) return;
         if (ghost || n.deceased) {
@@ -640,10 +645,11 @@ export function GalaxyOrbitView({
         } else {
           el.style.display = 'block';
           el.style.transform = `translate(${nx - 36}px, ${ny - 36}px) scale(${nr / 36})`;
+          el.style.zIndex = hovFrz ? '10' : '1';
         }
       });
 
-      all.forEach(({ n, nx, ny, depth, nr, hov, sel, ghost }) => {
+      all.forEach(({ n, nx, ny, depth, nr, hov, hovFrz, sel, ghost }) => {
         // Ghost nodes: faint distant star, no name, still tappable
         if (ghost) {
           const ga = 0.10 + depth * 0.08;
@@ -732,13 +738,13 @@ export function GalaxyOrbitView({
           }
 
           // Outer nebula halo
-          ctx.save(); ctx.globalAlpha = dAlpha * (hov || sel ? .72 : .28);
+          ctx.save(); ctx.globalAlpha = dAlpha * (hov || sel ? .72 : hovFrz ? .52 : .28);
           drawGlow(ctx, nx, ny, nr * 5.5, rgb, .40); ctx.restore();
 
-          // Orb glow rings (artifact style — smooth radial bloom instead of spikes)
-          ctx.save(); ctx.globalAlpha = dAlpha * (hov || sel ? .95 : .60);
-          drawGlow(ctx, nx, ny, nr * 3.8, rgb, .52 + (hov || sel ? .25 : 0)); ctx.restore();
-          ctx.save(); ctx.globalAlpha = dAlpha * (hov || sel ? .82 : .40);
+          // Orb glow rings
+          ctx.save(); ctx.globalAlpha = dAlpha * (hov || sel ? .95 : hovFrz ? .82 : .60);
+          drawGlow(ctx, nx, ny, nr * 3.8, rgb, .52 + (hov || sel ? .25 : hovFrz ? .12 : 0)); ctx.restore();
+          ctx.save(); ctx.globalAlpha = dAlpha * (hov || sel ? .82 : hovFrz ? .65 : .40);
           drawGlow(ctx, nx, ny, nr * 2.0, rgb, .78); ctx.restore();
 
           // Pulse ring
@@ -770,27 +776,29 @@ export function GalaxyOrbitView({
           ctx.restore();
 
           // Glowing rim — all nodes
-          ctx.save(); ctx.globalAlpha = dAlpha * (hov||sel ? 1 : .82);
-          ctx.strokeStyle = joined ? (hov||sel ? "#ffe97a" : GOLD) : "rgba(200,180,255,0.75)";
-          ctx.lineWidth = hov||sel ? 2.5 : 1.6;
-          ctx.shadowColor = joined ? (hov||sel ? '#ffe97a' : '#D4AF37') : 'rgba(185,158,235,0.7)';
-          ctx.shadowBlur = hov||sel ? 16 : 8;
+          ctx.save(); ctx.globalAlpha = dAlpha * (hov||sel ? 1 : hovFrz ? .96 : .82);
+          ctx.strokeStyle = joined ? (hov||sel||hovFrz ? "#ffe97a" : GOLD) : "rgba(200,180,255,0.75)";
+          ctx.lineWidth = hov||sel ? 2.5 : hovFrz ? 2.1 : 1.6;
+          ctx.shadowColor = joined ? (hov||sel ? '#ffe97a' : hovFrz ? '#FFD060' : '#D4AF37') : 'rgba(185,158,235,0.7)';
+          ctx.shadowBlur = hov||sel ? 16 : hovFrz ? 12 : 8;
           ctx.beginPath(); ctx.arc(nx, ny, nr, 0, Math.PI*2); ctx.stroke();
           ctx.shadowBlur = 0;
           ctx.restore();
 
-          // Name — hierarchy: selected always, orbit 1 always, rest only on hover
-          const showLabel = sel || hov || n.orbit === 1;
+          // Name — always for hover group, orbit 1 always, rest only on direct hover/sel
+          const showLabel = sel || hov || hovFrz || n.orbit === 1;
           if (showLabel) {
-            ctx.save(); ctx.globalAlpha = dAlpha * (sel||hov ? 1 : 0.68);
-            const lbl2 = sel||hov ? n.name : n.firstName;
-            ctx.font = `${sel||hov ? 700 : 500} ${sel||hov ? 14 : 12}px -apple-system,sans-serif`;
-            const lw2 = Math.min(ctx.measureText(lbl2).width + 14, 150);
-            ctx.fillStyle = "rgba(3,2,8,0.88)";
+            ctx.save(); ctx.globalAlpha = dAlpha * (sel||hov ? 1 : hovFrz ? 0.92 : 0.68);
+            const lbl2 = sel||hov||hovFrz ? n.name : n.firstName;
+            ctx.font = `${sel||hov||hovFrz ? 700 : 500} ${sel||hov||hovFrz ? 13 : 12}px -apple-system,sans-serif`;
+            const lw2 = Math.min(ctx.measureText(lbl2).width + 14, 160);
+            ctx.fillStyle = "rgba(3,2,8,0.90)";
             ctx.beginPath(); ctx.roundRect(nx - lw2/2, ny + nr + 5, lw2, 19, 5); ctx.fill();
             ctx.fillStyle = sel||hov
               ? "rgba(255,255,255,0.97)"
-              : (joined ? "rgba(245,220,100,0.88)" : "rgba(210,190,255,0.88)");
+              : hovFrz
+                ? (joined ? "rgba(255,235,120,0.96)" : "rgba(220,205,255,0.96)")
+                : (joined ? "rgba(245,220,100,0.88)" : "rgba(210,190,255,0.88)");
             ctx.textAlign = "center"; ctx.textBaseline = "middle";
             ctx.fillText(lbl2, nx, ny + nr + 14); ctx.restore();
           }
