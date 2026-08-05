@@ -3,6 +3,8 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import type { Profile, FamilyMember } from "@/lib/types";
 import { RELATION_LABELS } from "@/lib/types";
 import type { ExtendedEntry, MemberLink } from "@/components/tree/FamilyTreeGraph";
+import { AvatarFigure } from "./AvatarFigure";
+import type { UniverseNode } from "./useUniverseLayout";
 
 // ── Orbit cold-start seed ─────────────────────────────────────────────────────
 const ORBIT_1 = new Set([
@@ -211,6 +213,39 @@ const _comets: Array<{ x: number; y: number; sp: number; msg: string; life: numb
 let _cometTimer = 0
 let _cometIdx   = 0
 
+// ── OrbitAvatar: wraps AvatarFigure for use inside the canvas overlay ────────
+function OrbitAvatar({ node }: { node: OrbitNode }) {
+  const uNode: UniverseNode = {
+    id: node.id,
+    memberId: node.id,
+    name: node.name,
+    shortName: node.firstName,
+    relation: node.relationType,
+    relationType: node.relationType,
+    gender: "unknown",
+    avatarUrl: node.avatarUrl,
+    avatarConfig: undefined,
+    isRoot: false,
+    isFocal: false,
+    hopDistance: node.orbit,
+    orbitRadius: 0,
+    angleDeg: 0,
+    cx: 0,
+    cy: 0,
+    scale: 1,
+    opacity: 1,
+    zIndex: 10,
+    relevanceTier: node.orbit,
+    ageGroup: "adult",
+    isDeceased: node.deceased,
+    isJoined: node.joined,
+    parentMemberId: null,
+    connectionChannel: "blood" as const,
+    orbitParentId: null,
+  };
+  return <AvatarFigure node={uNode} />;
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 export function GalaxyOrbitView({
   profile, members, extendedMembers, memberLinks,
@@ -224,6 +259,8 @@ export function GalaxyOrbitView({
   const selectedRef    = useRef<string | null>(null);
   const frozenIdsRef   = useRef<Set<string>>(new Set());
   const memberLinksRef = useRef(memberLinks);
+  const avatarElemRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
+  const [overlayNodes, setOverlayNodes] = useState<OrbitNode[]>([]);
   useEffect(() => { memberLinksRef.current = memberLinks; }, [memberLinks]);
 
   const [selectedNode, setSelectedNode] = useState<OrbitNode | null>(null);
@@ -337,6 +374,7 @@ export function GalaxyOrbitView({
       }
     }
     nodesRef.current = raw;
+    setOverlayNodes([...raw]);
     // Seed initial active set: orbit 1 always active by default
     activeSetRef.current = new Set(raw.filter(n => n.orbit === 1).map(n => n.id));
   }, [members, extendedMembers, overrides]);
@@ -526,18 +564,34 @@ export function GalaxyOrbitView({
 
       // ── Phase 1: compute base positions & advance angles ─────────────────────
       const activeSet = activeSetRef.current;
+
+      // Pre-pass: find which node the mouse is over → freeze it + connections
+      let hoveredId: string | null = null;
+      for (const n of nodesRef.current) {
+        if (activeSet.size > 0 && !activeSet.has(n.id)) continue;
+        const { nx: px, ny: py } = nodePos(n, cx, cy, w, t - 1);
+        const nr0 = scaledNR(n.orbit, depthOf(n.angle));
+        if (Math.hypot(mouseRef.current.x - (px + n.repX), mouseRef.current.y - (py + n.repY)) < nr0 + 22) {
+          hoveredId = n.id; break;
+        }
+      }
+      const hovFrozen = new Set<string>();
+      if (hoveredId) {
+        hovFrozen.add(hoveredId);
+        memberLinksRef.current.forEach(lk => {
+          if (lk.fromMemberId === hoveredId) hovFrozen.add(lk.toMemberId);
+          if (lk.toMemberId   === hoveredId) hovFrozen.add(lk.fromMemberId);
+        });
+      }
+
       const raw = nodesRef.current.map(n => {
-        const { nx: nxPre, ny: nyPre } = nodePos(n, cx, cy, w, t - 1);
         const depth = depthOf(n.angle);
         const ghost = activeSet.size > 0 && !activeSet.has(n.id);
         const nr    = scaledNR(n.orbit, depth) * (ghost ? 0.40 : 1);
-        const hov = !ghost && Math.hypot(
-          mouseRef.current.x - (nxPre + n.repX),
-          mouseRef.current.y - (nyPre + n.repY),
-        ) < nr + 22;
-        const sel = selectedRef.current === n.id;
-        const frz = !sel && frozenIdsRef.current.has(n.id);
-        const eff = sel || frz ? 0 : hov ? n.baseSpeed * 0.04 : n.speed;
+        const hov   = n.id === hoveredId;
+        const sel   = selectedRef.current === n.id;
+        const frz   = !sel && (frozenIdsRef.current.has(n.id) || hovFrozen.has(n.id));
+        const eff   = sel || frz ? 0 : n.speed;
         n.angle += eff;
         const { nx, ny } = nodePos(n, cx, cy, w, t);
         return { n, nx, ny, depth, nr, hov, sel, ghost };
@@ -559,9 +613,11 @@ export function GalaxyOrbitView({
           if (dist < minD) {
             const push = (minD - dist) / minD * FORCE_K;
             const fx = (dx / dist) * push, fy = (dy / dist) * push;
-            // Paused (selected) nodes act as obstacles but don't move
-            if (!a.sel) { a.n.repX += fx; a.n.repY += fy; }
-            if (!b.sel) { b.n.repX -= fx; b.n.repY -= fy; }
+            // Paused/frozen nodes act as obstacles but don't move
+            const aStop = a.sel || frozenIdsRef.current.has(a.n.id) || hovFrozen.has(a.n.id);
+            const bStop = b.sel || frozenIdsRef.current.has(b.n.id) || hovFrozen.has(b.n.id);
+            if (!aStop) { a.n.repX += fx; a.n.repY += fy; }
+            if (!bStop) { b.n.repX -= fx; b.n.repY -= fy; }
           }
         }
       }
@@ -574,6 +630,18 @@ export function GalaxyOrbitView({
       const all = raw
         .map(r => ({ ...r, nx: r.nx + r.n.repX, ny: r.ny + r.n.repY }))
         .sort((a, b) => a.ny - b.ny);
+
+      // Update HTML avatar overlay positions directly (no React re-render)
+      all.forEach(({ n, nx, ny, nr, ghost }) => {
+        const el = avatarElemRefs.current.get(n.id);
+        if (!el) return;
+        if (ghost || n.deceased) {
+          el.style.display = 'none';
+        } else {
+          el.style.display = 'block';
+          el.style.transform = `translate(${nx - 36}px, ${ny - 36}px) scale(${nr / 36})`;
+        }
+      });
 
       all.forEach(({ n, nx, ny, depth, nr, hov, sel, ghost }) => {
         // Ghost nodes: faint distant star, no name, still tappable
@@ -686,47 +754,19 @@ export function GalaxyOrbitView({
           ctx.save(); ctx.globalAlpha = dAlpha;
           drawGlow(ctx, nx, ny, nr * 1.9, rgb, .72); ctx.restore();
 
-          // Core — photo clipped OR luminous sphere (no dark placeholder)
+          // Core — dark circle base (AvatarFigure HTML overlay renders on top)
           ctx.save(); ctx.globalAlpha = dAlpha;
-          if (img) {
-            ctx.beginPath(); ctx.arc(nx, ny, nr, 0, Math.PI*2); ctx.clip();
-            ctx.fillStyle = "rgba(8,5,18,0.95)"; ctx.fillRect(nx-nr, ny-nr, nr*2, nr*2);
-            drawImgCover(ctx, img, nx, ny, nr);
-          } else {
-            // Holographic orb — dark core + scan lines + glowing initial
-            ctx.save();
-            ctx.beginPath(); ctx.arc(nx, ny, nr, 0, Math.PI*2); ctx.clip();
-            // Dark radial background
-            const sg = ctx.createRadialGradient(nx, ny, 0, nx, ny, nr);
-            sg.addColorStop(0,   'rgba(4,2,16,0.96)');
-            sg.addColorStop(0.6, 'rgba(8,4,28,0.92)');
-            sg.addColorStop(1,   `rgba(${rgb},0.32)`);
-            ctx.fillStyle = sg;
-            ctx.fillRect(nx - nr, ny - nr, nr * 2, nr * 2);
-            // Horizontal scan lines
-            const scanStep = Math.max(2, Math.round(nr * 0.20));
-            ctx.strokeStyle = `rgba(${rgb},0.20)`;
-            ctx.lineWidth = 0.6;
-            for (let sy = -nr + scanStep; sy < nr; sy += scanStep) {
-              ctx.beginPath();
-              ctx.moveTo(nx - nr, ny + sy);
-              ctx.lineTo(nx + nr, ny + sy);
-              ctx.stroke();
-            }
-            // Glowing initial
-            ctx.shadowColor = joined ? '#FFD700' : '#B09EFF';
-            ctx.shadowBlur = 14;
-            ctx.font = `700 ${Math.round(nr * 0.76)}px -apple-system,sans-serif`;
-            ctx.textAlign = "center"; ctx.textBaseline = "middle";
-            ctx.fillStyle = joined ? "rgba(255,242,140,0.97)" : "rgba(218,200,255,0.97)";
-            ctx.fillText(n.firstName[0]?.toUpperCase() ?? "?", nx, ny + nr * 0.04);
-            ctx.shadowBlur = 0;
-            ctx.restore();
-          }
+          ctx.beginPath(); ctx.arc(nx, ny, nr, 0, Math.PI*2); ctx.clip();
+          const sg = ctx.createRadialGradient(nx, ny, 0, nx, ny, nr);
+          sg.addColorStop(0,   'rgba(4,2,16,0.96)');
+          sg.addColorStop(0.6, 'rgba(8,4,28,0.92)');
+          sg.addColorStop(1,   `rgba(${rgb},0.32)`);
+          ctx.fillStyle = sg;
+          ctx.fillRect(nx - nr, ny - nr, nr * 2, nr * 2);
           ctx.restore();
-          // 3D sphere highlight (subtle on holographic nodes)
-          ctx.save(); ctx.globalAlpha = dAlpha * (img ? 1 : 0.28);
-          drawSphere(ctx, nx, ny, nr, img ? 1 : 0.4);
+          // 3D sphere highlight
+          ctx.save(); ctx.globalAlpha = dAlpha * 0.28;
+          drawSphere(ctx, nx, ny, nr, 0.4);
           ctx.restore();
 
           // Glowing rim — all nodes
@@ -1121,6 +1161,25 @@ export function GalaxyOrbitView({
           </div>
         </div>
       )}
+
+      {/* ── Avatar HTML overlay (positioned above canvas, below panels) ── */}
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+        {overlayNodes.filter(n => !n.deceased).map(n => (
+          <div
+            key={n.id}
+            ref={el => { avatarElemRefs.current.set(n.id, el); }}
+            style={{
+              position: 'absolute', top: 0, left: 0,
+              transformOrigin: '36px 36px',
+              willChange: 'transform',
+              pointerEvents: 'none',
+              display: 'none',
+            }}
+          >
+            <OrbitAvatar node={n} />
+          </div>
+        ))}
+      </div>
 
       {/* ── Add member — almost invisible, never competes ── */}
       <button onClick={onAddMember} aria-label="Agregar familiar" style={{
