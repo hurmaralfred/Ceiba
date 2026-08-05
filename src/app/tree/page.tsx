@@ -101,6 +101,14 @@ function TreePageContent() {
     if (typeof window === "undefined") return false;
     return localStorage.getItem("ceiba_view") === "classic";
   });
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== "undefined" && window.innerWidth < 768
+  );
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
   const [myLocation, setMyLocation] = useState<[number, number] | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [showBroadcast, setShowBroadcast] = useState(false);
@@ -1137,7 +1145,7 @@ function TreePageContent() {
             {view === "graph" && profile && (
               <>
                 <TreeErrorBoundary>
-                  {GALAXY_ORBIT_ENABLED && !useClassicView ? (
+                  {GALAXY_ORBIT_ENABLED && !useClassicView && !isMobile ? (
                     <div style={{ position: "relative", height: "calc(100svh - 80px)", overflow: "hidden", background: "#030208" }}>
                       <GalaxyOrbitView
                         profile={profile}

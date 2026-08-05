@@ -74,7 +74,7 @@ const GOLD   = "#d4af37";
 const BG     = "#030208";
 const TILT   = 0.68;
 const BASE_ORBIT_FRACS = [0.21, 0.375, 0.52] as const;
-const BASE_SPEEDS      = [0.00425, 0.0029, 0.0016] as const;
+const BASE_SPEEDS      = [0.0032, 0.0022, 0.0012] as const;
 // Direction is now per-node (from hash), not per-orbit
 const BASE_NR          = [36, 28, 22] as const;
 const DEPTH_SCALE      = 0.80;
