@@ -172,6 +172,18 @@ const SHOTS = [
   { period:340, offset: 80, bx:.86, by:.35, ang:.40, len: 80, lw:1.0 },
 ] as const;
 
+// ── Comet notification system ─────────────────────────────────────────────────
+const COMET_MSGS = [
+  '⭐ Mamá compartió una foto',
+  '🎂 Cumpleaños de Sofía · mañana',
+  '✨ Papá actualizó su historia',
+  '📸 Ana subió recuerdos',
+  '🌟 5 años de la reunión familiar',
+]
+const _comets: Array<{ x: number; y: number; sp: number; msg: string; life: number; ml: number }> = []
+let _cometTimer = 0
+let _cometIdx   = 0
+
 // ── Component ─────────────────────────────────────────────────────────────────
 export function GalaxyOrbitView({
   profile, members, extendedMembers, memberLinks,
@@ -182,7 +194,9 @@ export function GalaxyOrbitView({
   const nodesRef    = useRef<OrbitNode[]>([]);
   const tRef        = useRef(0);
   const mouseRef    = useRef({ x: -9999, y: -9999 });
-  const selectedRef = useRef<string | null>(null);
+  const selectedRef    = useRef<string | null>(null);
+  const memberLinksRef = useRef(memberLinks);
+  useEffect(() => { memberLinksRef.current = memberLinks; }, [memberLinks]);
 
   const [selectedNode, setSelectedNode] = useState<OrbitNode | null>(null);
   const [overrides, setOverrides] = useState<Record<string, 1 | 2 | 3>>({});
@@ -416,6 +430,44 @@ export function GalaxyOrbitView({
         ctx.closePath(); ctx.stroke(); ctx.restore();
       });
 
+      // ── Constellation connections (between orbit members) ──────────────────
+      {
+        const posMap = new Map<string, { nx: number; ny: number; nr: number }>()
+        let hovConnId: string | null = null
+        for (const n of nodesRef.current) {
+          const { nx: nxRaw, ny: nyRaw } = nodePos(n, cx, cy, w, t)
+          const nx2 = nxRaw + n.repX, ny2 = nyRaw + n.repY
+          const nr2 = scaledNR(n.orbit, depthOf(n.angle))
+          posMap.set(n.id, { nx: nx2, ny: ny2, nr: nr2 })
+          if (Math.hypot(mouseRef.current.x - nx2, mouseRef.current.y - ny2) < nr2 + 22)
+            hovConnId = n.id
+        }
+        memberLinksRef.current.forEach(link => {
+          const pa = posMap.get(link.fromMemberId)
+          const pb = posMap.get(link.toMemberId)
+          if (!pa || !pb) return
+          const lit = hovConnId === link.fromMemberId || hovConnId === link.toMemberId
+          ctx.save()
+          if (lit) {
+            ctx.strokeStyle = 'rgba(212,175,55,0.80)'
+            ctx.lineWidth = 1.6
+            ctx.shadowColor = '#d4af37'
+            ctx.shadowBlur = 14
+          } else {
+            ctx.strokeStyle = 'rgba(180,160,220,0.10)'
+            ctx.lineWidth = 0.55
+            ctx.shadowBlur = 0
+          }
+          const mx2 = (pa.nx + pb.nx) / 2 + (pb.ny - pa.ny) * 0.08
+          const my2 = (pa.ny + pb.ny) / 2 - (pb.nx - pa.nx) * 0.08
+          ctx.beginPath()
+          ctx.moveTo(pa.nx, pa.ny)
+          ctx.quadraticCurveTo(mx2, my2, pb.nx, pb.ny)
+          ctx.stroke()
+          ctx.restore()
+        })
+      }
+
       // ── Phase 1: compute base positions & advance angles ─────────────────────
       const activeSet = activeSetRef.current;
       const raw = nodesRef.current.map(n => {
@@ -512,6 +564,47 @@ export function GalaxyOrbitView({
         } else {
           const joined = n.joined;
           const rgb = joined ? "245,220,100" : "185,158,235";
+
+          // ── Generation decoration: grandparent corona / parent ring ──────────
+          const isGrandparent = n.relationType.includes('grandfather') || n.relationType.includes('grandmother')
+          const isParent = n.relationType === 'father' || n.relationType === 'mother' ||
+                           n.relationType === 'stepfather' || n.relationType === 'stepmother' ||
+                           n.relationType === 'step_father' || n.relationType === 'step_mother'
+
+          if (isGrandparent) {
+            const spikes = 18
+            const outerR = nr * 1.62 * (1 + Math.sin(t * 0.0019 + n.wobPhase) * 0.04)
+            const innerR = nr * 1.06
+            ctx.save()
+            ctx.globalAlpha = dAlpha * 0.52
+            ctx.fillStyle = 'rgba(255,215,0,0.48)'
+            ctx.shadowColor = '#FFD700'
+            ctx.shadowBlur = 24
+            ctx.beginPath()
+            for (let i = 0; i <= spikes * 2; i++) {
+              const ang = (i / (spikes * 2)) * Math.PI * 2 - Math.PI / 2
+              const r2 = i % 2 === 0 ? outerR : innerR
+              i === 0 ? ctx.moveTo(nx + Math.cos(ang) * r2, ny + Math.sin(ang) * r2)
+                      : ctx.lineTo(nx + Math.cos(ang) * r2, ny + Math.sin(ang) * r2)
+            }
+            ctx.closePath()
+            ctx.fill()
+            ctx.restore()
+          }
+
+          if (isParent) {
+            ctx.save()
+            ctx.translate(nx, ny)
+            ctx.scale(1, 0.26)
+            ctx.strokeStyle = `rgba(${rgb},0.42)`
+            ctx.lineWidth = 3.5
+            ctx.shadowColor = joined ? '#F5D080' : 'rgba(185,158,235,0.5)'
+            ctx.shadowBlur = 11
+            ctx.beginPath()
+            ctx.arc(0, 0, nr * 1.65, 0, Math.PI * 2)
+            ctx.stroke()
+            ctx.restore()
+          }
 
           // Outer nebula halo
           ctx.save(); ctx.globalAlpha = dAlpha * (hov || sel ? .72 : .28);
@@ -681,6 +774,41 @@ export function GalaxyOrbitView({
       ctx.fillStyle = "rgba(245,220,100,0.95)";
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
       ctx.fillText(pl, cx, cy + NR + 17); ctx.restore();
+
+      // ── Comet notifications ────────────────────────────────────────────────
+      _cometTimer++
+      if (_cometTimer > 340 && _comets.length < 2) {
+        _cometTimer = 0
+        _comets.push({
+          x: -80, y: h * (0.18 + Math.random() * 0.38),
+          sp: 3.2 + Math.random() * 2,
+          msg: COMET_MSGS[_cometIdx++ % COMET_MSGS.length],
+          life: 0, ml: 270,
+        })
+      }
+      for (let ci = _comets.length - 1; ci >= 0; ci--) {
+        const c = _comets[ci]
+        c.x += c.sp; c.life++
+        if (c.life > c.ml || c.x > w + 80) { _comets.splice(ci, 1); continue }
+        const fade = c.life < 22 ? c.life / 22 : c.life > c.ml - 32 ? (c.ml - c.life) / 32 : 1
+        ctx.save()
+        ctx.globalAlpha = fade
+        const tg = ctx.createLinearGradient(c.x - 85, c.y, c.x, c.y)
+        tg.addColorStop(0, 'transparent')
+        tg.addColorStop(1, `rgba(240,200,100,${(fade * 0.72).toFixed(2)})`)
+        ctx.strokeStyle = tg; ctx.lineWidth = 2.2
+        ctx.beginPath(); ctx.moveTo(c.x - 85, c.y); ctx.lineTo(c.x, c.y); ctx.stroke()
+        ctx.fillStyle = '#fffce0'; ctx.shadowColor = '#f0c040'; ctx.shadowBlur = 18
+        ctx.beginPath(); ctx.arc(c.x, c.y, 3.5, 0, Math.PI * 2); ctx.fill()
+        if (c.life > 28) {
+          ctx.font = '500 11px -apple-system,sans-serif'
+          ctx.fillStyle = 'rgba(255,240,200,0.85)'
+          ctx.textAlign = 'left'; ctx.textBaseline = 'middle'
+          ctx.shadowBlur = 5; ctx.shadowColor = 'rgba(212,175,55,0.45)'
+          ctx.fillText(c.msg, c.x + 12, c.y)
+        }
+        ctx.restore()
+      }
 
       animRef.current = requestAnimationFrame(draw);
     };
