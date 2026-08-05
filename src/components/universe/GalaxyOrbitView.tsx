@@ -430,8 +430,9 @@ export function GalaxyOrbitView({
         ctx.closePath(); ctx.stroke(); ctx.restore();
       });
 
-      // ── Constellation connections (between orbit members) ──────────────────
+      // ── Constellation connections ──────────────────────────────────────────
       {
+        // Build position map for all orbit nodes
         const posMap = new Map<string, { nx: number; ny: number; nr: number }>()
         let hovConnId: string | null = null
         for (const n of nodesRef.current) {
@@ -442,29 +443,56 @@ export function GalaxyOrbitView({
           if (Math.hypot(mouseRef.current.x - nx2, mouseRef.current.y - ny2) < nr2 + 22)
             hovConnId = n.id
         }
+
+        // Helper: draw one constellation line
+        function drawConstLine(
+          ax: number, ay: number, bx: number, by: number,
+          lit: boolean, baseAlpha: number
+        ) {
+          ctx.save()
+          if (lit) {
+            ctx.strokeStyle = `rgba(212,175,55,0.88)`
+            ctx.lineWidth = 1.7
+            ctx.shadowColor = '#d4af37'
+            ctx.shadowBlur = 14
+          } else {
+            ctx.strokeStyle = `rgba(180,165,230,${baseAlpha})`
+            ctx.lineWidth = 0.7
+            ctx.shadowBlur = 0
+          }
+          const mxL = (ax + bx) / 2 + (by - ay) * 0.07
+          const myL = (ay + by) / 2 - (bx - ax) * 0.07
+          ctx.beginPath()
+          ctx.moveTo(ax, ay)
+          ctx.quadraticCurveTo(mxL, myL, bx, by)
+          ctx.stroke()
+          ctx.restore()
+        }
+
+        // 1. Nucleus → each orbit-1 node (always visible — guarantees lines show)
+        const NR_PX = 48 // nucleus radius, matches the draw code below
+        for (const n of nodesRef.current) {
+          if (n.orbit !== 1) continue
+          const pos = posMap.get(n.id)
+          if (!pos) continue
+          const lit = hovConnId === n.id
+          // Offset endpoints to the surface of each body, not their centers
+          const dx = pos.nx - cx, dy = pos.ny - cy
+          const dist = Math.hypot(dx, dy) || 1
+          const ax = cx  + (dx / dist) * NR_PX
+          const ay = cy  + (dy / dist) * NR_PX
+          const bx = pos.nx - (dx / dist) * pos.nr
+          const by = pos.ny - (dy / dist) * pos.nr
+          drawConstLine(ax, ay, bx, by, lit, 0.22)
+        }
+
+        // 2. Non-root member-to-member edges (grandparent↔parent, spouse↔child, etc.)
         memberLinksRef.current.forEach(link => {
           const pa = posMap.get(link.fromMemberId)
           const pb = posMap.get(link.toMemberId)
           if (!pa || !pb) return
           const lit = hovConnId === link.fromMemberId || hovConnId === link.toMemberId
-          ctx.save()
-          if (lit) {
-            ctx.strokeStyle = 'rgba(212,175,55,0.80)'
-            ctx.lineWidth = 1.6
-            ctx.shadowColor = '#d4af37'
-            ctx.shadowBlur = 14
-          } else {
-            ctx.strokeStyle = 'rgba(180,160,220,0.10)'
-            ctx.lineWidth = 0.55
-            ctx.shadowBlur = 0
-          }
-          const mx2 = (pa.nx + pb.nx) / 2 + (pb.ny - pa.ny) * 0.08
-          const my2 = (pa.ny + pb.ny) / 2 - (pb.nx - pa.nx) * 0.08
-          ctx.beginPath()
-          ctx.moveTo(pa.nx, pa.ny)
-          ctx.quadraticCurveTo(mx2, my2, pb.nx, pb.ny)
-          ctx.stroke()
-          ctx.restore()
+          drawConstLine(pa.nx, pa.ny, pb.nx, pb.ny, lit, 0.14)
         })
       }
 
