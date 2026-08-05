@@ -74,7 +74,7 @@ const GOLD   = "#d4af37";
 const BG     = "#030208";
 const TILT   = 0.68;
 const BASE_ORBIT_FRACS = [0.21, 0.375, 0.52] as const;
-const BASE_SPEEDS      = [0.0032, 0.0022, 0.0012] as const;
+const BASE_SPEEDS      = [0.0029, 0.002, 0.0011] as const;
 // Direction is now per-node (from hash), not per-orbit
 const BASE_NR          = [36, 28, 22] as const;
 const DEPTH_SCALE      = 0.80;
@@ -114,9 +114,10 @@ function memberRgb(relationType: string): string {
 }
 
 // Per-node position — unique ellipse per member
-function nodePos(n: OrbitNode, cx: number, cy: number, w: number, t: number) {
+// Pass wb=1 to suppress wobble (use when node is frozen)
+function nodePos(n: OrbitNode, cx: number, cy: number, w: number, t: number, wb?: number) {
   const r = baseOrbitR(n.orbit, w) * n.rVar;
-  const wobble = 1 + n.wobAmp * Math.sin(t * n.wobFreq + n.wobPhase);
+  const wobble = wb ?? (1 + n.wobAmp * Math.sin(t * n.wobFreq + n.wobPhase));
   const tilt = TILT + n.tiltVar;
   const nx = cx + n.offX + r * wobble * Math.cos(n.angle);
   const ny = cy + n.offY + r * wobble * tilt * Math.sin(n.angle);
@@ -594,7 +595,8 @@ export function GalaxyOrbitView({
         const frz    = !sel && (frozenIdsRef.current.has(n.id) || hovFrz);
         const eff    = sel || frz ? 0 : n.speed;
         n.angle += eff;
-        const { nx, ny } = nodePos(n, cx, cy, w, t);
+        // Frozen nodes use wobble=1 so position is perfectly still
+        const { nx, ny } = nodePos(n, cx, cy, w, t, (sel || frz) ? 1 : undefined);
         return { n, nx, ny, depth, nr, hov, hovFrz, sel, ghost };
       });
 
@@ -640,7 +642,7 @@ export function GalaxyOrbitView({
       all.forEach(({ n, nx, ny, nr, ghost, hovFrz }) => {
         const el = avatarElemRefs.current.get(n.id);
         if (!el) return;
-        if (ghost || n.deceased) {
+        if (ghost) {
           el.style.display = 'none';
         } else {
           el.style.display = 'block';
@@ -665,23 +667,24 @@ export function GalaxyOrbitView({
         const spikeLen = nr * (sel ? 6.5 : hov ? 5.5 : 3.8);
 
         if (n.deceased) {
-          // ── Cold silver — clearly different, still visible
+          // ── Cold silver atmosphere + dark base (AvatarFigure overlay renders on top)
           const sil = "175,200,225";
           const dA = dAlpha * .72;
-          ctx.save(); ctx.globalAlpha = dA * .55;
+          ctx.save(); ctx.globalAlpha = dA * .50;
           drawGlow(ctx, nx, ny, nr * 4, sil, .35); ctx.restore();
-          ctx.save(); ctx.globalAlpha = dA * .55;
-          drawSpikes(ctx, nx, ny, nr * 3.5, sil, .60); ctx.restore();
+          ctx.save(); ctx.globalAlpha = dA * .45;
+          drawSpikes(ctx, nx, ny, nr * 3.2, sil, .55); ctx.restore();
+          // Dark base circle for avatar
           ctx.save(); ctx.globalAlpha = dA;
-          drawGlow(ctx, nx, ny, nr * .9, sil, .50);
-          ctx.fillStyle = "rgba(175,200,230,0.52)";
-          ctx.beginPath(); ctx.arc(nx, ny, nr*.42, 0, Math.PI*2); ctx.fill();
-          // Memorial cross
-          ctx.strokeStyle = "rgba(200,220,245,0.68)"; ctx.lineWidth = 1.2;
-          ctx.beginPath();
-          ctx.moveTo(nx, ny - nr*.32); ctx.lineTo(nx, ny + nr*.32);
-          ctx.moveTo(nx - nr*.20, ny - nr*.08); ctx.lineTo(nx + nr*.20, ny - nr*.08);
-          ctx.stroke(); ctx.restore();
+          ctx.beginPath(); ctx.arc(nx, ny, nr, 0, Math.PI*2); ctx.clip();
+          ctx.fillStyle = "rgba(3,2,8,0.95)"; ctx.fillRect(nx-nr, ny-nr, nr*2, nr*2);
+          ctx.restore();
+          // Silver rim
+          ctx.save(); ctx.globalAlpha = dA * .85;
+          ctx.strokeStyle = "rgba(175,200,225,0.75)"; ctx.lineWidth = 1.4;
+          ctx.shadowColor = "rgba(175,200,225,0.4)"; ctx.shadowBlur = 8;
+          ctx.beginPath(); ctx.arc(nx, ny, nr, 0, Math.PI*2); ctx.stroke();
+          ctx.shadowBlur = 0; ctx.restore();
           // Name — italic, silver pill
           ctx.save(); ctx.globalAlpha = dA * .88;
           ctx.font = `italic 600 11px -apple-system,sans-serif`;
@@ -1179,7 +1182,7 @@ export function GalaxyOrbitView({
 
       {/* ── Avatar HTML overlay (positioned above canvas, below panels) ── */}
       <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
-        {overlayNodes.filter(n => !n.deceased).map(n => (
+        {overlayNodes.map(n => (
           <div
             key={n.id}
             ref={el => { avatarElemRefs.current.set(n.id, el); }}
