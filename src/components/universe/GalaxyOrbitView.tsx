@@ -483,7 +483,7 @@ export function GalaxyOrbitView({
           const ay = cy  + (dy / dist) * NR_PX
           const bx = pos.nx - (dx / dist) * pos.nr
           const by = pos.ny - (dy / dist) * pos.nr
-          drawConstLine(ax, ay, bx, by, lit, 0.22)
+          drawConstLine(ax, ay, bx, by, lit, 0.38)
         }
 
         // 2. Non-root member-to-member edges (grandparent↔parent, spouse↔child, etc.)
@@ -638,9 +638,11 @@ export function GalaxyOrbitView({
           ctx.save(); ctx.globalAlpha = dAlpha * (hov || sel ? .72 : .28);
           drawGlow(ctx, nx, ny, nr * 5.5, rgb, .40); ctx.restore();
 
-          // Diffraction spikes
-          ctx.save(); ctx.globalAlpha = dAlpha * (hov || sel ? .98 : .78);
-          drawSpikes(ctx, nx, ny, spikeLen, rgb, hov || sel ? .95 : .80); ctx.restore();
+          // Orb glow rings (artifact style — smooth radial bloom instead of spikes)
+          ctx.save(); ctx.globalAlpha = dAlpha * (hov || sel ? .95 : .60);
+          drawGlow(ctx, nx, ny, nr * 3.8, rgb, .52 + (hov || sel ? .25 : 0)); ctx.restore();
+          ctx.save(); ctx.globalAlpha = dAlpha * (hov || sel ? .82 : .40);
+          drawGlow(ctx, nx, ny, nr * 2.0, rgb, .78); ctx.restore();
 
           // Pulse ring
           if (sel) {
@@ -662,37 +664,51 @@ export function GalaxyOrbitView({
             ctx.fillStyle = "rgba(8,5,18,0.95)"; ctx.fillRect(nx-nr, ny-nr, nr*2, nr*2);
             drawImgCover(ctx, img, nx, ny, nr);
           } else {
-            // No photo — avatar con inicial, claro y personal
+            // Holographic orb — dark core + scan lines + glowing initial
             ctx.save();
             ctx.beginPath(); ctx.arc(nx, ny, nr, 0, Math.PI*2); ctx.clip();
-            // Fondo esférico
-            const sg = ctx.createRadialGradient(nx - nr*.28, ny - nr*.28, nr*.04, nx, ny, nr);
-            sg.addColorStop(0,    `rgba(${rgb},0.82)`);
-            sg.addColorStop(0.55, `rgba(${rgb},0.38)`);
-            sg.addColorStop(1,    `rgba(${rgb},0.06)`);
+            // Dark radial background
+            const sg = ctx.createRadialGradient(nx, ny, 0, nx, ny, nr);
+            sg.addColorStop(0,   'rgba(4,2,16,0.96)');
+            sg.addColorStop(0.6, 'rgba(8,4,28,0.92)');
+            sg.addColorStop(1,   `rgba(${rgb},0.32)`);
             ctx.fillStyle = sg;
             ctx.fillRect(nx - nr, ny - nr, nr * 2, nr * 2);
-            // Inicial centrada
+            // Horizontal scan lines
+            const scanStep = Math.max(2, Math.round(nr * 0.20));
+            ctx.strokeStyle = `rgba(${rgb},0.20)`;
+            ctx.lineWidth = 0.6;
+            for (let sy = -nr + scanStep; sy < nr; sy += scanStep) {
+              ctx.beginPath();
+              ctx.moveTo(nx - nr, ny + sy);
+              ctx.lineTo(nx + nr, ny + sy);
+              ctx.stroke();
+            }
+            // Glowing initial
+            ctx.shadowColor = joined ? '#FFD700' : '#B09EFF';
+            ctx.shadowBlur = 14;
             ctx.font = `700 ${Math.round(nr * 0.76)}px -apple-system,sans-serif`;
             ctx.textAlign = "center"; ctx.textBaseline = "middle";
-            ctx.fillStyle = joined ? "rgba(255,242,140,0.97)" : "rgba(218,200,255,0.93)";
+            ctx.fillStyle = joined ? "rgba(255,242,140,0.97)" : "rgba(218,200,255,0.97)";
             ctx.fillText(n.firstName[0]?.toUpperCase() ?? "?", nx, ny + nr * 0.04);
+            ctx.shadowBlur = 0;
             ctx.restore();
           }
           ctx.restore();
-          // 3D sphere highlight
-          ctx.save(); ctx.globalAlpha = dAlpha;
-          drawSphere(ctx, nx, ny, nr, img ? 1 : 0.55);
+          // 3D sphere highlight (subtle on holographic nodes)
+          ctx.save(); ctx.globalAlpha = dAlpha * (img ? 1 : 0.28);
+          drawSphere(ctx, nx, ny, nr, img ? 1 : 0.4);
           ctx.restore();
 
-          // Rim — photo only (luminous sphere has no hard border)
-          if (img) {
-            ctx.save(); ctx.globalAlpha = dAlpha * (hov||sel ? 1 : .82);
-            ctx.strokeStyle = joined ? (hov||sel ? "#ffe97a" : GOLD) : "rgba(200,180,255,0.72)";
-            ctx.lineWidth = hov||sel ? 2.5 : 1.6;
-            ctx.beginPath(); ctx.arc(nx, ny, nr, 0, Math.PI*2); ctx.stroke();
-            ctx.restore();
-          }
+          // Glowing rim — all nodes
+          ctx.save(); ctx.globalAlpha = dAlpha * (hov||sel ? 1 : .82);
+          ctx.strokeStyle = joined ? (hov||sel ? "#ffe97a" : GOLD) : "rgba(200,180,255,0.75)";
+          ctx.lineWidth = hov||sel ? 2.5 : 1.6;
+          ctx.shadowColor = joined ? (hov||sel ? '#ffe97a' : '#D4AF37') : 'rgba(185,158,235,0.7)';
+          ctx.shadowBlur = hov||sel ? 16 : 8;
+          ctx.beginPath(); ctx.arc(nx, ny, nr, 0, Math.PI*2); ctx.stroke();
+          ctx.shadowBlur = 0;
+          ctx.restore();
 
           // Name — hierarchy: selected always, orbit 1 always, rest only on hover
           const showLabel = sel || hov || n.orbit === 1;
