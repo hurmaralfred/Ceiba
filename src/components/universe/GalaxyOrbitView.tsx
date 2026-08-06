@@ -203,13 +203,6 @@ const SHOTS = [
 ] as const;
 
 // ── Comet notification system ─────────────────────────────────────────────────
-const COMET_MSGS = [
-  '⭐ Mamá compartió una foto',
-  '🎂 Cumpleaños de Sofía · mañana',
-  '✨ Papá actualizó su historia',
-  '📸 Ana subió recuerdos',
-  '🌟 5 años de la reunión familiar',
-]
 const _comets: Array<{ x: number; y: number; sp: number; msg: string; life: number; ml: number }> = []
 let _cometTimer = 0
 let _cometIdx   = 0
@@ -899,22 +892,37 @@ export function GalaxyOrbitView({
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
       ctx.fillText(pl, cx, cy + NR + 17); ctx.restore();
 
-      // ── Comet notifications ────────────────────────────────────────────────
+      // ── Comet notifications — real family data, 60% slower ────────────────
       _cometTimer++
       if (_cometTimer > 340 && _comets.length < 2) {
         _cometTimer = 0
+        // Build messages from actual family nodes
+        const liveNodes = nodesRef.current.filter(n => !n.deceased)
+        const joinedNodes = liveNodes.filter(n => n.joined)
+        const cometMsgs: string[] = []
+        joinedNodes.forEach(n => {
+          const rel = (RELATION_LABELS as Record<string, string>)[n.relationType] ?? n.relationType
+          cometMsgs.push(`✦ ${n.name} · ${rel} · en Ceiba`)
+        })
+        liveNodes.filter(n => !n.joined).forEach(n => {
+          const rel = (RELATION_LABELS as Record<string, string>)[n.relationType] ?? n.relationType
+          cometMsgs.push(`🌟 ${n.name} · ${rel}`)
+        })
+        if (liveNodes.length > 0) cometMsgs.push(`👨‍👩‍👧 ${liveNodes.length} personas en tu galaxia`)
+        if (joinedNodes.length > 0) cometMsgs.push(`✨ ${joinedNodes.length} familiares conectados en Ceiba`)
+        const msgs = cometMsgs.length > 0 ? cometMsgs : [`🌟 Tu universo familiar te espera`]
         _comets.push({
           x: -80, y: h * (0.18 + Math.random() * 0.38),
-          sp: 3.2 + Math.random() * 2,
-          msg: COMET_MSGS[_cometIdx++ % COMET_MSGS.length],
-          life: 0, ml: 270,
+          sp: (1.28 + Math.random() * 0.8),   // 40% of original speed (~60% slower)
+          msg: msgs[_cometIdx++ % msgs.length],
+          life: 0, ml: 680,
         })
       }
       for (let ci = _comets.length - 1; ci >= 0; ci--) {
         const c = _comets[ci]
         c.x += c.sp; c.life++
         if (c.life > c.ml || c.x > w + 80) { _comets.splice(ci, 1); continue }
-        const fade = c.life < 22 ? c.life / 22 : c.life > c.ml - 32 ? (c.ml - c.life) / 32 : 1
+        const fade = c.life < 30 ? c.life / 30 : c.life > c.ml - 60 ? (c.ml - c.life) / 60 : 1
         ctx.save()
         ctx.globalAlpha = fade
         const tg = ctx.createLinearGradient(c.x - 85, c.y, c.x, c.y)
