@@ -145,64 +145,64 @@ const UNIVERSE_CSS = `
   100% { transform: translate(  0px,   0px); }
 }
 
-/* ── Mobile: reduced drift amplitude ±50px (unique names, picked in JS) ── */
+/* ── Mobile: reduced drift amplitude ±22px (unique names, picked in JS) ── */
 @keyframes nodeDrift1M {
   0%   { transform: translate(  0px,   0px); }
-  14%  { transform: translate(-38px, -48px); }
-  30%  { transform: translate( 32px, -50px); }
-  48%  { transform: translate( 50px,  10px); }
-  64%  { transform: translate( 25px,  50px); }
-  80%  { transform: translate(-44px,  28px); }
-  92%  { transform: translate(-50px, -18px); }
+  14%  { transform: translate(-16px, -20px); }
+  30%  { transform: translate( 14px, -22px); }
+  48%  { transform: translate( 22px,   4px); }
+  64%  { transform: translate( 11px,  22px); }
+  80%  { transform: translate(-18px,  12px); }
+  92%  { transform: translate(-22px,  -8px); }
   100% { transform: translate(  0px,   0px); }
 }
 @keyframes nodeDrift2M {
   0%   { transform: translate(  0px,   0px); }
-  12%  { transform: translate( 46px, -25px); }
-  28%  { transform: translate( 18px, -50px); }
-  46%  { transform: translate(-40px, -34px); }
-  62%  { transform: translate(-50px,  16px); }
-  78%  { transform: translate(-16px,  50px); }
-  90%  { transform: translate( 44px,  32px); }
+  12%  { transform: translate( 20px, -11px); }
+  28%  { transform: translate(  8px, -22px); }
+  46%  { transform: translate(-18px, -15px); }
+  62%  { transform: translate(-22px,   7px); }
+  78%  { transform: translate( -7px,  22px); }
+  90%  { transform: translate( 19px,  14px); }
   100% { transform: translate(  0px,   0px); }
 }
 @keyframes nodeDrift3M {
   0%   { transform: translate(  0px,   0px); }
-  16%  { transform: translate( 22px,  50px); }
-  32%  { transform: translate( 50px,  -6px); }
-  50%  { transform: translate(  9px, -50px); }
-  66%  { transform: translate(-46px, -25px); }
-  82%  { transform: translate(-32px,  44px); }
-  94%  { transform: translate( 16px,  32px); }
+  16%  { transform: translate( 10px,  22px); }
+  32%  { transform: translate( 22px,  -3px); }
+  50%  { transform: translate(  4px, -22px); }
+  66%  { transform: translate(-20px, -11px); }
+  82%  { transform: translate(-14px,  19px); }
+  94%  { transform: translate(  7px,  14px); }
   100% { transform: translate(  0px,   0px); }
 }
 @keyframes nodeDrift4M {
   0%   { transform: translate(  0px,   0px); }
-  18%  { transform: translate(-48px,  18px); }
-  35%  { transform: translate(-22px, -48px); }
-  52%  { transform: translate( 36px, -44px); }
-  68%  { transform: translate( 50px,  22px); }
-  84%  { transform: translate( 12px,  50px); }
-  94%  { transform: translate(-32px,  34px); }
+  18%  { transform: translate(-21px,   8px); }
+  35%  { transform: translate(-10px, -21px); }
+  52%  { transform: translate( 16px, -19px); }
+  68%  { transform: translate( 22px,  10px); }
+  84%  { transform: translate(  5px,  22px); }
+  94%  { transform: translate(-14px,  15px); }
   100% { transform: translate(  0px,   0px); }
 }
 @keyframes nodeDrift5M {
   0%   { transform: translate(  0px,   0px); }
-  20%  { transform: translate(-32px, -44px); }
-  38%  { transform: translate( 25px, -50px); }
-  56%  { transform: translate( 50px,  16px); }
-  72%  { transform: translate( 18px,  48px); }
-  86%  { transform: translate(-44px,  25px); }
+  20%  { transform: translate(-14px, -19px); }
+  38%  { transform: translate( 11px, -22px); }
+  56%  { transform: translate( 22px,   7px); }
+  72%  { transform: translate(  8px,  21px); }
+  86%  { transform: translate(-19px,  11px); }
   100% { transform: translate(  0px,   0px); }
 }
 @keyframes nodeDrift6M {
   0%   { transform: translate(  0px,   0px); }
-  15%  { transform: translate( 34px, -48px); }
-  32%  { transform: translate(-34px, -38px); }
-  50%  { transform: translate(-50px,  12px); }
-  65%  { transform: translate(-16px,  50px); }
-  80%  { transform: translate( 46px,  28px); }
-  92%  { transform: translate( 40px, -25px); }
+  15%  { transform: translate( 15px, -21px); }
+  32%  { transform: translate(-15px, -17px); }
+  50%  { transform: translate(-22px,   5px); }
+  65%  { transform: translate( -7px,  22px); }
+  80%  { transform: translate( 20px,  12px); }
+  92%  { transform: translate( 18px, -11px); }
   100% { transform: translate(  0px,   0px); }
 }
 
@@ -648,7 +648,8 @@ export function FamilyUniverse({
   const viewScale = useMemo(() => {
     if (containerSize.w <= 0) return 1
     const half = containerSize.w / 2
-    return half >= 240 ? 1 : Math.max(0.72, half / 240)
+    // Scale so hop-2 nodes (315px orbit radius) fit within the viewport half-width
+    return half >= 315 ? 1 : Math.max(0.46, half / 315)
   }, [containerSize.w])
 
   const allNodes = useUniverseLayout(focalId, profile, members, extendedMembers, memberLinks)
