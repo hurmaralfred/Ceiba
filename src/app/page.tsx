@@ -234,13 +234,16 @@ function AppBtn({ store }: { store:"apple"|"google" }) {
 // ── Feature icons ──────────────────────────────────────────────────────────────
 function IcoTree() {
   return <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
-    <path d="M22 4 Q14 10 10 17 Q6 24 10 28 Q14 32 20 31 L20 38 L24 38 L24 31 Q30 32 34 28 Q38 24 34 17 Q30 10 22 4Z"
-      stroke={GOLD} strokeWidth="1.5" fill="rgba(212,175,55,0.07)"/>
-    <path d="M22 15 Q16 19 14 24 Q16 28 22 27 Q28 28 30 24 Q28 19 22 15Z"
-      stroke={GOLD} strokeWidth="1" fill="rgba(212,175,55,0.10)" strokeOpacity="0.6"/>
-    <line x1="22" y1="27" x2="22" y2="38" stroke={GOLD} strokeWidth="1.5" strokeOpacity="0.5"/>
-    <line x1="18" y1="33" x2="22" y2="30" stroke={GOLD} strokeWidth="1" strokeOpacity="0.35"/>
-    <line x1="26" y1="33" x2="22" y2="30" stroke={GOLD} strokeWidth="1" strokeOpacity="0.35"/>
+    {/* Galaxy / orbit icon */}
+    <circle cx="22" cy="22" r="4" fill={GOLD} opacity="0.85"/>
+    <ellipse cx="22" cy="22" rx="14" ry="6" stroke={GOLD} strokeWidth="1.4"
+      fill="none" strokeOpacity="0.75" transform="rotate(-25 22 22)"/>
+    <ellipse cx="22" cy="22" rx="14" ry="6" stroke={GOLD} strokeWidth="1"
+      fill="none" strokeOpacity="0.40" transform="rotate(50 22 22)"/>
+    <circle cx="36" cy="17" r="2" fill={GOLD} opacity="0.70"/>
+    <circle cx="10" cy="28" r="1.6" fill={GOLD} opacity="0.55"/>
+    <circle cx="30" cy="32" r="1.4" fill={GOLD} opacity="0.45"/>
+    <circle cx="14" cy="13" r="1.2" fill={GOLD} opacity="0.40"/>
   </svg>;
 }
 function IcoMsg() {
@@ -523,7 +526,7 @@ function IcoYT() { return <svg width="18" height="18" viewBox="0 0 24 24" fill="
 
 // ── Feature card ───────────────────────────────────────────────────────────────
 const FEATURES = [
-  { Ico:IcoTree,  t:"Árbol Familiar",      d:"Explora tu árbol familiar interactivo y visualiza tus conexiones de generación en generación.",     href:"/tree"   },
+  { Ico:IcoTree,  t:"Galaxia Familiar",     d:"Explora tu galaxia familiar interactiva y visualiza tus conexiones de generación en generación.",   href:"/tree"   },
   { Ico:IcoMsg,   t:"Historias y Mensajes", d:"Comparte recuerdos, anécdotas y mensajes con tus seres queridos y mantenlos vivos para siempre.",   href:"/feed"   },
   { Ico:IcoAlbum, t:"Álbumes y Recuerdos", d:"Guarda fotos, videos y documentos importantes en álbumes privados y revívelos cuando quieras.",     href:"/photos" },
   { Ico:IcoMap,   t:"Mapas de Origen",     d:"Descubre de dónde venimos. Explora los lugares que marcaron la historia de tu familia.",             href:"/mapa"   },
