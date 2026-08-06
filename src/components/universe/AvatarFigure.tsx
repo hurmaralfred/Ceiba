@@ -1,7 +1,7 @@
 'use client'
 import React, { useId, useState, useMemo } from 'react'
 import { createAvatar } from '@dicebear/core'
-import * as personas from '@dicebear/personas'
+import * as avataaars from '@dicebear/avataaars'
 import type { UniverseNode } from './useUniverseLayout'
 
 // ─── Color helpers ────────────────────────────────────────────────────────────
@@ -269,7 +269,7 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
     try {
       const BG_PALETTE = ['0a0618', '060d1a', '0d0620', '080318', '101030']
       const bg = BG_PALETTE[seed % BG_PALETTE.length]
-      const avatar = createAvatar(personas, {
+      const avatar = createAvatar(avataaars, {
         seed: node.id,
         size: 72,
         backgroundColor: [bg],
