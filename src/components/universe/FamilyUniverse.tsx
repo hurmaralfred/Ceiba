@@ -648,8 +648,16 @@ export function FamilyUniverse({
   const viewScale = useMemo(() => {
     if (containerSize.w <= 0) return 1
     const half = containerSize.w / 2
-    // Scale so hop-2 nodes (315px orbit radius) fit within the viewport half-width
-    return half >= 315 ? 1 : Math.max(0.46, half / 315)
+    return half >= 240 ? 1 : Math.max(0.72, half / 240)
+  }, [containerSize.w])
+
+  // On narrow screens compress node positions so orbit-2 nodes (315px radius)
+  // stay within the viewport. positionScale is applied to cx/cy before render.
+  const positionScale = useMemo(() => {
+    if (containerSize.w <= 0) return 1
+    const half = containerSize.w / 2
+    // Leave 20px margin: orbit-2 (315px) must fit in half-width minus margin
+    return half >= 335 ? 1 : Math.min(1, (half - 20) / 315)
   }, [containerSize.w])
 
   const allNodes = useUniverseLayout(focalId, profile, members, extendedMembers, memberLinks)
@@ -663,9 +671,17 @@ export function FamilyUniverse({
     [allNodes, showExtended],
   )
 
-  const { visible: nodes, maxExpansionReached } = useMemo(
+  const { visible: rawNodes, maxExpansionReached } = useMemo(
     () => selectVisibleUniverseNodes(baseNodes, containerSize.w, 0, expandedIds),
     [baseNodes, containerSize.w, expandedIds],
+  )
+
+  // Apply positionScale so nodes don't fly off screen on narrow viewports
+  const nodes = useMemo(() =>
+    positionScale === 1
+      ? rawNodes
+      : rawNodes.map(n => ({ ...n, cx: n.cx * positionScale, cy: n.cy * positionScale })),
+    [rawNodes, positionScale],
   )
 
   // Stable list of all naturally-hidden nodes (without expansion override)
