@@ -1,10 +1,10 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Plus, X, Trash2, Pencil, MapPin, Heart, Baby,
-  GraduationCap, Users, Star, BookOpen, AlertCircle, Calendar,
+  GraduationCap, Users, Star, BookOpen, AlertCircle, Calendar, Camera, ImagePlus,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
@@ -97,6 +97,9 @@ export default function EventsPage() {
   const [userId,    setUserId]    = useState<string | null>(null);
   const [form,      setForm]      = useState(EMPTY_FORM);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [photoFile,    setPhotoFile]    = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { init(); }, []);
 
@@ -114,11 +117,17 @@ export default function EventsPage() {
     setLoading(false);
   };
 
-  const openCreate = () => { setEditingId(null); setForm(EMPTY_FORM); setShowModal(true); };
+  const closeModal = () => {
+    setShowModal(false); setForm(EMPTY_FORM); setEditingId(null);
+    setPhotoFile(null); setPhotoPreview(null);
+  };
+
+  const openCreate = () => { setEditingId(null); setForm(EMPTY_FORM); setPhotoFile(null); setPhotoPreview(null); setShowModal(true); };
   const openEdit = (e: FamilyEvent) => {
     setEditingId(e.id);
     setForm({ title: e.title, event_type: e.event_type, event_date: e.event_date,
       description: e.description || "", location: e.location || "" });
+    setPhotoFile(null); setPhotoPreview(null);
     setShowModal(true);
   };
 
@@ -126,14 +135,27 @@ export default function EventsPage() {
     if (!form.title.trim()) { toast.error("El título es obligatorio"); return; }
     if (!form.event_date)   { toast.error("La fecha es obligatoria");  return; }
     setSaving(true);
-    const res = editingId
-      ? await fetch("/api/events", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: editingId, ...form }) })
-      : await fetch("/api/events", { method: "POST",  headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
-    setSaving(false);
-    if (!res.ok) { const b = await res.json().catch(() => ({})); toast.error(b.error || "Error al guardar"); return; }
-    toast.success(editingId ? "Recuerdo actualizado" : "Recuerdo guardado");
-    setShowModal(false); setForm(EMPTY_FORM); setEditingId(null);
-    await loadEvents();
+    try {
+      // 1. Subir foto a family-photos si hay una seleccionada
+      if (photoFile && userId) {
+        const ext = photoFile.name.split(".").pop();
+        const path = `${userId}/${Date.now()}.${ext}`;
+        const { error: uploadErr } = await supabase.storage.from("family-photos").upload(path, photoFile);
+        if (uploadErr) { toast.error("Error al subir la foto"); setSaving(false); return; }
+        await fetch("/api/photos", { method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ storagePath: path, caption: form.title.trim() }) });
+      }
+      // 2. Guardar el evento
+      const res = editingId
+        ? await fetch("/api/events", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: editingId, ...form }) })
+        : await fetch("/api/events", { method: "POST",  headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
+      if (!res.ok) { const b = await res.json().catch(() => ({})); toast.error(b.error || "Error al guardar"); setSaving(false); return; }
+      toast.success(editingId ? "Recuerdo actualizado" : photoFile ? "¡Recuerdo y foto guardados!" : "Recuerdo guardado");
+      closeModal();
+      await loadEvents();
+    } finally {
+      setSaving(false);
+    }
   };
 
   const deleteEvent = async (id: string) => {
@@ -382,7 +404,7 @@ export default function EventsPage() {
 
         {/* ── Añadir recuerdo modal ────────────────────────────────────────── */}
         {showModal && (
-          <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.75)",
+          <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.80)",
             backdropFilter:"blur(8px)", zIndex:50,
             display:"flex", alignItems:"flex-end", justifyContent:"center" }}>
             <div style={{
@@ -392,61 +414,127 @@ export default function EventsPage() {
               borderRadius:"24px 24px 0 0",
               borderTop:"0.5px solid rgba(242,180,60,0.40)",
               boxShadow:"0 -20px 60px rgba(0,0,0,0.90), 0 0 80px rgba(242,180,60,0.05)",
-              padding:"20px 20px 36px",
+              maxHeight:"92dvh", display:"flex", flexDirection:"column",
               position:"relative", overflow:"hidden",
             }}>
               {/* Nebula accent */}
               <div style={{ position:"absolute", top:-10, left:"25%", width:180, height:70,
                 borderRadius:"50%", background:"radial-gradient(ellipse, rgba(212,175,55,0.07) 0%, transparent 65%)",
                 filter:"blur(12px)", pointerEvents:"none" }} />
-              {/* Handle */}
-              <div style={{ display:"flex", justifyContent:"center", marginBottom:16 }}>
-                <div style={{ width:32, height:3, borderRadius:2, background:"rgba(242,180,60,0.30)" }} />
-              </div>
-              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
-                <span style={{ fontSize:16, fontWeight:700, color:"#F5EDD8", letterSpacing:"-0.01em" }}>
-                  {editingId ? "Editar recuerdo" : "Añadir recuerdo"}
-                </span>
-                <button onClick={() => { setShowModal(false); setForm(EMPTY_FORM); setEditingId(null); }}
-                  style={{ background:"none", border:"none", cursor:"pointer",
-                    color:"rgba(242,180,60,0.40)", padding:4 }}>
-                  <X size={18} />
-                </button>
+
+              {/* Header — fijo */}
+              <div style={{ padding:"16px 20px 0", flexShrink:0 }}>
+                {/* Handle */}
+                <div style={{ display:"flex", justifyContent:"center", marginBottom:14 }}>
+                  <div style={{ width:32, height:3, borderRadius:2, background:"rgba(242,180,60,0.30)" }} />
+                </div>
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
+                  <span style={{ fontSize:16, fontWeight:700, color:"#F5EDD8", letterSpacing:"-0.01em" }}>
+                    {editingId ? "Editar recuerdo" : "Nuevo recuerdo"}
+                  </span>
+                  <button onClick={closeModal}
+                    style={{ width:32, height:32, display:"flex", alignItems:"center", justifyContent:"center",
+                      background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.08)",
+                      borderRadius:8, cursor:"pointer", color:"rgba(255,255,255,0.4)" }}>
+                    <X size={15} />
+                  </button>
+                </div>
               </div>
 
-              <div style={{ display:"flex", flexDirection:"column", gap:14, position:"relative" }}>
-                <div>
-                  <span style={labelStyle}>Título *</span>
-                  <input type="text" style={s3dInput()} placeholder="ej. Nació Valentina Hurtado"
-                    value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} />
-                </div>
-                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+              {/* Contenido scrollable */}
+              <div style={{ overflowY:"auto", padding:"0 20px", flex:1 }}>
+                <div style={{ display:"flex", flexDirection:"column", gap:14, paddingBottom:4 }}>
+
+                  {/* Foto del recuerdo */}
+                  {!editingId && (
+                    <div>
+                      <span style={labelStyle}>Foto (opcional)</span>
+                      <input ref={photoInputRef} type="file" accept="image/*" style={{ display:"none" }}
+                        onChange={e => {
+                          const f = e.target.files?.[0];
+                          if (!f) return;
+                          if (f.size > 10 * 1024 * 1024) { toast.error("La foto debe pesar menos de 10 MB"); return; }
+                          setPhotoFile(f);
+                          setPhotoPreview(URL.createObjectURL(f));
+                        }} />
+                      {photoPreview ? (
+                        <div style={{ position:"relative", borderRadius:14, overflow:"hidden",
+                          border:"1px solid rgba(242,180,60,0.30)", marginTop:4 }}>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={photoPreview} alt="" style={{ width:"100%", height:160, objectFit:"cover", display:"block" }} />
+                          <div style={{ position:"absolute", inset:0,
+                            background:"linear-gradient(to top, rgba(6,3,16,0.65) 0%, transparent 50%)" }} />
+                          <button onClick={() => { setPhotoFile(null); setPhotoPreview(null); if (photoInputRef.current) photoInputRef.current.value = ""; }}
+                            style={{ position:"absolute", top:8, right:8, width:28, height:28,
+                              borderRadius:"50%", background:"rgba(0,0,0,0.65)", border:"1px solid rgba(255,255,255,0.15)",
+                              display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer",
+                              color:"rgba(255,255,255,0.8)" }}>
+                            <X size={13} />
+                          </button>
+                          <div style={{ position:"absolute", bottom:8, left:12,
+                            fontSize:10, color:"rgba(242,180,60,0.75)", fontWeight:600, letterSpacing:"0.04em" }}>
+                            Se compartirá con tu familia ✦
+                          </div>
+                        </div>
+                      ) : (
+                        <button onClick={() => photoInputRef.current?.click()}
+                          style={{ width:"100%", padding:"18px 0", borderRadius:14, cursor:"pointer",
+                            background:"rgba(242,180,60,0.04)", border:"1.5px dashed rgba(242,180,60,0.22)",
+                            display:"flex", flexDirection:"column", alignItems:"center", gap:8, marginTop:4 }}>
+                          <div style={{ width:40, height:40, borderRadius:12,
+                            background:"rgba(242,180,60,0.08)", border:"1px solid rgba(242,180,60,0.18)",
+                            display:"flex", alignItems:"center", justifyContent:"center" }}>
+                            <ImagePlus size={18} style={{ color:"rgba(242,180,60,0.55)" }} />
+                          </div>
+                          <div>
+                            <div style={{ fontSize:13, fontWeight:600, color:"rgba(242,180,60,0.65)" }}>Añadir foto</div>
+                            <div style={{ fontSize:10, color:"rgba(255,255,255,0.22)", marginTop:2 }}>
+                              Se publicará en el álbum familiar
+                            </div>
+                          </div>
+                        </button>
+                      )}
+                    </div>
+                  )}
+
                   <div>
-                    <span style={labelStyle}>Tipo</span>
-                    <select style={{ ...s3dInput(), appearance:"none" }}
-                      value={form.event_type} onChange={e => setForm(f => ({ ...f, event_type: e.target.value }))}>
-                      {EVENT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                    </select>
+                    <span style={labelStyle}>Título *</span>
+                    <input type="text" style={s3dInput()} placeholder="ej. Nació Valentina Hurtado"
+                      value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} />
+                  </div>
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+                    <div>
+                      <span style={labelStyle}>Tipo</span>
+                      <select style={{ ...s3dInput(), appearance:"none" }}
+                        value={form.event_type} onChange={e => setForm(f => ({ ...f, event_type: e.target.value }))}>
+                        {EVENT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <span style={labelStyle}>Fecha *</span>
+                      <input type="date" style={s3dInput()}
+                        value={form.event_date} onChange={e => setForm(f => ({ ...f, event_date: e.target.value }))} />
+                    </div>
                   </div>
                   <div>
-                    <span style={labelStyle}>Fecha *</span>
-                    <input type="date" style={s3dInput()}
-                      value={form.event_date} onChange={e => setForm(f => ({ ...f, event_date: e.target.value }))} />
+                    <span style={labelStyle}>Lugar (opcional)</span>
+                    <input type="text" style={s3dInput()} placeholder="ej. Bogotá, Colombia"
+                      value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} />
+                  </div>
+                  <div>
+                    <span style={labelStyle}>Historia (opcional)</span>
+                    <textarea style={{ ...s3dInput(), resize:"none" }} rows={3}
+                      placeholder="Cuenta algo sobre este momento..."
+                      value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
                   </div>
                 </div>
-                <div>
-                  <span style={labelStyle}>Lugar (opcional)</span>
-                  <input type="text" style={s3dInput()} placeholder="ej. Bogotá, Colombia"
-                    value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} />
-                </div>
-                <div>
-                  <span style={labelStyle}>Historia (opcional)</span>
-                  <textarea style={{ ...s3dInput(), resize:"none" }} rows={3}
-                    placeholder="Cuenta algo sobre este momento..."
-                    value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
-                </div>
-                <div style={{ display:"flex", gap:10, paddingTop:4 }}>
-                  <button onClick={() => { setShowModal(false); setForm(EMPTY_FORM); setEditingId(null); }}
+              </div>
+
+              {/* Botones — fijos abajo */}
+              <div style={{ padding:"14px 20px 36px", flexShrink:0,
+                borderTop:"0.5px solid rgba(242,180,60,0.10)" }}>
+                <div style={{ display:"flex", gap:10 }}>
+                  <button onClick={closeModal}
                     style={{ flex:1, padding:"13px 0", borderRadius:14, cursor:"pointer",
                       background:"rgba(8,5,18,0.95)",
                       border:"0.5px solid rgba(242,180,60,0.18)",
@@ -454,14 +542,15 @@ export default function EventsPage() {
                     Cancelar
                   </button>
                   <button onClick={saveEvent} disabled={saving}
-                    style={{ flex:1, padding:"13px 0", borderRadius:14,
+                    style={{ flex:2, padding:"13px 0", borderRadius:14,
                       cursor:saving ? "wait" : "pointer",
-                      background:"rgba(242,180,60,0.12)",
-                      border:"0.5px solid rgba(242,180,60,0.45)",
-                      borderTop:"0.5px solid rgba(242,180,60,0.65)",
+                      background:"linear-gradient(135deg, rgba(242,180,60,0.20) 0%, rgba(200,130,30,0.14) 100%)",
+                      border:"0.5px solid rgba(242,180,60,0.50)",
+                      borderTop:"0.5px solid rgba(242,180,60,0.70)",
+                      boxShadow:"0 0 20px rgba(212,175,55,0.15)",
                       color:"#F2B43C", fontWeight:700, fontSize:13,
                       letterSpacing:"0.04em" }}>
-                    {saving ? "Guardando..." : editingId ? "Guardar" : "✦ Guardar recuerdo"}
+                    {saving ? "Guardando..." : editingId ? "Guardar cambios" : photoFile ? "✦ Guardar con foto" : "✦ Guardar recuerdo"}
                   </button>
                 </div>
               </div>
