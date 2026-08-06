@@ -7,7 +7,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, TreePine, BookOpen, Camera, User, ArrowLeft, type LucideIcon } from "lucide-react";
+import { Home, TreePine, BookOpen, User, ArrowLeft, type LucideIcon } from "lucide-react";
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 export const C = {
@@ -164,8 +164,7 @@ export function CosmicHeader({
 const NAV_ITEMS: Array<{ href: string; Icon: LucideIcon; label: string; center?: boolean }> = [
   { href: "/home",    Icon: Home,     label: "Inicio"   },
   { href: "/tree",    Icon: TreePine, label: "Árbol"    },
-  { href: "/feed",    Icon: BookOpen, label: "Actividad", center: true },
-  { href: "/photos",  Icon: Camera,   label: "Álbumes"  },
+  { href: "/events",  Icon: BookOpen, label: "Recuerdos", center: true },
   { href: "/persona/me", Icon: User,     label: "Perfil"   },
 ];
 

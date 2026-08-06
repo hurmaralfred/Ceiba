@@ -217,7 +217,7 @@ export default function EventsPage() {
 
       <div style={{ minHeight:"100vh", color:"#fff", paddingBottom:100, position:"relative", zIndex:5 }}>
         <CosmicHeader
-          title="Historia familiar"
+          title="Recuerdos de la familia"
           backHref="/home"
           right={
             <button onClick={openCreate} style={{
@@ -407,7 +407,7 @@ export default function EventsPage() {
           <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.80)",
             backdropFilter:"blur(8px)", zIndex:50,
             display:"flex", alignItems:"flex-end", justifyContent:"center" }}>
-            {/* Sheet — scroll único, botones sticky */}
+            {/* Sheet — flex-column con min-height:0 en el scroll area (patrón iOS seguro) */}
             <div style={{
               width:"100%", maxWidth:480,
               background:"rgba(6,3,16,0.98)",
@@ -415,17 +415,17 @@ export default function EventsPage() {
               borderRadius:"24px 24px 0 0",
               borderTop:"0.5px solid rgba(242,180,60,0.40)",
               boxShadow:"0 -20px 60px rgba(0,0,0,0.90)",
-              maxHeight:"92dvh", overflowY:"auto",
-              WebkitOverflowScrolling:"touch" as any,
+              maxHeight:"92dvh",
+              display:"flex", flexDirection:"column",
+              overflow:"hidden",
             }}>
-              {/* Handle + título */}
-              <div style={{ padding:"16px 20px 0", position:"sticky", top:0, zIndex:2,
-                background:"rgba(6,3,16,0.98)",
+              {/* Header — fijo, no scrollea */}
+              <div style={{ flexShrink:0, padding:"16px 20px 14px",
                 borderBottom:"0.5px solid rgba(242,180,60,0.08)" }}>
                 <div style={{ display:"flex", justifyContent:"center", marginBottom:12 }}>
                   <div style={{ width:32, height:3, borderRadius:2, background:"rgba(242,180,60,0.30)" }} />
                 </div>
-                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
                   <span style={{ fontSize:16, fontWeight:700, color:"#F5EDD8", letterSpacing:"-0.01em" }}>
                     {editingId ? "Editar recuerdo" : "Nuevo recuerdo"}
                   </span>
@@ -438,9 +438,10 @@ export default function EventsPage() {
                 </div>
               </div>
 
-              {/* Contenido */}
-              <div style={{ padding:"16px 20px 0" }}>
-                <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+              {/* Contenido scrollable — min-height:0 permite que flex lo comprima */}
+              <div style={{ flex:1, minHeight:0, overflowY:"auto",
+                WebkitOverflowScrolling:"touch" as any, padding:"16px 20px 0" }}>
+                <div style={{ display:"flex", flexDirection:"column", gap:14, paddingBottom:8 }}>
 
                   {/* Foto del recuerdo */}
                   {!editingId && (
@@ -486,7 +487,7 @@ export default function EventsPage() {
                           <div>
                             <div style={{ fontSize:13, fontWeight:600, color:"rgba(242,180,60,0.65)" }}>Añadir foto</div>
                             <div style={{ fontSize:10, color:"rgba(255,255,255,0.22)", marginTop:2 }}>
-                              Se publicará en el álbum familiar
+                              Se compartirá con toda la familia
                             </div>
                           </div>
                         </button>
@@ -527,9 +528,9 @@ export default function EventsPage() {
                 </div>
               </div>
 
-              {/* Botones — sticky al fondo del sheet */}
+              {/* Botones — flexShrink:0, siempre visibles al fondo */}
               <div style={{
-                position:"sticky", bottom:0, zIndex:2,
+                flexShrink:0,
                 padding:"12px 20px max(env(safe-area-inset-bottom, 20px), 20px)",
                 background:"rgba(6,3,16,0.98)",
                 borderTop:"0.5px solid rgba(242,180,60,0.12)",

@@ -4,7 +4,7 @@ import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { getDiceBearUrl } from "@/lib/dicebear";
 import {
-  Home, TreePine, BookOpen, Camera, User, Bell, Menu,
+  Home, TreePine, BookOpen, User, Bell, Menu,
   Users, GitBranch, Send,
   Trophy, ChevronRight, Sparkles, X, MessageCircle, Map, Share2,
 } from "lucide-react";
@@ -453,8 +453,7 @@ function CosmicNav({ pathname, suggCount = 0 }: { pathname: string; suggCount?: 
   const items = [
     { href: "/home",    Icon: Home,     label: "Inicio"   },
     { href: "/tree",    Icon: TreePine, label: "Árbol"    },
-    { href: "/events",  Icon: BookOpen, label: "Historias", center: true },
-    { href: "/photos",  Icon: Camera,   label: "Álbumes"  },
+    { href: "/events",  Icon: BookOpen, label: "Recuerdos", center: true },
     { href: "/profile", Icon: User,     label: "Perfil"   },
   ];
   return (
@@ -522,6 +521,7 @@ export default function HomePage() {
   const [birthdays,    setBirthdays]    = useState<FeedBirthday[]>([]);
   const [photos,       setPhotos]       = useState<FeedPhoto[]>([]);
   const [events,       setEvents]       = useState<FeedEvent[]>([]);
+  const [allEvents,    setAllEvents]    = useState<FeedEvent[]>([]);
   const [suggestions,  setSuggestions]  = useState<KinshipSuggestion[]>([]);
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const [roster,       setRoster]       = useState<FamilyRosterMember[]>([]);
@@ -539,11 +539,12 @@ export default function HomePage() {
       if (status.needsConfirmation) { router.replace("/confirmar-datos"); return; }
     }
 
-    const [graphRes, feedRes, sugRes, rosterRes] = await Promise.allSettled([
+    const [graphRes, feedRes, sugRes, rosterRes, eventsRes] = await Promise.allSettled([
       supabase.rpc("get_my_family_graph", { p_depth: 4 }),
       fetch("/api/feed"),
       fetch("/api/suggestions"),
       fetch("/api/family/roster"),
+      fetch("/api/events"),
     ]);
 
     if (graphRes.status === "fulfilled" && !graphRes.value.error) {
@@ -584,6 +585,16 @@ export default function HomePage() {
         if (res.ok) {
           const { members } = await res.json();
           setRoster(members ?? []);
+        }
+      } catch {}
+    }
+
+    if (eventsRes.status === "fulfilled") {
+      try {
+        const res = eventsRes.value;
+        if (res.ok) {
+          const { events: ev } = await res.json();
+          setAllEvents(ev ?? []);
         }
       } catch {}
     }
@@ -649,7 +660,7 @@ export default function HomePage() {
     const pool: string[] = [
       n > 1 ? `Tu familia tiene ${n} personas. Cada una guarda una historia única.` : "Empieza construyendo tu árbol. La primera persona lo cambia todo.",
       h > 0 ? `${h} historia${h !== 1 ? "s" : ""} documentada${h !== 1 ? "s" : ""} en tu árbol. Cada una, un regalo para el futuro.` : "La primera historia que escribas será el inicio de algo que vivirá para siempre.",
-      p > 0 ? `${p} foto${p !== 1 ? "s" : ""} en tu álbum. Los recuerdos visuales son los que más duran.` : "Una foto hoy se convierte en un tesoro en veinte años.",
+      p > 0 ? `${p} recuerdo${p !== 1 ? "s" : ""} con foto en tu familia. Los momentos visuales son los que más duran.` : "Una foto hoy se convierte en un tesoro en veinte años.",
       n > 5 ? `¿Cuándo fue la última vez que hablaste con alguien de tu árbol de ${n} personas?` : "Cada persona que añades es una raíz más en el árbol.",
       "Los momentos que no se documentan desaparecen. Los que sí, permanecen.",
       h > 0 ? `Tu familia ya ha escrito ${h} capítulo${h !== 1 ? "s" : ""} de su historia.` : "Escribe el primer capítulo de la historia de tu familia.",
@@ -690,8 +701,8 @@ export default function HomePage() {
     if (freshPhoto) return {
       type: "foto", label: "Recuerdo del día",
       title: freshPhoto.caption ?? "Un recuerdo familiar",
-      subtitle: "Foto añadida recientemente a tu álbum.",
-      href: "/photos",
+      subtitle: "Foto añadida recientemente a los recuerdos.",
+      href: "/events",
       imageUrl: freshPhoto.url,
     };
     // 3. Cumpleaños próximo ≤14 días
@@ -890,7 +901,7 @@ export default function HomePage() {
           const recent = photos.find(p => (Date.now() - new Date(p.created_at).getTime()) < 86_400_000);
           if (!recent) return null;
           return (
-            <Link href="/photos">
+            <Link href="/events">
               <div style={{
                 borderRadius: 22, background: "#0a060e", position: "relative", overflow: "hidden", minHeight: 200,
                 borderTop: "2px solid rgba(160,100,40,0.6)", borderLeft: "1px solid rgba(160,100,40,0.25)",
@@ -910,7 +921,7 @@ export default function HomePage() {
                   textTransform: "uppercase" }}>Nueva foto</div>
                 <div style={{ position: "absolute", bottom: 20, left: 20, right: 20 }}>
                   <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
-                    textTransform: "uppercase", color: "rgba(200,120,48,0.7)", marginBottom: 6 }}>📸 Foto nueva en el álbum</div>
+                    textTransform: "uppercase", color: "rgba(200,120,48,0.7)", marginBottom: 6 }}>📸 Nuevo recuerdo con foto</div>
                   {recent.caption && (
                     <div style={{ fontSize: 16, fontWeight: 700, color: "#fff", marginBottom: 14, lineHeight: 1.3 }}>
                       {recent.caption}
@@ -1025,8 +1036,7 @@ export default function HomePage() {
         <div style={{ display: "flex", justifyContent: "space-between", gap: 4 }}>
           {([
             { href: "/tree",    Icon: TreePine,      label: "Árbol",    color: "#f0c040", top: "rgba(255,210,80,0.28)",  mid: "rgba(180,110,0,0.22)",  bot: "rgba(80,40,0,0.85)",  border: "rgba(240,192,64,0.60)",  glow: "rgba(212,175,55,0.50)",  shadow: "#3a2800" },
-            { href: "/events",  Icon: BookOpen,      label: "Historia", color: "#f0a060", top: "rgba(255,160,80,0.26)",  mid: "rgba(160,80,20,0.22)",  bot: "rgba(60,25,5,0.88)",  border: "rgba(220,130,60,0.58)",  glow: "rgba(200,110,40,0.45)",  shadow: "#2e1200" },
-            { href: "/photos",  Icon: Camera,        label: "Álbum",    color: "#f0a060", top: "rgba(255,155,70,0.26)",  mid: "rgba(155,75,15,0.22)",  bot: "rgba(58,22,4,0.88)",  border: "rgba(215,125,55,0.55)",  glow: "rgba(195,105,35,0.42)",  shadow: "#2a1000" },
+            { href: "/events",  Icon: BookOpen,      label: "Recuerdos", color: "#f2b43c", top: "rgba(242,180,60,0.28)",  mid: "rgba(180,120,10,0.22)",  bot: "rgba(60,30,2,0.88)",  border: "rgba(242,180,60,0.55)",  glow: "rgba(212,160,40,0.42)",  shadow: "#2a1400" },
             { href: "/chat",    Icon: MessageCircle, label: "Chat",     color: "#c0c8ff", top: "rgba(160,170,255,0.28)", mid: "rgba(80,90,200,0.22)",  bot: "rgba(10,8,50,0.90)",  border: "rgba(160,170,245,0.58)", glow: "rgba(130,140,230,0.45)", shadow: "#050328" },
             { href: "/mapa",    Icon: Map,           label: "Mapa",     color: "#60e0f8", top: "rgba(80,220,250,0.26)",  mid: "rgba(20,150,190,0.22)", bot: "rgba(4,30,50,0.90)",  border: "rgba(70,210,240,0.55)",  glow: "rgba(40,180,220,0.42)",  shadow: "#02101e" },
             { href: "/invitar", Icon: Send,          label: "Invitar",  color: "#f0c040", top: "rgba(255,205,70,0.26)",  mid: "rgba(175,105,0,0.20)",  bot: "rgba(78,38,0,0.87)",  border: "rgba(235,185,55,0.58)",  glow: "rgba(205,165,40,0.46)",  shadow: "#362000" },
@@ -1063,6 +1073,86 @@ export default function HomePage() {
           ))}
         </div>
       </div>
+
+      {/* ── HISTORIAS ─── (aparecen en las últimas 24h, luego desaparecen) */}
+      {(() => {
+        const recent24h = allEvents.filter(e => Date.now() - new Date(e.created_at).getTime() < 86_400_000);
+        if (recent24h.length === 0) return null;
+        const STORY_EMOJI: Record<string, string> = { birth:"👶", marriage:"💍", death:"✦", graduation:"🎓", reunion:"👨‍👩‍👧", anniversary:"🎂", other:"✨" };
+        return (
+          <div style={{ padding:"0 14px 18px" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:12 }}>
+              <span style={{ fontSize:11, fontWeight:700, letterSpacing:"0.18em", textTransform:"uppercase", color:"rgba(212,175,55,0.50)" }}>Historias</span>
+              <span style={{ fontSize:9, color:"rgba(255,255,255,0.18)", letterSpacing:"0.04em" }}>· desaparecen en 24h</span>
+            </div>
+            <div style={{ display:"flex", gap:14, overflowX:"auto", paddingBottom:4, WebkitOverflowScrolling:"touch" as any }}>
+              {recent24h.map(e => {
+                const emoji = STORY_EMOJI[e.event_type] ?? "✨";
+                return (
+                  <Link key={e.id} href="/events" style={{ textDecoration:"none", flexShrink:0 }}>
+                    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:6 }}>
+                      <div style={{ width:60, height:60, borderRadius:"50%", position:"relative",
+                        background:"radial-gradient(circle at 35% 28%, rgba(242,180,60,0.16) 0%, rgba(6,3,16,0.94) 70%)",
+                        border:"2px solid rgba(242,180,60,0.50)",
+                        boxShadow:"0 0 18px rgba(242,180,60,0.18), inset 0 1px 0 rgba(255,255,255,0.08)",
+                        display:"flex", alignItems:"center", justifyContent:"center", fontSize:24 }}>
+                        {emoji}
+                        <div style={{ position:"absolute", inset:0, borderRadius:"50%", pointerEvents:"none",
+                          background:"radial-gradient(circle at 35% 22%, rgba(255,255,255,0.18) 0%, transparent 50%)" }} />
+                      </div>
+                      <span style={{ fontSize:9, fontWeight:600, color:"rgba(255,255,255,0.45)",
+                        maxWidth:62, textAlign:"center", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                        {e.title}
+                      </span>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── RECUERDOS ─── (todos los eventos de la familia, sin límite de tiempo) */}
+      {allEvents.length > 0 && (
+        <div style={{ padding:"0 14px 18px" }}>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12 }}>
+            <span style={{ fontSize:11, fontWeight:700, letterSpacing:"0.18em", textTransform:"uppercase", color:"rgba(212,175,55,0.50)" }}>Recuerdos</span>
+            <Link href="/events" style={{ fontSize:10, color:"rgba(212,175,55,0.50)", textDecoration:"none", fontWeight:600 }}>Ver todos →</Link>
+          </div>
+          <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+            {[...allEvents].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 5).map(e => {
+              const EMOJIS: Record<string, string> = { birth:"👶", marriage:"💍", death:"✦", graduation:"🎓", reunion:"👨‍👩‍👧", anniversary:"🎂", other:"✨" };
+              const ACCENTS: Record<string, string> = { birth:"220,100,150", marriage:"220,60,80", death:"140,140,160", graduation:"60,120,240", reunion:"70,200,100", anniversary:"212,175,55", other:"160,80,240" };
+              const emoji = EMOJIS[e.event_type] ?? "✨";
+              const ac = ACCENTS[e.event_type] ?? "212,175,55";
+              const d = new Date(e.event_date);
+              const dateStr = `${d.getDate()} ${["ENE","FEB","MAR","ABR","MAY","JUN","JUL","AGO","SEP","OCT","NOV","DIC"][d.getMonth()]} ${d.getFullYear()}`;
+              return (
+                <Link key={e.id} href="/events" style={{ textDecoration:"none" }}>
+                  <div style={{ borderRadius:16, background:"rgba(8,5,18,0.85)", backdropFilter:"blur(12px)",
+                    WebkitBackdropFilter:"blur(12px)", borderTop:`0.5px solid rgba(${ac},0.32)`,
+                    border:`0.5px solid rgba(${ac},0.12)`, padding:"11px 14px",
+                    display:"flex", alignItems:"center", gap:12,
+                    boxShadow:"0 4px 16px rgba(0,0,0,0.4)" }}>
+                    <div style={{ width:40, height:40, borderRadius:13, flexShrink:0,
+                      background:`rgba(${ac},0.08)`, border:`1px solid rgba(${ac},0.18)`,
+                      display:"flex", alignItems:"center", justifyContent:"center", fontSize:20 }}>
+                      {emoji}
+                    </div>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontSize:13, fontWeight:700, color:"#F5EDD8",
+                        overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{e.title}</div>
+                      <div style={{ fontSize:10, color:"rgba(255,255,255,0.28)", marginTop:2 }}>{dateStr}</div>
+                    </div>
+                    <ChevronRight size={14} style={{ color:`rgba(${ac},0.30)`, flexShrink:0 }} />
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ── FUNCIONES ────────────────────────────────────────────────────── */}
       <div style={{ padding: "16px 14px 14px", position: "relative" }}>
