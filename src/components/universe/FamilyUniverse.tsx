@@ -145,6 +145,69 @@ const UNIVERSE_CSS = `
   100% { transform: translate(  0px,   0px); }
 }
 
+/* ── Mobile: reduced drift amplitude ±70px so nodes stay on a 375px screen ── */
+@media (max-width: 600px) {
+  @keyframes nodeDrift1 {
+    0%   { transform: translate(  0px,   0px); }
+    14%  { transform: translate(-52px, -65px); }
+    30%  { transform: translate( 44px, -70px); }
+    48%  { transform: translate( 72px,  14px); }
+    64%  { transform: translate( 35px,  70px); }
+    80%  { transform: translate(-61px,  40px); }
+    92%  { transform: translate(-70px, -26px); }
+    100% { transform: translate(  0px,   0px); }
+  }
+  @keyframes nodeDrift2 {
+    0%   { transform: translate(  0px,   0px); }
+    12%  { transform: translate( 65px, -35px); }
+    28%  { transform: translate( 26px, -72px); }
+    46%  { transform: translate(-57px, -48px); }
+    62%  { transform: translate(-72px,  22px); }
+    78%  { transform: translate(-22px,  70px); }
+    90%  { transform: translate( 61px,  44px); }
+    100% { transform: translate(  0px,   0px); }
+  }
+  @keyframes nodeDrift3 {
+    0%   { transform: translate(  0px,   0px); }
+    16%  { transform: translate( 30px,  70px); }
+    32%  { transform: translate( 70px,  -9px); }
+    50%  { transform: translate( 13px, -70px); }
+    66%  { transform: translate(-65px, -35px); }
+    82%  { transform: translate(-44px,  61px); }
+    94%  { transform: translate( 22px,  44px); }
+    100% { transform: translate(  0px,   0px); }
+  }
+  @keyframes nodeDrift4 {
+    0%   { transform: translate(  0px,   0px); }
+    18%  { transform: translate(-67px,  26px); }
+    35%  { transform: translate(-30px, -67px); }
+    52%  { transform: translate( 52px, -61px); }
+    68%  { transform: translate( 72px,  30px); }
+    84%  { transform: translate( 17px,  70px); }
+    94%  { transform: translate(-44px,  48px); }
+    100% { transform: translate(  0px,   0px); }
+  }
+  @keyframes nodeDrift5 {
+    0%   { transform: translate(  0px,   0px); }
+    20%  { transform: translate(-44px, -61px); }
+    38%  { transform: translate( 35px, -70px); }
+    56%  { transform: translate( 70px,  22px); }
+    72%  { transform: translate( 26px,  67px); }
+    86%  { transform: translate(-61px,  35px); }
+    100% { transform: translate(  0px,   0px); }
+  }
+  @keyframes nodeDrift6 {
+    0%   { transform: translate(  0px,   0px); }
+    15%  { transform: translate( 48px, -67px); }
+    32%  { transform: translate(-48px, -52px); }
+    50%  { transform: translate(-70px,  17px); }
+    65%  { transform: translate(-22px,  70px); }
+    80%  { transform: translate( 65px,  40px); }
+    92%  { transform: translate( 57px, -35px); }
+    100% { transform: translate(  0px,   0px); }
+  }
+}
+
 /* ── Orbital ring spin (used by AvatarFigure) ── */
 @keyframes orbitSpin {
   from { transform: rotate(0deg); }
