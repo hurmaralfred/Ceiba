@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import type { Profile, FamilyMember } from "@/lib/types";
 import { RELATION_LABELS } from "@/lib/types";
 import type { ExtendedEntry, MemberLink } from "@/components/tree/FamilyTreeGraph";
-import { AvatarFigure } from "./AvatarFigure";
+import { AvatarFigure, SPRITE_H } from "./AvatarFigure";
 import type { UniverseNode } from "./useUniverseLayout";
 
 // ── Orbit cold-start seed ─────────────────────────────────────────────────────
@@ -639,7 +639,8 @@ export function GalaxyOrbitView({
           el.style.display = 'none';
         } else {
           el.style.display = 'block';
-          el.style.transform = `translate(${nx - 36}px, ${ny - 36}px) scale(${nr / 36})`;
+          // Feet (bottom of sprite) land near the orbital platform glow
+          el.style.transform = `translate(${nx - 36}px, ${ny - (SPRITE_H - 12)}px) scale(${nr / 36})`;
           el.style.zIndex = hovFrz ? '10' : '1';
         }
       });
@@ -1157,7 +1158,7 @@ export function GalaxyOrbitView({
             ref={el => { avatarElemRefs.current.set(n.id, el); }}
             style={{
               position: 'absolute', top: 0, left: 0,
-              transformOrigin: '36px 36px',
+              transformOrigin: `36px ${SPRITE_H}px`,
               willChange: 'transform',
               pointerEvents: 'none',
               display: 'none',
