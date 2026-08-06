@@ -203,34 +203,6 @@ function CosmicPortal() {
   );
 }
 
-// ── App Store Buttons ──────────────────────────────────────────────────────────
-function AppBtn({ store }: { store:"apple"|"google" }) {
-  return (
-    <Link href="/instalar" style={{ textDecoration:"none" }}>
-      <div style={{
-        display:"inline-flex", alignItems:"center", gap:8,
-        background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.14)",
-        borderRadius:12, padding:"9px 14px", cursor:"pointer", color:"#fff",
-        flex:"1 1 0", minWidth:0,
-      }}>
-        {store==="apple"
-          ? <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
-          : <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M3.18 23.76a2 2 0 0 0 2.07-.21l11.58-6.59L13.76 14l-10.58 9.76zm-1.1-20.4A2 2 0 0 0 2 5v14a2 2 0 0 0 .09 1.63l.08.08 7.86-7.86v-.19L2.08 3.36zm18.1 8.45-2.56-1.46-3.05 3.04 3.05 3.04 2.58-1.47a2 2 0 0 0 0-3.15zm-15.05 9.3 10.08-5.74-3.03-3.03-7.05 8.77z"/></svg>
-        }
-        <div>
-          <div style={{ fontSize:9, color:"rgba(255,255,255,0.45)", letterSpacing:"0.06em",
-            textTransform:"uppercase", lineHeight:1 }}>
-            {store==="apple"?"Descárgalo en el":"Disponible en"}
-          </div>
-          <div style={{ fontSize:15, fontWeight:700, lineHeight:1.35 }}>
-            {store==="apple"?"App Store":"Google Play"}
-          </div>
-        </div>
-      </div>
-    </Link>
-  );
-}
-
 // ── Feature icons ──────────────────────────────────────────────────────────────
 function IcoTree() {
   return <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
@@ -558,8 +530,6 @@ export default function LandingPage() {
           .feat-g{grid-template-columns:1fr!important}
           .px-section{padding-left:18px!important;padding-right:18px!important}
           .nav-wrap{padding:14px 18px!important}
-          .stats-g{grid-template-columns:repeat(2,1fr)!important}
-          .stat-sep:nth-child(2n){border-right:none!important}
         }
       `}</style>
 
@@ -610,45 +580,10 @@ export default function LandingPage() {
             CEIBA te ayuda a conectar con tu historia familiar, descubrir tus raíces
             y preservar lo que más importa: las personas que nos hacen quienes somos.
           </p>
-          <div style={{ display:"flex", flexWrap:"wrap", gap:10 }}>
-            <AppBtn store="apple"/>
-            <AppBtn store="google"/>
-          </div>
         </div>
 
         <div style={{ display:"flex", justifyContent:"center" }}>
           <CosmicPortal/>
-        </div>
-      </section>
-
-      {/* ── STATS ────────────────────────────────────────── */}
-      <section style={{ position:"relative", zIndex:10, maxWidth:1200, margin:"0 auto",
-        padding:"0 40px 72px" }} className="px-section">
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)",
-          background:CARD, border:"1px solid rgba(212,175,55,0.12)",
-          borderTop:"1px solid rgba(212,175,55,0.25)",
-          borderRadius:18, overflow:"hidden",
-          boxShadow:"0 8px 40px rgba(0,0,0,0.65)" }}
-          className="stats-g">
-          {[
-            { e:"👥", n:"53",   l:"Personas"            },
-            { e:"🌿", n:"5",    l:"Generaciones"        },
-            { e:"🔗", n:"18",   l:"Conexiones"          },
-            { e:"📖", n:"120+", l:"Historias guardadas"  },
-          ].map((s,i)=>(
-            <div key={i} className="stat-sep" style={{
-              padding:"22px 16px", display:"flex", alignItems:"center", gap:14,
-              borderRight:"1px solid rgba(212,175,55,0.07)",
-            }}>
-              <span style={{ fontSize:26, flexShrink:0 }}>{s.e}</span>
-              <div>
-                <div style={{ fontSize:"clamp(1.6rem,2.8vw,2.2rem)", fontWeight:900,
-                  color:GOLD, lineHeight:1 }}>{s.n}</div>
-                <div style={{ fontSize:11, ...S.muted, marginTop:4,
-                  letterSpacing:"0.03em" }}>{s.l}</div>
-              </div>
-            </div>
-          ))}
         </div>
       </section>
 

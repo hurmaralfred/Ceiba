@@ -145,67 +145,65 @@ const UNIVERSE_CSS = `
   100% { transform: translate(  0px,   0px); }
 }
 
-/* ── Mobile: reduced drift amplitude ±70px so nodes stay on a 375px screen ── */
-@media (max-width: 600px) {
-  @keyframes nodeDrift1 {
-    0%   { transform: translate(  0px,   0px); }
-    14%  { transform: translate(-52px, -65px); }
-    30%  { transform: translate( 44px, -70px); }
-    48%  { transform: translate( 72px,  14px); }
-    64%  { transform: translate( 35px,  70px); }
-    80%  { transform: translate(-61px,  40px); }
-    92%  { transform: translate(-70px, -26px); }
-    100% { transform: translate(  0px,   0px); }
-  }
-  @keyframes nodeDrift2 {
-    0%   { transform: translate(  0px,   0px); }
-    12%  { transform: translate( 65px, -35px); }
-    28%  { transform: translate( 26px, -72px); }
-    46%  { transform: translate(-57px, -48px); }
-    62%  { transform: translate(-72px,  22px); }
-    78%  { transform: translate(-22px,  70px); }
-    90%  { transform: translate( 61px,  44px); }
-    100% { transform: translate(  0px,   0px); }
-  }
-  @keyframes nodeDrift3 {
-    0%   { transform: translate(  0px,   0px); }
-    16%  { transform: translate( 30px,  70px); }
-    32%  { transform: translate( 70px,  -9px); }
-    50%  { transform: translate( 13px, -70px); }
-    66%  { transform: translate(-65px, -35px); }
-    82%  { transform: translate(-44px,  61px); }
-    94%  { transform: translate( 22px,  44px); }
-    100% { transform: translate(  0px,   0px); }
-  }
-  @keyframes nodeDrift4 {
-    0%   { transform: translate(  0px,   0px); }
-    18%  { transform: translate(-67px,  26px); }
-    35%  { transform: translate(-30px, -67px); }
-    52%  { transform: translate( 52px, -61px); }
-    68%  { transform: translate( 72px,  30px); }
-    84%  { transform: translate( 17px,  70px); }
-    94%  { transform: translate(-44px,  48px); }
-    100% { transform: translate(  0px,   0px); }
-  }
-  @keyframes nodeDrift5 {
-    0%   { transform: translate(  0px,   0px); }
-    20%  { transform: translate(-44px, -61px); }
-    38%  { transform: translate( 35px, -70px); }
-    56%  { transform: translate( 70px,  22px); }
-    72%  { transform: translate( 26px,  67px); }
-    86%  { transform: translate(-61px,  35px); }
-    100% { transform: translate(  0px,   0px); }
-  }
-  @keyframes nodeDrift6 {
-    0%   { transform: translate(  0px,   0px); }
-    15%  { transform: translate( 48px, -67px); }
-    32%  { transform: translate(-48px, -52px); }
-    50%  { transform: translate(-70px,  17px); }
-    65%  { transform: translate(-22px,  70px); }
-    80%  { transform: translate( 65px,  40px); }
-    92%  { transform: translate( 57px, -35px); }
-    100% { transform: translate(  0px,   0px); }
-  }
+/* ── Mobile: reduced drift amplitude ±50px (unique names, picked in JS) ── */
+@keyframes nodeDrift1M {
+  0%   { transform: translate(  0px,   0px); }
+  14%  { transform: translate(-38px, -48px); }
+  30%  { transform: translate( 32px, -50px); }
+  48%  { transform: translate( 50px,  10px); }
+  64%  { transform: translate( 25px,  50px); }
+  80%  { transform: translate(-44px,  28px); }
+  92%  { transform: translate(-50px, -18px); }
+  100% { transform: translate(  0px,   0px); }
+}
+@keyframes nodeDrift2M {
+  0%   { transform: translate(  0px,   0px); }
+  12%  { transform: translate( 46px, -25px); }
+  28%  { transform: translate( 18px, -50px); }
+  46%  { transform: translate(-40px, -34px); }
+  62%  { transform: translate(-50px,  16px); }
+  78%  { transform: translate(-16px,  50px); }
+  90%  { transform: translate( 44px,  32px); }
+  100% { transform: translate(  0px,   0px); }
+}
+@keyframes nodeDrift3M {
+  0%   { transform: translate(  0px,   0px); }
+  16%  { transform: translate( 22px,  50px); }
+  32%  { transform: translate( 50px,  -6px); }
+  50%  { transform: translate(  9px, -50px); }
+  66%  { transform: translate(-46px, -25px); }
+  82%  { transform: translate(-32px,  44px); }
+  94%  { transform: translate( 16px,  32px); }
+  100% { transform: translate(  0px,   0px); }
+}
+@keyframes nodeDrift4M {
+  0%   { transform: translate(  0px,   0px); }
+  18%  { transform: translate(-48px,  18px); }
+  35%  { transform: translate(-22px, -48px); }
+  52%  { transform: translate( 36px, -44px); }
+  68%  { transform: translate( 50px,  22px); }
+  84%  { transform: translate( 12px,  50px); }
+  94%  { transform: translate(-32px,  34px); }
+  100% { transform: translate(  0px,   0px); }
+}
+@keyframes nodeDrift5M {
+  0%   { transform: translate(  0px,   0px); }
+  20%  { transform: translate(-32px, -44px); }
+  38%  { transform: translate( 25px, -50px); }
+  56%  { transform: translate( 50px,  16px); }
+  72%  { transform: translate( 18px,  48px); }
+  86%  { transform: translate(-44px,  25px); }
+  100% { transform: translate(  0px,   0px); }
+}
+@keyframes nodeDrift6M {
+  0%   { transform: translate(  0px,   0px); }
+  15%  { transform: translate( 34px, -48px); }
+  32%  { transform: translate(-34px, -38px); }
+  50%  { transform: translate(-50px,  12px); }
+  65%  { transform: translate(-16px,  50px); }
+  80%  { transform: translate( 46px,  28px); }
+  92%  { transform: translate( 40px, -25px); }
+  100% { transform: translate(  0px,   0px); }
 }
 
 /* ── Orbital ring spin (used by AvatarFigure) ── */
@@ -768,6 +766,7 @@ export function FamilyUniverse({
               dimmed={!!selectedNode && selectedNode.id !== node.id && !node.isFocal}
               onClick={handleAvatarClick}
               isNew={newNodeIds.has(node.id)}
+              isMobile={containerSize.w < 600}
             />
           ))}
         </UniverseViewport>
@@ -918,16 +917,18 @@ export function FamilyUniverse({
 
 // ─── Avatar slot ──────────────────────────────────────────────────────────────
 
-const DRIFT_NAMES = ['nodeDrift1','nodeDrift2','nodeDrift3','nodeDrift4','nodeDrift5','nodeDrift6']
+const DRIFT_NAMES   = ['nodeDrift1','nodeDrift2','nodeDrift3','nodeDrift4','nodeDrift5','nodeDrift6']
+const DRIFT_NAMES_M = ['nodeDrift1M','nodeDrift2M','nodeDrift3M','nodeDrift4M','nodeDrift5M','nodeDrift6M']
 
 function AvatarSlot({
-  node, selected, dimmed = false, onClick, isNew = false,
+  node, selected, dimmed = false, onClick, isNew = false, isMobile = false,
 }: {
   node: UniverseNode
   selected: boolean
   dimmed?: boolean
   onClick: (node: UniverseNode) => void
   isNew?: boolean
+  isMobile?: boolean
 }) {
   const divRef = useRef<HTMLDivElement>(null)
   const [appeared, setAppeared] = useState(!isNew)
@@ -948,7 +949,8 @@ function AvatarSlot({
   // Deterministic drift variant & timing per node
   // 28-42s duration so 150-170px sweeps are slow & graceful, not frenetic
   const hash    = nodeHash(node.id)
-  const driftName = DRIFT_NAMES[hash % DRIFT_NAMES.length]
+  const driftPool = isMobile ? DRIFT_NAMES_M : DRIFT_NAMES
+  const driftName = driftPool[hash % driftPool.length]
   const driftDur  = 60 + (hash % 15)          // 60–74 s — half speed
   const driftDel  = -((hash % 35))             // -0 to -34 s offset — fully staggered phases
 
