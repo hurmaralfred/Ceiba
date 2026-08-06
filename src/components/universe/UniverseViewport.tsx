@@ -236,16 +236,19 @@ function AmbientLayer({ width, height }: { width: number; height: number }) {
   )
 }
 
-// ─── Connection lines — 3-channel visual system ───────────────────────────────
-// blood:    gold solid   — sanguínea
-// marriage: blue dashed  — matrimonial
-// political: violet dotted — político-legal
+// ─── Connection lines — differentiated visual system ─────────────────────────
+// direct blood (hop 1):   gold solid, visible      — parent/child/spouse to focal
+// extended blood (hop 2+): gold dashed, subtle     — grandparents, cousins
+// marriage:               blue luminous glow       — matrimonial
+// political:              violet dotted, faint     — político-legal
 
-const CONN_STYLES = {
-  blood:    { stroke: '#F2B43C', dash: '',    width: 0.8, opacity: 0.11 },
-  marriage: { stroke: '#7BAFD4', dash: '7 5', width: 0.8, opacity: 0.08 },
-  political:{ stroke: '#B8A0D8', dash: '3 7', width: 0.6, opacity: 0.06 },
-} as const
+function resolveConnStyle(channel: 'blood' | 'marriage' | 'political', isDirect: boolean, isSpouse: boolean) {
+  if (isSpouse) return { stroke: '#D4A0C0', dash: '6 3', width: 1.0, opacity: 0.22 }
+  if (channel === 'blood' && isDirect) return { stroke: '#F2B43C', dash: '',    width: 1.1, opacity: 0.28 }
+  if (channel === 'blood')             return { stroke: '#F2B43C', dash: '4 7', width: 0.7, opacity: 0.11 }
+  if (channel === 'marriage')          return { stroke: '#8BBDE8', dash: '6 4', width: 0.9, opacity: 0.15 }
+  return                                      { stroke: '#B8A0D8', dash: '3 7', width: 0.6, opacity: 0.07 }
+}
 
 function ConnectionLines({ nodes, width, height, selectedId }: { nodes: UniverseNode[]; width: number; height: number; selectedId?: string }) {
   const cx = width  / 2
@@ -257,9 +260,12 @@ function ConnectionLines({ nodes, width, height, selectedId }: { nodes: Universe
     .filter(n => !n.isFocal && n.orbitParentId)
     .map(n => {
       const parent = nodeById.get(n.orbitParentId!)
-      return parent ? { from: parent, to: n, channel: n.connectionChannel } : null
+      if (!parent) return null
+      const isDirect = n.hopDistance === 1
+      const isSpouse = n.relationType === 'spouse' || n.relationType === 'husband' || n.relationType === 'wife' || n.relationType === 'partner'
+      return { from: parent, to: n, channel: n.connectionChannel, isDirect, isSpouse }
     })
-    .filter(Boolean) as Array<{ from: UniverseNode; to: UniverseNode; channel: 'blood' | 'marriage' | 'political' }>
+    .filter(Boolean) as Array<{ from: UniverseNode; to: UniverseNode; channel: 'blood' | 'marriage' | 'political'; isDirect: boolean; isSpouse: boolean }>
 
   if (edges.length === 0) return null
 
@@ -274,8 +280,12 @@ function ConnectionLines({ nodes, width, height, selectedId }: { nodes: Universe
           <feGaussianBlur stdDeviation="2.2" result="blur"/>
           <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
         </filter>
+        <filter id="line-glow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="1.5" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
       </defs>
-      {edges.map(({ from, to, channel }, idx) => {
+      {edges.map(({ from, to, channel, isDirect, isSpouse }, idx) => {
         const x1 = cx + from.cx
         const y1 = cy + from.cy
         const x2 = cx + to.cx
@@ -283,18 +293,32 @@ function ConnectionLines({ nodes, width, height, selectedId }: { nodes: Universe
         const mx = (x1 + x2) / 2 + (cy - y1) * 0.08
         const my = (y1 + y2) / 2 + (cx - x1) * 0.08
         const d  = `M${x1},${y1} Q${mx},${my} ${x2},${y2}`
-        const st = CONN_STYLES[channel]
+        const st = resolveConnStyle(channel, isDirect, isSpouse)
         const isRelated = selectedId ? (from.id === selectedId || to.id === selectedId) : false
-        const selFactor = selectedId ? (isRelated ? 4.0 : 0.12) : 1
-        const lineOpacity = Math.min(0.85, st.opacity
+        const selFactor = selectedId ? (isRelated ? 4.5 : 0.10) : 1
+        const lineOpacity = Math.min(0.90, st.opacity
           * (to.isDeceased ? 0.45 : 1)
           * (to.isJoined === false ? 0.75 : 1)
           * selFactor)
         const pathId = `cp-${from.id.slice(-6)}-${to.id.slice(-6)}`
         const dur = `${3.8 + (idx % 5) * 0.7}s`
         const delay = `${-(idx % 4) * 1.1}s`
+        const useGlow = isDirect || isSpouse || channel === 'marriage'
         return (
           <g key={`${from.id}-${to.id}`}>
+            {/* Glow layer for prominent connections */}
+            {useGlow && (
+              <path
+                d={d}
+                fill="none"
+                stroke={st.stroke}
+                strokeWidth={st.width * 3}
+                strokeDasharray={st.dash || undefined}
+                strokeLinecap="round"
+                opacity={lineOpacity * 0.18}
+                filter="url(#line-glow)"
+              />
+            )}
             <path
               id={pathId}
               d={d}
@@ -305,12 +329,14 @@ function ConnectionLines({ nodes, width, height, selectedId }: { nodes: Universe
               strokeLinecap="round"
               opacity={lineOpacity}
             />
-            {/* Energy particle flowing parent → child */}
-            <circle r={1.4} fill={st.stroke} opacity={lineOpacity * 1.4} filter="url(#particle-glow)">
-              <animateMotion dur={dur} begin={delay} repeatCount="indefinite" rotate="auto">
-                <mpath href={`#${pathId}`}/>
-              </animateMotion>
-            </circle>
+            {/* Energy particle — only on direct/marriage connections to reduce visual noise */}
+            {(isDirect || channel === 'marriage') && (
+              <circle r={1.4} fill={st.stroke} opacity={lineOpacity * 1.2} filter="url(#particle-glow)">
+                <animateMotion dur={dur} begin={delay} repeatCount="indefinite" rotate="auto">
+                  <mpath href={`#${pathId}`}/>
+                </animateMotion>
+              </circle>
+            )}
           </g>
         )
       })}

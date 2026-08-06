@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import type { Profile, FamilyMember } from "@/lib/types";
 import { RELATION_LABELS } from "@/lib/types";
 import type { ExtendedEntry, MemberLink } from "@/components/tree/FamilyTreeGraph";
-import { AvatarFigure, SPRITE_H } from "./AvatarFigure";
+import { AvatarFigure, STAR_R } from "./AvatarFigure";
 import type { UniverseNode } from "./useUniverseLayout";
 
 // ── Orbit cold-start seed ─────────────────────────────────────────────────────
@@ -237,7 +237,7 @@ function OrbitAvatar({ node }: { node: OrbitNode }) {
     connectionChannel: "blood" as const,
     orbitParentId: null,
   };
-  return <AvatarFigure node={uNode} />;
+  return <AvatarFigure node={uNode} overlayOnly />;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -641,7 +641,7 @@ export function GalaxyOrbitView({
         } else {
           el.style.display = 'block';
           // Feet (bottom of sprite) land near the orbital platform glow
-          el.style.transform = `translate(${nx - 36}px, ${ny - (SPRITE_H - 12)}px) scale(${nr / 36})`;
+          el.style.transform = `translate(${nx - STAR_R}px, ${ny - STAR_R}px) scale(${nr / STAR_R})`;
           el.style.zIndex = hovFrz ? '10' : '1';
         }
       });
@@ -782,6 +782,36 @@ export function GalaxyOrbitView({
           ctx.beginPath(); ctx.arc(nx, ny, nr, 0, Math.PI*2); ctx.stroke();
           ctx.shadowBlur = 0;
           ctx.restore();
+
+          // ── Unique per-node stellar corona ────────────────────────────────
+          // wobPhase is a deterministic seed (0–2π) unique per node
+          {
+            const s       = n.wobPhase                              // seed
+            const rays    = 7 + Math.floor((s / (Math.PI * 2)) * 6)  // 7–12 rays
+            const rot     = s + t * 0.00007                         // slow unique rotation
+            const baseLen = nr * (hov || sel ? 1.8 : 1.3)
+            ctx.save()
+            ctx.globalAlpha = dAlpha * (hov || sel ? 0.72 : 0.38)
+            ctx.lineCap = 'round'
+            ctx.shadowColor = `rgba(${rgb},0.9)`
+            ctx.shadowBlur   = nr * 0.6
+            for (let i = 0; i < rays; i++) {
+              const ang = rot + (i / rays) * Math.PI * 2
+              // Alternate long/short rays seeded by wobPhase
+              const lenFactor = i % 2 === 0
+                ? 1.0 + 0.45 * Math.abs(Math.sin(s * (i + 1.3)))
+                : 0.48 + 0.30 * Math.abs(Math.cos(s * (i + 0.7)))
+              const rayEnd = nr + baseLen * lenFactor
+              ctx.strokeStyle = `rgba(${rgb},${i % 2 === 0 ? 0.85 : 0.45})`
+              ctx.lineWidth   = i % 2 === 0 ? 1.4 : 0.8
+              ctx.beginPath()
+              ctx.moveTo(nx + Math.cos(ang) * (nr + 1), ny + Math.sin(ang) * (nr + 1))
+              ctx.lineTo(nx + Math.cos(ang) * rayEnd,   ny + Math.sin(ang) * rayEnd)
+              ctx.stroke()
+            }
+            ctx.shadowBlur = 0
+            ctx.restore()
+          }
 
           // Name — always for hover group, orbit 1 always, rest only on direct hover/sel
           const showLabel = sel || hov || hovFrz || n.orbit === 1;
@@ -1159,7 +1189,7 @@ export function GalaxyOrbitView({
             ref={el => { avatarElemRefs.current.set(n.id, el); }}
             style={{
               position: 'absolute', top: 0, left: 0,
-              transformOrigin: `36px ${SPRITE_H}px`,
+              transformOrigin: `${STAR_R}px ${STAR_R}px`,
               willChange: 'transform',
               pointerEvents: 'none',
               display: 'none',

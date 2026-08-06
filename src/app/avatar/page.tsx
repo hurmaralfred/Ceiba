@@ -11,6 +11,8 @@ import {
   AVATAR_SKIN_TONES,
   AVATAR_HAIR_COLORS,
   AVATAR_EYE_COLORS,
+  AVATAR_TOP_COLORS,
+  AVATAR_BOT_COLORS,
   MALE_HAIR_NAMES,
   FEMALE_HAIR_NAMES,
   FACE_SHAPE_NAMES,
@@ -241,7 +243,7 @@ export default function AvatarBuilderPage() {
           ctx.fillStyle = '#030208'
           ctx.fillRect(0, 0, SIZE, SIZE)
           const scale = SIZE / 72
-          ctx.drawImage(img, 0, 0, SIZE, Math.round(84 * scale))
+          ctx.drawImage(img, 0, 0, SIZE, Math.round(144 * scale))
           URL.revokeObjectURL(svgUrl)
           canvas.toBlob(async (blob) => {
             if (!blob) { reject(new Error('canvas toBlob failed')); return }
@@ -461,6 +463,30 @@ export default function AvatarBuilderPage() {
                 {accNames.map((name, i) => (
                   <AccChip key={i} label={name} selected={config.accessories === i}
                     onClick={() => set('accessories', i)} />
+                ))}
+              </div>
+            </div>
+
+            {/* Top color */}
+            <div>
+              <Label>Color ropa superior</Label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {AVATAR_TOP_COLORS.map((color, i) => (
+                  <ColorSwatch key={i} color={color}
+                    selected={(config.topColor ?? AVATAR_TOP_COLORS[0]) === color}
+                    onClick={() => set('topColor', color)} />
+                ))}
+              </div>
+            </div>
+
+            {/* Bottom color */}
+            <div>
+              <Label>{config.gender === 'female' ? 'Color falda / pantalón' : 'Color pantalón'}</Label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {AVATAR_BOT_COLORS.map((color, i) => (
+                  <ColorSwatch key={i} color={color}
+                    selected={(config.botColor ?? AVATAR_BOT_COLORS[0]) === color}
+                    onClick={() => set('botColor', color)} />
                 ))}
               </div>
             </div>
