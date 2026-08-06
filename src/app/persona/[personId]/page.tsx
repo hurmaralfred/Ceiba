@@ -99,9 +99,9 @@ function RelativeOrb({ rel, onClick }: { rel: RelativeItem; onClick: () => void 
         <img src={src} alt={rel.first_name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
       </div>
       <div style={{ textAlign: "center" }}>
-        <p style={{ fontSize: 10, fontWeight: 700, color: "#fff", lineHeight: 1.2 }}>{rel.first_name}</p>
+        <p style={{ fontSize: 11, fontWeight: 700, color: "#fff", lineHeight: 1.2 }}>{rel.first_name}</p>
         {rel.birth_year && (
-          <p style={{ fontSize: 9, color: "rgba(212,175,55,0.5)" }}>{rel.birth_year}</p>
+          <p style={{ fontSize: 10, color: "rgba(212,175,55,0.5)" }}>{rel.birth_year}</p>
         )}
       </div>
     </div>
@@ -124,16 +124,16 @@ function EventOrb({ ev, birthCity }: { ev: EventItem; birthCity?: string | null 
       <div style={{ fontSize: 14, fontWeight: 800, color: "#d4af37", lineHeight: 1 }}>
         {eventYear(ev.event_date)}
       </div>
-      <div style={{ fontSize: 9, color: "rgba(255,255,255,0.9)", lineHeight: 1.3, marginTop: 2 }}>
+      <div style={{ fontSize: 10, color: "rgba(255,255,255,0.9)", lineHeight: 1.3, marginTop: 2 }}>
         {EVENT_LABEL[ev.event_type] ?? "Evento"}
       </div>
       {ev.event_type === "birth" && birthCity && (
-        <div style={{ fontSize: 8, color: "rgba(212,175,55,0.45)", lineHeight: 1.2, marginTop: 1 }}>
+        <div style={{ fontSize: 10, color: "rgba(212,175,55,0.45)", lineHeight: 1.2, marginTop: 1 }}>
           {birthCity}
         </div>
       )}
       {ev.event_type !== "birth" && (
-        <div style={{ fontSize: 8, color: "rgba(212,175,55,0.45)", lineHeight: 1.2, marginTop: 1 }}>
+        <div style={{ fontSize: 10, color: "rgba(212,175,55,0.45)", lineHeight: 1.2, marginTop: 1 }}>
           {formatShortDate(ev.event_date)}
         </div>
       )}

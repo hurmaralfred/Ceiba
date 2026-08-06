@@ -832,7 +832,7 @@ function TreePageContent() {
           position: "fixed", top: 0, left: 0, right: 0, zIndex: 180,
           background: "rgba(12,10,24,0.97)",
           borderBottom: "1px solid rgba(212,175,55,0.35)",
-          padding: "10px 16px",
+          padding: "calc(env(safe-area-inset-top, 0px) + 10px) 16px 10px",
         }}>
           {pendingConnectionRequests.map(req => {
             const name = req.requester
@@ -948,46 +948,46 @@ function TreePageContent() {
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {/* Buscar */}
           <button onClick={() => setShowSearch(true)} style={{
-            width: 34, height: 34, borderRadius: 10, background: "#0c0a1a", border: "none",
+            width: 44, height: 44, borderRadius: 12, background: "#0c0a1a", border: "none",
             borderTop: "1px solid rgba(212,175,55,0.28)", borderBottom: "2px solid #000",
             boxShadow: "0 4px 0 #02010a, 0 6px 12px rgba(0,0,0,0.6)",
             display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
           }}>
-            <Search size={15} style={{ color: "rgba(212,175,55,0.7)" }} />
+            <Search size={17} style={{ color: "rgba(212,175,55,0.7)" }} />
           </button>
 
           {/* Invitar */}
           <Link href="/invitar" style={{ textDecoration: "none" }}>
             <div style={{
               display: "flex", alignItems: "center", gap: 5,
-              background: "#c9a820", borderRadius: 10, padding: "6px 12px",
+              background: "#c9a820", borderRadius: 12, padding: "8px 14px",
               borderTop: "1.5px solid #f5e060", borderBottom: "2.5px solid #6a5600",
               boxShadow: "0 5px 0 #4a3c00, 0 8px 16px rgba(0,0,0,0.6)",
-              fontSize: 12, fontWeight: 700, color: "#030208",
+              fontSize: 13, fontWeight: 700, color: "#030208", minHeight: 44,
             }}>
-              <Send size={13} /> Invitar
+              <Send size={14} /> Invitar
             </div>
           </Link>
 
           {/* Compartir */}
           <button onClick={shareTree} style={{
-            width: 34, height: 34, borderRadius: 10, background: "#0c0a1a", border: "none",
+            width: 44, height: 44, borderRadius: 12, background: "#0c0a1a", border: "none",
             borderTop: "1px solid rgba(212,175,55,0.28)", borderBottom: "2px solid #000",
             boxShadow: "0 4px 0 #02010a, 0 6px 12px rgba(0,0,0,0.6)",
             display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
           }}>
-            <Share2 size={15} style={{ color: "rgba(212,175,55,0.7)" }} />
+            <Share2 size={17} style={{ color: "rgba(212,175,55,0.7)" }} />
           </button>
 
           {/* Perfil */}
           <Link href="/profile">
             <div style={{
-              width: 34, height: 34, borderRadius: 10, background: "#0c0a1a",
+              width: 44, height: 44, borderRadius: 12, background: "#0c0a1a",
               borderTop: "1px solid rgba(212,175,55,0.28)", borderBottom: "2px solid #000",
               boxShadow: "0 4px 0 #02010a, 0 6px 12px rgba(0,0,0,0.6)",
               display: "flex", alignItems: "center", justifyContent: "center",
             }}>
-              <User size={15} style={{ color: "rgba(212,175,55,0.7)" }} />
+              <User size={17} style={{ color: "rgba(212,175,55,0.7)" }} />
             </div>
           </Link>
 
@@ -997,7 +997,7 @@ function TreePageContent() {
             disabled={sosSending}
             title="Enviar alerta SOS a tu familia"
             style={{
-              width: 34, height: 34, borderRadius: 10, border: "none", cursor: "pointer",
+              width: 44, height: 44, borderRadius: 12, border: "none", cursor: "pointer",
               background: sosActive ? "#7f1d1d" : "#dc2626",
               borderTop: "1px solid rgba(255,100,100,0.4)", borderBottom: "2px solid #7f1d1d",
               boxShadow: "0 4px 0 #450a0a, 0 6px 12px rgba(0,0,0,0.6)",
@@ -1005,7 +1005,7 @@ function TreePageContent() {
               animation: sosActive ? "pulse 2s infinite" : "none",
             }}
           >
-            <AlertTriangle size={15} style={{ color: "#fff" }} />
+            <AlertTriangle size={17} style={{ color: "#fff" }} />
           </button>
         </div>
       </nav>
@@ -1110,12 +1110,12 @@ function TreePageContent() {
               <div style={{ display: "flex", alignItems: "center", gap: 8, paddingTop: 12 }}>
                 {joinedMembers.length > 0 && (
                   <button onClick={() => setShowBroadcast(true)} style={{
-                    width: 36, height: 36, borderRadius: 10, background: "#0c0a1a", border: "none",
+                    width: 44, height: 44, borderRadius: 12, background: "#0c0a1a", border: "none",
                     borderTop: "1px solid rgba(212,175,55,0.28)", borderBottom: "2px solid #000",
                     boxShadow: "0 4px 0 #02010a", display: "flex", alignItems: "center",
                     justifyContent: "center", cursor: "pointer", flexShrink: 0,
                   }}>
-                    <Megaphone size={16} style={{ color: "rgba(212,175,55,0.7)" }} />
+                    <Megaphone size={18} style={{ color: "rgba(212,175,55,0.7)" }} />
                   </button>
                 )}
                 {/* View toggle */}
@@ -1942,12 +1942,12 @@ function SearchModal({ onClose }: { onClose: () => void }) {
           />
         </div>
         <button onClick={onClose} style={{
-          width: 36, height: 36, borderRadius: 10, background: "#0c0a1a", border: "none",
+          width: 44, height: 44, borderRadius: 12, background: "#0c0a1a", border: "none",
           borderTop: "1px solid rgba(212,175,55,0.2)", borderBottom: "2px solid #000",
           boxShadow: "0 4px 0 #02010a", display: "flex", alignItems: "center",
           justifyContent: "center", cursor: "pointer", flexShrink: 0,
         }}>
-          <X size={16} style={{ color: "rgba(212,175,55,0.6)" }} />
+          <X size={17} style={{ color: "rgba(212,175,55,0.6)" }} />
         </button>
       </div>
 

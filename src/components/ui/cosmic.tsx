@@ -142,20 +142,20 @@ export function CosmicHeader({
   return (
     <div style={{
       display: "flex", alignItems: "center", justifyContent: "space-between",
-      padding: "52px 20px 14px",
+      padding: "calc(env(safe-area-inset-top, 44px) + 12px) 20px 14px",
       borderBottom: "0.5px solid rgba(212,175,55,0.14)",
     }}>
       <Link href={backHref}>
-        <div style={{ width: 36, height: 36, borderRadius: 11, background: "#0c0a1a",
+        <div style={{ width: 44, height: 44, borderRadius: 13, background: "#0c0a1a",
           borderTop: "1px solid rgba(212,175,55,0.28)", borderLeft: "1px solid rgba(212,175,55,0.12)",
           borderBottom: "2px solid #000", borderRight: "1px solid rgba(0,0,0,0.6)",
           boxShadow: "0 5px 0 #02010a, 0 7px 14px rgba(0,0,0,0.7)",
           display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <ArrowLeft size={17} style={{ color: "rgba(212,175,55,0.75)" }} />
+          <ArrowLeft size={18} style={{ color: "rgba(212,175,55,0.75)" }} />
         </div>
       </Link>
       <div style={{ fontSize: 15, fontWeight: 700, color: "#fff", letterSpacing: 0.3 }}>{title}</div>
-      <div style={{ width: 36, display: "flex", justifyContent: "center" }}>{right ?? null}</div>
+      <div style={{ width: 44, display: "flex", justifyContent: "center" }}>{right ?? null}</div>
     </div>
   );
 }
@@ -213,7 +213,7 @@ export function CosmicNav() {
         const showBadge = href === "/home" && suggCount > 0;
         return (
           <Link key={href} href={href}
-            style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, textDecoration: "none" }}>
+            style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, textDecoration: "none", minHeight: 44, minWidth: 44 }}>
             <div style={{ position: "relative" }}>
               <Icon size={22} style={{ color }} />
               {showBadge && (

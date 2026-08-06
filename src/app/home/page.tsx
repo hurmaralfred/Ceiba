@@ -911,7 +911,7 @@ export default function HomePage() {
             ].map(({ href, Icon, label, color, border }) => (
               <Link key={href} href={href} style={{ textDecoration: "none", flex: 1 }}>
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
-                  <div style={{ width: 40, height: 40, borderRadius: 13,
+                  <div style={{ width: 44, height: 44, borderRadius: 13,
                     background: "rgba(255,255,255,0.03)", border: `1px solid ${border}`,
                     display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <Icon size={16} style={{ color, opacity: 0.85 }} />
@@ -937,7 +937,7 @@ export default function HomePage() {
             ].map(({ href, Icon, label, color, border }) => (
               <Link key={href} href={href} style={{ textDecoration: "none", flex: 1 }}>
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
-                  <div style={{ width: 40, height: 40, borderRadius: 13,
+                  <div style={{ width: 44, height: 44, borderRadius: 13,
                     background: "rgba(255,255,255,0.03)", border: `1px solid ${border}`,
                     display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <Icon size={16} style={{ color, opacity: 0.85 }} />

@@ -178,8 +178,9 @@ export default function FeedPage() {
         backHref="/home"
         right={
           <button onClick={handleRefresh} disabled={refreshing}
-            style={{ background: "none", border: "none", cursor: "pointer", padding: 4 }}>
-            <RefreshCw size={17} style={{ color: "rgba(212,175,55,0.5)",
+            style={{ background: "none", border: "none", cursor: "pointer", padding: 0,
+              width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <RefreshCw size={18} style={{ color: "rgba(212,175,55,0.5)",
               animation: refreshing ? "spin 1s linear infinite" : "none" }} />
           </button>
         }
