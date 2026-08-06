@@ -407,28 +407,25 @@ export default function EventsPage() {
           <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.80)",
             backdropFilter:"blur(8px)", zIndex:50,
             display:"flex", alignItems:"flex-end", justifyContent:"center" }}>
+            {/* Sheet — scroll único, botones sticky */}
             <div style={{
               width:"100%", maxWidth:480,
               background:"rgba(6,3,16,0.98)",
               backdropFilter:"blur(32px)", WebkitBackdropFilter:"blur(32px)",
               borderRadius:"24px 24px 0 0",
               borderTop:"0.5px solid rgba(242,180,60,0.40)",
-              boxShadow:"0 -20px 60px rgba(0,0,0,0.90), 0 0 80px rgba(242,180,60,0.05)",
-              maxHeight:"92dvh", display:"flex", flexDirection:"column",
-              position:"relative", overflow:"hidden",
+              boxShadow:"0 -20px 60px rgba(0,0,0,0.90)",
+              maxHeight:"92dvh", overflowY:"auto",
+              WebkitOverflowScrolling:"touch" as any,
             }}>
-              {/* Nebula accent */}
-              <div style={{ position:"absolute", top:-10, left:"25%", width:180, height:70,
-                borderRadius:"50%", background:"radial-gradient(ellipse, rgba(212,175,55,0.07) 0%, transparent 65%)",
-                filter:"blur(12px)", pointerEvents:"none" }} />
-
-              {/* Header — fijo */}
-              <div style={{ padding:"16px 20px 0", flexShrink:0 }}>
-                {/* Handle */}
-                <div style={{ display:"flex", justifyContent:"center", marginBottom:14 }}>
+              {/* Handle + título */}
+              <div style={{ padding:"16px 20px 0", position:"sticky", top:0, zIndex:2,
+                background:"rgba(6,3,16,0.98)",
+                borderBottom:"0.5px solid rgba(242,180,60,0.08)" }}>
+                <div style={{ display:"flex", justifyContent:"center", marginBottom:12 }}>
                   <div style={{ width:32, height:3, borderRadius:2, background:"rgba(242,180,60,0.30)" }} />
                 </div>
-                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
                   <span style={{ fontSize:16, fontWeight:700, color:"#F5EDD8", letterSpacing:"-0.01em" }}>
                     {editingId ? "Editar recuerdo" : "Nuevo recuerdo"}
                   </span>
@@ -441,9 +438,9 @@ export default function EventsPage() {
                 </div>
               </div>
 
-              {/* Contenido scrollable */}
-              <div style={{ overflowY:"auto", padding:"0 20px", flex:1 }}>
-                <div style={{ display:"flex", flexDirection:"column", gap:14, paddingBottom:4 }}>
+              {/* Contenido */}
+              <div style={{ padding:"16px 20px 0" }}>
+                <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
 
                   {/* Foto del recuerdo */}
                   {!editingId && (
@@ -530,26 +527,29 @@ export default function EventsPage() {
                 </div>
               </div>
 
-              {/* Botones — fijos abajo */}
-              <div style={{ padding:"14px 20px 36px", flexShrink:0,
-                borderTop:"0.5px solid rgba(242,180,60,0.10)" }}>
+              {/* Botones — sticky al fondo del sheet */}
+              <div style={{
+                position:"sticky", bottom:0, zIndex:2,
+                padding:"12px 20px max(env(safe-area-inset-bottom, 20px), 20px)",
+                background:"rgba(6,3,16,0.98)",
+                borderTop:"0.5px solid rgba(242,180,60,0.12)",
+              }}>
                 <div style={{ display:"flex", gap:10 }}>
                   <button onClick={closeModal}
-                    style={{ flex:1, padding:"13px 0", borderRadius:14, cursor:"pointer",
-                      background:"rgba(8,5,18,0.95)",
-                      border:"0.5px solid rgba(242,180,60,0.18)",
+                    style={{ flex:1, padding:"14px 0", borderRadius:14, cursor:"pointer",
+                      background:"rgba(255,255,255,0.04)",
+                      border:"1px solid rgba(242,180,60,0.18)",
                       color:"rgba(242,180,60,0.55)", fontWeight:600, fontSize:13 }}>
                     Cancelar
                   </button>
                   <button onClick={saveEvent} disabled={saving}
-                    style={{ flex:2, padding:"13px 0", borderRadius:14,
+                    style={{ flex:2, padding:"14px 0", borderRadius:14,
                       cursor:saving ? "wait" : "pointer",
-                      background:"linear-gradient(135deg, rgba(242,180,60,0.20) 0%, rgba(200,130,30,0.14) 100%)",
-                      border:"0.5px solid rgba(242,180,60,0.50)",
-                      borderTop:"0.5px solid rgba(242,180,60,0.70)",
-                      boxShadow:"0 0 20px rgba(212,175,55,0.15)",
-                      color:"#F2B43C", fontWeight:700, fontSize:13,
-                      letterSpacing:"0.04em" }}>
+                      background:"linear-gradient(135deg, #f0c040 0%, #c8902a 100%)",
+                      border:"none",
+                      boxShadow:"0 4px 18px rgba(212,175,55,0.35), inset 0 1px 0 rgba(255,255,255,0.22)",
+                      color:"#0c0a18", fontWeight:800, fontSize:14,
+                      letterSpacing:"0.02em", opacity: saving ? 0.6 : 1 }}>
                     {saving ? "Guardando..." : editingId ? "Guardar cambios" : photoFile ? "✦ Guardar con foto" : "✦ Guardar recuerdo"}
                   </button>
                 </div>
