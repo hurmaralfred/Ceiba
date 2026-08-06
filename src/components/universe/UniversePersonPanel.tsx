@@ -70,7 +70,7 @@ const PANEL_CSS = `
   position: fixed;
   left: 0; right: 0;
   bottom: calc(${NAV_H}px + env(safe-area-inset-bottom, 0px));
-  max-height: 48dvh;
+  max-height: 54dvh;
   background: #080610;
   border-top: 1px solid rgba(212,175,55,0.2);
   border-radius: 24px 24px 0 0;
@@ -80,10 +80,11 @@ const PANEL_CSS = `
   flex-direction: column;
   overflow: hidden;
   transform: translateY(calc(100% + ${NAV_H}px + env(safe-area-inset-bottom, 0px)));
-  transition: transform 0.30s ease-out;
+  transition: transform 0.30s ease-out, max-height 0.30s ease-out;
   pointer-events: auto;
 }
 .unv-panel--visible { transform: translateY(0); }
+.unv-panel--expanded { max-height: 82dvh; }
 
 @media (min-width: 768px) {
   .unv-panel {
@@ -99,31 +100,48 @@ const PANEL_CSS = `
     transition: transform 0.30s ease-out;
   }
   .unv-panel--visible { transform: translateX(0); }
-  .unv-panel__handle { display: none; }
+  .unv-panel--expanded { max-height: none; }
+  .unv-panel__handle-btn { display: none; }
 }
 
+.unv-panel__handle-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 10px 24px 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  width: 100%;
+}
 .unv-panel__handle {
   width: 36px; height: 4px; border-radius: 2px;
-  background: rgba(255,255,255,0.12);
-  margin: 10px auto 0;
-  flex-shrink: 0;
+  background: rgba(255,255,255,0.18);
+}
+.unv-panel__handle-hint {
+  font-size: 9px;
+  color: rgba(255,255,255,0.22);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 .unv-panel__close {
-  position: absolute; top: 12px; right: 14px; z-index: 10;
-  width: 30px; height: 30px; border-radius: 50%;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.10);
-  color: rgba(255,255,255,0.5);
-  font-size: 18px; line-height: 1; cursor: pointer;
+  position: absolute; top: 8px; right: 10px; z-index: 10;
+  width: 44px; height: 44px; border-radius: 50%;
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.4);
+  font-size: 22px; line-height: 1; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
 }
-.unv-panel__close:hover { background: rgba(255,255,255,0.12); color: #fff; }
+.unv-panel__close:hover { color: #fff; }
 
 .unv-panel__hero {
   flex-shrink: 0;
   position: relative;
   overflow: hidden;
-  padding: 18px 20px 14px;
+  padding: 10px 16px 12px;
   background: radial-gradient(ellipse 80% 55% at 50% 35%, rgba(20,12,50,0.65) 0%, transparent 100%);
 }
 .unv-panel__hero::before {
@@ -234,11 +252,13 @@ export function UniversePersonPanel({ node, onClose, onRefocus, onEdit, onInvite
   const [data, setData] = useState<PersonaResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [tab, setTab] = useState<TabKey>('historia')
+  const [expanded, setExpanded] = useState(false)
 
   useEffect(() => {
-    if (!node?.memberId || node.isFocal) { setData(null); return }
+    if (!node?.memberId || node.isFocal) { setData(null); setExpanded(false); return }
     setLoading(true)
     setTab('historia')
+    setExpanded(false)
     fetch(`/api/persona/${node.memberId}`)
       .then(r => r.ok ? r.json() : null)
       .then(d => setData(d))
@@ -274,11 +294,19 @@ export function UniversePersonPanel({ node, onClose, onRefocus, onEdit, onInvite
         role="dialog"
         aria-label={node ? `Perfil de ${node?.shortName}` : undefined}
         aria-modal="false"
-        className={`unv-panel${visible ? ' unv-panel--visible' : ''}`}
+        className={`unv-panel${visible ? ' unv-panel--visible' : ''}${expanded ? ' unv-panel--expanded' : ''}`}
         onPointerDown={e => e.stopPropagation()}
         onClick={e => e.stopPropagation()}
       >
-        <div className="unv-panel__handle" />
+        {/* Handle táctil — toca para expandir/contraer */}
+        <button
+          className="unv-panel__handle-btn"
+          onClick={() => setExpanded(v => !v)}
+          aria-label={expanded ? 'Contraer panel' : 'Expandir panel'}
+        >
+          <div className="unv-panel__handle" />
+          <span className="unv-panel__handle-hint">{expanded ? '▾ contraer' : '▴ expandir'}</span>
+        </button>
         <button className="unv-panel__close" onClick={onClose} aria-label="Cerrar">×</button>
 
         {/* ── HERO ── */}
@@ -494,25 +522,14 @@ function PersonHero({ node, person, yearsLine, loading }: {
   const location = [person?.birth_city, person?.birth_country].filter(Boolean).join(', ')
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-      {/* Avatar — conic rainbow ring matching /persona page */}
-      <div style={{ position: 'relative', width: 100, height: 100, flexShrink: 0 }}>
-        <div style={{
-          position: 'absolute', inset: -12, borderRadius: '50%',
-          border: '1px solid rgba(212,175,55,0.1)',
-          boxShadow: '0 0 36px rgba(212,175,55,0.1)',
-          pointerEvents: 'none',
-        }} />
-        <div style={{
-          position: 'absolute', inset: -5, borderRadius: '50%',
-          border: '1px solid rgba(212,175,55,0.16)',
-          pointerEvents: 'none',
-        }} />
+    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+      {/* Avatar compacto — 72px */}
+      <div style={{ position: 'relative', width: 72, height: 72, flexShrink: 0 }}>
         <div style={{
           position: 'absolute', inset: 0, borderRadius: '50%',
           background: 'conic-gradient(from 15deg,#d4af37 0%,#f5e070 16%,#8a6012 32%,#6030b0 48%,#2044c0 64%,#18b0c0 76%,#f0d060 88%,#d4af37 100%)',
           padding: 3,
-          boxShadow: '0 0 36px rgba(212,175,55,0.28), 0 4px 20px rgba(0,0,0,0.65)',
+          boxShadow: '0 0 24px rgba(212,175,55,0.28), 0 3px 12px rgba(0,0,0,0.65)',
         }}>
           <div style={{
             width: '100%', height: '100%', borderRadius: '50%',
@@ -522,53 +539,56 @@ function PersonHero({ node, person, yearsLine, loading }: {
             {avatarSrc
               // eslint-disable-next-line @next/next/no-img-element
               ? <img src={avatarSrc} alt={fullName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              : <span style={{ fontSize: 26, fontWeight: 800, color: '#d4af37' }}>{initials}</span>
+              : <span style={{ fontSize: 20, fontWeight: 800, color: '#d4af37' }}>{initials}</span>
             }
           </div>
         </div>
       </div>
 
-      {/* Name */}
-      <div style={{
-        fontSize: 19, fontWeight: 800, color: '#fff',
-        letterSpacing: '-0.02em', lineHeight: 1.15,
-        textAlign: 'center', marginTop: 13, padding: '0 12px',
-        fontFamily: "Georgia,'Times New Roman',serif",
-      }}>
-        {fullName}
-      </div>
-
-      {/* Years */}
-      {yearsLine && (
-        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.36)', marginTop: 3, fontWeight: 500 }}>
-          {yearsLine}
+      {/* Info a la derecha */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        {/* Relación */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 3 }}>
+          <span style={{ fontSize: 8, color: '#d4af37' }}>✦</span>
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#d4af37', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+            {node.relation}
+          </span>
         </div>
-      )}
 
-      {/* Relation */}
-      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 6 }}>
-        <span style={{ fontSize: 9, color: '#d4af37' }}>✦</span>
-        <span style={{ fontSize: 12, fontWeight: 700, color: '#d4af37', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-          {node.relation}
-        </span>
-      </div>
-
-      {/* Location */}
-      {loading && !person && (
-        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', marginTop: 5 }}>Cargando…</div>
-      )}
-      {location && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 5 }}>
-          <span style={{ fontSize: 10, color: 'rgba(212,175,55,0.45)' }}>◎</span>
-          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.32)' }}>{location}</span>
+        {/* Nombre */}
+        <div style={{
+          fontSize: 17, fontWeight: 800, color: '#fff',
+          letterSpacing: '-0.02em', lineHeight: 1.2,
+          fontFamily: "Georgia,'Times New Roman',serif",
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}>
+          {fullName}
         </div>
-      )}
 
-      {/* Status chips */}
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'center', marginTop: 10 }}>
-        {node.isJoined && <StatusChip color="#2A6B3A" text="En Ceiba" />}
-        {!node.isJoined && <StatusChip color="#5C4A20" text="Sin cuenta" />}
-        {(node.isDeceased || person?.is_deceased) && <StatusChip color="#4A4A4A" text="Fallecido/a" />}
+        {/* Años */}
+        {yearsLine && (
+          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>
+            {yearsLine}
+          </div>
+        )}
+
+        {/* Lugar */}
+        {loading && !person && (
+          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', marginTop: 2 }}>Cargando…</div>
+        )}
+        {location && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 3 }}>
+            <span style={{ fontSize: 9, color: 'rgba(212,175,55,0.45)' }}>◎</span>
+            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{location}</span>
+          </div>
+        )}
+
+        {/* Status chips */}
+        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 6 }}>
+          {node.isJoined && <StatusChip color="#2A6B3A" text="En Ceiba" />}
+          {!node.isJoined && <StatusChip color="#5C4A20" text="Sin cuenta" />}
+          {(node.isDeceased || person?.is_deceased) && <StatusChip color="#4A4A4A" text="Fallecido/a" />}
+        </div>
       </div>
     </div>
   )

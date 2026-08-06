@@ -72,7 +72,9 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after {
+    *:not(.unv-allow-anim):not(.unv-allow-anim *),
+    *:not(.unv-allow-anim)::before,
+    *:not(.unv-allow-anim)::after {
       animation: none !important;
       transition-duration: 0.01ms !important;
     }

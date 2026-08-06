@@ -753,6 +753,7 @@ export function FamilyUniverse({
 
       <div
         ref={containerRef}
+        className="unv-allow-anim"
         style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}
         onClick={handleClose}
       >
