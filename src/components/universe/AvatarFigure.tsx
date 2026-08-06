@@ -1,5 +1,7 @@
 'use client'
-import React, { useId, useState } from 'react'
+import React, { useId, useState, useMemo } from 'react'
+import { createAvatar } from '@dicebear/core'
+import * as personas from '@dicebear/personas'
 import type { UniverseNode } from './useUniverseLayout'
 
 // ─── Color helpers ────────────────────────────────────────────────────────────
@@ -262,6 +264,22 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
   const floatDur   = `${4.2 + (seed % 24) * 0.13}s`
   const glowDelay  = `-${(seed % 40) * 0.07}s`
 
+  // DiceBear personas portrait — deterministic from node.id
+  const dicebearUri = useMemo(() => {
+    try {
+      const BG_PALETTE = ['0a0618', '060d1a', '0d0620', '080318', '101030']
+      const bg = BG_PALETTE[seed % BG_PALETTE.length]
+      const avatar = createAvatar(personas, {
+        seed: node.id,
+        size: 72,
+        backgroundColor: [bg],
+      })
+      return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(avatar.toString())}`
+    } catch {
+      return null
+    }
+  }, [node.id, seed])
+
   // ── Portrait geometry ──────────────────────────────────────────────────────
   // SVG canvas 72×84. Circle: cx=36, cy=36, r=32.
   const SVG_W = 72
@@ -484,139 +502,24 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
                 />
               </>
             ) : (
-              <g clipPath={`url(#${uid}pc)`}>
-                {/* Dark background */}
+              <>
+                {/* DiceBear personas portrait — fallback dark bg */}
                 <circle cx={CX} cy={CY} r={R} fill={`url(#${uid}bg)`} />
-
-                {/* Shirt / torso */}
-                <path
-                  d={`M${CX-22},${SVG_H} L${CX-22},${neckBotY+3} C${CX-18},${neckBotY-1} ${CX-9},${neckBotY} ${CX-6},${neckBotY} L${CX+6},${neckBotY} C${CX+9},${neckBotY} ${CX+18},${neckBotY-1} ${CX+22},${neckBotY+3} L${CX+22},${SVG_H} Z`}
-                  fill={`url(#${uid}sh)`}
-                />
-                {/* Collar V */}
-                <path d={`M${CX-5},${neckBotY+1} L${CX},${neckBotY+10} L${CX+5},${neckBotY+1}`}
-                  fill={darken(shirt, 0.28)} />
-                {/* Shirt highlight */}
-                <ellipse cx={CX-7} cy={neckBotY+9} rx={5} ry={3.5} fill={shirtLight} opacity={0.16} />
-
-                {/* Neck */}
-                <path
-                  d={`M${CX-5},${neckTopY} L${CX-4.5},${neckBotY} L${CX+4.5},${neckBotY} L${CX+5},${neckTopY} Z`}
-                  fill={skin}
-                />
-
-                {/* Hair — background layer (long/extended styles go behind head) */}
-                <PortraitHair color={hairColor} female={female} elder={elder} child={child}
-                  style={hairStyle} headTopY={headTopY} hairlineY={hairlineY} cx={CX} />
-
-                {/* Head */}
-                <ellipse cx={CX} cy={headCY} rx={headRX} ry={headRY} fill={`url(#${uid}sk)`} />
-
-                {/* Ears */}
-                <ellipse cx={earLX+2.5} cy={earCY}   rx={3.5} ry={child?4:5}   fill={skin} />
-                <ellipse cx={earRX-2.5} cy={earCY}   rx={3.5} ry={child?4:5}   fill={skin} />
-                <ellipse cx={earLX+3.0} cy={earCY+1} rx={1.5} ry={2}           fill={skinDark} opacity={0.30} />
-                <ellipse cx={earRX-3.0} cy={earCY+1} rx={1.5} ry={2}           fill={skinDark} opacity={0.30} />
-
-                {/* Eyebrows */}
-                <path d={`M${CX-13},${browY} Q${CX-8},${browY-(female?2.5:3)} ${CX-4},${browY+(female?-0.5:0)}`}
-                  stroke={browColor} strokeWidth={female?1.3:1.9} strokeLinecap="round" fill="none" />
-                <path d={`M${CX+4},${browY+(female?-0.5:0)} Q${CX+8},${browY-(female?2.5:3)} ${CX+13},${browY}`}
-                  stroke={browColor} strokeWidth={female?1.3:1.9} strokeLinecap="round" fill="none" />
-
-                {/* Eye whites */}
-                <circle cx={CX-9} cy={eyeY} r={eyeR-0.6} fill="white" />
-                <circle cx={CX+9} cy={eyeY} r={eyeR-0.6} fill="white" />
-
-                {/* Iris */}
-                <circle cx={CX-8.5} cy={eyeY+0.5} r={eyeR*0.62} fill={`url(#${uid}el)`} />
-                <circle cx={CX+8.5} cy={eyeY+0.5} r={eyeR*0.62} fill={`url(#${uid}er)`} />
-
-                {/* Pupil */}
-                <circle cx={CX-8.2} cy={eyeY+0.8} r={eyeR*0.28} fill="#080504" />
-                <circle cx={CX+8.8} cy={eyeY+0.8} r={eyeR*0.28} fill="#080504" />
-
-                {/* Eye shine */}
-                <circle cx={CX-6.5}  cy={eyeY-0.8} r={1.4} fill="rgba(255,255,255,0.93)" />
-                <circle cx={CX+10.5} cy={eyeY-0.8} r={1.4} fill="rgba(255,255,255,0.93)" />
-                <circle cx={CX-9.5}  cy={eyeY+1.5} r={0.5} fill="rgba(255,255,255,0.55)" />
-                <circle cx={CX+7.5}  cy={eyeY+1.5} r={0.5} fill="rgba(255,255,255,0.55)" />
-
-                {/* Upper eyelid lash line */}
-                <path d={`M${CX-13},${eyeY-1} Q${CX-9},${eyeY-eyeR+0.5} ${CX-5},${eyeY-1}`}
-                  stroke="#0A0200" strokeWidth="1.1" fill="none" strokeLinecap="round" opacity="0.85" />
-                <path d={`M${CX+5},${eyeY-1} Q${CX+9},${eyeY-eyeR+0.5} ${CX+13},${eyeY-1}`}
-                  stroke="#0A0200" strokeWidth="1.1" fill="none" strokeLinecap="round" opacity="0.85" />
-                {/* Eyelid shadow */}
-                <path d={`M${CX-13},${eyeY-1.5} Q${CX-9},${eyeY-3.5} ${CX-5},${eyeY-1.5}`}
-                  stroke={skinDeep} strokeWidth="0.9" fill="none" opacity="0.35" />
-                <path d={`M${CX+5},${eyeY-1.5} Q${CX+9},${eyeY-3.5} ${CX+13},${eyeY-1.5}`}
-                  stroke={skinDeep} strokeWidth="0.9" fill="none" opacity="0.35" />
-
-                {/* Cheek blush */}
-                <ellipse cx={CX-11} cy={eyeY+9} rx={5} ry={2.5} fill="rgba(255,110,90,0.10)" />
-                <ellipse cx={CX+11} cy={eyeY+9} rx={5} ry={2.5} fill="rgba(255,110,90,0.10)" />
-
-                {/* Nose */}
-                {!child ? (
-                  <g opacity="0.52">
-                    <path d={`M${CX-3},${noseY-4} Q${CX-3.5},${noseY} ${CX-4},${noseY+1}`}
-                      fill="none" stroke={skinDark} strokeWidth="1.0" strokeLinecap="round" />
-                    <path d={`M${CX+3},${noseY-4} Q${CX+3.5},${noseY} ${CX+4},${noseY+1}`}
-                      fill="none" stroke={skinDark} strokeWidth="1.0" strokeLinecap="round" />
-                    <path d={`M${CX-4},${noseY+1} Q${CX},${noseY+3} ${CX+4},${noseY+1}`}
-                      fill="none" stroke={skinDark} strokeWidth="0.9" strokeLinecap="round" />
-                  </g>
-                ) : (
-                  <ellipse cx={CX} cy={noseY} rx={2} ry={1.4} fill={skinDark} opacity={0.20} />
-                )}
-
-                {/* Mouth */}
-                <path
-                  d={female || child
-                    ? `M${CX-6},${mouthY-1} Q${CX},${mouthY+3} ${CX+6},${mouthY-1}`
-                    : `M${CX-7},${mouthY} Q${CX-1},${mouthY+2} ${CX+5},${mouthY-1}`}
-                  fill={female || child ? darken(skin, 0.12) : "none"}
-                  stroke={darken(skin, 0.33)} strokeWidth="0.95" strokeLinecap="round"
-                />
-
-                {/* Beard */}
-                {hasBeard && (
-                  <path
-                    d={`M${CX-headRX+4},${headCY+6} Q${CX},${chinY+7} ${CX+headRX-4},${headCY+6}`}
-                    fill={hairColor} opacity={0.70}
+                {dicebearUri && (
+                  <image
+                    href={dicebearUri}
+                    x={CX - R} y={CY - R}
+                    width={R * 2} height={R * 2}
+                    preserveAspectRatio="xMidYMid slice"
+                    clipPath={`url(#${uid}pc)`}
                   />
                 )}
-
-                {/* Head highlight catch-light */}
-                <ellipse cx={CX-5} cy={headCY-headRY*0.52} rx={6} ry={3.5}
-                  fill="rgba(255,255,255,0.11)" />
-
-                {/* Glasses */}
-                {hasGlasses && (
-                  <g stroke="rgba(55,38,22,0.82)" strokeWidth="1.1" fill="none">
-                    <rect x={CX-14} y={eyeY-eyeR+0.5} width={11} height={(eyeR-0.5)*2} rx={2.5} />
-                    <rect x={CX+3}  y={eyeY-eyeR+0.5} width={11} height={(eyeR-0.5)*2} rx={2.5} />
-                    <line x1={CX-3}  y1={eyeY} x2={CX+3}  y2={eyeY} />
-                    <line x1={CX-15} y1={eyeY} x2={CX-17} y2={eyeY} />
-                    <line x1={CX+14} y1={eyeY} x2={CX+17} y2={eyeY} />
-                    <path d={`M${CX-12},${eyeY-eyeR+2} Q${CX-10},${eyeY-eyeR+4} ${CX-8},${eyeY-eyeR+2}`}
-                      stroke="rgba(255,255,255,0.45)" strokeWidth="0.6" />
-                  </g>
-                )}
-
-                {/* Earrings */}
-                {hasEarrings && (
-                  <>
-                    <line x1={earLX+2.5} y1={earCY+3.5} x2={earLX+2.5} y2={earCY+4.5}
-                      stroke={glowColor} strokeWidth="1.0" opacity="0.80" />
-                    <circle cx={earLX+2.5} cy={earCY+6} r={2.0} fill={glowColor} opacity={0.85} />
-                    <line x1={earRX-2.5} y1={earCY+3.5} x2={earRX-2.5} y2={earCY+4.5}
-                      stroke={glowColor} strokeWidth="1.0" opacity="0.80" />
-                    <circle cx={earRX-2.5} cy={earCY+6} r={2.0} fill={glowColor} opacity={0.85} />
-                  </>
-                )}
-              </g>
+                {/* Inner edge vignette for depth */}
+                <circle cx={CX} cy={CY} r={R - 1}
+                  fill="none" stroke="rgba(0,0,0,0.30)"
+                  strokeWidth="6" clipPath={`url(#${uid}pc)`}
+                />
+              </>
             )}
 
             {/* ── Portrait ring ── */}
