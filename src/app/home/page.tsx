@@ -1011,34 +1011,51 @@ export default function HomePage() {
 
       {/* ══ ACCESOS RÁPIDOS ══════════════════════════════════════════════ */}
       <div style={{ padding: "22px 12px 8px" }}>
+        <style>{`
+          @keyframes fab-float-0 { 0%,100%{transform:translateY(0px)} 50%{transform:translateY(-5px)} }
+          @keyframes fab-float-1 { 0%,100%{transform:translateY(0px)} 50%{transform:translateY(-4px)} }
+          @keyframes fab-float-2 { 0%,100%{transform:translateY(0px)} 50%{transform:translateY(-6px)} }
+          @keyframes fab-float-3 { 0%,100%{transform:translateY(0px)} 50%{transform:translateY(-4px)} }
+          @keyframes fab-float-4 { 0%,100%{transform:translateY(0px)} 50%{transform:translateY(-5px)} }
+          @keyframes fab-float-5 { 0%,100%{transform:translateY(0px)} 50%{transform:translateY(-3px)} }
+          @keyframes shine-sweep { 0%{opacity:0;left:-60%} 30%{opacity:1} 100%{opacity:0;left:130%} }
+        `}</style>
         <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase",
-          color: "rgba(212,175,55,0.45)", marginBottom: 14, paddingLeft: 2 }}>Accesos rápidos</div>
+          color: "rgba(212,175,55,0.45)", marginBottom: 16, paddingLeft: 2 }}>Accesos rápidos</div>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 4 }}>
-          {[
-            { href: "/tree",    Icon: TreePine,      label: "Árbol",    color: "#f0c040", fill: "rgba(212,175,55,0.16)", border: "rgba(212,175,55,0.55)", outer: "rgba(212,175,55,0.22)" },
-            { href: "/events",  Icon: BookOpen,      label: "Historia", color: "#f09050", fill: "rgba(200,120,48,0.18)", border: "rgba(200,100,40,0.55)", outer: "rgba(200,100,40,0.18)" },
-            { href: "/photos",  Icon: Camera,        label: "Álbum",    color: "#f09050", fill: "rgba(200,120,48,0.18)", border: "rgba(200,100,40,0.50)", outer: "rgba(200,100,40,0.16)" },
-            { href: "/chat",    Icon: MessageCircle, label: "Chat",     color: "#b0b8f8", fill: "rgba(140,140,220,0.18)", border: "rgba(140,140,200,0.55)", outer: "rgba(130,130,200,0.16)" },
-            { href: "/mapa",    Icon: Map,           label: "Mapa",     color: "#70d8f0", fill: "rgba(80,190,220,0.18)", border: "rgba(80,190,220,0.50)", outer: "rgba(80,190,210,0.14)" },
-            { href: "/invitar", Icon: Send,          label: "Invitar",  color: "#f0c040", fill: "rgba(212,175,55,0.16)", border: "rgba(212,175,55,0.52)", outer: "rgba(212,175,55,0.20)" },
-          ].map(({ href, Icon, label, color, fill, border, outer }) => (
+          {([
+            { href: "/tree",    Icon: TreePine,      label: "Árbol",    color: "#f0c040", top: "rgba(255,210,80,0.28)",  mid: "rgba(180,110,0,0.22)",  bot: "rgba(80,40,0,0.85)",  border: "rgba(240,192,64,0.60)",  glow: "rgba(212,175,55,0.50)",  shadow: "#3a2800" },
+            { href: "/events",  Icon: BookOpen,      label: "Historia", color: "#f0a060", top: "rgba(255,160,80,0.26)",  mid: "rgba(160,80,20,0.22)",  bot: "rgba(60,25,5,0.88)",  border: "rgba(220,130,60,0.58)",  glow: "rgba(200,110,40,0.45)",  shadow: "#2e1200" },
+            { href: "/photos",  Icon: Camera,        label: "Álbum",    color: "#f0a060", top: "rgba(255,155,70,0.26)",  mid: "rgba(155,75,15,0.22)",  bot: "rgba(58,22,4,0.88)",  border: "rgba(215,125,55,0.55)",  glow: "rgba(195,105,35,0.42)",  shadow: "#2a1000" },
+            { href: "/chat",    Icon: MessageCircle, label: "Chat",     color: "#c0c8ff", top: "rgba(160,170,255,0.28)", mid: "rgba(80,90,200,0.22)",  bot: "rgba(10,8,50,0.90)",  border: "rgba(160,170,245,0.58)", glow: "rgba(130,140,230,0.45)", shadow: "#050328" },
+            { href: "/mapa",    Icon: Map,           label: "Mapa",     color: "#60e0f8", top: "rgba(80,220,250,0.26)",  mid: "rgba(20,150,190,0.22)", bot: "rgba(4,30,50,0.90)",  border: "rgba(70,210,240,0.55)",  glow: "rgba(40,180,220,0.42)",  shadow: "#02101e" },
+            { href: "/invitar", Icon: Send,          label: "Invitar",  color: "#f0c040", top: "rgba(255,205,70,0.26)",  mid: "rgba(175,105,0,0.20)",  bot: "rgba(78,38,0,0.87)",  border: "rgba(235,185,55,0.58)",  glow: "rgba(205,165,40,0.46)",  shadow: "#362000" },
+          ] as const).map(({ href, Icon, label, color, top, mid, bot, border, glow, shadow }, idx) => (
             <Link key={href} href={href} style={{ textDecoration: "none", flex: 1 }}>
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 7 }}>
-                {/* Botón */}
-                <div style={{ position: "relative", width: 52, height: 52, borderRadius: 18,
-                  background: `linear-gradient(145deg, ${fill} 0%, rgba(6,4,18,0.90) 100%)`,
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8,
+                animation: `fab-float-${idx} ${3.2 + idx * 0.3}s ease-in-out infinite ${idx * 0.4}s` }}>
+                {/* Botón 3D */}
+                <div style={{ position: "relative", width: 52, height: 52, borderRadius: 18, overflow: "hidden",
+                  background: `linear-gradient(160deg, ${top} 0%, ${mid} 40%, ${bot} 100%)`,
                   border: `1.5px solid ${border}`,
-                  boxShadow: `0 0 18px ${outer}, 0 6px 20px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.12)`,
+                  boxShadow: `0 2px 0 ${shadow}, 0 6px 0 rgba(0,0,0,0.55), 0 8px 20px rgba(0,0,0,0.7), 0 0 22px ${glow}, inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(0,0,0,0.4)`,
                   display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  {/* Brillo superior interno */}
-                  <div style={{ position: "absolute", top: 0, left: "15%", right: "15%", height: 1,
-                    borderRadius: "0 0 50% 50%", background: `linear-gradient(90deg, transparent, ${border}, transparent)`,
-                    opacity: 0.7 }} />
-                  <Icon size={22} style={{ color, filter: `drop-shadow(0 0 6px ${color}99)` }} />
+                  {/* Shine sweep — pasa cada ~6s */}
+                  <div style={{ position: "absolute", top: 0, bottom: 0, width: "40%", pointerEvents: "none",
+                    background: "linear-gradient(105deg,transparent 0%,rgba(255,255,255,0.18) 50%,transparent 100%)",
+                    animation: `shine-sweep ${5 + idx * 0.7}s ease-in-out infinite ${idx * 0.9}s` }} />
+                  {/* Brillo arco superior */}
+                  <div style={{ position: "absolute", top: 0, left: "10%", right: "10%", height: 14,
+                    borderRadius: "0 0 50% 50%", pointerEvents: "none",
+                    background: `radial-gradient(ellipse at 50% 0%, rgba(255,255,255,0.30) 0%, transparent 80%)` }} />
+                  <Icon size={22} style={{ color, filter: `drop-shadow(0 0 8px ${color}cc)`, position: "relative", zIndex: 1 }} />
                 </div>
+                {/* Sombra proyectada difusa bajo el botón */}
+                <div style={{ width: 36, height: 5, borderRadius: "50%", marginTop: -5,
+                  background: `radial-gradient(ellipse, ${glow} 0%, transparent 75%)`, opacity: 0.6 }} />
                 {/* Label */}
-                <span style={{ fontSize: 9.5, fontWeight: 700, color: "rgba(255,255,255,0.55)",
-                  letterSpacing: "0.05em", textAlign: "center" }}>
+                <span style={{ fontSize: 9.5, fontWeight: 700, color: "rgba(255,255,255,0.60)",
+                  letterSpacing: "0.05em", textAlign: "center", marginTop: -2 }}>
                   {label}
                 </span>
               </div>

@@ -1414,40 +1414,67 @@ function TreePageContent() {
 
       {/* Add / Edit Member Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
-          <div className="bg-cream-50 rounded-2xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-ceiba-900">
+        <div className="fixed inset-0 flex items-center justify-center z-50 px-4"
+          style={{ background: "rgba(2,1,10,0.82)", backdropFilter: "blur(6px)" }}>
+          <style>{`
+            .modal-dark .input-field {
+              background: rgba(6,4,18,0.80) !important;
+              border: 1px solid rgba(212,175,55,0.25) !important;
+              color: rgba(255,255,255,0.88) !important;
+              border-radius: 10px !important;
+            }
+            .modal-dark .input-field::placeholder { color: rgba(255,255,255,0.22) !important; }
+            .modal-dark .input-field:focus {
+              border-color: rgba(212,175,55,0.55) !important;
+              box-shadow: 0 0 0 2px rgba(212,175,55,0.12) !important;
+              outline: none !important;
+            }
+            .modal-dark select.input-field option { background: #0c0a18; color: rgba(255,255,255,0.85); }
+            .modal-dark select.input-field optgroup { background: #0c0a18; color: rgba(212,175,55,0.6); }
+          `}</style>
+          <div className="modal-dark rounded-2xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto"
+            style={{
+              background: "linear-gradient(160deg, #0e0b1f 0%, #07060f 100%)",
+              border: "1px solid rgba(212,175,55,0.20)",
+              boxShadow: "0 0 60px rgba(0,0,0,0.9), 0 0 0 0.5px rgba(212,175,55,0.08), inset 0 1px 0 rgba(212,175,55,0.12)",
+            }}>
+            <div className="flex items-center justify-between mb-5">
+              <h2 style={{ fontSize: 17, fontWeight: 800, color: "#d4af37", letterSpacing: 0.3 }}>
                 {editingMember ? "Editar familiar" : "Agregar familiar"}
               </h2>
-              <button onClick={() => { setShowModal(false); setEditingMember(null); setForm(EMPTY_FORM); setDuplicateWarning(null); setModalPhotoFile(null); setModalPhotoPreview(null); setPendingCollabRequests([]); }} className="text-ceiba-400 hover:text-ceiba-600">
-                <X size={20} />
+              <button onClick={() => { setShowModal(false); setEditingMember(null); setForm(EMPTY_FORM); setDuplicateWarning(null); setModalPhotoFile(null); setModalPhotoPreview(null); setPendingCollabRequests([]); }}
+                style={{ width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center",
+                  borderRadius: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)",
+                  color: "rgba(255,255,255,0.4)", cursor: "pointer" }}>
+                <X size={16} />
               </button>
             </div>
             <div className="space-y-3">
               {/* Solicitudes de colaboración pendientes (visible solo al dueño) */}
               {editingMember && canEditMember && pendingCollabRequests.length > 0 && (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-2">
-                  <p className="text-xs font-semibold text-amber-800">
+                <div style={{ background: "rgba(180,120,0,0.12)", border: "1px solid rgba(212,175,55,0.30)", borderRadius: 12, padding: "10px 12px" }} className="space-y-2">
+                  <p style={{ fontSize: 11, fontWeight: 700, color: "rgba(212,175,55,0.9)" }}>
                     {pendingCollabRequests.length === 1 ? "1 solicitud pendiente" : `${pendingCollabRequests.length} solicitudes pendientes`}
                   </p>
                   {pendingCollabRequests.map(req => (
                     <div key={req.id} className="flex items-center justify-between gap-2">
-                      <span className="text-xs text-amber-700">
+                      <span style={{ fontSize: 11, color: "rgba(212,175,55,0.65)" }}>
                         {req.request_type === "edit" ? "Co-edición" : "Transferencia"}
                       </span>
                       <div className="flex gap-1">
                         <button
                           onClick={() => resolveCollabRequest(req.id, "approve")}
                           disabled={processingRequestId === req.id}
-                          className="text-xs text-green-700 font-semibold px-2 py-1 bg-green-100 rounded-lg hover:bg-green-200 disabled:opacity-50"
+                          style={{ fontSize: 11, fontWeight: 600, color: "#4ade80", padding: "3px 8px", background: "rgba(74,222,128,0.10)", border: "1px solid rgba(74,222,128,0.25)", borderRadius: 7 }}
+                          className="disabled:opacity-50"
                         >
                           Aprobar
                         </button>
                         <button
                           onClick={() => resolveCollabRequest(req.id, "reject")}
                           disabled={processingRequestId === req.id}
-                          className="text-xs text-red-600 font-semibold px-2 py-1 bg-red-50 rounded-lg hover:bg-red-100 disabled:opacity-50"
+                          style={{ fontSize: 11, fontWeight: 600, color: "#f87171", padding: "3px 8px", background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.22)", borderRadius: 7 }}
+                          className="disabled:opacity-50"
                         >
                           Rechazar
                         </button>
@@ -1461,18 +1488,20 @@ function TreePageContent() {
                 <div className="flex items-center gap-3 pb-1">
                   <div
                     onClick={() => modalPhotoRef.current?.click()}
-                    className="w-14 h-14 rounded-full flex-shrink-0 flex items-center justify-center cursor-pointer overflow-hidden border-2 border-dashed border-ceiba-200 hover:border-ceiba-400 bg-ceiba-50 transition-colors"
+                    style={{ width: 56, height: 56, borderRadius: "50%", flexShrink: 0, cursor: "pointer", overflow: "hidden",
+                      border: "2px dashed rgba(212,175,55,0.35)", background: "rgba(212,175,55,0.05)",
+                      display: "flex", alignItems: "center", justifyContent: "center" }}
                   >
                     {modalPhotoPreview
                       ? <img src={modalPhotoPreview} className="w-full h-full object-cover" alt="" />
-                      : <Camera size={20} className="text-ceiba-400" />}
+                      : <Camera size={20} style={{ color: "rgba(212,175,55,0.5)" }} />}
                   </div>
                   <div>
                     <button type="button" onClick={() => modalPhotoRef.current?.click()}
-                      className="text-sm font-medium text-ceiba-700 hover:text-ceiba-800 transition-colors">
+                      style={{ fontSize: 13, fontWeight: 600, color: "rgba(212,175,55,0.85)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
                       {modalPhotoPreview ? "Cambiar foto" : "Añadir foto"}
                     </button>
-                    <p className="text-xs text-gray-400">Aparecerá en el árbol hasta que se registre</p>
+                    <p style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", marginTop: 2 }}>Aparecerá en el árbol hasta que se registre</p>
                   </div>
                   <input ref={modalPhotoRef} type="file" accept="image/*" className="hidden"
                     onChange={e => {
@@ -1487,7 +1516,7 @@ function TreePageContent() {
               )}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Primer nombre <span className="text-red-500">*</span></label>
+                  <label style={{ display: "block", fontSize: 10, fontWeight: 600, color: "rgba(212,175,55,0.6)", marginBottom: 4, letterSpacing: "0.04em" }}>Primer nombre <span style={{ color: "#f87171" }}>*</span></label>
                   <input
                     type="text"
                     className="input-field text-sm"
@@ -1497,7 +1526,7 @@ function TreePageContent() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Segundo nombre</label>
+                  <label style={{ display: "block", fontSize: 10, fontWeight: 600, color: "rgba(212,175,55,0.6)", marginBottom: 4, letterSpacing: "0.04em" }}>Segundo nombre</label>
                   <input
                     type="text"
                     className="input-field text-sm"
@@ -1507,7 +1536,7 @@ function TreePageContent() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Primer apellido <span className="text-red-500">*</span></label>
+                  <label style={{ display: "block", fontSize: 10, fontWeight: 600, color: "rgba(212,175,55,0.6)", marginBottom: 4, letterSpacing: "0.04em" }}>Primer apellido <span style={{ color: "#f87171" }}>*</span></label>
                   <input
                     type="text"
                     className="input-field text-sm"
@@ -1517,7 +1546,7 @@ function TreePageContent() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Segundo apellido</label>
+                  <label style={{ display: "block", fontSize: 10, fontWeight: 600, color: "rgba(212,175,55,0.6)", marginBottom: 4, letterSpacing: "0.04em" }}>Segundo apellido</label>
                   <input
                     type="text"
                     className="input-field text-sm"
@@ -1529,7 +1558,7 @@ function TreePageContent() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Correo (para invitarlo)</label>
+                  <label style={{ display: "block", fontSize: 10, fontWeight: 600, color: "rgba(212,175,55,0.6)", marginBottom: 4, letterSpacing: "0.04em" }}>Correo (para invitarlo)</label>
                   <input
                     type="email"
                     className="input-field text-sm"
@@ -1539,9 +1568,9 @@ function TreePageContent() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Fecha de nacimiento</label>              <div className="grid grid-cols-2 gap-3">
+                  <label style={{ display: "block", fontSize: 10, fontWeight: 600, color: "rgba(212,175,55,0.6)", marginBottom: 4, letterSpacing: "0.04em" }}>Fecha de nacimiento</label>              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Ciudad de nacimiento</label>
+                  <label style={{ display: "block", fontSize: 10, fontWeight: 600, color: "rgba(212,175,55,0.6)", marginBottom: 4, letterSpacing: "0.04em" }}>Ciudad de nacimiento</label>
                   <input
                     type="text"
                     className="input-field text-sm"
@@ -1551,7 +1580,7 @@ function TreePageContent() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">País de nacimiento</label>
+                  <label style={{ display: "block", fontSize: 10, fontWeight: 600, color: "rgba(212,175,55,0.6)", marginBottom: 4, letterSpacing: "0.04em" }}>País de nacimiento</label>
                   <input
                     type="text"
                     className="input-field text-sm"
@@ -1578,17 +1607,22 @@ function TreePageContent() {
                     checked={form.is_deceased}
                     onChange={e => setForm(f => ({ ...f, is_deceased: e.target.checked }))}
                   />
-                  <div className={`w-10 h-5 rounded-full transition-colors ${form.is_deceased ? "bg-gray-500" : "bg-gray-200"}`} />
-                  <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${form.is_deceased ? "translate-x-5" : ""}`} />
+                  <div style={{ width: 40, height: 20, borderRadius: 10, transition: "background 0.2s",
+                    background: form.is_deceased ? "rgba(212,175,55,0.45)" : "rgba(255,255,255,0.10)",
+                    border: "1px solid rgba(255,255,255,0.12)" }} />
+                  <div style={{ position: "absolute", top: 3, left: 3, width: 14, height: 14,
+                    borderRadius: "50%", background: form.is_deceased ? "#d4af37" : "rgba(255,255,255,0.5)",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.5)", transition: "transform 0.2s, background 0.2s",
+                    transform: form.is_deceased ? "translateX(20px)" : "translateX(0)" }} />
                 </div>
-                <span className="text-sm text-gray-700">
+                <span style={{ fontSize: 13, color: "rgba(255,255,255,0.65)" }}>
                   Fallecido(a){" "}
-                  <span className="text-gray-400 font-normal">— aparecerá con † en el árbol</span>
+                  <span style={{ color: "rgba(255,255,255,0.30)", fontWeight: 400 }}>— aparecerá con † en el árbol</span>
                 </span>
               </label>
 
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Parentesco *</label>
+                <label style={{ display: "block", fontSize: 10, fontWeight: 600, color: "rgba(212,175,55,0.6)", marginBottom: 4, letterSpacing: "0.04em" }}>Parentesco *</label>
                 <select
                   className="input-field text-sm"
                   value={form.relation_type}
@@ -1614,11 +1648,11 @@ function TreePageContent() {
               {/* Selector de familiar conector — abuelos/bisabuelos/nietos/bisnietos */}
               {relationRequiresConnector(form.relation_type) && (
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
-                    {connectorLabel(form.relation_type)} <span className="text-red-400">*</span>
+                  <label style={{ display: "block", fontSize: 10, fontWeight: 600, color: "rgba(212,175,55,0.6)", marginBottom: 4, letterSpacing: "0.04em" }}>
+                    {connectorLabel(form.relation_type)} <span style={{ color: "#f87171" }}>*</span>
                   </label>
                   {connectorCandidates(form.relation_type).length === 0 ? (
-                    <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg p-2">
+                    <p style={{ fontSize: 11, color: "rgba(212,175,55,0.75)", background: "rgba(180,120,0,0.10)", border: "1px solid rgba(212,175,55,0.22)", borderRadius: 8, padding: "8px 10px" }}>
                       Primero agrega el familiar intermedio (el {(form.relation_type.startsWith("great_grand") ? "abuelo/a o nieto/a" : "padre/madre o hijo/a")} correspondiente) para poder conectar este parentesco.
                     </p>
                   ) : (
@@ -1636,20 +1670,27 @@ function TreePageContent() {
                 </div>
               )}
             </div>
-            <div className="flex gap-3 mt-6">
+            <div style={{ display: "flex", gap: 10, marginTop: 20, borderTop: "1px solid rgba(212,175,55,0.10)", paddingTop: 18 }}>
               {editingMember ? (
                 <>
                   <button
                     onClick={deleteMember}
                     disabled={saving || !canEditMember}
-                    className="btn-secondary text-red-500 border-red-200 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ padding: "10px 16px", borderRadius: 12, fontSize: 13, fontWeight: 600,
+                      color: "#f87171", background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.25)",
+                      cursor: "pointer" }}
+                    className="disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Eliminar
                   </button>
                   <button
                     onClick={updateMember}
                     disabled={saving || !canEditMember}
-                    className="flex-1 btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ flex: 1, padding: "10px 16px", borderRadius: 12, fontSize: 13, fontWeight: 700,
+                      color: "#0c0a18", background: "linear-gradient(135deg,#f0c040 0%,#c8902a 100%)",
+                      border: "none", cursor: "pointer",
+                      boxShadow: "0 4px 14px rgba(212,175,55,0.35), inset 0 1px 0 rgba(255,255,255,0.25)" }}
+                    className="disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {checkingEditPermission ? "Verificando..." : saving ? "Guardando..." : "Guardar cambios"}
                   </button>
@@ -1658,9 +1699,9 @@ function TreePageContent() {
                 <>
                   {/* Error real devuelto por add_relative — sin ocultar la causa */}
                   {saveError && (
-                    <div className="w-full mb-2 bg-red-50 border border-red-200 rounded-xl p-3">
-                      <p className="text-xs font-semibold text-red-800 mb-1">No se pudo agregar</p>
-                      <p className="text-xs text-red-700 leading-relaxed break-words">{saveError}</p>
+                    <div style={{ width: "100%", marginBottom: 8, background: "rgba(220,60,60,0.10)", border: "1px solid rgba(248,113,113,0.30)", borderRadius: 12, padding: "10px 12px" }}>
+                      <p style={{ fontSize: 11, fontWeight: 700, color: "#f87171", marginBottom: 3 }}>No se pudo agregar</p>
+                      <p style={{ fontSize: 11, color: "rgba(248,113,113,0.75)", lineHeight: 1.5, wordBreak: "break-word" }}>{saveError}</p>
                     </div>
                   )}
                   {/* Duplicate warning */}
@@ -1668,23 +1709,23 @@ function TreePageContent() {
                     const top = duplicateWarning.candidates[0];
                     const isClaimed = top?.is_claimed ?? false;
                     return (
-                      <div className="w-full mb-2 bg-amber-50 border border-amber-200 rounded-xl p-3">
-                        <p className="text-xs font-semibold text-amber-800 mb-1">⚠️ Posible duplicado detectado</p>
-                        <p className="text-xs text-amber-700 leading-relaxed mb-1">
-                          <span className="font-bold">{duplicateWarning.matchedName}</span>
+                      <div style={{ width: "100%", marginBottom: 8, background: "rgba(180,120,0,0.12)", border: "1px solid rgba(212,175,55,0.28)", borderRadius: 12, padding: "10px 12px" }}>
+                        <p style={{ fontSize: 11, fontWeight: 700, color: "rgba(212,175,55,0.9)", marginBottom: 3 }}>⚠️ Posible duplicado detectado</p>
+                        <p style={{ fontSize: 11, color: "rgba(212,175,55,0.70)", lineHeight: 1.5, marginBottom: 4 }}>
+                          <span style={{ fontWeight: 700 }}>{duplicateWarning.matchedName}</span>
                           {isClaimed ? " ya tiene cuenta en Ceiba." : " ya existe en Ceiba."}
                           {" "}¿Es la misma persona que estás agregando?
                         </p>
                         {isClaimed && (
-                          <p className="text-xs text-amber-600 mb-3">
+                          <p style={{ fontSize: 11, color: "rgba(212,175,55,0.55)", marginBottom: 10 }}>
                             Tiene su propio perfil — recibirá una solicitud para confirmar el parentesco.
                           </p>
                         )}
-                        {!isClaimed && <div className="mb-3" />}
+                        {!isClaimed && <div style={{ marginBottom: 10 }} />}
                         <div className="flex gap-2">
                           <button
                             onClick={() => { setDuplicateWarning(null); saveMember(true); }}
-                            className="flex-1 text-xs font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200 px-3 py-1.5 rounded-lg transition-colors"
+                            style={{ flex: 1, fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.55)", padding: "6px 10px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 8, cursor: "pointer" }}
                           >
                             No, son diferentes
                           </button>
@@ -1692,7 +1733,8 @@ function TreePageContent() {
                             <button
                               onClick={sendConnectionRequest}
                               disabled={saving}
-                              className="flex-1 text-xs font-semibold bg-ceiba-700 text-white hover:bg-ceiba-800 px-3 py-1.5 rounded-lg transition-colors"
+                              style={{ flex: 1, fontSize: 11, fontWeight: 700, color: "#0c0a18", padding: "6px 10px", background: "linear-gradient(135deg,#f0c040,#c8902a)", border: "none", borderRadius: 8, cursor: "pointer" }}
+                              className="disabled:opacity-50"
                             >
                               {saving ? "Enviando..." : "Sí — enviar solicitud"}
                             </button>
@@ -1700,7 +1742,8 @@ function TreePageContent() {
                             <button
                               onClick={saveLinkedMember}
                               disabled={saving}
-                              className="flex-1 text-xs font-semibold bg-ceiba-700 text-white hover:bg-ceiba-800 px-3 py-1.5 rounded-lg transition-colors"
+                              style={{ flex: 1, fontSize: 11, fontWeight: 700, color: "#0c0a18", padding: "6px 10px", background: "linear-gradient(135deg,#f0c040,#c8902a)", border: "none", borderRadius: 8, cursor: "pointer" }}
+                              className="disabled:opacity-50"
                             >
                               {saving ? "Vinculando..." : "Sí, es la misma"}
                             </button>
@@ -1709,10 +1752,18 @@ function TreePageContent() {
                       </div>
                     );
                   })()}
-                  <button onClick={() => { setShowModal(false); setForm(EMPTY_FORM); setDuplicateWarning(null); }} className="flex-1 btn-secondary">
+                  <button onClick={() => { setShowModal(false); setForm(EMPTY_FORM); setDuplicateWarning(null); }}
+                    style={{ flex: 1, padding: "10px 16px", borderRadius: 12, fontSize: 13, fontWeight: 600,
+                      color: "rgba(255,255,255,0.50)", background: "rgba(255,255,255,0.05)",
+                      border: "1px solid rgba(255,255,255,0.10)", cursor: "pointer" }}>
                     Cancelar
                   </button>
-                  <button onClick={() => saveMember()} disabled={saving} className="flex-1 btn-primary">
+                  <button onClick={() => saveMember()} disabled={saving}
+                    style={{ flex: 1, padding: "10px 16px", borderRadius: 12, fontSize: 13, fontWeight: 700,
+                      color: "#0c0a18", background: "linear-gradient(135deg,#f0c040 0%,#c8902a 100%)",
+                      border: "none", cursor: "pointer",
+                      boxShadow: "0 4px 14px rgba(212,175,55,0.35), inset 0 1px 0 rgba(255,255,255,0.25)" }}
+                    className="disabled:opacity-50">
                     {saving ? "Guardando..." : "Agregar"}
                   </button>
                 </>
