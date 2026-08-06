@@ -451,10 +451,11 @@ function CardShine({ ar }: { ar: string }) {
 // ── Navegación cósmica ────────────────────────────────────────────────────────
 function CosmicNav({ pathname, suggCount = 0 }: { pathname: string; suggCount?: number }) {
   const items = [
-    { href: "/home",    Icon: Home,     label: "Inicio"   },
-    { href: "/tree",    Icon: TreePine, label: "Árbol"    },
-    { href: "/events",  Icon: BookOpen, label: "Recuerdos", center: true },
-    { href: "/profile", Icon: User,     label: "Perfil"   },
+    { href: "/home",      Icon: Home,     label: "Inicio"   },
+    { href: "/tree",      Icon: TreePine, label: "Árbol"    },
+    { href: "/historias", Icon: Sparkles, label: "Historias", center: true },
+    { href: "/events",    Icon: BookOpen, label: "Recuerdos" },
+    { href: "/profile",   Icon: User,     label: "Perfil"   },
   ];
   return (
     <nav style={{
@@ -1035,8 +1036,9 @@ export default function HomePage() {
           color: "rgba(212,175,55,0.45)", marginBottom: 16, paddingLeft: 2 }}>Accesos rápidos</div>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 4 }}>
           {([
-            { href: "/tree",    Icon: TreePine,      label: "Árbol",    color: "#f0c040", top: "rgba(255,210,80,0.28)",  mid: "rgba(180,110,0,0.22)",  bot: "rgba(80,40,0,0.85)",  border: "rgba(240,192,64,0.60)",  glow: "rgba(212,175,55,0.50)",  shadow: "#3a2800" },
-            { href: "/events",  Icon: BookOpen,      label: "Recuerdos", color: "#f2b43c", top: "rgba(242,180,60,0.28)",  mid: "rgba(180,120,10,0.22)",  bot: "rgba(60,30,2,0.88)",  border: "rgba(242,180,60,0.55)",  glow: "rgba(212,160,40,0.42)",  shadow: "#2a1400" },
+            { href: "/tree",      Icon: TreePine,      label: "Árbol",    color: "#f0c040", top: "rgba(255,210,80,0.28)",  mid: "rgba(180,110,0,0.22)",  bot: "rgba(80,40,0,0.85)",  border: "rgba(240,192,64,0.60)",  glow: "rgba(212,175,55,0.50)",  shadow: "#3a2800" },
+            { href: "/historias", Icon: Sparkles,      label: "Historias", color: "#c0a8ff", top: "rgba(160,120,255,0.28)", mid: "rgba(80,40,200,0.22)",  bot: "rgba(10,4,48,0.90)",  border: "rgba(160,120,245,0.55)", glow: "rgba(120,80,230,0.42)",  shadow: "#06022a" },
+            { href: "/events",    Icon: BookOpen,      label: "Recuerdos", color: "#f2b43c", top: "rgba(242,180,60,0.28)",  mid: "rgba(180,120,10,0.22)",  bot: "rgba(60,30,2,0.88)",  border: "rgba(242,180,60,0.55)",  glow: "rgba(212,160,40,0.42)",  shadow: "#2a1400" },
             { href: "/chat",    Icon: MessageCircle, label: "Chat",     color: "#c0c8ff", top: "rgba(160,170,255,0.28)", mid: "rgba(80,90,200,0.22)",  bot: "rgba(10,8,50,0.90)",  border: "rgba(160,170,245,0.58)", glow: "rgba(130,140,230,0.45)", shadow: "#050328" },
             { href: "/mapa",    Icon: Map,           label: "Mapa",     color: "#60e0f8", top: "rgba(80,220,250,0.26)",  mid: "rgba(20,150,190,0.22)", bot: "rgba(4,30,50,0.90)",  border: "rgba(70,210,240,0.55)",  glow: "rgba(40,180,220,0.42)",  shadow: "#02101e" },
             { href: "/invitar", Icon: Send,          label: "Invitar",  color: "#f0c040", top: "rgba(255,205,70,0.26)",  mid: "rgba(175,105,0,0.20)",  bot: "rgba(78,38,0,0.87)",  border: "rgba(235,185,55,0.58)",  glow: "rgba(205,165,40,0.46)",  shadow: "#362000" },
@@ -1089,7 +1091,7 @@ export default function HomePage() {
               {recent24h.map(e => {
                 const emoji = STORY_EMOJI[e.event_type] ?? "✨";
                 return (
-                  <Link key={e.id} href="/events" style={{ textDecoration:"none", flexShrink:0 }}>
+                  <Link key={e.id} href="/historias" style={{ textDecoration:"none", flexShrink:0 }}>
                     <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:6 }}>
                       <div style={{ width:60, height:60, borderRadius:"50%", position:"relative",
                         background:"radial-gradient(circle at 35% 28%, rgba(242,180,60,0.16) 0%, rgba(6,3,16,0.94) 70%)",
