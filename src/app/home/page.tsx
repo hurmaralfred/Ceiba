@@ -1010,29 +1010,35 @@ export default function HomePage() {
       </div>
 
       {/* ══ ACCESOS RÁPIDOS ══════════════════════════════════════════════ */}
-      <div style={{ padding: "20px 14px 4px" }}>
+      <div style={{ padding: "22px 12px 8px" }}>
         <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase",
-          color: "rgba(212,175,55,0.38)", marginBottom: 12, paddingLeft: 2 }}>Accesos rápidos</div>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 6 }}>
+          color: "rgba(212,175,55,0.45)", marginBottom: 14, paddingLeft: 2 }}>Accesos rápidos</div>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 4 }}>
           {[
-            { href: "/tree",    Icon: TreePine,      label: "Árbol",    color: "#d4af37", glow: "rgba(212,175,55,0.18)", border: "rgba(212,175,55,0.22)" },
-            { href: "/events",  Icon: BookOpen,      label: "Historia", color: "#c87830", glow: "rgba(200,120,48,0.14)", border: "rgba(200,120,48,0.22)" },
-            { href: "/photos",  Icon: Camera,        label: "Álbum",    color: "#c87830", glow: "rgba(200,120,48,0.14)", border: "rgba(200,120,48,0.20)" },
-            { href: "/chat",    Icon: MessageCircle, label: "Chat",     color: "#9898cc", glow: "rgba(130,130,200,0.12)", border: "rgba(130,130,180,0.20)" },
-            { href: "/mapa",    Icon: Map,           label: "Mapa",     color: "#7abed4", glow: "rgba(100,180,210,0.10)", border: "rgba(100,180,210,0.18)" },
-            { href: "/invitar", Icon: Send,          label: "Invitar",  color: "#d4af37", glow: "rgba(212,175,55,0.15)", border: "rgba(212,175,55,0.20)" },
-          ].map(({ href, Icon, label, color, glow, border }) => (
+            { href: "/tree",    Icon: TreePine,      label: "Árbol",    color: "#f0c040", fill: "rgba(212,175,55,0.16)", border: "rgba(212,175,55,0.55)", outer: "rgba(212,175,55,0.22)" },
+            { href: "/events",  Icon: BookOpen,      label: "Historia", color: "#f09050", fill: "rgba(200,120,48,0.18)", border: "rgba(200,100,40,0.55)", outer: "rgba(200,100,40,0.18)" },
+            { href: "/photos",  Icon: Camera,        label: "Álbum",    color: "#f09050", fill: "rgba(200,120,48,0.18)", border: "rgba(200,100,40,0.50)", outer: "rgba(200,100,40,0.16)" },
+            { href: "/chat",    Icon: MessageCircle, label: "Chat",     color: "#b0b8f8", fill: "rgba(140,140,220,0.18)", border: "rgba(140,140,200,0.55)", outer: "rgba(130,130,200,0.16)" },
+            { href: "/mapa",    Icon: Map,           label: "Mapa",     color: "#70d8f0", fill: "rgba(80,190,220,0.18)", border: "rgba(80,190,220,0.50)", outer: "rgba(80,190,210,0.14)" },
+            { href: "/invitar", Icon: Send,          label: "Invitar",  color: "#f0c040", fill: "rgba(212,175,55,0.16)", border: "rgba(212,175,55,0.52)", outer: "rgba(212,175,55,0.20)" },
+          ].map(({ href, Icon, label, color, fill, border, outer }) => (
             <Link key={href} href={href} style={{ textDecoration: "none", flex: 1 }}>
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-                <div style={{ width: 50, height: 50, borderRadius: 16,
-                  background: `radial-gradient(circle at 40% 30%, ${glow} 0%, rgba(6,4,18,0.80) 70%)`,
-                  border: `1px solid ${border}`,
-                  boxShadow: `0 4px 16px rgba(0,0,0,0.55), 0 0 12px ${glow}`,
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 7 }}>
+                {/* Botón */}
+                <div style={{ position: "relative", width: 52, height: 52, borderRadius: 18,
+                  background: `linear-gradient(145deg, ${fill} 0%, rgba(6,4,18,0.90) 100%)`,
+                  border: `1.5px solid ${border}`,
+                  boxShadow: `0 0 18px ${outer}, 0 6px 20px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.12)`,
                   display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <Icon size={20} style={{ color, opacity: 0.9 }} />
+                  {/* Brillo superior interno */}
+                  <div style={{ position: "absolute", top: 0, left: "15%", right: "15%", height: 1,
+                    borderRadius: "0 0 50% 50%", background: `linear-gradient(90deg, transparent, ${border}, transparent)`,
+                    opacity: 0.7 }} />
+                  <Icon size={22} style={{ color, filter: `drop-shadow(0 0 6px ${color}99)` }} />
                 </div>
-                <span style={{ fontSize: 9, fontWeight: 600, color: "rgba(255,255,255,0.35)",
-                  letterSpacing: "0.04em", textAlign: "center" }}>
+                {/* Label */}
+                <span style={{ fontSize: 9.5, fontWeight: 700, color: "rgba(255,255,255,0.55)",
+                  letterSpacing: "0.05em", textAlign: "center" }}>
                   {label}
                 </span>
               </div>
