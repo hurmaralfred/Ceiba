@@ -409,26 +409,53 @@ export function UniverseViewport({
     return () => el.removeEventListener('wheel', handleWheel)
   }, [handleWheel])
 
-  // ── Pointer pan ───────────────────────────────────────────────────────────
+  // ── Pointer pan + pinch-to-zoom ──────────────────────────────────────────
 
-  const pointerDown  = useRef(false)
-  const didDrag      = useRef(false)
-  const panOrigin    = useRef({ px: 0, py: 0, cx: 0, cy: 0 })
+  const activePointers  = useRef(new Map<number, { x: number; y: number }>())
+  const pointerDown     = useRef(false)
+  const didDrag         = useRef(false)
+  const panOrigin       = useRef({ px: 0, py: 0, cx: 0, cy: 0 })
+  const pinchOrigin     = useRef({ dist: 0, scale: 1 })
 
   const handlePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     if (e.button !== 0 && e.pointerType === 'mouse') return
-    // Don't start pan from avatars, buttons, or the panel
     const t = e.target as HTMLElement
     if (t.closest('button, [role="dialog"], [data-avatar]')) return
 
     containerRef.current?.setPointerCapture(e.pointerId)
-    const cam = cameraRef.current
-    panOrigin.current = { px: e.clientX, py: e.clientY, cx: cam.x, cy: cam.y }
-    pointerDown.current = true
-    didDrag.current = false
+    activePointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+
+    if (activePointers.current.size === 2) {
+      // Switch to pinch mode — record starting distance and scale
+      const pts = [...activePointers.current.values()]
+      pinchOrigin.current = {
+        dist:  Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y),
+        scale: cameraRef.current.scale,
+      }
+      pointerDown.current = false
+    } else {
+      const cam = cameraRef.current
+      panOrigin.current = { px: e.clientX, py: e.clientY, cx: cam.x, cy: cam.y }
+      pointerDown.current = true
+      didDrag.current = false
+    }
   }, [])
 
   const handlePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    activePointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+
+    if (activePointers.current.size === 2) {
+      // Pinch zoom
+      const pts = [...activePointers.current.values()]
+      const dist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y)
+      const { dist: d0, scale: s0 } = pinchOrigin.current
+      if (d0 > 0) {
+        const newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, s0 * (dist / d0)))
+        setCamera(prev => ({ ...prev, scale: newScale }))
+      }
+      return
+    }
+
     if (!pointerDown.current) return
     const dx = e.clientX - panOrigin.current.px
     const dy = e.clientY - panOrigin.current.py
@@ -447,8 +474,12 @@ export function UniverseViewport({
 
   const handlePointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     try { containerRef.current?.releasePointerCapture(e.pointerId) } catch { /* ignore */ }
-    pointerDown.current = false
-    setGrabbing(false)
+    activePointers.current.delete(e.pointerId)
+    if (activePointers.current.size < 2) pinchOrigin.current = { dist: 0, scale: 1 }
+    if (activePointers.current.size === 0) {
+      pointerDown.current = false
+      setGrabbing(false)
+    }
   }, [])
 
   // Intercept clicks that followed a drag so avatar panel doesn't open accidentally

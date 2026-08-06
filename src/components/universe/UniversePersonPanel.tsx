@@ -70,7 +70,7 @@ const PANEL_CSS = `
   position: fixed;
   left: 0; right: 0;
   bottom: calc(${NAV_H}px + env(safe-area-inset-bottom, 0px));
-  max-height: 82dvh;
+  max-height: 48dvh;
   background: #080610;
   border-top: 1px solid rgba(212,175,55,0.2);
   border-radius: 24px 24px 0 0;

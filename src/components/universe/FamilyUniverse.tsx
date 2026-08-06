@@ -255,12 +255,6 @@ const UNIVERSE_CSS = `
   50%     { transform: translate(14px,10px); }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation: none !important;
-    transition-duration: 0.001ms !important;
-  }
-}
 `
 
 function UniverseStyles() {
