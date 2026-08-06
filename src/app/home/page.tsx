@@ -5,8 +5,8 @@ import Link from "next/link";
 import { getDiceBearUrl } from "@/lib/dicebear";
 import {
   Home, TreePine, BookOpen, Camera, User, Bell, Menu,
-  Users, GitBranch, Image as ImageIcon, Send,
-  Trophy, ChevronRight, Cake, Sparkles, X, MessageCircle, Map,
+  Users, GitBranch, Send,
+  Trophy, ChevronRight, Sparkles, X, MessageCircle, Map, Share2,
 } from "lucide-react";
 import BirthdayCardFeed from "@/components/BirthdayCardFeed";
 import { useFamilyPresence } from "@/hooks/useFamilyPresence";
@@ -103,22 +103,110 @@ const ORBIT_OUTER = [
   { dx:-132, dy:   0, r: 2.2, color: '#d4af37', glow: 'rgba(212,175,55,0.50)'  },
 ] as const
 
-function GalaxyHero({ children, avatarInitial, avatarUrl, firstName, lastName, visibleCount, historyCount, birthdaysThisMonth }: {
+// ── Nodo estadística ─────────────────────────────────────────────────────────
+function StatNode({ icon: Icon, value, label }: {
+  icon: React.ElementType; value: number; label: string;
+}) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
+      <div style={{
+        width: 62, height: 62, borderRadius: "50%",
+        background: "rgba(6,4,18,0.80)",
+        border: "1px solid rgba(212,175,55,0.22)",
+        backdropFilter: "blur(10px)",
+        boxShadow: "0 0 22px rgba(212,175,55,0.07), 0 4px 18px rgba(0,0,0,0.6)",
+        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2,
+      }}>
+        <Icon size={11} style={{ color: "#d4af37", opacity: 0.65 }} />
+        <span style={{ fontSize: 18, fontWeight: 800, color: "#d4af37", lineHeight: 1 }}>{value}</span>
+      </div>
+      <span style={{ fontSize: 8.5, fontWeight: 600, color: "rgba(255,255,255,0.32)", textAlign: "center",
+        letterSpacing: "0.04em", lineHeight: 1.3, maxWidth: 62, whiteSpace: "pre-line" }}>
+        {label}
+      </span>
+    </div>
+  );
+}
+
+// ── Fila de grupos familiares ─────────────────────────────────────────────────
+function FamilyRow({ members }: { members: FamilyMember[] }) {
+  const GROUPS = [
+    { key: "padres",   label: "Padres",    types: ["father","stepfather","mother","stepmother","parent"], emoji: "👴" },
+    { key: "pareja",   label: "Pareja",    types: ["husband","wife","spouse","partner"],                  emoji: "💑" },
+    { key: "hijos",    label: "Hijos",     types: ["son","daughter","child","stepson","stepdaughter"],    emoji: "👶" },
+    { key: "hermanos", label: "Hermanos",  types: ["brother","sister","sibling","half_brother","half_sister"], emoji: "👫" },
+    { key: "abuelos",  label: "Abuelos",   types: ["grandfather","grandmother","grandparent"],             emoji: "👴" },
+  ];
+  const groups = GROUPS.map(g => {
+    const ms = members.filter(m => {
+      const t = (m.relation_type ?? "").toLowerCase().replace(/-/g,"_");
+      return g.types.some(type => t === type || t.startsWith(type+"_"));
+    });
+    return { ...g, count: ms.length, first: ms[0] ?? null };
+  }).filter(g => g.count > 0).slice(0, 5);
+
+  if (groups.length === 0) return null;
+
+  return (
+    <div style={{ padding: "14px 14px 0" }}>
+      <div style={{ position: "relative", display: "flex", alignItems: "flex-start", justifyContent: "space-around" }}>
+        {/* Línea dorada punteada */}
+        <div style={{
+          position: "absolute", top: 28, left: "8%", right: "8%", height: 1, pointerEvents: "none",
+          backgroundImage: "repeating-linear-gradient(90deg,rgba(212,175,55,0.3) 0px,rgba(212,175,55,0.3) 4px,transparent 4px,transparent 10px)",
+        }} />
+        {groups.map(g => {
+          const src = g.first?.profile?.avatar_url ?? null;
+          return (
+            <Link key={g.key} href="/tree" style={{ textDecoration: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 5, zIndex: 1 }}>
+              <div style={{
+                width: 54, height: 54, borderRadius: "50%",
+                background: "#0c0a18", border: "2px solid rgba(212,175,55,0.28)",
+                boxShadow: "0 0 14px rgba(212,175,55,0.1), 0 4px 12px rgba(0,0,0,0.5)",
+                display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden",
+                fontSize: 24,
+              }}>
+                {src
+                  // eslint-disable-next-line @next/next/no-img-element
+                  ? <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  : <span>{g.emoji}</span>}
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
+                <span style={{ fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.65)" }}>{g.label}</span>
+                <span style={{ fontSize: 10, fontWeight: 800, color: "rgba(212,175,55,0.7)" }}>{g.count}</span>
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+      <div style={{ display: "flex", justifyContent: "center", marginTop: 18 }}>
+        <Link href="/tree">
+          <div style={{
+            display: "inline-flex", alignItems: "center", gap: 7,
+            padding: "10px 24px", borderRadius: 24,
+            border: "1px solid rgba(212,175,55,0.32)",
+            background: "rgba(212,175,55,0.06)",
+            fontSize: 12, fontWeight: 700, color: "rgba(212,175,55,0.85)", letterSpacing: "0.02em",
+          }}>
+            <TreePine size={13} style={{ color: "#d4af37" }} />
+            Ver mi árbol completo
+          </div>
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function GalaxyHero({ children, avatarInitial, avatarUrl, firstName, visibleCount, directCount, generationsCount, historyCount }: {
   children: React.ReactNode;
   avatarInitial: string;
   avatarUrl?: string | null;
   firstName: string;
-  lastName: string;
   visibleCount: number;
+  directCount: number;
+  generationsCount: number;
   historyCount: number;
-  birthdaysThisMonth: number;
 }) {
-  const statsLine = birthdaysThisMonth > 0
-    ? `${visibleCount} personas  ·  🎂 ${birthdaysThisMonth} cumpleaños próximos`
-    : historyCount > 0
-      ? `${visibleCount} personas  ·  ✨ ${historyCount} ${historyCount === 1 ? "recuerdo" : "recuerdos"}`
-      : `${visibleCount} personas en tu constelación`
-
   return (
     <div style={{ position: "relative", overflow: "hidden", paddingBottom: 36, textAlign: "center",
       background: "radial-gradient(ellipse 120% 80% at 50% 0%, #12082a 0%, #060318 45%, #030208 100%)" }}>
@@ -187,14 +275,23 @@ function GalaxyHero({ children, avatarInitial, avatarUrl, firstName, lastName, v
       {/* Top bar */}
       {children}
 
-      {/* Avatar + family constellation */}
-      <div style={{ position:"relative", display:"inline-block", marginBottom:14, zIndex:5 }}>
+      {/* Avatar + stat nodes layout */}
+      <div style={{ position:"relative", width:"100%", display:"flex", alignItems:"center",
+        justifyContent:"center", gap:0, marginBottom:14, zIndex:5 }}>
 
-        {/* Ambient core glow */}
-        <div style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-50%)",
-          width:240, height:240, borderRadius:"50%", pointerEvents:"none",
-          background:"radial-gradient(circle,rgba(130,60,230,0.16) 0%,rgba(212,175,55,0.07) 40%,transparent 70%)",
-          filter:"blur(16px)", animation:"core-pulse 4.5s ease-in-out infinite" }} />
+        {/* Stat nodes — columna izquierda */}
+        <div style={{ display:"flex", flexDirection:"column", gap:12, alignItems:"center", flex:"0 0 72px", zIndex:2 }}>
+          <StatNode icon={Users}   value={visibleCount}     label="personas" />
+          <StatNode icon={Share2}  value={directCount}      label={"conexiones\ndirectas"} />
+        </div>
+
+        {/* Constelación + avatar — centro */}
+        <div style={{ position:"relative", display:"inline-block", flexShrink:0 }}>
+          {/* Ambient core glow */}
+          <div style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-50%)",
+            width:240, height:240, borderRadius:"50%", pointerEvents:"none",
+            background:"radial-gradient(circle,rgba(130,60,230,0.16) 0%,rgba(212,175,55,0.07) 40%,transparent 70%)",
+            filter:"blur(16px)", animation:"core-pulse 4.5s ease-in-out infinite" }} />
 
         {/* Family constellation — 3 orbital rings, each slowly rotating */}
         <svg width="300" height="300" viewBox="0 0 300 300"
@@ -294,25 +391,28 @@ function GalaxyHero({ children, avatarInitial, avatarUrl, firstName, lastName, v
             )}
           </div>
         </div>
-      </div>
+        </div>{/* /center */}
+
+        {/* Stat nodes — columna derecha */}
+        <div style={{ display:"flex", flexDirection:"column", gap:12, alignItems:"center", flex:"0 0 72px", zIndex:2 }}>
+          <StatNode icon={GitBranch} value={generationsCount} label="generaciones" />
+          <StatNode icon={BookOpen}  value={historyCount}     label="recuerdos" />
+        </div>
+
+      </div>{/* /outer flex */}
 
       {/* Name */}
-      <div style={{ fontSize:22, fontWeight:800, color:"#fff", letterSpacing:0.3, marginBottom:5,
+      <div style={{ fontSize:22, fontWeight:800, color:"#fff", letterSpacing:0.3, marginBottom:4,
         position:"relative", zIndex:5, animation:"name-glow 5s ease-in-out infinite" }}>
         {firstName || "Cargando..."}
       </div>
 
       {/* Universe label */}
       <div style={{ fontSize:10, color:"rgba(212,175,55,0.55)", fontStyle:"italic",
-        marginBottom:10, position:"relative", zIndex:5, letterSpacing:"0.08em" }}>
-        Tu universo familiar
+        marginBottom:16, position:"relative", zIndex:5, letterSpacing:"0.1em" }}>
+        ✦ Tu universo familiar ✦
       </div>
 
-      {/* Narrative stats */}
-      <div style={{ fontSize:11, color:"rgba(255,255,255,0.35)", position:"relative", zIndex:5,
-        letterSpacing:"0.03em" }}>
-        {statsLine}
-      </div>
     </div>
   );
 }
@@ -561,6 +661,15 @@ export default function HomePage() {
   // Stats — invitan a explorar, no describen el vacío
   const birthdaysThisMonth = allBirthdays.filter(b => b.days > 0 && b.days <= 30).length;
   const historyCount = events.length;
+  const directCount = members.length;
+  const generationsCount = (() => {
+    const types = new Set(members.map(m => m.relation_type ?? ""));
+    let gen = 1;
+    if ([...types].some(t => t.includes("grand"))) gen = Math.max(gen, 2);
+    if ([...types].some(t => t.includes("great_grand"))) gen = Math.max(gen, 3);
+    if ([...types].some(t => t.includes("great_great"))) gen = Math.max(gen, 4);
+    return gen;
+  })();
   const recentMemories = [
     ...photos.filter(p => (Date.now() - new Date(p.created_at).getTime()) < 7 * 86_400_000),
     ...events.filter(e => (Date.now() - new Date(e.created_at).getTime()) < 7 * 86_400_000),
@@ -618,10 +727,10 @@ export default function HomePage() {
         avatarInitial={avatarInitial}
         avatarUrl={profile?.avatar_url ?? getDiceBearUrl(profile?.first_name ?? 'user')}
         firstName={profile?.first_name ?? ""}
-        lastName={profile?.last_name ?? ""}
         visibleCount={visibleCount}
+        directCount={directCount}
+        generationsCount={generationsCount}
         historyCount={historyCount}
-        birthdaysThisMonth={birthdaysThisMonth}
       >
         {/* Barra de navegación superior */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -657,6 +766,9 @@ export default function HomePage() {
           </Link>
         </div>
       </GalaxyHero>
+
+      {/* ── FAMILIA DIRECTA ─────────────────────────────────────────────── */}
+      <FamilyRow members={members} />
 
       {/* Stats integradas en hero — sin cajas */}
 
@@ -898,57 +1010,34 @@ export default function HomePage() {
       </div>
 
       {/* ══ ACCESOS RÁPIDOS ══════════════════════════════════════════════ */}
-      <div style={{ padding: "18px 14px 0" }}>
-        {/* Conectar */}
-        <div style={{ marginBottom: 14 }}>
-          <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase",
-            color: "rgba(212,175,55,0.38)", marginBottom: 10, paddingLeft: 2 }}>Conectar</div>
-          <div style={{ display: "flex", gap: 10 }}>
-            {[
-              { href: "/tree",    Icon: TreePine,      label: "Árbol",   color: "#d4af37", border: "rgba(212,175,55,0.2)" },
-              { href: "/chat",    Icon: MessageCircle, label: "Chat",    color: "#9898b8", border: "rgba(130,130,160,0.16)" },
-              { href: "/invitar", Icon: Send,          label: "Invitar", color: "#d4af37", border: "rgba(212,175,55,0.18)" },
-            ].map(({ href, Icon, label, color, border }) => (
-              <Link key={href} href={href} style={{ textDecoration: "none", flex: 1 }}>
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
-                  <div style={{ width: 44, height: 44, borderRadius: 13,
-                    background: "rgba(255,255,255,0.03)", border: `1px solid ${border}`,
-                    display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <Icon size={16} style={{ color, opacity: 0.85 }} />
-                  </div>
-                  <span style={{ fontSize: 9, fontWeight: 500, color: "rgba(255,255,255,0.25)", letterSpacing: "0.04em" }}>
-                    {label}
-                  </span>
+      <div style={{ padding: "20px 14px 4px" }}>
+        <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase",
+          color: "rgba(212,175,55,0.38)", marginBottom: 12, paddingLeft: 2 }}>Accesos rápidos</div>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 6 }}>
+          {[
+            { href: "/tree",    Icon: TreePine,      label: "Árbol",    color: "#d4af37", glow: "rgba(212,175,55,0.18)", border: "rgba(212,175,55,0.22)" },
+            { href: "/events",  Icon: BookOpen,      label: "Historia", color: "#c87830", glow: "rgba(200,120,48,0.14)", border: "rgba(200,120,48,0.22)" },
+            { href: "/photos",  Icon: Camera,        label: "Álbum",    color: "#c87830", glow: "rgba(200,120,48,0.14)", border: "rgba(200,120,48,0.20)" },
+            { href: "/chat",    Icon: MessageCircle, label: "Chat",     color: "#9898cc", glow: "rgba(130,130,200,0.12)", border: "rgba(130,130,180,0.20)" },
+            { href: "/mapa",    Icon: Map,           label: "Mapa",     color: "#7abed4", glow: "rgba(100,180,210,0.10)", border: "rgba(100,180,210,0.18)" },
+            { href: "/invitar", Icon: Send,          label: "Invitar",  color: "#d4af37", glow: "rgba(212,175,55,0.15)", border: "rgba(212,175,55,0.20)" },
+          ].map(({ href, Icon, label, color, glow, border }) => (
+            <Link key={href} href={href} style={{ textDecoration: "none", flex: 1 }}>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+                <div style={{ width: 50, height: 50, borderRadius: 16,
+                  background: `radial-gradient(circle at 40% 30%, ${glow} 0%, rgba(6,4,18,0.80) 70%)`,
+                  border: `1px solid ${border}`,
+                  boxShadow: `0 4px 16px rgba(0,0,0,0.55), 0 0 12px ${glow}`,
+                  display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Icon size={20} style={{ color, opacity: 0.9 }} />
                 </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-
-        {/* Recordar */}
-        <div>
-          <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase",
-            color: "rgba(200,120,48,0.38)", marginBottom: 10, paddingLeft: 2 }}>Recordar</div>
-          <div style={{ display: "flex", gap: 10 }}>
-            {[
-              { href: "/events", Icon: BookOpen, label: "Historia", color: "#c87830", border: "rgba(160,100,40,0.22)" },
-              { href: "/photos", Icon: Camera,   label: "Álbum",   color: "#c87830", border: "rgba(160,100,40,0.22)" },
-              { href: "/mapa",   Icon: Map,      label: "Mapa",    color: "#9898b8", border: "rgba(130,130,160,0.16)" },
-            ].map(({ href, Icon, label, color, border }) => (
-              <Link key={href} href={href} style={{ textDecoration: "none", flex: 1 }}>
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
-                  <div style={{ width: 44, height: 44, borderRadius: 13,
-                    background: "rgba(255,255,255,0.03)", border: `1px solid ${border}`,
-                    display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <Icon size={16} style={{ color, opacity: 0.85 }} />
-                  </div>
-                  <span style={{ fontSize: 9, fontWeight: 500, color: "rgba(255,255,255,0.25)", letterSpacing: "0.04em" }}>
-                    {label}
-                  </span>
-                </div>
-              </Link>
-            ))}
-          </div>
+                <span style={{ fontSize: 9, fontWeight: 600, color: "rgba(255,255,255,0.35)",
+                  letterSpacing: "0.04em", textAlign: "center" }}>
+                  {label}
+                </span>
+              </div>
+            </Link>
+          ))}
         </div>
       </div>
 
