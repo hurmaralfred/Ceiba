@@ -1,19 +1,22 @@
 "use client";
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
 
-// ── Background components (unchanged) ─────────────────────────────────────────
+const GOLD = "#d4af37";
+const GOLD_DIM = "rgba(212,175,55,0.35)";
+const BG = "#030208";
+const CARD = "#0c0a18";
 
+// ── Background ─────────────────────────────────────────────────────────────────
 function StarField() {
-  const stars = Array.from({ length: 70 }, (_, i) => ({
+  const stars = Array.from({ length: 90 }, (_, i) => ({
     cx: (((i * 137.5) % 100)).toFixed(1),
     cy: (((i * 97.3) % 100)).toFixed(1),
-    r:  (0.5 + (i % 5) * 0.22).toFixed(2),
-    op: (0.18 + (i % 7) * 0.07).toFixed(2),
+    r:  (0.4 + (i % 5) * 0.18).toFixed(2),
+    op: (0.12 + (i % 9) * 0.06).toFixed(2),
   }));
   return (
     <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice"
-      style={{ position: "fixed", inset: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 0 }}>
+      style={{ position:"fixed", inset:0, width:"100%", height:"100%", pointerEvents:"none", zIndex:0 }}>
       {stars.map((s, i) => <circle key={i} cx={s.cx} cy={s.cy} r={s.r} fill="white" opacity={s.op} />)}
     </svg>
   );
@@ -21,577 +24,597 @@ function StarField() {
 
 function NebulaBg() {
   return (
-    <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0 }} aria-hidden>
-      <div style={{ position: "absolute", top: "-10%", left: "20%", width: 500, height: 400,
-        background: "radial-gradient(ellipse, rgba(30,60,20,0.22) 0%, transparent 70%)", borderRadius: "50%", filter: "blur(60px)" }} />
-      <div style={{ position: "absolute", top: "30%", right: "-5%", width: 350, height: 350,
-        background: "radial-gradient(ellipse, rgba(120,80,10,0.14) 0%, transparent 70%)", borderRadius: "50%", filter: "blur(50px)" }} />
-      <div style={{ position: "absolute", bottom: "10%", left: "-10%", width: 300, height: 300,
-        background: "radial-gradient(ellipse, rgba(40,20,80,0.16) 0%, transparent 70%)", borderRadius: "50%", filter: "blur(60px)" }} />
+    <div style={{ position:"fixed", inset:0, pointerEvents:"none", zIndex:0 }} aria-hidden>
+      <div style={{ position:"absolute", top:"-10%", left:"15%", width:600, height:500,
+        background:"radial-gradient(ellipse, rgba(20,10,60,0.35) 0%, transparent 70%)", filter:"blur(70px)" }} />
+      <div style={{ position:"absolute", top:"35%", right:"-5%", width:400, height:400,
+        background:"radial-gradient(ellipse, rgba(100,60,10,0.18) 0%, transparent 70%)", filter:"blur(60px)" }} />
+      <div style={{ position:"absolute", bottom:"5%", left:"-5%", width:350, height:350,
+        background:"radial-gradient(ellipse, rgba(40,15,90,0.20) 0%, transparent 70%)", filter:"blur(65px)" }} />
     </div>
   );
 }
 
-function ConnectionOverlay() {
-  const nodes = [
-    { x: 18, y: 12, label: "Abuela" },
-    { x: 78, y: 10, label: "Abuelo" },
-    { x: 28, y: 48, label: "Mamá"   },
-    { x: 62, y: 44, label: "Papá"   },
-    { x: 45, y: 80, label: "Tú"     },
+// ── Cosmic portal ──────────────────────────────────────────────────────────────
+function CosmicPortal() {
+  const R = 182, CX = 260, CY = 248;
+  const avatars = [
+    { angle: 312, init: "R", color: "#E8784A" },
+    { angle: 32,  init: "C", color: "#F2B43C" },
+    { angle: 88,  init: "H", color: "#5AAEE0" },
+    { angle: 148, init: "L", color: "#D46090" },
+    { angle: 215, init: "A", color: "#4ABA8A" },
+    { angle: 272, init: "M", color: "#9A88DA" },
+  ].map(a => {
+    const rad = (a.angle * Math.PI) / 180;
+    return { ...a, x: CX + R * Math.sin(rad), y: CY - R * Math.cos(rad) };
+  });
+  const persons = [
+    { x: 218, hy: 352, bw: 22, hr: 10, ph: 38 },
+    { x: 240, hy: 333, bw: 26, hr: 12, ph: 50 },
+    { x: 260, hy: 316, bw: 28, hr: 13, ph: 58 },
+    { x: 280, hy: 333, bw: 25, hr: 12, ph: 50 },
+    { x: 302, hy: 352, bw: 20, hr:  9, ph: 38 },
   ];
-  const edges = [[0,2],[1,3],[2,4],[3,4],[0,3],[1,2]];
   return (
-    <svg viewBox="0 0 100 100" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} preserveAspectRatio="xMidYMid slice">
+    <svg viewBox="0 0 520 498" style={{ width:"100%", maxWidth:560, display:"block" }} aria-hidden>
       <defs>
-        <linearGradient id="line-gold" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%"   stopColor="#d4af37" stopOpacity="0.9" />
-          <stop offset="100%" stopColor="#f5e070" stopOpacity="0.7" />
+        <filter id="cp-gl"><feGaussianBlur stdDeviation="10" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        <filter id="cp-gm"><feGaussianBlur stdDeviation="4"  result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        <filter id="cp-gs"><feGaussianBlur stdDeviation="2"  result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        <radialGradient id="cp-in" cx="50%" cy="38%" r="65%">
+          <stop offset="0%"   stopColor="#1a0800" stopOpacity="0.92"/>
+          <stop offset="50%"  stopColor="#07040f" stopOpacity="0.97"/>
+          <stop offset="100%" stopColor="#030208" stopOpacity="1"/>
+        </radialGradient>
+        <radialGradient id="cp-neb" cx="50%" cy="68%" r="52%">
+          <stop offset="0%"   stopColor="#c87030" stopOpacity="0.24"/>
+          <stop offset="50%"  stopColor="#6b3010" stopOpacity="0.10"/>
+          <stop offset="100%" stopColor="transparent" stopOpacity="0"/>
+        </radialGradient>
+        <linearGradient id="cp-rg" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%"   stopColor="#f5e070" stopOpacity="0.98"/>
+          <stop offset="28%"  stopColor="#d4af37" stopOpacity="0.88"/>
+          <stop offset="58%"  stopColor="#8b6914" stopOpacity="0.62"/>
+          <stop offset="82%"  stopColor="#d4af37" stopOpacity="0.85"/>
+          <stop offset="100%" stopColor="#f5e070" stopOpacity="0.96"/>
         </linearGradient>
-        <filter id="soft-glow2">
-          <feGaussianBlur in="SourceGraphic" stdDeviation="0.7" result="blur"/>
-          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-        </filter>
         <style>{`
-          @keyframes flow2 { from { stroke-dashoffset: 18; } to { stroke-dashoffset: 0; } }
-          @keyframes pop2  { 0%,100% { opacity:0.9; } 50% { opacity:1; } }
-          @keyframes ring2 { 0% { r:2.5; opacity:0.5; } 100% { r:5.5; opacity:0; } }
-          .fl2  { animation: flow2 2.8s linear infinite; }
-          .fl2b { animation: flow2 2.8s linear infinite 0.7s; }
-          .fl2c { animation: flow2 2.8s linear infinite 1.4s; }
-          .pp2  { animation: pop2  3s ease-in-out infinite; }
-          .rr2  { animation: ring2 3s ease-out infinite; }
+          @keyframes cp-spin  { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+          @keyframes cp-rspin { from{transform:rotate(0deg)} to{transform:rotate(-360deg)} }
+          @keyframes cp-pulse { 0%,100%{opacity:.75} 50%{opacity:1} }
+          .cpr  { animation:cp-spin  80s linear infinite; transform-origin:${CX}px ${CY}px; }
+          .cprr { animation:cp-rspin 52s linear infinite; transform-origin:${CX}px ${CY}px; }
+          .cpp  { animation:cp-pulse 3.5s ease-in-out infinite; }
         `}</style>
       </defs>
-      {edges.map(([a, b], i) => {
-        const na = nodes[a], nb = nodes[b];
-        const cls = i < 2 ? "fl2" : i < 4 ? "fl2b" : "fl2c";
-        return <line key={i} x1={na.x} y1={na.y} x2={nb.x} y2={nb.y}
-          stroke="url(#line-gold)" strokeWidth="0.5" strokeDasharray="4,3"
-          filter="url(#soft-glow2)" className={cls} />;
+
+      {/* Portal glow aura */}
+      <ellipse cx={CX} cy={CY} rx={220} ry={200} fill="#3020a0" opacity="0.07" filter="url(#cp-gl)"/>
+
+      {/* Avatar connector lines */}
+      {avatars.map((a, i) => {
+        const rad = a.angle * Math.PI / 180;
+        return <line key={i}
+          x1={CX + (R - 3) * Math.sin(rad)} y1={CY - (R - 3) * Math.cos(rad)}
+          x2={CX + (R + 30) * Math.sin(rad)} y2={CY - (R + 30) * Math.cos(rad)}
+          stroke={a.color} strokeWidth="0.9" strokeOpacity="0.40"
+        />;
       })}
-      {nodes.map((n, i) => (
-        <g key={i} style={{ transformOrigin: `${n.x}px ${n.y}px` }}>
-          <circle cx={n.x} cy={n.y} r={2.5} fill="none" stroke="#d4af37" strokeWidth="0.3"
-            opacity="0.5" className="rr2" style={{ animationDelay: `${i * 0.5}s` }} />
-          <circle cx={n.x} cy={n.y} r={1.6} fill="#d4af37"
-            filter="url(#soft-glow2)" className="pp2" style={{ animationDelay: `${i * 0.5}s` }} />
-          <rect x={n.x - 6} y={n.y - 6.5} width={12} height={4.5} rx={1.2} fill="rgba(0,0,0,0.6)" />
-          <text x={n.x} y={n.y - 3.8} textAnchor="middle" fontSize="2.6" fontWeight="700"
-            fill="white" fontFamily="system-ui">{n.label}</text>
+
+      {/* Outer ring glow */}
+      <circle cx={CX} cy={CY} r={R} fill="none" stroke="#d4af37" strokeWidth="5" strokeOpacity="0.12" filter="url(#cp-gl)"/>
+
+      {/* Portal interior */}
+      <circle cx={CX} cy={CY} r={R - 1} fill="url(#cp-in)"/>
+      <circle cx={CX} cy={CY} r={R - 1} fill="url(#cp-neb)"/>
+
+      {/* Ground light */}
+      <ellipse cx={CX} cy={428} rx={125} ry={28} fill="#c87030" opacity="0.22" filter="url(#cp-gm)"/>
+
+      {/* Silhouettes */}
+      {persons.map((p, i) => (
+        <g key={i}>
+          <circle cx={p.x} cy={p.hy} r={p.hr} fill="rgba(4,2,10,0.96)"/>
+          <path d={`M${p.x-p.bw/2},${p.hy+p.hr+2} Q${p.x-p.bw*.58},${p.hy+p.hr+p.ph*.4} ${p.x-p.bw*.68},${p.hy+p.hr+p.ph} L${p.x+p.bw*.68},${p.hy+p.hr+p.ph} Q${p.x+p.bw*.58},${p.hy+p.hr+p.ph*.4} ${p.x+p.bw/2},${p.hy+p.hr+2} Z`}
+            fill="rgba(4,2,10,0.88)"/>
+        </g>
+      ))}
+
+      {/* Atmospheric floor */}
+      <ellipse cx={CX} cy={404} rx={135} ry={16} fill="#c87030" opacity="0.16" filter="url(#cp-gm)"/>
+
+      {/* Main ring — slow spin */}
+      <g className="cpr">
+        <circle cx={CX} cy={CY} r={R} fill="none" stroke="url(#cp-rg)" strokeWidth="2.4"/>
+        {[0,45,90,135,180,225,270,315].map((ang, i) => {
+          const r2 = ang * Math.PI / 180;
+          return <circle key={i}
+            cx={CX + R * Math.sin(r2)} cy={CY - R * Math.cos(r2)}
+            r={i % 2 === 0 ? 2.6 : 1.6}
+            fill={i % 2 === 0 ? "#f5e070" : "#d4af37"}
+            opacity={i % 2 === 0 ? 0.88 : 0.55}
+            filter={i % 2 === 0 ? "url(#cp-gs)" : undefined}
+          />;
+        })}
+      </g>
+
+      {/* Inner dashed ring — reverse spin */}
+      <g className="cprr">
+        <circle cx={CX} cy={CY} r={R - 14} fill="none" stroke="#d4af37" strokeWidth="0.55" strokeOpacity="0.18" strokeDasharray="8,16"/>
+      </g>
+
+      {/* Avatar circles */}
+      {avatars.map((a, i) => (
+        <g key={i} className="cpp" style={{ animationDelay:`${i * 0.55}s` }}>
+          <circle cx={a.x} cy={a.y} r={27} fill="none" stroke={a.color} strokeWidth="0.9" strokeOpacity="0.28"/>
+          <circle cx={a.x} cy={a.y} r={22} fill={CARD} stroke={a.color} strokeWidth="1.6" strokeOpacity="0.72"/>
+          <text x={a.x} y={a.y} textAnchor="middle" dominantBaseline="central"
+            fontSize="13" fontWeight="800" fill={a.color} fontFamily="system-ui">{a.init}</text>
         </g>
       ))}
     </svg>
   );
 }
 
-const GOLD = "#d4af37";
-
-function DemoFamilyTree() {
-  const nodes = [
-    { id: "ag1", x: 52,  y: 48,  name: "Ramón",   rel: "Abuelo",    reg: true,  root: false },
-    { id: "ag2", x: 152, y: 32,  name: "Carmen",  rel: "Abuela",    reg: true,  root: false },
-    { id: "ag3", x: 268, y: 36,  name: "Héctor",  rel: "Abuelo",    reg: false, root: false },
-    { id: "ag4", x: 368, y: 55,  name: "Lidia",   rel: "Abuela",    reg: true,  root: false },
-    { id: "mama",    x: 100, y: 148, name: "Lucía",   rel: "Madre",     reg: true,  root: false },
-    { id: "papa",    x: 210, y: 155, name: "Andrés",  rel: "Padre",     reg: true,  root: false },
-    { id: "tio",     x: 340, y: 170, name: "Julián",  rel: "Tío",       reg: true,  root: false },
-    { id: "tu",      x: 155, y: 268, name: "Tú",      rel: "",          reg: true,  root: true  },
-    { id: "hermana", x: 52,  y: 290, name: "Sofía",   rel: "Hermana",   reg: true,  root: false },
-    { id: "prima1",  x: 305, y: 282, name: "Paula",   rel: "Prima",     reg: true,  root: false },
-    { id: "primo2",  x: 398, y: 270, name: "Marco",   rel: "Primo",     reg: false, root: false },
-    { id: "sobrino", x: 40,  y: 392, name: "Mateo",   rel: "Sobrino",   reg: false, root: false },
-    { id: "nino2",   x: 290, y: 395, name: "Valeria", rel: "Sobrina",   reg: false, root: false },
-  ];
-  const edges: [string, string][] = [
-    ["mama", "ag1"], ["mama", "ag2"],
-    ["papa", "ag3"], ["papa", "ag4"],
-    ["tu", "mama"], ["tu", "papa"],
-    ["tu", "hermana"],
-    ["papa", "tio"],
-    ["tio", "prima1"], ["tio", "primo2"],
-    ["hermana", "sobrino"],
-    ["prima1", "nino2"],
-  ];
-  const map = Object.fromEntries(nodes.map(n => [n.id, n]));
+// ── Memories visual ────────────────────────────────────────────────────────────
+function MemoriesVisual() {
   return (
-    <svg viewBox="0 0 440 430" style={{ width: "100%", display: "block" }}>
-      <defs>
-        <filter id="dm-glow" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="3" result="b"/>
-          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-        </filter>
-        <filter id="dm-glow-sm" x="-60%" y="-60%" width="220%" height="220%">
-          <feGaussianBlur stdDeviation="2" result="b"/>
-          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-        </filter>
-        <radialGradient id="dm-nebula" cx="35%" cy="50%" r="70%">
-          <stop offset="0%" stopColor="rgba(30,60,20,0.18)" />
-          <stop offset="60%" stopColor="rgba(20,10,50,0.08)" />
-          <stop offset="100%" stopColor="transparent" />
-        </radialGradient>
-        <style>{`
-          @keyframes dm-flow  { from{stroke-dashoffset:18} to{stroke-dashoffset:0} }
-          @keyframes dm-ring  { 0%{r:28;opacity:.45} 100%{r:42;opacity:0} }
-          @keyframes dm-pulse { 0%,100%{opacity:.88} 50%{opacity:1} }
-          @keyframes dm-badge { 0%,100%{opacity:.85} 50%{opacity:1} }
-          .dm-f0 { animation: dm-flow 3.2s linear infinite }
-          .dm-f1 { animation: dm-flow 3.2s linear infinite .6s }
-          .dm-f2 { animation: dm-flow 3.2s linear infinite 1.2s }
-          .dm-f3 { animation: dm-flow 3.2s linear infinite 1.8s }
-          .dm-ring { animation: dm-ring 3s ease-out infinite }
-          .dm-pulse { animation: dm-pulse 3s ease-in-out infinite }
-          .dm-badge { animation: dm-badge 2.4s ease-in-out infinite }
-        `}</style>
-      </defs>
-      <ellipse cx="180" cy="220" rx="260" ry="200" fill="url(#dm-nebula)" />
-      {edges.map(([a, b], i) => {
-        const na = map[a], nb = map[b];
-        const active = na.reg && nb.reg;
-        const cls = ["dm-f0","dm-f1","dm-f2","dm-f3"][i % 4];
-        return (
-          <line key={i} x1={na.x} y1={na.y} x2={nb.x} y2={nb.y}
-            stroke={active ? "#d4af37" : "rgba(255,255,255,0.13)"}
-            strokeWidth={active ? 1.1 : 0.65}
-            strokeDasharray={active ? "6,3.5" : "3,4"}
-            opacity={active ? 0.9 : 0.4}
-            className={active ? cls : undefined}
-          />
-        );
-      })}
-      {nodes.map((n) => {
-        const r = n.root ? 25 : n.reg ? 19 : 15;
-        const filt = n.root ? "url(#dm-glow)" : n.reg ? "url(#dm-glow-sm)" : undefined;
-        return (
-          <g key={n.id}>
-            {n.root && (
-              <circle cx={n.x} cy={n.y} r={33} fill="none"
-                stroke="#d4af37" strokeWidth="0.7" opacity="0.3" className="dm-ring" />
-            )}
-            <circle cx={n.x} cy={n.y} r={r}
-              fill={n.root ? "#d4af37" : n.reg ? "rgba(212,175,55,0.13)" : "rgba(255,255,255,0.04)"}
-              stroke={n.root ? "#f5e070" : n.reg ? "#d4af37" : "rgba(255,255,255,0.2)"}
-              strokeWidth={n.root ? 2.2 : n.reg ? 1.3 : 0.8}
-              strokeDasharray={n.reg ? undefined : "2.5,2"}
-              filter={filt}
-              className={n.root ? "dm-pulse" : undefined}
-            />
-            <text x={n.x} y={n.y} textAnchor="middle" dominantBaseline="central"
-              fontSize={n.root ? 10 : 7.5} fontWeight="800"
-              fill={n.root ? "#030208" : n.reg ? "#d4af37" : "rgba(255,255,255,0.22)"}>
-              {n.root ? "Tú" : n.name[0]}
-            </text>
-            <text x={n.x} y={n.y + r + 10} textAnchor="middle"
-              fontSize="7.2" fontWeight="600"
-              fill={n.reg ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.28)"}>
-              {n.name}
-            </text>
-            {n.rel && (
-              <text x={n.x} y={n.y + r + 19} textAnchor="middle" fontSize="6"
-                fill={n.reg ? "rgba(212,175,55,0.7)" : "rgba(255,255,255,0.16)"}>
-                {n.rel}
-              </text>
-            )}
-          </g>
-        );
-      })}
-      <g className="dm-badge">
-        <rect x="163" y="1" width="48" height="15" rx="5.5"
-          fill="rgba(0,0,0,0.85)" stroke="#d4af37" strokeWidth="0.65" strokeOpacity="0.7"/>
-        <text x="187" y="9" textAnchor="middle" dominantBaseline="central"
-          fontSize="5.8" fill="#d4af37">🎂 mañana</text>
-      </g>
-      <g className="dm-badge" style={{ animationDelay: "1.2s" }}>
-        <rect x="355" y="140" width="52" height="15" rx="5.5"
-          fill="rgba(0,0,0,0.85)" stroke="rgba(80,200,120,0.7)" strokeWidth="0.65"/>
-        <text x="381" y="148" textAnchor="middle" dominantBaseline="central"
-          fontSize="5.8" fill="rgba(80,220,130,1)">✓ Se unió hoy</text>
-      </g>
-    </svg>
-  );
-}
+    <div style={{ position:"relative", width:"100%", maxWidth:480, aspectRatio:"1/0.9", margin:"0 auto" }}>
+      <style>{`@keyframes mem-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}`}</style>
+      {/* Golden light burst */}
+      <div style={{ position:"absolute", bottom:"4%", left:"50%", transform:"translateX(-50%)",
+        width:340, height:200,
+        background:"radial-gradient(ellipse at center bottom, rgba(212,175,55,0.42) 0%, rgba(180,90,20,0.18) 42%, transparent 72%)",
+        filter:"blur(28px)", pointerEvents:"none" }} />
 
-const GOLD_DIM = "rgba(212,175,55,0.35)";
-const BG = "#030208";
-const CARD = "#0c0a18";
-
-function GoldBtn({ href, children }: { href: string; children: React.ReactNode }) {
-  return (
-    <Link href={href} style={{ textDecoration: "none" }}>
-      <div style={{ display: "inline-flex", alignItems: "center", gap: 8,
-        background: "#c9a820", borderTop: "2px solid #f5e060",
-        borderLeft: "1.5px solid rgba(255,240,100,0.5)",
-        borderBottom: "4px solid #6a5600", borderRight: "1.5px solid rgba(0,0,0,0.4)",
-        boxShadow: "0 8px 0 #4a3c00, 0 14px 28px rgba(0,0,0,0.7), 0 0 28px rgba(212,175,55,0.25)",
-        borderRadius: 16, color: BG, fontWeight: 800, fontSize: 15,
-        padding: "13px 28px", cursor: "pointer" }}>
-        {children}
+      {/* Photo: back-left */}
+      <div style={{
+        position:"absolute", left:"2%", top:"14%", width:"50%", aspectRatio:"3/4",
+        background:"#f0e8d4", border:"8px solid #f5f0e8", borderBottom:"24px solid #f5f0e8",
+        borderRadius:4, transform:"rotate(-8deg)",
+        boxShadow:"0 16px 48px rgba(0,0,0,0.72), 0 4px 12px rgba(0,0,0,0.5)",
+        overflow:"hidden", animation:"mem-float 5.5s ease-in-out 0.8s infinite",
+      }}>
+        <div style={{ width:"100%", height:"80%",
+          background:"linear-gradient(160deg,#8b6914 0%,#5c3d0a 42%,#3a2008 100%)",
+          position:"relative", overflow:"hidden" }}>
+          <div style={{ position:"absolute", inset:0, opacity:0.55,
+            background:"radial-gradient(ellipse at 35% 40%,rgba(255,220,160,0.3) 0%,rgba(100,60,20,0.4) 60%,rgba(30,15,5,0.6) 100%)" }}/>
+          <svg viewBox="0 0 100 100" style={{ position:"absolute", bottom:0, width:"100%", height:"62%" }}>
+            {[20,38,56,74,88].map((x,i)=>(
+              <g key={i}>
+                <circle cx={x} cy={i%2===0?28:22} r={i===2?9:7} fill="rgba(18,9,3,0.75)"/>
+                <rect x={x-(i===2?8:6)} y={i%2===0?37:30} width={i===2?16:12} height={65} rx="4" fill="rgba(12,6,2,0.68)"/>
+              </g>
+            ))}
+          </svg>
+        </div>
+        <div style={{ height:"20%", display:"flex", alignItems:"center", justifyContent:"center" }}>
+          <span style={{ fontSize:9, color:"#8b6914", fontFamily:"Georgia,serif", opacity:0.7 }}>Familia · 1978</span>
+        </div>
       </div>
-    </Link>
-  );
-}
 
-function OutlineBtn({ href, children }: { href: string; children: React.ReactNode }) {
-  return (
-    <Link href={href} style={{ textDecoration: "none" }}>
-      <div style={{ display: "inline-flex", alignItems: "center", gap: 8,
-        border: `1px solid ${GOLD_DIM}`, borderRadius: 16, color: GOLD_DIM,
-        fontWeight: 600, fontSize: 14, padding: "12px 24px", cursor: "pointer" }}>
-        {children}
+      {/* Photo: front-right */}
+      <div style={{
+        position:"absolute", right:"2%", top:"6%", width:"52%", aspectRatio:"3/4",
+        background:"#f5f0e8", border:"8px solid #fff", borderBottom:"26px solid #fff",
+        borderRadius:4, transform:"rotate(6deg)",
+        boxShadow:"0 20px 60px rgba(0,0,0,0.76), 0 6px 16px rgba(0,0,0,0.56)",
+        overflow:"hidden", zIndex:2, animation:"mem-float 6s ease-in-out 0s infinite",
+      }}>
+        <div style={{ width:"100%", height:"79%",
+          background:"linear-gradient(140deg,#c4943a 0%,#7a4510 46%,#3f200a 100%)",
+          position:"relative", overflow:"hidden" }}>
+          <div style={{ position:"absolute", inset:0, opacity:0.48,
+            background:"radial-gradient(ellipse at 60% 35%,rgba(255,200,120,0.4) 0%,transparent 70%)" }}/>
+          <svg viewBox="0 0 100 100" style={{ position:"absolute", bottom:0, width:"100%", height:"60%" }}>
+            {[28,50,72].map((x,i)=>(
+              <g key={i}>
+                <circle cx={x} cy={i===1?19:27} r={i===1?11:8} fill="rgba(22,11,4,0.78)"/>
+                <rect x={x-(i===1?10:7)} y={i===1?29:34} width={i===1?20:14} height={72} rx="4" fill="rgba(15,8,3,0.68)"/>
+              </g>
+            ))}
+          </svg>
+        </div>
+        <div style={{ height:"21%", display:"flex", alignItems:"center", justifyContent:"center" }}>
+          <span style={{ fontSize:9, color:"#8b6914", fontFamily:"Georgia,serif", opacity:0.7 }}>Tres generaciones · 1995</span>
+        </div>
       </div>
-    </Link>
-  );
-}
 
-function Card3d({ ar = "212,175,55", sh = "#040300", glow = 0.07, children, style = {} }: {
-  ar?: string; sh?: string; glow?: number; children: React.ReactNode; style?: React.CSSProperties;
-}) {
-  return (
-    <div style={{
-      borderRadius: 20, background: CARD, position: "relative", overflow: "hidden",
-      borderTop: `1.5px solid rgba(${ar},0.4)`, borderLeft: `1px solid rgba(${ar},0.18)`,
-      borderBottom: `3px solid ${sh}`, borderRight: "1px solid rgba(0,0,0,0.6)",
-      boxShadow: `0 7px 0 ${sh}, 0 12px 22px rgba(0,0,0,0.85), 0 0 20px rgba(${ar},${glow})`,
-      ...style,
-    }}>
-      <div style={{ position: "absolute", top: 0, left: "18%", right: "18%",
-        height: 1, background: `rgba(${ar},0.42)` }} />
-      {children}
+      {/* Floating icons */}
+      {[
+        { e:"📷", b:"22%", l:"7%",  d:"0s",   sz:36 },
+        { e:"♥",  b:"46%", r:"4%",  d:"1.2s", sz:34, red:true },
+        { e:"♥",  b:"18%", r:"15%", d:"0.6s", sz:26, red:true },
+      ].map((ic,i)=>(
+        <div key={i} style={{
+          position:"absolute", bottom:ic.b, left:(ic as any).l, right:(ic as any).r,
+          width:ic.sz, height:ic.sz, borderRadius:"50%",
+          background:"rgba(10,8,20,0.82)", border:"1px solid rgba(212,175,55,0.22)",
+          backdropFilter:"blur(8px)",
+          display:"flex", alignItems:"center", justifyContent:"center",
+          fontSize:ic.sz * 0.42,
+          color:(ic as any).red ? "#e06080" : "#d4af37",
+          boxShadow:"0 4px 12px rgba(0,0,0,0.55)",
+          animation:`cp-pulse 3s ease-in-out ${ic.d} infinite`,
+          zIndex:5,
+        }}>{ic.e}</div>
+      ))}
     </div>
   );
 }
 
-// ── Divider ────────────────────────────────────────────────────────────────────
-
-function Divider() {
+// ── Buttons ────────────────────────────────────────────────────────────────────
+function GoldBtn({ href, children }: { href:string; children:React.ReactNode }) {
   return (
-    <div style={{ maxWidth: 560, margin: "0 auto", padding: "0 24px" }}>
-      <div style={{ height: 1, background: "linear-gradient(to right, transparent, rgba(212,175,55,0.15), transparent)" }} />
+    <Link href={href} style={{ textDecoration:"none" }}>
+      <div style={{
+        display:"inline-flex", alignItems:"center", gap:8,
+        background:"#c9a820", borderTop:"2px solid #f5e060",
+        borderLeft:"1.5px solid rgba(255,240,100,0.5)",
+        borderBottom:"4px solid #6a5600", borderRight:"1.5px solid rgba(0,0,0,0.4)",
+        boxShadow:"0 8px 0 #4a3c00, 0 14px 28px rgba(0,0,0,0.65), 0 0 24px rgba(212,175,55,0.22)",
+        borderRadius:14, color:BG, fontWeight:800, fontSize:15,
+        padding:"13px 28px", cursor:"pointer",
+      }}>{children}</div>
+    </Link>
+  );
+}
+
+function AppBtn({ store }: { store:"apple"|"google" }) {
+  return (
+    <Link href="/instalar" style={{ textDecoration:"none" }}>
+      <div style={{
+        display:"inline-flex", alignItems:"center", gap:10,
+        background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.14)",
+        borderRadius:12, padding:"9px 18px", cursor:"pointer", color:"#fff",
+      }}>
+        <span style={{ fontSize:22, lineHeight:1 }}>{store==="apple"?"":"▶"}</span>
+        <div>
+          <div style={{ fontSize:9, color:"rgba(255,255,255,0.48)", lineHeight:1,
+            letterSpacing:"0.06em", textTransform:"uppercase" }}>
+            {store==="apple"?"Descárgalo en el":"Disponible en"}
+          </div>
+          <div style={{ fontSize:14, fontWeight:700, lineHeight:1.3 }}>
+            {store==="apple"?"App Store":"Google Play"}
+          </div>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+// ── Feature icons ──────────────────────────────────────────────────────────────
+const G = GOLD;
+function IcoTree() {
+  return <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+    <circle cx="20" cy="11" r="8" stroke={G} strokeWidth="1.5" fill="rgba(212,175,55,0.08)"/>
+    <circle cx="10" cy="27" r="6" stroke={G} strokeWidth="1.5" fill="rgba(212,175,55,0.08)"/>
+    <circle cx="30" cy="27" r="6" stroke={G} strokeWidth="1.5" fill="rgba(212,175,55,0.08)"/>
+    <line x1="20" y1="19" x2="10" y2="22" stroke={G} strokeWidth="1.2" strokeOpacity="0.6"/>
+    <line x1="20" y1="19" x2="30" y2="22" stroke={G} strokeWidth="1.2" strokeOpacity="0.6"/>
+  </svg>;
+}
+function IcoMsg() {
+  return <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+    <rect x="4" y="8" width="32" height="20" rx="6" stroke={G} strokeWidth="1.5" fill="rgba(212,175,55,0.08)"/>
+    <circle cx="13" cy="18" r="2.2" fill={G} fillOpacity="0.75"/>
+    <circle cx="20" cy="18" r="2.2" fill={G} fillOpacity="0.75"/>
+    <circle cx="27" cy="18" r="2.2" fill={G} fillOpacity="0.75"/>
+    <path d="M16 28 L20 34 L24 28" stroke={G} strokeWidth="1.2" fill="rgba(212,175,55,0.08)" strokeOpacity="0.6"/>
+  </svg>;
+}
+function IcoAlbum() {
+  return <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+    <rect x="7" y="9" width="26" height="22" rx="4" stroke={G} strokeWidth="1.5" fill="rgba(212,175,55,0.08)"/>
+    <rect x="4" y="6" width="26" height="22" rx="4" stroke={G} strokeWidth="1" fill="rgba(212,175,55,0.05)" strokeOpacity="0.45"/>
+    <circle cx="21" cy="19" r="5.5" stroke={G} strokeWidth="1.2" fill="none" strokeOpacity="0.65"/>
+    <circle cx="21" cy="19" r="2.2" fill={G} fillOpacity="0.55"/>
+  </svg>;
+}
+function IcoMap() {
+  return <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+    <path d="M20 5C14.48 5 10 9.48 10 15C10 22 20 35 20 35C20 35 30 22 30 15C30 9.48 25.52 5 20 5Z"
+      stroke={G} strokeWidth="1.5" fill="rgba(212,175,55,0.08)"/>
+    <circle cx="20" cy="15" r="4" stroke={G} strokeWidth="1.2" fill="none" strokeOpacity="0.7"/>
+  </svg>;
+}
+
+// ── Social icons ───────────────────────────────────────────────────────────────
+function IcoIG()  { return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4.5"/><circle cx="17.5" cy="6.5" r="0.8" fill="currentColor" stroke="none"/></svg>; }
+function IcoFB()  { return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>; }
+function IcoYT()  {
+  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.97C18.88 4 12 4 12 4s-6.88 0-8.59.45A2.78 2.78 0 0 0 1.46 6.42 29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.41 19.1C5.12 19.56 12 19.56 12 19.56s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.97A29 29 0 0 0 23 11.75a29 29 0 0 0-.46-5.33z"/>
+    <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02" fill="currentColor" stroke="none"/>
+  </svg>;
+}
+
+// ── Logo ───────────────────────────────────────────────────────────────────────
+function CeibaLogo() {
+  return (
+    <div style={{ display:"flex", alignItems:"center", gap:9 }}>
+      <svg width="30" height="30" viewBox="0 0 32 32" fill="none">
+        <rect x="14" y="20" width="4" height="9" rx="2" fill={GOLD} opacity="0.82"/>
+        <ellipse cx="16" cy="13" rx="10" ry="9" fill={GOLD} opacity="0.88"/>
+        <ellipse cx="13" cy="10" rx="5" ry="3.5" fill="#f5e070" opacity="0.28"/>
+      </svg>
+      <div>
+        <div style={{ fontWeight:800, fontSize:17, color:"#fff", lineHeight:1, letterSpacing:"-0.02em" }}>CEIBA</div>
+        <div style={{ fontSize:8, color:GOLD_DIM, letterSpacing:"0.10em", textTransform:"uppercase", lineHeight:1.2 }}>Nuestras Raíces</div>
+      </div>
     </div>
   );
 }
 
 // ── Page ───────────────────────────────────────────────────────────────────────
+const FEATURES = [
+  { Ico: IcoTree,  title:"Árbol Familiar",       desc:"Explora tu árbol familiar interactivo y visualiza tus conexiones de generación en generación.", href:"/tree"   },
+  { Ico: IcoMsg,   title:"Historias y Mensajes",  desc:"Comparte recuerdos, anécdotas y mensajes con tus seres queridos y mantenlos vivos para siempre.", href:"/feed"   },
+  { Ico: IcoAlbum, title:"Álbumes y Recuerdos",   desc:"Guarda fotos, videos y documentos importantes en álbumes privados y revívelos cuando quieras.",   href:"/photos" },
+  { Ico: IcoMap,   title:"Mapas de Origen",        desc:"Descubre de dónde venimos. Explora los lugares que marcaron la historia de tu familia.",            href:"/mapa"   },
+];
+
+const NAV = [
+  { href:"#",          l:"Inicio"          },
+  { href:"#features",  l:"Características" },
+  { href:"#memories",  l:"Historias"       },
+  { href:"#sobre",     l:"Sobre nosotros"  },
+];
 
 export default function LandingPage() {
   return (
-    <main style={{ minHeight: "100vh", background: BG, color: "#fff", overflowX: "hidden", position: "relative" }}>
+    <main style={{ minHeight:"100vh", background:BG, color:"#fff", overflowX:"hidden", position:"relative" }}>
       <StarField />
       <NebulaBg />
+      <style>{`
+        @keyframes cp-pulse{0%,100%{opacity:.75}50%{opacity:1}}
+        .nav-lnk{color:rgba(255,255,255,0.60);font-size:13px;font-weight:500;text-decoration:none;transition:color .2s}
+        .nav-lnk:hover{color:rgba(212,175,55,0.85)}
+        .feat-card:hover{border-color:rgba(212,175,55,0.28)!important;transform:translateY(-2px)}
+        .feat-card{transition:transform .22s,border-color .22s}
+        @media(max-width:860px){.nav-links-row{display:none!important}}
+        @media(min-width:860px){.hero-grid{grid-template-columns:1fr 1fr!important}.hero-txt{order:1!important}.hero-vis{order:2!important}}
+        @media(min-width:860px){.mem-grid{grid-template-columns:1fr 1fr!important}}
+        @media(max-width:640px){.stats-grid{grid-template-columns:repeat(2,1fr)!important}}
+        .stat-sep{border-right:1px solid rgba(212,175,55,0.08)}
+        @media(max-width:640px){.stat-sep:nth-child(2n){border-right:none}}
+      `}</style>
 
       {/* ── NAV ── */}
-      <nav style={{ position: "relative", zIndex: 10, display: "flex", alignItems: "center",
-        justifyContent: "space-between", padding: "20px 24px", maxWidth: 1100, margin: "0 auto" }}>
-        <div style={{ fontSize: 19, fontWeight: 800, color: "#fff", letterSpacing: "-0.02em" }}>
-          <span style={{ color: GOLD, marginRight: 6 }}>✦</span>Ceiba
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <Link href="/auth/login" style={{ fontSize: 13, color: GOLD_DIM, fontWeight: 600, textDecoration: "none" }}>
-            Iniciar sesión
-          </Link>
-          <Link href="/auth/register" style={{ textDecoration: "none" }}>
-            <div style={{ background: "#c9a820", borderTop: "2px solid #f5e060",
-              borderLeft: "1.5px solid rgba(255,240,100,0.5)",
-              borderBottom: "3px solid #6a5600", borderRight: "1.5px solid rgba(0,0,0,0.4)",
-              boxShadow: "0 5px 0 #4a3c00, 0 8px 18px rgba(0,0,0,0.6)",
-              borderRadius: 12, color: BG, fontWeight: 800, fontSize: 13,
-              padding: "9px 20px", cursor: "pointer" }}>
-              Empezar gratis
-            </div>
-          </Link>
+      <nav style={{ position:"relative", zIndex:20, display:"flex", alignItems:"center",
+        justifyContent:"space-between", padding:"20px 32px", maxWidth:1160, margin:"0 auto" }}>
+        <CeibaLogo />
+        <div style={{ display:"flex", alignItems:"center", gap:32 }}>
+          <div className="nav-links-row" style={{ display:"flex", gap:28 }}>
+            {NAV.map(n => <Link key={n.href} href={n.href} className="nav-lnk">{n.l}</Link>)}
+          </div>
+          <div style={{ display:"flex", gap:10, alignItems:"center" }}>
+            <Link href="/auth/login" style={{
+              fontSize:13, color:"rgba(255,255,255,0.52)", fontWeight:600, textDecoration:"none",
+              padding:"8px 16px", border:"1px solid rgba(255,255,255,0.11)", borderRadius:10,
+            }}>Iniciar sesión</Link>
+            <Link href="/auth/register" style={{ textDecoration:"none" }}>
+              <div style={{
+                background:"#c9a820", borderTop:"1.5px solid #f5e060",
+                borderBottom:"3px solid #6a5600", borderRadius:10,
+                color:BG, fontWeight:800, fontSize:13, padding:"9px 20px",
+                cursor:"pointer", whiteSpace:"nowrap",
+                boxShadow:"0 4px 0 #4a3c00,0 6px 18px rgba(0,0,0,0.55)",
+              }}>Comenzar ahora →</div>
+            </Link>
+          </div>
         </div>
       </nav>
 
-      {/* ── HERO — emoción primero ── */}
-      <section style={{ position: "relative", zIndex: 10, maxWidth: 1100, margin: "0 auto",
-        padding: "20px 24px 96px", display: "grid",
-        gridTemplateColumns: "1fr", gap: 48 }} className="hero-grid">
-        <style>{`
-          @media (min-width: 900px) {
-            .hero-grid { grid-template-columns: 1fr 1fr !important; align-items: center; }
-            .hero-order-1 { order: 1 !important; }
-            .hero-order-2 { order: 2 !important; }
-          }
-        `}</style>
-
-        {/* Texto */}
-        <div style={{ order: 2 }} className="hero-order-1">
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 8,
-            background: "rgba(212,175,55,0.06)", border: `1px solid ${GOLD_DIM}`,
-            borderRadius: 100, padding: "5px 14px", fontSize: 11, color: GOLD_DIM,
-            fontWeight: 600, marginBottom: 32 }}>
-            <span style={{ width: 7, height: 7, borderRadius: "50%", background: GOLD,
-              display: "inline-block", boxShadow: `0 0 8px ${GOLD}`, flexShrink: 0 }} />
-            Gratis · Sin publicidad · Solo tu familia
-          </div>
-
-          <h1 style={{ fontWeight: 900, lineHeight: 1.05, marginBottom: 24, letterSpacing: "-0.03em",
-            fontSize: "clamp(2.6rem, 5.5vw, 4rem)" }}>
-            Aquí vive<br />
-            la historia<br />
-            <span style={{ color: GOLD }}>de tu familia.</span>
+      {/* ── HERO ── */}
+      <section style={{ position:"relative", zIndex:10, maxWidth:1160, margin:"0 auto",
+        padding:"16px 32px 80px", display:"grid", gridTemplateColumns:"1fr", gap:48, alignItems:"center" }}
+        className="hero-grid">
+        <div style={{ order:2 }} className="hero-txt">
+          <p style={{ fontSize:10, fontWeight:700, letterSpacing:"0.22em", textTransform:"uppercase",
+            color:GOLD_DIM, marginBottom:20 }}>Tu familia. Tu legado. Para siempre.</p>
+          <h1 style={{ fontWeight:900, lineHeight:1.02, letterSpacing:"-0.03em",
+            fontSize:"clamp(3rem,7vw,4.8rem)", marginBottom:22 }}>
+            Nuestras<br /><span style={{ color:GOLD }}>Raíces</span>
           </h1>
-
-          <p style={{ fontSize: "clamp(14px, 2vw, 17px)", color: "rgba(255,255,255,0.45)",
-            lineHeight: 1.75, marginBottom: 36, maxWidth: 420 }}>
-            Ceiba es el lugar donde tu familia permanece unida,
-            conectada y recuerda todo lo que importa —
-            sin importar la distancia ni el tiempo.
+          <p style={{ fontSize:"clamp(14px,1.8vw,16px)", color:"rgba(255,255,255,0.46)",
+            lineHeight:1.82, marginBottom:36, maxWidth:440 }}>
+            CEIBA te ayuda a conectar con tu historia familiar, descubrir tus raíces y preservar lo que más importa: las personas que nos hacen quienes somos.
           </p>
-
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
-            <GoldBtn href="/auth/register">
-              Empezar gratis <ChevronRight size={16} />
-            </GoldBtn>
-            <OutlineBtn href="/auth/login">Ya tengo cuenta</OutlineBtn>
+          <div style={{ display:"flex", flexWrap:"wrap", gap:12 }}>
+            <AppBtn store="apple" />
+            <AppBtn store="google" />
           </div>
         </div>
+        <div style={{ order:1 }} className="hero-vis">
+          <CosmicPortal />
+        </div>
+      </section>
 
-        {/* Foto familiar */}
-        <div style={{ order: 1, position: "relative" }} className="hero-order-2">
-          <div style={{ position: "relative", borderRadius: 24, overflow: "hidden",
-            aspectRatio: "4/3",
-            boxShadow: "0 20px 60px rgba(0,0,0,0.8), 0 0 0 1px rgba(212,175,55,0.15)",
-            background: "#0c0a18" }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="https://images.pexels.com/photos/13197844/pexels-photo-13197844.jpeg?auto=compress&cs=tinysrgb&w=900"
-              alt="Tres generaciones de una familia juntas"
-              style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 40%" }} />
-            <div style={{ position: "absolute", inset: 0,
-              background: `linear-gradient(to right, rgba(3,2,8,0.45) 0%, transparent, rgba(3,2,8,0.22) 100%)` }} />
-            <div style={{ position: "absolute", inset: 0,
-              background: `linear-gradient(to top, rgba(3,2,8,0.6) 0%, transparent 50%)` }} />
-            <ConnectionOverlay />
-            <div style={{ position: "absolute", bottom: 14, left: "50%", transform: "translateX(-50%)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8,
-                background: "rgba(0,0,0,0.65)", backdropFilter: "blur(10px)",
-                border: "1px solid rgba(212,175,55,0.18)", borderRadius: 100,
-                padding: "7px 16px", whiteSpace: "nowrap" }}>
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: GOLD,
-                  boxShadow: `0 0 8px ${GOLD}`, flexShrink: 0 }} />
-                <span style={{ fontSize: 11, fontWeight: 600, color: "#fff" }}>Tres generaciones, un solo lugar</span>
-              </div>
+      {/* ── STATS BAR ── */}
+      <section style={{ position:"relative", zIndex:10, padding:"0 32px 80px", maxWidth:1160, margin:"0 auto" }}>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)",
+          background:CARD, border:"1px solid rgba(212,175,55,0.12)",
+          borderRadius:18, overflow:"hidden", boxShadow:"0 8px 32px rgba(0,0,0,0.62)" }}
+          className="stats-grid">
+          {[
+            { e:"👥", n:"53",   l:"Personas"           },
+            { e:"🌿", n:"5",    l:"Generaciones"       },
+            { e:"🔗", n:"18",   l:"Conexiones"         },
+            { e:"📖", n:"120+", l:"Historias guardadas" },
+          ].map((s,i)=>(
+            <div key={i} className="stat-sep" style={{ padding:"24px 16px", textAlign:"center" }}>
+              <div style={{ fontSize:22, marginBottom:8 }}>{s.e}</div>
+              <div style={{ fontSize:"clamp(1.5rem,3vw,2rem)", fontWeight:900, color:GOLD, lineHeight:1 }}>{s.n}</div>
+              <div style={{ fontSize:11, color:"rgba(255,255,255,0.38)", marginTop:6, letterSpacing:"0.04em" }}>{s.l}</div>
             </div>
-          </div>
-          <div style={{ position: "absolute", inset: -1, borderRadius: 25, pointerEvents: "none",
-            background: "linear-gradient(135deg, rgba(212,175,55,0.18) 0%, transparent 50%, rgba(120,80,20,0.1) 100%)" }} />
+          ))}
         </div>
       </section>
 
-      {/* ── POR QUÉ CEIBA EXISTE — manifiesto ── */}
-      <section style={{ position: "relative", zIndex: 10, maxWidth: 680, margin: "0 auto",
-        padding: "0 24px 112px", textAlign: "center" }}>
-        <p style={{ color: GOLD_DIM, fontSize: 10, letterSpacing: "0.2em",
-          textTransform: "uppercase", marginBottom: 24 }}>Por qué existe Ceiba</p>
-        <h2 style={{ fontSize: "clamp(1.8rem, 4vw, 2.8rem)", fontWeight: 900,
-          letterSpacing: "-0.03em", lineHeight: 1.15, marginBottom: 24 }}>
-          La historia de tu familia<br />
-          <span style={{ color: GOLD }}>no debería perderse.</span>
-        </h2>
-        <p style={{ fontSize: "clamp(14px, 2vw, 16px)", color: "rgba(255,255,255,0.40)",
-          lineHeight: 1.85, maxWidth: 520, margin: "0 auto" }}>
-          Cada familia acumula décadas de momentos. Fechas que nadie recuerda. Fotos sin nombre.
-          Historias que solo los abuelos conocen. Sin un lugar para guardarlas, se pierden.
-          Ceiba es ese lugar.
+      {/* ── FEATURES ── */}
+      <section id="features" style={{ position:"relative", zIndex:10,
+        padding:"0 32px 96px", maxWidth:1160, margin:"0 auto" }}>
+        <p style={{ textAlign:"center", fontSize:9, fontWeight:700, letterSpacing:"0.22em",
+          textTransform:"uppercase", color:GOLD_DIM, marginBottom:16 }}>
+          Todo lo que necesitas para honrar tu historia
         </p>
-      </section>
-
-      <Divider />
-
-      {/* ── VISUAL PRINCIPAL — el producto como consecuencia ── */}
-      <section style={{ position: "relative", zIndex: 10, padding: "80px 0 96px" }}>
-        <div style={{ textAlign: "center", padding: "0 24px 44px", maxWidth: 520, margin: "0 auto" }}>
-          <h2 style={{ fontSize: "clamp(1.7rem, 4.5vw, 2.4rem)", fontWeight: 900,
-            marginBottom: 16, letterSpacing: "-0.025em", lineHeight: 1.1 }}>
-            Tu familia,<br />
-            <span style={{ color: GOLD }}>ya conectada.</span>
-          </h2>
-          <p style={{ fontSize: 14, color: "rgba(255,255,255,0.35)", lineHeight: 1.7, maxWidth: 380, margin: "0 auto" }}>
-            Cuando un familiar entra, el resto ya está ahí.
-            Nadie empieza de cero.
-          </p>
-        </div>
-
-        <div style={{ maxWidth: 760, margin: "0 auto", padding: "0 16px" }}>
-          <div style={{
-            borderRadius: 28,
-            background: "radial-gradient(ellipse at 38% 45%, rgba(25,15,55,0.95) 0%, rgba(8,5,18,0.98) 70%, #030208 100%)",
-            border: "1px solid rgba(212,175,55,0.18)",
-            boxShadow: "0 32px 80px rgba(0,0,0,0.9), 0 0 0 1px rgba(212,175,55,0.06), inset 0 1px 0 rgba(212,175,55,0.12)",
-            overflow: "hidden",
-          }}>
-            <div style={{
-              borderBottom: "1px solid rgba(212,175,55,0.1)",
-              padding: "13px 20px",
-              display: "flex", alignItems: "center", justifyContent: "space-between",
+        <h2 style={{ textAlign:"center", fontSize:"clamp(1.8rem,4vw,2.6rem)",
+          fontWeight:900, letterSpacing:"-0.025em", lineHeight:1.1, marginBottom:14 }}>
+          Un legado que crece contigo
+        </h2>
+        <p style={{ textAlign:"center", fontSize:14, color:"rgba(255,255,255,0.36)",
+          lineHeight:1.75, maxWidth:400, margin:"0 auto 52px" }}>
+          Herramientas poderosas y fáciles de usar para conectar, compartir y preservar las historias que dan forma a tu familia.
+        </p>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(230px,1fr))", gap:16 }}>
+          {FEATURES.map(({Ico,title,desc,href},i)=>(
+            <div key={i} className="feat-card" style={{
+              borderRadius:18, background:CARD, padding:"28px 24px 24px",
+              border:"1px solid rgba(212,175,55,0.10)",
+              borderTop:"1px solid rgba(212,175,55,0.22)",
+              boxShadow:"0 8px 24px rgba(0,0,0,0.65)", position:"relative",
+              overflow:"hidden", display:"flex", flexDirection:"column",
             }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <div style={{ width: 28, height: 28, borderRadius: 8,
-                  background: "rgba(212,175,55,0.12)", border: "1px solid rgba(212,175,55,0.2)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 14 }}>✦</div>
-                <div>
-                  <p style={{ fontSize: 12, fontWeight: 700, color: "#fff", margin: 0 }}>Familia Reyes</p>
-                  <p style={{ fontSize: 10, color: GOLD_DIM, margin: 0 }}>3 generaciones · Bogotá, Colombia</p>
-                </div>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6,
-                background: "rgba(212,175,55,0.06)", border: "1px solid rgba(212,175,55,0.15)",
-                borderRadius: 100, padding: "4px 10px" }}>
-                <span style={{ width: 6, height: 6, borderRadius: "50%", background: GOLD,
-                  boxShadow: `0 0 5px ${GOLD}`, flexShrink: 0 }} />
-                <span style={{ fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.6)" }}>
-                  9 conectados · 4 pendientes
-                </span>
-              </div>
+              <div style={{ position:"absolute", top:0, left:"22%", right:"22%", height:1,
+                background:"rgba(212,175,55,0.35)" }}/>
+              <div style={{ marginBottom:18 }}><Ico /></div>
+              <h3 style={{ fontSize:16, fontWeight:700, color:"#fff", marginBottom:10, lineHeight:1.3 }}>{title}</h3>
+              <p style={{ fontSize:13, color:"rgba(255,255,255,0.38)", lineHeight:1.72, flex:1 }}>{desc}</p>
+              <Link href={href} style={{ display:"inline-flex", alignItems:"center", gap:4,
+                marginTop:20, fontSize:12, fontWeight:600, color:GOLD_DIM, textDecoration:"none" }}>
+                Explorar →
+              </Link>
             </div>
-            <div style={{ padding: "12px 8px 4px" }}>
-              <DemoFamilyTree />
+          ))}
+        </div>
+      </section>
+
+      {/* ── MEMORIES ── */}
+      <section id="memories" style={{ position:"relative", zIndex:10,
+        maxWidth:1160, margin:"0 auto", padding:"0 32px 100px",
+        display:"grid", gridTemplateColumns:"1fr", gap:48, alignItems:"center" }}
+        className="mem-grid">
+        <div style={{ order:1 }}>
+          <p style={{ fontSize:9, fontWeight:700, letterSpacing:"0.22em",
+            textTransform:"uppercase", color:GOLD_DIM, marginBottom:20 }}>
+            Un viaje en el tiempo
+          </p>
+          <h2 style={{ fontSize:"clamp(1.9rem,4vw,2.8rem)", fontWeight:900,
+            letterSpacing:"-0.025em", lineHeight:1.1, marginBottom:20 }}>
+            Revive lo que<br />nos une
+          </h2>
+          <p style={{ fontSize:"clamp(14px,1.8vw,16px)", color:"rgba(255,255,255,0.42)",
+            lineHeight:1.82, marginBottom:36, maxWidth:420 }}>
+            Cada foto, cada historia, cada detalle cuenta. CEIBA convierte los recuerdos en un legado que tus futuras generaciones podrán valorar.
+          </p>
+          <Link href="/photos" style={{ textDecoration:"none" }}>
+            <div style={{ display:"inline-flex", alignItems:"center", gap:8,
+              border:`1px solid ${GOLD_DIM}`, borderRadius:12,
+              padding:"11px 22px", cursor:"pointer",
+              color:GOLD_DIM, fontWeight:600, fontSize:14 }}>
+              Ver historias →
             </div>
-            <div style={{ borderTop: "1px solid rgba(212,175,55,0.08)", padding: "16px 20px 20px" }}>
-              <div style={{ borderRadius: 12, padding: "12px 16px",
-                background: "rgba(212,175,55,0.04)", border: "1px solid rgba(212,175,55,0.09)",
-                fontSize: 12, color: "rgba(255,255,255,0.42)", textAlign: "center", lineHeight: 1.7 }}>
-                Cuando <span style={{ color: GOLD, fontWeight: 600 }}>Julián</span> entró,
-                Ceiba ya sabía que <span style={{ color: GOLD, fontWeight: 600 }}>Paula</span> y{" "}
-                <span style={{ color: GOLD, fontWeight: 600 }}>Marco</span> eran tus primos
-                — sin que nadie los agregara.
-              </div>
-            </div>
+          </Link>
+        </div>
+        <div style={{ order:2 }}>
+          <MemoriesVisual />
+        </div>
+      </section>
+
+      {/* ── CTA ── */}
+      <section style={{ position:"relative", zIndex:10 }}>
+        <div style={{ background:"linear-gradient(to bottom,rgba(3,2,8,0) 0%,rgba(8,5,20,0.95) 20%,rgba(4,3,10,1) 100%)",
+          padding:"72px 32px 0", textAlign:"center", position:"relative", overflow:"hidden" }}>
+          <div style={{ position:"absolute", top:"20%", left:"50%", transform:"translateX(-50%)",
+            width:640, height:220, pointerEvents:"none",
+            background:"radial-gradient(ellipse,rgba(212,175,55,0.07) 0%,transparent 70%)" }}/>
+          <h2 style={{ fontSize:"clamp(1.8rem,4.5vw,3.1rem)", fontWeight:900, lineHeight:1.18,
+            letterSpacing:"-0.025em", maxWidth:660, margin:"0 auto 40px", position:"relative" }}>
+            Guardemos hoy nuestra historia,<br />
+            <span style={{ color:GOLD }}>para que mañana nos recuerden.</span>
+          </h2>
+          <div style={{ marginBottom:68, position:"relative" }}>
+            <GoldBtn href="/auth/register">Guardar nuestra historia →</GoldBtn>
+          </div>
+
+          {/* Ceiba tree */}
+          <div style={{ maxWidth:700, margin:"0 auto" }}>
+            <svg viewBox="0 0 700 220" style={{ width:"100%", display:"block" }} aria-hidden>
+              <defs>
+                <radialGradient id="tg" cx="50%" cy="100%" r="55%">
+                  <stop offset="0%"  stopColor="#d4af37" stopOpacity="0.28"/>
+                  <stop offset="60%" stopColor="#8b6914" stopOpacity="0.07"/>
+                  <stop offset="100%" stopColor="transparent"/>
+                </radialGradient>
+                <radialGradient id="tga" cx="50%" cy="40%" r="55%">
+                  <stop offset="0%" stopColor="#d4af37" stopOpacity="0.16"/>
+                  <stop offset="100%" stopColor="transparent"/>
+                </radialGradient>
+                <filter id="tb"><feGaussianBlur stdDeviation="7"/></filter>
+              </defs>
+              <ellipse cx="350" cy="202" rx="310" ry="38" fill="url(#tg)"/>
+              <ellipse cx="350" cy="100" rx="170" ry="125" fill="url(#tga)" filter="url(#tb)"/>
+              <rect x="338" y="142" width="24" height="58" rx="10" fill="#8b6914" opacity="0.58"/>
+              <ellipse cx="350" cy="90" rx="125" ry="105" fill="#1a0e00" opacity="0.92"/>
+              <ellipse cx="350" cy="75" rx="95"  ry="78"  fill="#3a1e00" opacity="0.85"/>
+              <ellipse cx="350" cy="62" rx="68"  ry="55"  fill="#5c2e00" opacity="0.75"/>
+              <ellipse cx="350" cy="52" rx="44"  ry="36"  fill="#8b4500" opacity="0.62"/>
+              {[305,342,358,395,325,370,315,348,380,340,360,330,385,310,350,322,368,295,408,345,355,338,362,350].map((x,i)=>(
+                <circle key={i} cx={x} cy={50+(i%6)*12} r={1.1+(i%3)*0.5} fill="#d4af37" opacity={0.14+(i%5)*0.07}/>
+              ))}
+              <path d="M338 192 Q310 196 280 210" stroke="#8b6914" strokeWidth="2" strokeOpacity="0.28" fill="none"/>
+              <path d="M362 192 Q390 196 420 210" stroke="#8b6914" strokeWidth="2" strokeOpacity="0.28" fill="none"/>
+            </svg>
           </div>
         </div>
       </section>
 
-      <Divider />
-
-      {/* ── BENEFICIOS — consecuencias, no funciones ── */}
-      <section style={{ position: "relative", zIndex: 10, maxWidth: 960, margin: "0 auto", padding: "80px 24px 96px" }}>
-        <p style={{ textAlign: "center", color: GOLD_DIM, fontSize: 10, letterSpacing: "0.2em",
-          textTransform: "uppercase", marginBottom: 16 }}>Lo que cambia</p>
-        <h2 style={{ textAlign: "center", fontSize: "clamp(1.5rem, 3.5vw, 2.2rem)", fontWeight: 900,
-          letterSpacing: "-0.025em", marginBottom: 48 }}>
-          Cuando tu familia tiene un lugar propio
-        </h2>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))", gap: 14 }}>
-          {[
-            { icon: "🎂", title: "Nunca más te perderás un momento importante.",
-              desc: "Las fechas de toda tu red llegan a ti — aunque nunca las hayas guardado en el teléfono.",
-              ar: "40,180,120", sh: "#020a05" },
-            { icon: "📢", title: "Lo que pasa en la familia, todos lo saben.",
-              desc: "Un solo mensaje llega a cada persona al mismo tiempo. Sin grupos, sin reenviar, sin olvidar a nadie.",
-              ar: "212,175,55", sh: "#040300" },
-            { icon: "🚨", title: "En una emergencia, nadie se queda sin saber.",
-              desc: "Tu ubicación llega a toda la familia al instante — incluyendo familiares que nunca guardaste en el teléfono.",
-              ar: "220,60,80", sh: "#160208" },
-          ].map((f, i) => (
-            <Card3d key={i} ar={f.ar} sh={f.sh} style={{ padding: 28 }}>
-              <div style={{ fontSize: 28, marginBottom: 16 }}>{f.icon}</div>
-              <h3 style={{ fontWeight: 700, fontSize: 15, color: "#fff", marginBottom: 10, lineHeight: 1.3 }}>{f.title}</h3>
-              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", lineHeight: 1.75 }}>{f.desc}</p>
-            </Card3d>
-          ))}
-        </div>
-      </section>
-
-      <Divider />
-
-      {/* ── CÓMO FUNCIONA ── */}
-      <section style={{ position: "relative", zIndex: 10, maxWidth: 480, margin: "0 auto", padding: "80px 24px 96px" }}>
-        <h2 style={{ textAlign: "center", fontSize: "clamp(1.5rem,4vw,2rem)", fontWeight: 800,
-          marginBottom: 8, letterSpacing: "-0.025em" }}>
-          Menos de dos minutos.
-        </h2>
-        <p style={{ textAlign: "center", color: "rgba(212,175,55,0.4)", fontSize: 13, marginBottom: 52 }}>
-          Sin tarjeta de crédito. Sin formularios.
-        </p>
-        <div style={{ position: "relative", display: "flex", flexDirection: "column", gap: 36 }}>
-          <div style={{ position: "absolute", left: 17, top: 18, bottom: 18, width: 1,
-            background: "linear-gradient(to bottom, rgba(212,175,55,0.4), rgba(212,175,55,0.05))" }} />
-          {[
-            { n:"1", t:"Crea tu perfil",     d:"Nombre y foto. Treinta segundos." },
-            { n:"2", t:"Agrega a tu familia", d:"Ceiba detecta automáticamente quién ya está adentro." },
-            { n:"3", t:"Comparte el link",    d:"Cada familiar que entra trae a los suyos. El resto crece solo." },
-          ].map((s, i) => (
-            <div key={i} style={{ display: "flex", gap: 24 }}>
-              <div style={{ position: "relative", zIndex: 2, width: 36, height: 36, borderRadius: "50%",
-                background: BG, border: `1.5px solid ${GOLD_DIM}`, flexShrink: 0,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 13, fontWeight: 800, color: GOLD,
-                boxShadow: `0 0 12px rgba(212,175,55,0.12)` }}>
-                {s.n}
-              </div>
-              <div style={{ paddingTop: 6 }}>
-                <p style={{ fontWeight: 700, fontSize: 15, color: "#fff", marginBottom: 5 }}>{s.t}</p>
-                <p style={{ fontSize: 13, color: "rgba(255,255,255,0.38)", lineHeight: 1.7 }}>{s.d}</p>
-              </div>
+      {/* ── FOOTER ── */}
+      <footer id="sobre" style={{ position:"relative", zIndex:10,
+        background:"rgba(4,3,10,0.99)", borderTop:"1px solid rgba(212,175,55,0.08)",
+        padding:"40px 32px" }}>
+        <div style={{ maxWidth:1160, margin:"0 auto" }}>
+          <div style={{ display:"flex", flexWrap:"wrap", alignItems:"center",
+            justifyContent:"space-between", gap:24, marginBottom:32 }}>
+            <CeibaLogo />
+            <div style={{ display:"flex", flexWrap:"wrap", gap:22 }}>
+              {[
+                { href:"#",         l:"Inicio"          },
+                { href:"#features", l:"Características" },
+                { href:"#memories", l:"Historias"       },
+                { href:"/instalar", l:"Blog"            },
+                { href:"#sobre",    l:"Contacto"        },
+              ].map(n=>(
+                <Link key={n.href} href={n.href} style={{ fontSize:12,
+                  color:"rgba(255,255,255,0.36)", textDecoration:"none", fontWeight:500 }}>
+                  {n.l}
+                </Link>
+              ))}
             </div>
-          ))}
-        </div>
-      </section>
-
-      <Divider />
-
-      {/* ── TODO INCLUIDO — grid de beneficios ── */}
-      <section style={{ position: "relative", zIndex: 10, maxWidth: 840, margin: "0 auto", padding: "80px 24px 96px" }}>
-        <p style={{ textAlign: "center", color: GOLD_DIM, fontSize: 10, letterSpacing: "0.2em",
-          textTransform: "uppercase", marginBottom: 16 }}>Todo incluido, gratis</p>
-        <h2 style={{ textAlign: "center", fontSize: "clamp(1.4rem, 3vw, 2rem)", fontWeight: 800,
-          letterSpacing: "-0.02em", marginBottom: 40 }}>
-          Todo lo que tu familia necesita.
-        </h2>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 10 }}>
-          {[
-            { e:"🗺️", t:"Dónde vive cada quien",      d:"Mapa de toda la red familiar"    },
-            { e:"🎂", t:"Nunca más olvidarás una fecha", d:"Alertas automáticas, siempre"  },
-            { e:"📸", t:"Las fotos de todos, juntas",   d:"Galería compartida de la familia"},
-            { e:"📅", t:"La historia, preservada",       d:"Eventos y memorias para siempre"},
-            { e:"💬", t:"Conversaciones que no se mezclan", d:"Grupos por parentesco"      },
-            { e:"🔒", t:"Solo tu familia lo ve",         d:"Privado por diseño"             },
-          ].map((f, i) => (
-            <div key={i} style={{ borderRadius: 14, background: "rgba(255,255,255,0.02)",
-              border: "1px solid rgba(212,175,55,0.08)", padding: "18px 16px",
-              display: "flex", alignItems: "flex-start", gap: 14 }}>
-              <span style={{ fontSize: 22, flexShrink: 0 }}>{f.e}</span>
-              <div>
-                <p style={{ fontSize: 13, fontWeight: 600, color: "#fff", lineHeight: 1.35 }}>{f.t}</p>
-                <p style={{ fontSize: 11, color: "rgba(255,255,255,0.28)", marginTop: 4 }}>{f.d}</p>
-              </div>
+            <div style={{ display:"flex", gap:12 }}>
+              {([IcoIG, IcoFB, IcoYT] as React.FC[]).map((Ico,i)=>(
+                <Link key={i} href="#" style={{ color:"rgba(212,175,55,0.40)", display:"flex",
+                  padding:7, borderRadius:8, border:"1px solid rgba(212,175,55,0.10)" }}>
+                  <Ico />
+                </Link>
+              ))}
             </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── CTA FINAL — cierre emocional ── */}
-      <section style={{ position: "relative", zIndex: 10, maxWidth: 560, margin: "0 auto", padding: "0 24px 96px" }}>
-        <Card3d ar="212,175,55" sh="#040300" glow={0.12} style={{ padding: "56px 36px", textAlign: "center" }}>
-          <div style={{ position: "absolute", inset: 0, borderRadius: 20, pointerEvents: "none", opacity: 0.04,
-            backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)",
-            backgroundSize: "20px 20px" }} />
-          <div style={{ position: "absolute", top: 0, left: "20%", right: "20%", height: "55%",
-            background: "radial-gradient(ellipse, rgba(30,80,30,0.30) 0%, transparent 70%)",
-            pointerEvents: "none" }} />
-          <div style={{ position: "relative" }}>
-            <div style={{ fontSize: 13, letterSpacing: "0.18em", textTransform: "uppercase",
-              color: GOLD_DIM, marginBottom: 24 }}>Tu historia empieza hoy</div>
-            <h2 style={{ fontSize: "clamp(1.6rem,4vw,2.2rem)", fontWeight: 900, lineHeight: 1.2,
-              marginBottom: 16, letterSpacing: "-0.025em" }}>
-              La historia de tu familia<br />merece un lugar propio.
-            </h2>
-            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", marginBottom: 36,
-              maxWidth: 320, margin: "0 auto 36px" }}>
-              Gratis. Sin publicidad. Sin límites.<br />
-              Solo tu familia.
-            </p>
-            <GoldBtn href="/auth/register">
-              Guardar nuestra historia <ChevronRight size={17} />
-            </GoldBtn>
           </div>
-        </Card3d>
-      </section>
-
-      <footer style={{ position: "relative", zIndex: 10, textAlign: "center",
-        paddingBottom: 40, fontSize: 11, color: "rgba(212,175,55,0.18)" }}>
-        © 2025 Ceiba · Hecho para familias, por familias
+          <div style={{ display:"flex", flexWrap:"wrap", justifyContent:"space-between",
+            alignItems:"center", gap:12, borderTop:"1px solid rgba(255,255,255,0.05)", paddingTop:20 }}>
+            <span style={{ fontSize:11, color:"rgba(212,175,55,0.18)" }}>
+              © 2024 CEIBA – Nuestras Raíces. Todos los derechos reservados.
+            </span>
+            <div style={{ display:"flex", gap:20 }}>
+              {["Términos de servicio","Política de privacidad"].map(t=>(
+                <Link key={t} href="#" style={{ fontSize:11, color:"rgba(255,255,255,0.20)", textDecoration:"none" }}>{t}</Link>
+              ))}
+            </div>
+          </div>
+        </div>
       </footer>
     </main>
   );
