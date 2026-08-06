@@ -594,10 +594,11 @@ export function GalaxyOrbitView({
       });
 
       // ── Phase 2: separation force (prevents collisions) ──────────────────────
-      const COMFORT = 1.9;   // comfort zone = 1.9× combined radii
-      const FORCE_K = 1.4;   // push strength per frame
+      // Sprites are 144px tall — need more horizontal breathing room to avoid overlap
+      const COMFORT = 2.8;   // comfort zone (was 1.9 for circles, bumped for tall sprites)
+      const FORCE_K = 1.6;   // push strength per frame
       const DAMP    = 0.78;  // velocity decay (< 1 prevents runaway)
-      const MAX_REP = 55;    // max pixel displacement
+      const MAX_REP = 90;    // max pixel displacement (was 55)
       for (let i = 0; i < raw.length; i++) {
         for (let j = i + 1; j < raw.length; j++) {
           const a = raw[i], b = raw[j];

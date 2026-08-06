@@ -1,8 +1,36 @@
 'use client'
-import React, { useId, useState } from 'react'
+import React, { useId, useState, useCallback } from 'react'
 import { createAvatar } from '@dicebear/core'
 import * as avataaars from '@dicebear/avataaars'
 import type { UniverseNode } from './useUniverseLayout'
+
+// ─── White background removal ─────────────────────────────────────────────────
+// Runs once per sprite load; makes near-white pixels transparent so PNGs
+// that DALL-E generated with solid white bg blend into the dark canvas.
+function stripWhiteBg(img: HTMLImageElement): string {
+  try {
+    const c = document.createElement('canvas')
+    c.width  = img.naturalWidth
+    c.height = img.naturalHeight
+    const ctx = c.getContext('2d')!
+    ctx.drawImage(img, 0, 0)
+    const id = ctx.getImageData(0, 0, c.width, c.height)
+    const d  = id.data
+    for (let i = 0; i < d.length; i += 4) {
+      const r = d[i], g = d[i + 1], b = d[i + 2]
+      if (r > 230 && g > 230 && b > 230) {
+        d[i + 3] = 0                                     // fully transparent
+      } else if (r > 190 && g > 190 && b > 190) {
+        const w = ((r + g + b) / 765 - 190 / 255) * 5   // soft edge
+        d[i + 3] = Math.round(d[i + 3] * (1 - w))
+      }
+    }
+    ctx.putImageData(id, 0, 0)
+    return c.toDataURL('image/png')
+  } catch {
+    return img.src   // CORS or other error — use original
+  }
+}
 
 // ─── Color helpers ────────────────────────────────────────────────────────────
 
@@ -144,6 +172,11 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
   const [hovered,      setHovered]      = useState(false)
   const [focused,      setFocused]      = useState(false)
   const [spriteFailed, setSpriteFailed] = useState(false)
+  const [cleanSrc,     setCleanSrc]     = useState<string | null>(null)
+
+  const handleSpriteLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
+    setCleanSrc(stripWhiteBg(e.currentTarget))
+  }, [])
 
   const seed       = hashId(node.id)
   const oKey       = getOutfitKey(node)
@@ -243,9 +276,10 @@ export function AvatarFigure({ node, onClick, highlighted, hitAreaScale, labelVi
         {useSprite ? (
           // ── Full-body Pixar-style sprite ──────────────────────────────────
           <img
-            src={imgSrc}
+            src={cleanSrc ?? imgSrc}
             alt={node.shortName}
             draggable={false}
+            onLoad={handleSpriteLoad}
             onError={() => setSpriteFailed(true)}
             style={{
               display: 'block',
