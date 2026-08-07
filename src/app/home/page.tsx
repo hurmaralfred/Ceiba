@@ -1084,58 +1084,17 @@ export default function HomePage() {
         )}
       </div>
 
-      {/* ══ ACCESOS RÁPIDOS ══════════════════════════════════════════════ */}
-      <div style={{ padding: "22px 12px 8px" }}>
-        <style>{`
-          @keyframes fab-float-0 { 0%,100%{transform:translateY(0px)} 50%{transform:translateY(-5px)} }
-          @keyframes fab-float-1 { 0%,100%{transform:translateY(0px)} 50%{transform:translateY(-4px)} }
-          @keyframes fab-float-2 { 0%,100%{transform:translateY(0px)} 50%{transform:translateY(-6px)} }
-          @keyframes fab-float-3 { 0%,100%{transform:translateY(0px)} 50%{transform:translateY(-4px)} }
-          @keyframes fab-float-4 { 0%,100%{transform:translateY(0px)} 50%{transform:translateY(-5px)} }
-          @keyframes fab-float-5 { 0%,100%{transform:translateY(0px)} 50%{transform:translateY(-3px)} }
-          @keyframes shine-sweep { 0%{opacity:0;left:-60%} 30%{opacity:1} 100%{opacity:0;left:130%} }
-        `}</style>
-        <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase",
-          color: "rgba(212,175,55,0.45)", marginBottom: 16, paddingLeft: 2 }}>Accesos rápidos</div>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 4 }}>
-          {([
-            { href: "/tree",      Icon: TreePine,      label: "Árbol",    color: "#f0c040", top: "rgba(255,210,80,0.28)",  mid: "rgba(180,110,0,0.22)",  bot: "rgba(80,40,0,0.85)",  border: "rgba(240,192,64,0.60)",  glow: "rgba(212,175,55,0.50)",  shadow: "#3a2800" },
-            { href: "/historias", Icon: Sparkles,      label: "Historias", color: "#c0a8ff", top: "rgba(160,120,255,0.28)", mid: "rgba(80,40,200,0.22)",  bot: "rgba(10,4,48,0.90)",  border: "rgba(160,120,245,0.55)", glow: "rgba(120,80,230,0.42)",  shadow: "#06022a" },
-            { href: "/events",    Icon: BookOpen,      label: "Recuerdos", color: "#f2b43c", top: "rgba(242,180,60,0.28)",  mid: "rgba(180,120,10,0.22)",  bot: "rgba(60,30,2,0.88)",  border: "rgba(242,180,60,0.55)",  glow: "rgba(212,160,40,0.42)",  shadow: "#2a1400" },
-            { href: "/chat",    Icon: MessageCircle, label: "Chat",     color: "#c0c8ff", top: "rgba(160,170,255,0.28)", mid: "rgba(80,90,200,0.22)",  bot: "rgba(10,8,50,0.90)",  border: "rgba(160,170,245,0.58)", glow: "rgba(130,140,230,0.45)", shadow: "#050328" },
-            { href: "/mapa",    Icon: Map,           label: "Mapa",     color: "#60e0f8", top: "rgba(80,220,250,0.26)",  mid: "rgba(20,150,190,0.22)", bot: "rgba(4,30,50,0.90)",  border: "rgba(70,210,240,0.55)",  glow: "rgba(40,180,220,0.42)",  shadow: "#02101e" },
-            { href: "/invitar", Icon: Send,          label: "Invitar",  color: "#f0c040", top: "rgba(255,205,70,0.26)",  mid: "rgba(175,105,0,0.20)",  bot: "rgba(78,38,0,0.87)",  border: "rgba(235,185,55,0.58)",  glow: "rgba(205,165,40,0.46)",  shadow: "#362000" },
-          ] as const).map(({ href, Icon, label, color, top, mid, bot, border, glow, shadow }, idx) => (
-            <Link key={href} href={href} style={{ textDecoration: "none", flex: 1 }}>
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8,
-                animation: `fab-float-${idx} ${3.2 + idx * 0.3}s ease-in-out infinite ${idx * 0.4}s` }}>
-                {/* Botón 3D */}
-                <div style={{ position: "relative", width: 52, height: 52, borderRadius: 18, overflow: "hidden",
-                  background: `linear-gradient(160deg, ${top} 0%, ${mid} 40%, ${bot} 100%)`,
-                  border: `1.5px solid ${border}`,
-                  boxShadow: `0 2px 0 ${shadow}, 0 6px 0 rgba(0,0,0,0.55), 0 8px 20px rgba(0,0,0,0.7), 0 0 22px ${glow}, inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(0,0,0,0.4)`,
-                  display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  {/* Shine sweep — pasa cada ~6s */}
-                  <div style={{ position: "absolute", top: 0, bottom: 0, width: "40%", pointerEvents: "none",
-                    background: "linear-gradient(105deg,transparent 0%,rgba(255,255,255,0.18) 50%,transparent 100%)",
-                    animation: `shine-sweep ${5 + idx * 0.7}s ease-in-out infinite ${idx * 0.9}s` }} />
-                  {/* Brillo arco superior */}
-                  <div style={{ position: "absolute", top: 0, left: "10%", right: "10%", height: 14,
-                    borderRadius: "0 0 50% 50%", pointerEvents: "none",
-                    background: `radial-gradient(ellipse at 50% 0%, rgba(255,255,255,0.30) 0%, transparent 80%)` }} />
-                  <Icon size={22} style={{ color, filter: `drop-shadow(0 0 8px ${color}cc)`, position: "relative", zIndex: 1 }} />
-                </div>
-                {/* Sombra proyectada difusa bajo el botón */}
-                <div style={{ width: 36, height: 5, borderRadius: "50%", marginTop: -5,
-                  background: `radial-gradient(ellipse, ${glow} 0%, transparent 75%)`, opacity: 0.6 }} />
-                {/* Label */}
-                <span style={{ fontSize: 9.5, fontWeight: 700, color: "rgba(255,255,255,0.60)",
-                  letterSpacing: "0.05em", textAlign: "center", marginTop: -2 }}>
-                  {label}
-                </span>
-              </div>
-            </Link>
-          ))}
+      {/* ══ ACCESOS RÁPIDOS — cuadrícula 4×2 de botones circulares ═══════ */}
+      <div style={{ padding: "20px 14px 8px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "18px 8px" }}>
+          <CircleBtn icon={TreePine}      label="Árbol"       href="/tree"      color="240,192,64"  shadowColor="#3a2800" delay={0}    />
+          <CircleBtn icon={Sparkles}      label="Historias"   href="/historias" color="160,120,255" shadowColor="#06022a" delay={0.4}  />
+          <CircleBtn icon={BookOpen}      label="Recuerdos"   href="/events"    color="242,180,60"  shadowColor="#2a1400" delay={0.8}  />
+          <CircleBtn icon={MessageCircle} label="Chat"        href="/chat"      color="160,170,245" shadowColor="#050328" delay={1.2}  />
+          <CircleBtn icon={Lock}          label={"Cápsulas"}  href="/capsulas"  color="150,90,255"  shadowColor="#060010" delay={1.6}  />
+          <CircleBtn icon={Map}           label="Mapa"        href="/mapa"      color="80,220,250"  shadowColor="#02101e" delay={2.0}  />
+          <CircleBtn icon={Send}          label="Invitar"     href="/invitar"   color="212,175,55"  shadowColor="#362000" delay={2.4}  />
+          <CircleBtn icon={Trophy}        label="Logros"      href="/profile"   color="210,150,40"  shadowColor="#070500" delay={2.8}  />
         </div>
       </div>
 
@@ -1256,19 +1215,6 @@ export default function HomePage() {
             </div>
           </div>
         </Link>
-
-        {/* ── Accesos rápidos — botones circulares 3D ─────────────────── */}
-        <div style={{ display:"flex", justifyContent:"space-evenly", alignItems:"flex-start",
-          padding:"8px 4px 20px", overflowX:"visible" }}>
-          <CircleBtn icon={Lock}   label={"Cápsulas\ndel tiempo"} href="/capsulas"
-            color="150,90,255"  shadowColor="#060010" delay={0}   />
-          <CircleBtn icon={Map}    label={"Mapa\nfamiliar"}        href="/mapa"
-            color="100,140,210" shadowColor="#020410" delay={0.7} />
-          <CircleBtn icon={Send}   label={"Invitar\nfamilia"}      href="/invitar"
-            color="212,175,55"  shadowColor="#080600" delay={1.4} />
-          <CircleBtn icon={Trophy} label={"Logros\nfamiliares"}    href="/profile"
-            color="210,150,40"  shadowColor="#070500" delay={2.1} />
-        </div>
 
         {/* ── Coincidencias familiares ──────────────────────────────────── */}
         {suggestions.filter(s => !dismissedIds.has(s.id)).length > 0 && (
