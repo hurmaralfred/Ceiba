@@ -316,10 +316,11 @@ export default function HistoriasPage() {
                 </div>
               </div>
 
-              {/* Contenido scrollable */}
-              <div style={{ flex: 1, minHeight: 0, overflowY: "auto",
-                WebkitOverflowScrolling: "touch" as any, padding: "16px 20px 0" }}>
-                <div style={{ display: "flex", flexDirection: "column", gap: 14, paddingBottom: 8 }}>
+              {/* Contenido scrollable — botones incluidos para que siempre sean alcanzables */}
+              <div style={{ overflowY: "auto", WebkitOverflowScrolling: "touch" as any,
+                padding: "16px 20px 0", flex: 1, minHeight: 0 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 14,
+                  paddingBottom: "max(env(safe-area-inset-bottom), 24px)" }}>
 
                   {/* Foto opcional */}
                   <div>
@@ -386,34 +387,30 @@ export default function HistoriasPage() {
                       Visible para toda tu familia · Desaparece en 24 horas
                     </span>
                   </div>
-                </div>
-              </div>
 
-              {/* Botones */}
-              <div style={{
-                flexShrink: 0,
-                padding: "12px 20px max(env(safe-area-inset-bottom, 20px), 20px)",
-                background: "rgba(8,4,20,0.98)",
-                borderTop: "0.5px solid rgba(160,120,255,0.12)",
-              }}>
-                <div style={{ display: "flex", gap: 10 }}>
-                  <button onClick={closeModal}
-                    style={{ flex: 1, padding: "14px 0", borderRadius: 14, cursor: "pointer",
-                      background: "rgba(255,255,255,0.04)",
-                      border: "1px solid rgba(160,120,255,0.18)",
-                      color: "rgba(160,120,255,0.55)", fontWeight: 600, fontSize: 13 }}>
-                    Cancelar
-                  </button>
-                  <button onClick={save} disabled={saving}
-                    style={{ flex: 2, padding: "14px 0", borderRadius: 14,
-                      cursor: saving ? "wait" : "pointer",
-                      background: "linear-gradient(135deg, #a060f0 0%, #6030c0 100%)",
-                      border: "none",
-                      boxShadow: "0 4px 18px rgba(140,80,255,0.35), inset 0 1px 0 rgba(255,255,255,0.18)",
-                      color: "#fff", fontWeight: 800, fontSize: 14,
-                      letterSpacing: "0.02em", opacity: saving ? 0.6 : 1 }}>
-                    {saving ? "Compartiendo..." : "✦ Compartir historia"}
-                  </button>
+                  {/* ── Botón Publicar — dentro del scroll para que siempre sea visible ── */}
+                  <div style={{ borderTop: "0.5px solid rgba(160,120,255,0.12)", paddingTop: 14 }}>
+                    <button onClick={save} disabled={saving}
+                      style={{ width: "100%", padding: "17px 0", borderRadius: 16,
+                        cursor: saving ? "wait" : "pointer",
+                        background: saving
+                          ? "rgba(120,70,200,0.5)"
+                          : "linear-gradient(135deg, #a060f0 0%, #6030c0 100%)",
+                        border: "none",
+                        boxShadow: saving ? "none" : "0 6px 22px rgba(140,80,255,0.40), inset 0 1px 0 rgba(255,255,255,0.20)",
+                        color: "#fff", fontWeight: 800, fontSize: 16,
+                        letterSpacing: "0.01em" }}>
+                      {saving ? "Publicando..." : "Publicar historia"}
+                    </button>
+                    <button onClick={closeModal}
+                      style={{ width: "100%", marginTop: 10, padding: "14px 0", borderRadius: 14,
+                        cursor: "pointer", background: "transparent",
+                        border: "1px solid rgba(160,120,255,0.18)",
+                        color: "rgba(160,120,255,0.55)", fontWeight: 600, fontSize: 13 }}>
+                      Cancelar
+                    </button>
+                  </div>
+
                 </div>
               </div>
             </div>

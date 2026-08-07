@@ -450,10 +450,11 @@ export default function EventsPage() {
                 </div>
               </div>
 
-              {/* Contenido scrollable — min-height:0 permite que flex lo comprima */}
+              {/* Contenido scrollable — botones al final para que siempre sean alcanzables */}
               <div style={{ flex:1, minHeight:0, overflowY:"auto",
                 WebkitOverflowScrolling:"touch" as any, padding:"16px 20px 0" }}>
-                <div style={{ display:"flex", flexDirection:"column", gap:14, paddingBottom:8 }}>
+                <div style={{ display:"flex", flexDirection:"column", gap:14,
+                  paddingBottom:"max(env(safe-area-inset-bottom), 24px)" }}>
 
                   {/* Foto del recuerdo */}
                   {!editingId && (
@@ -537,34 +538,30 @@ export default function EventsPage() {
                       placeholder="Cuenta algo sobre este momento..."
                       value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
                   </div>
-                </div>
-              </div>
 
-              {/* Botones — flexShrink:0, siempre visibles al fondo */}
-              <div style={{
-                flexShrink:0,
-                padding:"12px 20px max(env(safe-area-inset-bottom, 20px), 20px)",
-                background:"rgba(6,3,16,0.98)",
-                borderTop:"0.5px solid rgba(242,180,60,0.12)",
-              }}>
-                <div style={{ display:"flex", gap:10 }}>
-                  <button onClick={closeModal}
-                    style={{ flex:1, padding:"14px 0", borderRadius:14, cursor:"pointer",
-                      background:"rgba(255,255,255,0.04)",
-                      border:"1px solid rgba(242,180,60,0.18)",
-                      color:"rgba(242,180,60,0.55)", fontWeight:600, fontSize:13 }}>
-                    Cancelar
-                  </button>
-                  <button onClick={saveEvent} disabled={saving}
-                    style={{ flex:2, padding:"14px 0", borderRadius:14,
-                      cursor:saving ? "wait" : "pointer",
-                      background:"linear-gradient(135deg, #f0c040 0%, #c8902a 100%)",
-                      border:"none",
-                      boxShadow:"0 4px 18px rgba(212,175,55,0.35), inset 0 1px 0 rgba(255,255,255,0.22)",
-                      color:"#0c0a18", fontWeight:800, fontSize:14,
-                      letterSpacing:"0.02em", opacity: saving ? 0.6 : 1 }}>
-                    {saving ? "Guardando..." : editingId ? "Guardar cambios" : photoFile ? "✦ Guardar con foto" : "✦ Guardar recuerdo"}
-                  </button>
+                  {/* ── Botón Publicar — dentro del scroll para que siempre sea visible ── */}
+                  <div style={{ borderTop:"0.5px solid rgba(242,180,60,0.12)", paddingTop:14 }}>
+                    <button onClick={saveEvent} disabled={saving}
+                      style={{ width:"100%", padding:"17px 0", borderRadius:16,
+                        cursor:saving ? "wait" : "pointer",
+                        background: saving
+                          ? "rgba(180,130,30,0.5)"
+                          : "linear-gradient(135deg, #f0c040 0%, #c8902a 100%)",
+                        border:"none",
+                        boxShadow: saving ? "none" : "0 6px 22px rgba(212,175,55,0.40), inset 0 1px 0 rgba(255,255,255,0.25)",
+                        color:"#0c0a18", fontWeight:800, fontSize:16,
+                        letterSpacing:"0.01em" }}>
+                      {saving ? "Publicando..." : editingId ? "Guardar cambios" : "Publicar recuerdo"}
+                    </button>
+                    <button onClick={closeModal}
+                      style={{ width:"100%", marginTop:10, padding:"14px 0", borderRadius:14,
+                        cursor:"pointer", background:"transparent",
+                        border:"1px solid rgba(242,180,60,0.18)",
+                        color:"rgba(242,180,60,0.55)", fontWeight:600, fontSize:13 }}>
+                      Cancelar
+                    </button>
+                  </div>
+
                 </div>
               </div>
             </div>
