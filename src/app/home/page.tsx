@@ -620,6 +620,12 @@ export default function HomePage() {
   const [myUserId,     setMyUserId]     = useState<string | null>(null);
   const [lightboxPhoto, setLightboxPhoto] = useState<FeedPhoto | null>(null);
 
+  // Force dark body background — globals.css uses cream which bleeds through
+  useEffect(() => {
+    document.body.style.background = '#030208';
+    return () => { document.body.style.background = ''; };
+  }, []);
+
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { router.push("/auth/login"); return; }
@@ -737,6 +743,58 @@ export default function HomePage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#030208", paddingBottom: 100, color: "#fff" }}>
+
+      {/* ── MARCO LUMINOSO VIVO ─────────────────────────────────────────── */}
+      <div style={{ position:"fixed", inset:0, pointerEvents:"none", zIndex:998, overflow:"hidden" }}>
+        <style>{`
+          @keyframes fglow{0%,100%{opacity:0.42}50%{opacity:1}}
+          @keyframes fglow2{0%,100%{opacity:0.55}50%{opacity:0.18}}
+        `}</style>
+        {/* Borde superior */}
+        <div style={{ position:"absolute",top:0,left:0,right:0,height:2.5,
+          background:"linear-gradient(90deg,transparent 4%,rgba(212,175,55,0.95) 25%,rgba(160,95,255,0.95) 55%,rgba(212,175,55,0.80) 80%,transparent 96%)",
+          animation:"fglow 2.6s ease-in-out infinite",
+          boxShadow:"0 0 10px rgba(212,175,55,0.7),0 0 28px rgba(212,175,55,0.25),0 0 50px rgba(160,95,255,0.15)" }} />
+        {/* Borde inferior */}
+        <div style={{ position:"absolute",bottom:0,left:0,right:0,height:2.5,
+          background:"linear-gradient(90deg,transparent 4%,rgba(160,95,255,0.95) 25%,rgba(212,175,55,0.95) 55%,rgba(160,95,255,0.80) 80%,transparent 96%)",
+          animation:"fglow 2.6s ease-in-out infinite 1.3s",
+          boxShadow:"0 0 10px rgba(160,95,255,0.7),0 0 28px rgba(160,95,255,0.25),0 0 50px rgba(212,175,55,0.15)" }} />
+        {/* Borde izquierdo */}
+        <div style={{ position:"absolute",top:0,bottom:0,left:0,width:2.5,
+          background:"linear-gradient(180deg,transparent 4%,rgba(212,175,55,0.90) 28%,rgba(160,95,255,0.75) 65%,transparent 96%)",
+          animation:"fglow 3.1s ease-in-out infinite 0.65s",
+          boxShadow:"0 0 10px rgba(212,175,55,0.5),0 0 22px rgba(212,175,55,0.18)" }} />
+        {/* Borde derecho */}
+        <div style={{ position:"absolute",top:0,bottom:0,right:0,width:2.5,
+          background:"linear-gradient(180deg,transparent 4%,rgba(160,95,255,0.90) 28%,rgba(212,175,55,0.75) 65%,transparent 96%)",
+          animation:"fglow 3.1s ease-in-out infinite 1.95s",
+          boxShadow:"0 0 10px rgba(160,95,255,0.5),0 0 22px rgba(160,95,255,0.18)" }} />
+        {/* Esquina sup-izq */}
+        <div style={{ position:"absolute",top:0,left:0,width:100,height:100,
+          background:"radial-gradient(circle at 0% 0%,rgba(212,175,55,0.50) 0%,transparent 72%)",
+          animation:"fglow 4s ease-in-out infinite" }} />
+        {/* Esquina sup-der */}
+        <div style={{ position:"absolute",top:0,right:0,width:100,height:100,
+          background:"radial-gradient(circle at 100% 0%,rgba(160,95,255,0.50) 0%,transparent 72%)",
+          animation:"fglow 4s ease-in-out infinite 2s" }} />
+        {/* Esquina inf-izq */}
+        <div style={{ position:"absolute",bottom:0,left:0,width:100,height:100,
+          background:"radial-gradient(circle at 0% 100%,rgba(160,95,255,0.40) 0%,transparent 72%)",
+          animation:"fglow 4s ease-in-out infinite 1s" }} />
+        {/* Esquina inf-der */}
+        <div style={{ position:"absolute",bottom:0,right:0,width:100,height:100,
+          background:"radial-gradient(circle at 100% 100%,rgba(212,175,55,0.40) 0%,transparent 72%)",
+          animation:"fglow 4s ease-in-out infinite 3s" }} />
+        {/* Destello viajero superior */}
+        <div style={{ position:"absolute",top:0,left:0,width:80,height:2.5,
+          background:"linear-gradient(90deg,transparent,rgba(255,255,255,0.9),transparent)",
+          animation:"fglow2 3.8s ease-in-out infinite 0.4s" }} />
+        {/* Destello viajero inferior */}
+        <div style={{ position:"absolute",bottom:0,right:0,width:80,height:2.5,
+          background:"linear-gradient(90deg,transparent,rgba(255,255,255,0.8),transparent)",
+          animation:"fglow2 3.8s ease-in-out infinite 2.2s" }} />
+      </div>
 
       {/* ── HERO ─────────────────────────────────────────────────────────── */}
       <GalaxyHero
@@ -973,7 +1031,7 @@ export default function HomePage() {
             textTransform: "uppercase", color: "rgba(212,175,55,0.45)", marginBottom: 14, paddingLeft: 2 }}>
             📸 Fotos de la familia
           </div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "center" }}>
             {photos.map((photo, idx) => (
               <div
                 key={photo.id}
