@@ -137,22 +137,17 @@ export async function GET(
     }
   }
 
-  // Get recent life events from the family space
-  const { data: allClaims } = await service
-    .from("person_claims")
-    .select("user_id")
-    .in("person_id", allPersonIds)
-    .eq("claim_status", "approved")
-    .is("revoked_at", null);
-
-  const familyUserIds = [...new Set([user.id, ...((allClaims ?? []) as any[]).map((c) => c.user_id as string)])];
-
-  const { data: events } = await service
-    .from("family_events")
-    .select("id, title, event_type, event_date, description, created_at")
-    .in("created_by", familyUserIds)
-    .order("event_date", { ascending: true })
-    .limit(8);
+  // Get events created by this specific person only
+  let events: any[] = [];
+  if (claim?.user_id) {
+    const { data: personEvents } = await service
+      .from("family_events")
+      .select("id, title, event_type, event_date, description, created_at")
+      .eq("created_by", claim.user_id)
+      .order("event_date", { ascending: true })
+      .limit(8);
+    events = (personEvents ?? []) as any[];
+  }
 
   return NextResponse.json({
     person: {
@@ -166,6 +161,6 @@ export async function GET(
     relatives,
     familyInCeiba,
     totalInSpace: allPersonIds.length,
-    events: (events ?? []) as any[],
+    events,
   });
 }
