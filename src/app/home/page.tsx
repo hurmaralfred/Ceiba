@@ -441,11 +441,11 @@ function GalaxyHero({ children, avatarInitial, avatarUrl, firstName, visibleCoun
 
 // ── Botón circular 3D flotante ────────────────────────────────────────────────
 const SPARKLE_POS = [
-  { top: -7,  left: 28 },
-  { top: 10,  left: 58 },
-  { top: 44,  left: 63 },
-  { top: 58,  left: 8  },
-  { top: 18,  left: -5 },
+  { top: -8,  left: 32 },
+  { top: 11,  left: 66 },
+  { top: 50,  left: 71 },
+  { top: 66,  left: 10 },
+  { top: 20,  left: -7 },
 ];
 function CircleBtn({ icon: Icon, label, href, color, shadowColor, delay = 0 }: {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -458,7 +458,7 @@ function CircleBtn({ icon: Icon, label, href, color, shadowColor, delay = 0 }: {
   return (
     <Link href={href} style={{ display:"flex", flexDirection:"column", alignItems:"center",
       gap:8, flexShrink:0, textDecoration:"none" }}>
-      <div style={{ position:"relative", width:64, height:64,
+      <div style={{ position:"relative", width:72, height:72,
         animation:`btn-float 3.8s ease-in-out infinite ${delay}s` }}>
         {SPARKLE_POS.map((p, i) => (
           <div key={i} style={{
@@ -470,24 +470,33 @@ function CircleBtn({ icon: Icon, label, href, color, shadowColor, delay = 0 }: {
           }}/>
         ))}
         <div style={{
-          width:64, height:64, borderRadius:"50%",
-          background:`radial-gradient(circle at 38% 28%, rgba(${color},0.32) 0%, rgba(4,1,10,0.94) 60%)`,
-          border:`1.5px solid rgba(${color},0.65)`,
+          width:72, height:72, borderRadius:"50%",
+          background:[
+            `radial-gradient(circle at 38% 28%, rgba(${color},0.55) 0%, rgba(${color},0.12) 40%, rgba(3,1,8,0.96) 70%)`,
+          ].join(","),
+          border:`2px solid rgba(${color},0.80)`,
           boxShadow:[
-            `0 7px 0 ${shadowColor}`,
-            `0 13px 28px rgba(0,0,0,0.92)`,
-            `0 0 26px rgba(${color},0.24)`,
-            `inset 0 1px 0 rgba(255,255,255,0.22)`,
-            `inset 0 -2px 5px rgba(0,0,0,0.55)`,
+            `0 10px 0 ${shadowColor}`,
+            `0 18px 36px rgba(0,0,0,0.95)`,
+            `0 0 40px rgba(${color},0.35)`,
+            `0 0 80px rgba(${color},0.12)`,
+            `inset 0 2px 0 rgba(255,255,255,0.32)`,
+            `inset 0 -3px 8px rgba(0,0,0,0.70)`,
+            `inset 2px 0 6px rgba(255,255,255,0.06)`,
           ].join(","),
           display:"flex", alignItems:"center", justifyContent:"center",
           position:"relative", overflow:"hidden",
         }}>
-          <div style={{ position:"absolute", top:0, left:"10%", right:"10%", height:"46%",
-            background:"radial-gradient(ellipse at 50% 0%, rgba(255,255,255,0.18) 0%, transparent 75%)",
+          {/* Top dome highlight */}
+          <div style={{ position:"absolute", top:0, left:"8%", right:"8%", height:"52%",
+            background:"radial-gradient(ellipse at 50% 0%, rgba(255,255,255,0.32) 0%, rgba(255,255,255,0.06) 55%, transparent 80%)",
             borderRadius:"50%", pointerEvents:"none" }}/>
-          <Icon size={22} style={{ color:`rgb(${color})`, position:"relative",
-            filter:`drop-shadow(0 0 7px rgba(${color},0.75))` }}/>
+          {/* Side rim light */}
+          <div style={{ position:"absolute", top:"12%", bottom:"12%", left:0, width:"18%",
+            background:"linear-gradient(to right, rgba(255,255,255,0.10) 0%, transparent 100%)",
+            borderRadius:"50% 0 0 50%", pointerEvents:"none" }}/>
+          <Icon size={26} style={{ color:`rgb(${color})`, position:"relative",
+            filter:`drop-shadow(0 0 10px rgba(${color},0.90)) drop-shadow(0 2px 4px rgba(0,0,0,0.8))` }}/>
         </div>
       </div>
       <span style={{ fontSize:10, fontWeight:700, color:"rgba(255,255,255,0.62)",
