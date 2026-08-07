@@ -227,6 +227,8 @@ function GalaxyHero({ children, avatarInitial, avatarUrl, firstName, visibleCoun
         @keyframes corona-pulse   { 0%,100%{opacity:0.35;transform:scale(1)} 50%{opacity:1;transform:scale(1.05)} }
         @keyframes home-ring-spin    { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
         @keyframes home-ring-breathe { 0%,100%{opacity:0.72;transform:scale(1)} 50%{opacity:1;transform:scale(1.055)} }
+        @keyframes btn-float { 0%,100%{transform:translateY(0px)} 50%{transform:translateY(-6px)} }
+        @keyframes spdot { 0%,100%{opacity:0;transform:scale(0.3)} 50%{opacity:1;transform:scale(1)} }
         a:active > div { transform: scale(0.97) translateY(1px) !important; }
         button:active { transform: scale(0.97) !important; }
       `}</style>
@@ -434,6 +436,66 @@ function GalaxyHero({ children, avatarInitial, avatarUrl, firstName, visibleCoun
       </div>
 
     </div>
+  );
+}
+
+// ── Botón circular 3D flotante ────────────────────────────────────────────────
+const SPARKLE_POS = [
+  { top: -7,  left: 28 },
+  { top: 10,  left: 58 },
+  { top: 44,  left: 63 },
+  { top: 58,  left: 8  },
+  { top: 18,  left: -5 },
+];
+function CircleBtn({ icon: Icon, label, href, color, shadowColor, delay = 0 }: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  icon: React.ComponentType<any>;
+  label: string; href: string;
+  color: string;    // "r,g,b"
+  shadowColor: string; // hex for 3D depth shadow
+  delay?: number;
+}) {
+  return (
+    <Link href={href} style={{ display:"flex", flexDirection:"column", alignItems:"center",
+      gap:8, flexShrink:0, textDecoration:"none" }}>
+      <div style={{ position:"relative", width:64, height:64,
+        animation:`btn-float 3.8s ease-in-out infinite ${delay}s` }}>
+        {SPARKLE_POS.map((p, i) => (
+          <div key={i} style={{
+            position:"absolute", top:p.top, left:p.left,
+            width:3.5, height:3.5, borderRadius:"50%",
+            background:`rgba(${color},0.95)`,
+            boxShadow:`0 0 6px rgba(${color},0.85)`,
+            animation:`spdot 2.4s ease-in-out infinite ${i * 0.48}s`,
+          }}/>
+        ))}
+        <div style={{
+          width:64, height:64, borderRadius:"50%",
+          background:`radial-gradient(circle at 38% 28%, rgba(${color},0.32) 0%, rgba(4,1,10,0.94) 60%)`,
+          border:`1.5px solid rgba(${color},0.65)`,
+          boxShadow:[
+            `0 7px 0 ${shadowColor}`,
+            `0 13px 28px rgba(0,0,0,0.92)`,
+            `0 0 26px rgba(${color},0.24)`,
+            `inset 0 1px 0 rgba(255,255,255,0.22)`,
+            `inset 0 -2px 5px rgba(0,0,0,0.55)`,
+          ].join(","),
+          display:"flex", alignItems:"center", justifyContent:"center",
+          position:"relative", overflow:"hidden",
+        }}>
+          <div style={{ position:"absolute", top:0, left:"10%", right:"10%", height:"46%",
+            background:"radial-gradient(ellipse at 50% 0%, rgba(255,255,255,0.18) 0%, transparent 75%)",
+            borderRadius:"50%", pointerEvents:"none" }}/>
+          <Icon size={22} style={{ color:`rgb(${color})`, position:"relative",
+            filter:`drop-shadow(0 0 7px rgba(${color},0.75))` }}/>
+        </div>
+      </div>
+      <span style={{ fontSize:10, fontWeight:700, color:"rgba(255,255,255,0.62)",
+        textAlign:"center", letterSpacing:"0.01em", lineHeight:1.35,
+        maxWidth:68, whiteSpace:"pre-line" }}>
+        {label}
+      </span>
+    </Link>
   );
 }
 
@@ -1186,75 +1248,18 @@ export default function HomePage() {
           </div>
         </Link>
 
-        {/* Cápsulas del tiempo */}
-        <Link href="/capsulas">
-          <div style={{ ...s3dCard("#080414","150,90,255","#020108",0.14), marginBottom: 9 }}>
-            <div style={{ position: "absolute", top: 0, left: "25%", right: "25%", height: 1,
-              background: "rgba(150,90,255,0.38)" }} />
-            <div style={{ position: "absolute", top: -8, right: -8, width: 70, height: 70,
-              borderRadius: "50%", background: "radial-gradient(circle,rgba(150,90,255,0.16) 0%,transparent 70%)",
-              pointerEvents: "none" }} />
-            <div style={{ padding: "13px 14px", display: "flex", alignItems: "center", gap: 12, position: "relative" }}>
-              <div style={{ width: 40, height: 40, borderRadius: 13, background: "#0a0618",
-                borderTop: "1.5px solid rgba(150,90,255,0.42)", borderBottom: "2px solid #020108",
-                borderLeft: "1px solid rgba(150,90,255,0.18)", borderRight: "1px solid rgba(0,0,0,0.55)",
-                boxShadow: "0 4px 0 #020108, 0 6px 10px rgba(0,0,0,0.65)",
-                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <Lock size={19} style={{ color: "#9660ff" }} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#fff", marginBottom: 2 }}>Cápsulas del tiempo</div>
-                <div style={{ fontSize: 10, color: "rgba(150,90,255,0.65)" }}>Mensajes que el tiempo guardará</div>
-              </div>
-              <ChevronRight size={18} style={{ color: "rgba(150,90,255,0.45)" }} />
-            </div>
-          </div>
-        </Link>
-
-        {/* Mapa familiar — neutro oscuro */}
-        <Link href="/mapa">
-          <div style={{ ...s3dCard("#0a0a14","130,130,160","#03030a"), marginBottom: 9 }}>
-            <div style={{ position: "absolute", top: 0, left: "25%", right: "25%", height: 1,
-              background: "rgba(130,130,160,0.25)" }} />
-            <div style={{ padding: "13px 14px", display: "flex", alignItems: "center", gap: 12, position: "relative" }}>
-              <div style={{ width: 40, height: 40, borderRadius: 13, background: "#0c0c1c",
-                borderTop: "1.5px solid rgba(130,130,160,0.32)", borderBottom: "2px solid #03030a",
-                borderLeft: "1px solid rgba(130,130,160,0.14)", borderRight: "1px solid rgba(0,0,0,0.55)",
-                boxShadow: "0 4px 0 #03030a, 0 6px 10px rgba(0,0,0,0.65)",
-                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <Map size={19} style={{ color: "#9898b8" }} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#fff", marginBottom: 2 }}>Mapa familiar</div>
-                <div style={{ fontSize: 10, color: "rgba(255,255,255,0.25)" }}>
-                  De dónde venimos · ciudades de origen
-                </div>
-              </div>
-              <ChevronRight size={18} style={{ color: "rgba(255,255,255,0.2)" }} />
-            </div>
-          </div>
-        </Link>
-
-        {/* Invitar — oro (acción principal) */}
-        <Link href="/invitar">
-          <div style={{ ...s3dCard("#0c0a02","212,175,55","#040300",0.14), marginBottom: 9 }}>
-            <div style={{ position: "absolute", top: 0, left: "25%", right: "25%", height: 1,
-              background: "rgba(212,175,55,0.4)" }} />
-            <div style={{ position: "absolute", top: -8, right: -8, width: 70, height: 70,
-              borderRadius: "50%", background: "radial-gradient(circle,rgba(212,175,55,0.14) 0%,transparent 70%)",
-              pointerEvents: "none" }} />
-            <div style={{ padding: "13px 14px", display: "flex", alignItems: "center", gap: 12, position: "relative" }}>
-              <div style={{ ...s3dIcon("#100c02","212,175,55","#040300"), marginBottom: 0, width: 40, height: 40, borderRadius: 13 }}>
-                <Send size={19} style={{ color: "#d4af37" }} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#fff", marginBottom: 2 }}>Invitar a mi familia</div>
-                <div style={{ fontSize: 10, color: "rgba(212,175,55,0.55)" }}>Haz crecer tu árbol familiar</div>
-              </div>
-              <ChevronRight size={18} style={{ color: "rgba(212,175,55,0.45)" }} />
-            </div>
-          </div>
-        </Link>
+        {/* ── Accesos rápidos — botones circulares 3D ─────────────────── */}
+        <div style={{ display:"flex", justifyContent:"space-evenly", alignItems:"flex-start",
+          padding:"8px 4px 20px", overflowX:"visible" }}>
+          <CircleBtn icon={Lock}   label={"Cápsulas\ndel tiempo"} href="/capsulas"
+            color="150,90,255"  shadowColor="#060010" delay={0}   />
+          <CircleBtn icon={Map}    label={"Mapa\nfamiliar"}        href="/mapa"
+            color="100,140,210" shadowColor="#020410" delay={0.7} />
+          <CircleBtn icon={Send}   label={"Invitar\nfamilia"}      href="/invitar"
+            color="212,175,55"  shadowColor="#080600" delay={1.4} />
+          <CircleBtn icon={Trophy} label={"Logros\nfamiliares"}    href="/profile"
+            color="210,150,40"  shadowColor="#070500" delay={2.1} />
+        </div>
 
         {/* ── Coincidencias familiares ──────────────────────────────────── */}
         {suggestions.filter(s => !dismissedIds.has(s.id)).length > 0 && (
@@ -1369,35 +1374,6 @@ export default function HomePage() {
         {/* Feed de cumpleaños — Sprint 0 */}
         <BirthdayCardFeed birthdays={allBirthdays} rosterPersonIds={rosterPersonIds} />
 
-        {/* Logros — oro oscuro */}
-        <Link href="/profile">
-          <div style={s3dCard("#0a0802","212,175,55","#030200")}>
-            <div style={{ position: "absolute", top: 0, left: "20%", right: "20%", height: 1,
-              background: "rgba(212,175,55,0.42)" }} />
-            <div style={{ padding: "13px 14px", display: "flex", alignItems: "center", gap: 12, position: "relative" }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.14em",
-                  textTransform: "uppercase", color: "rgba(212,175,55,0.52)", marginBottom: 4 }}>
-                  Logros familiares
-                </div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: "#fff", marginBottom: 8 }}>Tu árbol crece</div>
-                <div style={{ height: 5, background: "rgba(212,175,55,0.08)", borderRadius: 100, overflow: "hidden",
-                  boxShadow: "inset 0 1px 3px rgba(0,0,0,0.6)" }}>
-                  <div style={{
-                    width: `${Math.min(100, Math.round((visibleCount / 100) * 100))}%`,
-                    height: "100%", background: "#d4af37", borderRadius: 100,
-                    boxShadow: "0 0 8px rgba(212,175,55,0.6)",
-                    transition: "width 0.8s ease",
-                  }} />
-                </div>
-                <div style={{ fontSize: 9, color: "rgba(212,175,55,0.4)", marginTop: 5 }}>
-                  {visibleCount} de 100 familiares
-                </div>
-              </div>
-              <Trophy size={33} style={{ color: "#d4af37", flexShrink: 0 }} />
-            </div>
-          </div>
-        </Link>
       </div>
 
       {/* Navegación inferior cósmica */}
