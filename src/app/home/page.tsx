@@ -6,7 +6,7 @@ import { getDiceBearUrl } from "@/lib/dicebear";
 import {
   Home, TreePine, BookOpen, User, Bell, Menu,
   Users, GitBranch, Send,
-  Trophy, ChevronRight, Sparkles, X, MessageCircle, Map, Share2,
+  Trophy, ChevronRight, Sparkles, X, MessageCircle, Map, Share2, Lock,
 } from "lucide-react";
 import BirthdayCardFeed from "@/components/BirthdayCardFeed";
 import { useFamilyPresence } from "@/hooks/useFamilyPresence";
@@ -322,6 +322,25 @@ function GalaxyHero({ children, avatarInitial, avatarUrl, firstName, visibleCoun
             style={{ animation:"section-glow 12s ease-in-out infinite 3s" }}/>
           <circle cx="150" cy="150" r="132" fill="none" stroke="rgba(212,175,55,0.02)" strokeWidth="0.3"
             style={{ animation:"section-glow 15s ease-in-out infinite 6s" }}/>
+          {/* Background gas giants — very slow drift, appear behind orbital rings */}
+          <g transform="translate(150,150)" style={{ transformOrigin:"0px 0px", animation:"orbit-ring-cw 265s linear infinite -55s" }}>
+            <circle cx="70" cy="-54" r="26" fill="rgba(200,100,18,0.86)" style={{ filter:"drop-shadow(0 0 18px rgba(200,120,48,0.82))" }}/>
+            <ellipse cx="70" cy="-50" rx="26" ry="5.5" fill="rgba(255,195,75,0.24)"/>
+            <ellipse cx="70" cy="-58" rx="26" ry="4" fill="rgba(130,45,0,0.22)"/>
+            <circle cx="61" cy="-63" r="9" fill="white" opacity="0.18"/>
+            <circle cx="70" cy="-54" r="38" fill="rgba(200,100,18,0.06)"/>
+          </g>
+          <g transform="translate(150,150)" style={{ transformOrigin:"0px 0px", animation:"orbit-ring-ccw 188s linear infinite -35s" }}>
+            <circle cx="-74" cy="56" r="17" fill="rgba(88,148,228,0.82)" style={{ filter:"drop-shadow(0 0 11px rgba(110,170,255,0.68))" }}/>
+            <circle cx="-81" cy="49" r="6" fill="white" opacity="0.22"/>
+            <ellipse cx="-74" cy="56" rx="27" ry="6" fill="none" stroke="rgba(150,200,255,0.38)" strokeWidth="2.5"/>
+            <circle cx="-74" cy="56" r="26" fill="rgba(88,148,228,0.05)"/>
+          </g>
+          <g transform="translate(150,150)" style={{ transformOrigin:"0px 0px", animation:"orbit-ring-cw 318s linear infinite -90s" }}>
+            <circle cx="-50" cy="-71" r="12" fill="rgba(160,120,228,0.84)" style={{ filter:"drop-shadow(0 0 9px rgba(180,140,255,0.72))" }}/>
+            <circle cx="-57" cy="-78" r="4.5" fill="white" opacity="0.24"/>
+            <circle cx="-50" cy="-71" r="20" fill="rgba(160,120,228,0.06)"/>
+          </g>
           {/* Inner orbit — 4 intimate planets, 65s CW */}
           <g transform="translate(150,150)" style={{ transformOrigin:"0px 0px", animation:"orbit-ring-cw 65s linear infinite" }}>
             {ORBIT_INNER.map((n,i) => (
@@ -1059,6 +1078,9 @@ export default function HomePage() {
             @keyframes pf3{0%,100%{transform:translateY(0px) rotate(0.5deg)}50%{transform:translateY(-6px) rotate(-0.3deg)}}
             @keyframes pf4{0%,100%{transform:translateY(0px) rotate(-0.4deg)}50%{transform:translateY(-7px) rotate(0.2deg)}}
             @keyframes pf5{0%,100%{transform:translateY(0px) rotate(0.3deg)}50%{transform:translateY(-5px) rotate(-0.4deg)}}
+            @keyframes pglow0{0%,100%{box-shadow:0 14px 30px rgba(0,0,0,0.75),0 5px 10px rgba(0,0,0,0.55),inset 0 1px 0 rgba(255,255,255,0.12),0 0 0 2px rgba(212,175,55,0.22),0 0 12px rgba(212,175,55,0.10)}50%{box-shadow:0 14px 30px rgba(0,0,0,0.75),0 5px 10px rgba(0,0,0,0.55),inset 0 1px 0 rgba(255,255,255,0.12),0 0 0 2px rgba(212,175,55,0.72),0 0 30px rgba(212,175,55,0.40),0 0 60px rgba(212,175,55,0.12)}}
+            @keyframes pglow1{0%,100%{box-shadow:0 14px 30px rgba(0,0,0,0.75),0 5px 10px rgba(0,0,0,0.55),inset 0 1px 0 rgba(255,255,255,0.12),0 0 0 2px rgba(255,200,80,0.18),0 0 10px rgba(255,200,80,0.08)}50%{box-shadow:0 14px 30px rgba(0,0,0,0.75),0 5px 10px rgba(0,0,0,0.55),inset 0 1px 0 rgba(255,255,255,0.12),0 0 0 2px rgba(255,200,80,0.68),0 0 26px rgba(255,200,80,0.36),0 0 50px rgba(255,200,80,0.10)}}
+            @keyframes pglow2{0%,100%{box-shadow:0 14px 30px rgba(0,0,0,0.75),0 5px 10px rgba(0,0,0,0.55),inset 0 1px 0 rgba(255,255,255,0.12),0 0 0 2px rgba(180,140,255,0.20),0 0 10px rgba(180,140,255,0.08)}50%{box-shadow:0 14px 30px rgba(0,0,0,0.75),0 5px 10px rgba(0,0,0,0.55),inset 0 1px 0 rgba(255,255,255,0.12),0 0 0 2px rgba(180,140,255,0.62),0 0 24px rgba(180,140,255,0.32),0 0 46px rgba(180,140,255,0.08)}}
           `}</style>
           <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.18em",
             textTransform: "uppercase", color: "rgba(212,175,55,0.45)", marginBottom: 14, paddingLeft: 2 }}>
@@ -1077,13 +1099,7 @@ export default function HomePage() {
                   cursor: "pointer",
                   position: "relative",
                   flexShrink: 0,
-                  boxShadow: [
-                    "0 14px 30px rgba(0,0,0,0.75)",
-                    "0 5px 10px rgba(0,0,0,0.55)",
-                    "0 0 0 1px rgba(212,175,55,0.18)",
-                    "inset 0 1px 0 rgba(255,255,255,0.12)",
-                  ].join(", "),
-                  animation: `pf${idx % 6} ${3.8 + (idx % 3) * 0.55}s ease-in-out infinite ${(idx % 5) * 0.5}s`,
+                  animation: `pf${idx % 6} ${3.8 + (idx % 3) * 0.55}s ease-in-out infinite ${(idx % 5) * 0.5}s, pglow${idx % 3} ${2.8 + (idx % 3) * 0.7}s ease-in-out infinite ${(idx % 4) * 0.8}s`,
                   willChange: "transform",
                 }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1166,6 +1182,31 @@ export default function HomePage() {
                   Abrir
                 </span>
               </div>
+            </div>
+          </div>
+        </Link>
+
+        {/* Cápsulas del tiempo */}
+        <Link href="/capsulas">
+          <div style={{ ...s3dCard("#080414","150,90,255","#020108",0.14), marginBottom: 9 }}>
+            <div style={{ position: "absolute", top: 0, left: "25%", right: "25%", height: 1,
+              background: "rgba(150,90,255,0.38)" }} />
+            <div style={{ position: "absolute", top: -8, right: -8, width: 70, height: 70,
+              borderRadius: "50%", background: "radial-gradient(circle,rgba(150,90,255,0.16) 0%,transparent 70%)",
+              pointerEvents: "none" }} />
+            <div style={{ padding: "13px 14px", display: "flex", alignItems: "center", gap: 12, position: "relative" }}>
+              <div style={{ width: 40, height: 40, borderRadius: 13, background: "#0a0618",
+                borderTop: "1.5px solid rgba(150,90,255,0.42)", borderBottom: "2px solid #020108",
+                borderLeft: "1px solid rgba(150,90,255,0.18)", borderRight: "1px solid rgba(0,0,0,0.55)",
+                boxShadow: "0 4px 0 #020108, 0 6px 10px rgba(0,0,0,0.65)",
+                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Lock size={19} style={{ color: "#9660ff" }} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#fff", marginBottom: 2 }}>Cápsulas del tiempo</div>
+                <div style={{ fontSize: 10, color: "rgba(150,90,255,0.65)" }}>Mensajes que el tiempo guardará</div>
+              </div>
+              <ChevronRight size={18} style={{ color: "rgba(150,90,255,0.45)" }} />
             </div>
           </div>
         </Link>
