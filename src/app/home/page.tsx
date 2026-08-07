@@ -912,64 +912,8 @@ export default function HomePage() {
           </Link>
         )}
 
-        {/* — Caso B: Foto reciente (últimas 24h) — tarjeta compacta */}
-        {!todayBirthday && photos.length > 0 && (() => {
-          const recent = photos.find(p => (Date.now() - new Date(p.created_at).getTime()) < 86_400_000);
-          if (!recent) return null;
-          return (
-            <div onClick={() => setLightboxPhoto(recent)} style={{ cursor: "pointer" }}>
-              <div style={{
-                borderRadius: 18, background: "#0a0710", position: "relative", overflow: "hidden",
-                borderTop: "1.5px solid rgba(200,120,48,0.45)",
-                borderLeft: "1px solid rgba(200,120,48,0.18)",
-                borderBottom: "3px solid #030104",
-                borderRight: "1px solid rgba(0,0,0,0.6)",
-                boxShadow: "0 6px 0 #030104, 0 12px 28px rgba(0,0,0,0.80), 0 0 24px rgba(160,100,40,0.10)",
-                padding: "12px 14px",
-                display: "flex", alignItems: "center", gap: 14,
-              }}>
-                {/* Thumbnail cuadrado */}
-                {recent.url && (
-                  <div style={{ width: 72, height: 72, borderRadius: 14, overflow: "hidden", flexShrink: 0,
-                    border: "1.5px solid rgba(200,120,48,0.30)",
-                    boxShadow: "0 4px 12px rgba(0,0,0,0.60)" }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={recent.url} alt=""
-                      style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                  </div>
-                )}
-                {/* Contenido */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.14em",
-                    textTransform: "uppercase", color: "rgba(200,120,48,0.70)", marginBottom: 5 }}>
-                    📸 Foto reciente
-                  </div>
-                  {recent.caption && (
-                    <div style={{ fontSize: 14, fontWeight: 700, color: "#F5EDD8", lineHeight: 1.25,
-                      overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2,
-                      WebkitBoxOrient: "vertical" as const }}>
-                      {recent.caption}
-                    </div>
-                  )}
-                  <div style={{ fontSize: 10, color: "rgba(200,120,48,0.55)", marginTop: 6, fontWeight: 600 }}>
-                    Toca para verla completa →
-                  </div>
-                </div>
-                {/* Badge nueva */}
-                <div style={{ position: "absolute", top: 10, right: 12,
-                  background: "rgba(200,120,48,0.12)", border: "0.5px solid rgba(200,120,48,0.35)",
-                  borderRadius: 100, padding: "2px 8px",
-                  fontSize: 8, fontWeight: 800, letterSpacing: "0.12em", color: "#c87830",
-                  textTransform: "uppercase" }}>
-                  Nueva
-                </div>
-              </div>
-            </div>
-          );
-        })()}
-
         {/* — Caso C: Próximo cumpleaños (≤ 7 días) — card dominante */}
-        {!todayBirthday && !(photos.find(p => (Date.now() - new Date(p.created_at).getTime()) < 86_400_000)) && upcomingBirthday && upcomingBirthday.days <= 7 && (
+        {!todayBirthday && upcomingBirthday && upcomingBirthday.days <= 7 && (
           <Link href={`/persona/${upcomingBirthday.person_id}`}>
             <div style={{
               borderRadius: 22, background: "linear-gradient(145deg,#0e0a00 0%,#080600 100%)",
@@ -1007,7 +951,7 @@ export default function HomePage() {
         )}
 
         {/* — Caso D: Momento del día — siempre específico, nunca genérico */}
-        {!todayBirthday && !(photos.find(p => (Date.now() - new Date(p.created_at).getTime()) < 86_400_000)) && !(upcomingBirthday && upcomingBirthday.days <= 7) && (
+        {!todayBirthday && !(upcomingBirthday && upcomingBirthday.days <= 7) && (
           <Link href={events.length > 0 ? "/events" : "/tree"} style={{ textDecoration: "none" }}>
             <div style={{
               borderRadius: 22,
@@ -1104,6 +1048,67 @@ export default function HomePage() {
           ))}
         </div>
       </div>
+
+      {/* ── GALERÍA FAMILIAR ─────────────────────────────────────────────── */}
+      {photos.length > 0 && (
+        <div style={{ padding: "20px 14px 8px" }}>
+          <style>{`
+            @keyframes pf0{0%,100%{transform:translateY(0px) rotate(-0.5deg)}50%{transform:translateY(-7px) rotate(0.3deg)}}
+            @keyframes pf1{0%,100%{transform:translateY(0px) rotate(0.4deg)}50%{transform:translateY(-5px) rotate(-0.2deg)}}
+            @keyframes pf2{0%,100%{transform:translateY(0px) rotate(-0.3deg)}50%{transform:translateY(-8px) rotate(0.4deg)}}
+            @keyframes pf3{0%,100%{transform:translateY(0px) rotate(0.5deg)}50%{transform:translateY(-6px) rotate(-0.3deg)}}
+            @keyframes pf4{0%,100%{transform:translateY(0px) rotate(-0.4deg)}50%{transform:translateY(-7px) rotate(0.2deg)}}
+            @keyframes pf5{0%,100%{transform:translateY(0px) rotate(0.3deg)}50%{transform:translateY(-5px) rotate(-0.4deg)}}
+          `}</style>
+          <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.18em",
+            textTransform: "uppercase", color: "rgba(212,175,55,0.45)", marginBottom: 14, paddingLeft: 2 }}>
+            📸 Fotos de la familia
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+            {photos.map((photo, idx) => (
+              <div
+                key={photo.id}
+                onClick={() => setLightboxPhoto(photo)}
+                style={{
+                  width: "calc(33.33% - 7px)",
+                  aspectRatio: "1",
+                  borderRadius: 16,
+                  overflow: "hidden",
+                  cursor: "pointer",
+                  position: "relative",
+                  flexShrink: 0,
+                  boxShadow: [
+                    "0 14px 30px rgba(0,0,0,0.75)",
+                    "0 5px 10px rgba(0,0,0,0.55)",
+                    "0 0 0 1px rgba(212,175,55,0.18)",
+                    "inset 0 1px 0 rgba(255,255,255,0.12)",
+                  ].join(", "),
+                  animation: `pf${idx % 6} ${3.8 + (idx % 3) * 0.55}s ease-in-out infinite ${(idx % 5) * 0.5}s`,
+                  willChange: "transform",
+                }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={photo.url} alt={photo.caption ?? ""}
+                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                {/* Brillo superior — simula luz */}
+                <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "45%",
+                  background: "linear-gradient(to bottom, rgba(255,255,255,0.13) 0%, transparent 100%)",
+                  borderRadius: "16px 16px 0 0", pointerEvents: "none" }} />
+                {/* Caption al fondo si existe */}
+                {photo.caption && (
+                  <div style={{ position: "absolute", bottom: 0, left: 0, right: 0,
+                    background: "linear-gradient(to top, rgba(3,2,8,0.88) 0%, transparent 100%)",
+                    padding: "20px 7px 6px",
+                    fontSize: 8.5, fontWeight: 600, color: "rgba(255,255,255,0.72)",
+                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                    pointerEvents: "none" }}>
+                    {photo.caption}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── FUNCIONES ────────────────────────────────────────────────────── */}
       <div style={{ padding: "16px 14px 14px", position: "relative" }}>
