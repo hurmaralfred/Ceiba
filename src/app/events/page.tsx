@@ -304,148 +304,164 @@ export default function EventsPage() {
             </div>
           )}
 
-          {/* ── Cinematic timeline ────────────────────────────────────────── */}
+          {/* ── Muro familiar ─────────────────────────────────────────────── */}
           {years.map((year, yi) => (
             <div key={year}>
 
-              {/* Year chapter separator */}
-              <div style={{ display:"flex", alignItems:"center", gap:14,
-                padding: yi === 0 ? "12px 0 20px" : "32px 0 20px" }}>
-                <div style={{ height:0.5, width:24,
-                  background:"linear-gradient(90deg, transparent, rgba(242,180,60,0.22))" }} />
-                <span style={{ fontSize:11, fontWeight:700, letterSpacing:"0.20em",
-                  color:"rgba(242,180,60,0.50)", textTransform:"uppercase", flexShrink:0 }}>
-                  {year}
-                </span>
-                <div style={{ flex:1, height:0.5,
-                  background:"linear-gradient(90deg, rgba(242,180,60,0.22), transparent)" }} />
+              {/* Year pill separator */}
+              <div style={{ display:"flex", alignItems:"center", gap:10,
+                padding: yi === 0 ? "6px 0 16px" : "22px 0 16px" }}>
+                <div style={{ flex:1, height:"0.5px",
+                  background:"linear-gradient(90deg, transparent, rgba(242,180,60,0.18))" }} />
+                <div style={{ padding:"4px 14px",
+                  background:"rgba(242,180,60,0.07)",
+                  border:"0.5px solid rgba(242,180,60,0.25)", borderRadius:100 }}>
+                  <span style={{ fontSize:10, fontWeight:800, letterSpacing:"0.22em",
+                    color:"rgba(242,180,60,0.60)", textTransform:"uppercase" }}>
+                    {year}
+                  </span>
+                </div>
+                <div style={{ flex:1, height:"0.5px",
+                  background:"linear-gradient(90deg, rgba(242,180,60,0.18), transparent)" }} />
               </div>
 
-              {/* Events for this year */}
               {byYear[year].map((event, ei) => {
                 const t = getTypeInfo(event.event_type);
                 const phrase = contextPhrase(event);
-                // Buscar foto asociada por caption coincidente (se sube junto al evento)
                 const eventTs = new Date(event.created_at).getTime();
                 const linkedPhoto = familyPhotos.find(p =>
                   p.caption?.trim().toLowerCase() === event.title.trim().toLowerCase() &&
                   Math.abs(new Date(p.created_at).getTime() - eventTs) < 120_000
                 );
+                const isOwn = event.created_by === userId;
+
                 return (
                   <div key={event.id} style={{
-                    background:"rgba(8,5,18,0.85)",
-                    backdropFilter:"blur(22px)", WebkitBackdropFilter:"blur(22px)",
-                    border:`0.5px solid rgba(${t.accentRgb},0.12)`,
-                    borderTop:`0.5px solid rgba(${t.accentRgb},0.32)`,
-                    borderRadius:22,
-                    padding:"22px 18px 18px",
-                    marginBottom:10,
+                    background:"rgba(9,6,22,0.92)",
+                    borderRadius:20,
+                    marginBottom:14,
+                    overflow:"hidden",
+                    boxShadow:`0 4px 24px rgba(0,0,0,0.55), 0 0 0 0.5px rgba(${t.accentRgb},0.15)`,
                     animation:`mem-card-in 0.45s ease ${(yi * 3 + ei) * 70}ms both`,
-                    boxShadow:"0 8px 32px rgba(0,0,0,0.50)",
                   }}>
 
-                    {/* Eyebrow: date + context phrase */}
-                    <div style={{ display:"flex", alignItems:"baseline", justifyContent:"space-between",
-                      marginBottom:14 }}>
-                      <div style={{ display:"flex", alignItems:"baseline", gap:10 }}>
-                        <span style={{ fontSize:10, fontWeight:700, letterSpacing:"0.16em",
-                          textTransform:"uppercase", color:`rgba(${t.accentRgb},0.75)` }}>
-                          {formatDay(event.event_date)}
-                        </span>
-                        <span style={{ fontSize:10, color:"rgba(255,255,255,0.22)", letterSpacing:"0.03em",
-                          fontStyle:"italic" }}>
-                          {phrase}
-                        </span>
+                    {/* ── Post header: avatar + nombre + tipo + fecha ── */}
+                    <div style={{ display:"flex", alignItems:"center",
+                      padding:"13px 14px 12px", gap:10 }}>
+                      {/* Avatar */}
+                      <div style={{
+                        width:42, height:42, borderRadius:"50%", flexShrink:0, overflow:"hidden",
+                        background:`radial-gradient(circle at 35% 28%, rgba(${t.accentRgb},0.25) 0%, rgba(8,5,18,0.95) 70%)`,
+                        border:`1.5px solid rgba(${t.accentRgb},0.40)`,
+                        display:"flex", alignItems:"center", justifyContent:"center",
+                        fontSize:14, fontWeight:800, color:t.iconColor,
+                      }}>
+                        {event.creator?.photo_path
+                          // eslint-disable-next-line @next/next/no-img-element
+                          ? <img src={event.creator.photo_path} style={{ width:"100%", height:"100%", objectFit:"cover" }} alt="" />
+                          : `${event.creator?.first_name?.[0] ?? "?"}${event.creator?.last_name?.[0] ?? ""}`}
                       </div>
-                      {/* Edit/delete — owner only */}
-                      {event.created_by === userId && (
-                        <div style={{ display:"flex", gap:6 }}>
+
+                      {/* Nombre + tipo + fecha */}
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ fontSize:13, fontWeight:700, color:"#F5EDD8",
+                          letterSpacing:"-0.01em", lineHeight:1.2 }}>
+                          {event.creator?.first_name || "Un familiar"}{event.creator?.last_name ? ` ${event.creator.last_name}` : ""}
+                        </div>
+                        <div style={{ display:"flex", alignItems:"center", gap:5, marginTop:3, flexWrap:"wrap" as const }}>
+                          {/* Tipo pill */}
+                          <div style={{ display:"flex", alignItems:"center", gap:3,
+                            background:`rgba(${t.accentRgb},0.10)`,
+                            border:`0.5px solid rgba(${t.accentRgb},0.28)`,
+                            borderRadius:100, padding:"2px 7px 2px 5px" }}>
+                            <t.Icon size={8} style={{ color:t.iconColor }} />
+                            <span style={{ fontSize:8.5, color:t.iconColor, fontWeight:700,
+                              letterSpacing:"0.07em", textTransform:"uppercase" as const }}>
+                              {t.label}
+                            </span>
+                          </div>
+                          <span style={{ fontSize:9, color:"rgba(255,255,255,0.22)" }}>·</span>
+                          <span style={{ fontSize:9, color:"rgba(255,255,255,0.30)" }}>
+                            {longDate(event.event_date)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Editar / eliminar — solo el autor */}
+                      {isOwn && (
+                        <div style={{ display:"flex", gap:5, flexShrink:0 }}>
                           <button onClick={() => openEdit(event)}
-                            style={{ display:"flex", alignItems:"center", gap:4,
+                            style={{ width:30, height:30, display:"flex", alignItems:"center",
+                              justifyContent:"center",
                               background:"rgba(242,180,60,0.08)", border:"1px solid rgba(242,180,60,0.22)",
-                              borderRadius:8, cursor:"pointer",
-                              color:"rgba(242,180,60,0.75)", padding:"4px 8px", lineHeight:0 }}>
-                            <Pencil size={11} />
+                              borderRadius:8, cursor:"pointer", color:"rgba(242,180,60,0.75)" }}>
+                            <Pencil size={12} />
                           </button>
                           <button onClick={() => deleteEvent(event.id)}
-                            style={{ display:"flex", alignItems:"center", gap:4,
+                            style={{ width:30, height:30, display:"flex", alignItems:"center",
+                              justifyContent:"center",
                               background:"rgba(220,60,80,0.08)", border:"1px solid rgba(220,60,80,0.22)",
-                              borderRadius:8, cursor:"pointer",
-                              color:"rgba(220,60,80,0.75)", padding:"4px 8px", lineHeight:0 }}>
-                            <Trash2 size={11} />
+                              borderRadius:8, cursor:"pointer", color:"rgba(220,60,80,0.75)" }}>
+                            <Trash2 size={12} />
                           </button>
                         </div>
                       )}
                     </div>
 
-                    {/* Foto asociada al recuerdo */}
+                    {/* ── Foto full-width (si existe) ─────────────────── */}
                     {linkedPhoto && (
-                      <div style={{ margin:"0 -18px 16px", overflow:"hidden",
-                        borderBottom:"0.5px solid rgba(255,255,255,0.06)" }}>
+                      <div
+                        onClick={() => setLightboxUrl({ url: linkedPhoto.url, photoId: linkedPhoto.id, ownPhoto: linkedPhoto.uploader_user_id === userId })}
+                        style={{ cursor:"pointer", position:"relative" as const, lineHeight:0 }}>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={linkedPhoto.url}
-                          alt=""
-                          onClick={() => setLightboxUrl({ url: linkedPhoto.url, photoId: linkedPhoto.id, ownPhoto: linkedPhoto.uploader_user_id === userId })}
-                          style={{ width:"100%", maxHeight:220, objectFit:"contain",
-                            background:"#050210", display:"block", cursor:"pointer" }}
-                        />
-                        <div style={{ padding:"6px 18px 0",
-                          fontSize:10, color:"rgba(255,255,255,0.25)", letterSpacing:"0.04em" }}>
-                          Toca para ver completa
+                        <img src={linkedPhoto.url} alt=""
+                          style={{ width:"100%", maxHeight:340, objectFit:"cover",
+                            display:"block", minHeight:160 }} />
+                        {/* Gradient bottom overlay */}
+                        <div style={{ position:"absolute" as const, bottom:0, left:0, right:0, height:50,
+                          background:"linear-gradient(to top, rgba(9,6,22,0.70) 0%, transparent 100%)",
+                          pointerEvents:"none" }} />
+                        {/* Hint */}
+                        <div style={{ position:"absolute" as const, bottom:8, right:12,
+                          fontSize:9, color:"rgba(255,255,255,0.40)", fontWeight:500,
+                          letterSpacing:"0.04em" }}>
+                          Toca para ampliar
                         </div>
                       </div>
                     )}
 
-                    {/* Title — editorial, large */}
-                    <h2 style={{ fontSize:20, fontWeight:700, color:"#F5EDD8",
-                      lineHeight:1.25, letterSpacing:"-0.01em",
-                      marginBottom: event.description ? 12 : 16 }}>
-                      {event.title}
-                    </h2>
-
-                    {/* Description — if present, generous space */}
-                    {event.description && (
-                      <p style={{ fontSize:14, color:"rgba(255,255,255,0.48)", lineHeight:1.80,
-                        marginBottom:16, fontStyle:"italic" }}>
-                        {event.description}
-                      </p>
-                    )}
-
-                    {/* Footer: location + creator */}
-                    <div style={{ display:"flex", alignItems:"center", gap:14,
-                      paddingTop:12, borderTop:"0.5px solid rgba(242,180,60,0.06)" }}>
-                      {event.location && (
-                        <span style={{ display:"flex", alignItems:"center", gap:4, fontSize:10,
-                          color:"rgba(255,255,255,0.25)", letterSpacing:"0.04em", flex:1,
-                          overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
-                          <MapPin size={9} style={{ flexShrink:0 }} />
-                          {event.location}
-                        </span>
+                    {/* ── Contenido ───────────────────────────────────── */}
+                    <div style={{ padding: linkedPhoto ? "12px 16px 16px" : "4px 16px 16px" }}>
+                      {phrase && (
+                        <div style={{ fontSize:10, color:`rgba(${t.accentRgb},0.55)`,
+                          fontStyle:"italic", marginBottom:6, letterSpacing:"0.02em" }}>
+                          {phrase}
+                        </div>
                       )}
-                      <div style={{ display:"flex", alignItems:"center", gap:6, flexShrink:0,
-                        marginLeft: event.location ? 0 : "auto" }}>
-                        {/* Creator luminous sphere */}
-                        <div style={{ position:"relative", width:22, height:22 }}>
-                          <div style={{ position:"absolute", inset:-4, borderRadius:"50%",
-                            background:"radial-gradient(circle,rgba(242,180,60,0.15) 0%,transparent 68%)",
-                            filter:"blur(3px)" }} />
-                          <div style={{ width:22, height:22, borderRadius:"50%", position:"relative",
-                            background:"radial-gradient(circle at 35% 28%, rgba(242,180,60,0.20) 0%, rgba(8,5,18,0.97) 65%)",
-                            border:"1px solid rgba(242,180,60,0.22)",
-                            display:"flex", alignItems:"center", justifyContent:"center",
-                            fontSize:8, fontWeight:600, color:"#F2B43C", overflow:"hidden" }}>
-                            {event.creator?.photo_path
-                              // eslint-disable-next-line @next/next/no-img-element
-                              ? <img src={event.creator.photo_path} style={{ width:"100%", height:"100%", objectFit:"cover" }} alt="" />
-                              : `${event.creator?.first_name?.[0] ?? ""}${event.creator?.last_name?.[0] ?? ""}`}
-                          </div>
+                      <h2 style={{ fontSize:17, fontWeight:800, color:"#F5EDD8",
+                        lineHeight:1.30, letterSpacing:"-0.01em",
+                        marginBottom: event.description ? 8 : 0 }}>
+                        {event.title}
+                      </h2>
+                      {event.description && (
+                        <p style={{ fontSize:13, color:"rgba(255,255,255,0.50)",
+                          lineHeight:1.80, margin:0 }}>
+                          {event.description}
+                        </p>
+                      )}
+                      {event.location && (
+                        <div style={{ display:"flex", alignItems:"center", gap:5,
+                          marginTop:10, paddingTop:10,
+                          borderTop:"0.5px solid rgba(255,255,255,0.05)" }}>
+                          <MapPin size={9} style={{ color:"rgba(255,255,255,0.25)", flexShrink:0 }} />
+                          <span style={{ fontSize:10, color:"rgba(255,255,255,0.30)",
+                            overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" as const }}>
+                            {event.location}
+                          </span>
                         </div>
-                        <span style={{ fontSize:10, color:"rgba(242,180,60,0.35)", letterSpacing:"0.03em" }}>
-                          {event.creator?.first_name || "Un familiar"}
-                        </span>
-                      </div>
+                      )}
                     </div>
+
                   </div>
                 );
               })}

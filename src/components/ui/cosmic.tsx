@@ -172,6 +172,8 @@ const NAV_ITEMS: Array<{ href: string; Icon: LucideIcon; label: string; center?:
 export function CosmicNav() {
   const pathname = usePathname();
   const [suggCount, setSuggCount] = useState(0);
+  const [badgeHistoria, setBadgeHistoria] = useState(false);
+  const [badgeRecuerdo, setBadgeRecuerdo] = useState(false);
 
   useEffect(() => {
     fetch("/api/suggestions")
@@ -179,6 +181,35 @@ export function CosmicNav() {
       .then(d => setSuggCount((d.suggestions ?? []).length))
       .catch(() => {});
   }, []);
+
+  // Inicializar desde localStorage y escuchar eventos custom
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setBadgeHistoria(localStorage.getItem("ceiba-badge-historia") === "1");
+    setBadgeRecuerdo(localStorage.getItem("ceiba-badge-recuerdo") === "1");
+
+    const onNewHistoria = () => setBadgeHistoria(true);
+    const onNewRecuerdo = () => setBadgeRecuerdo(true);
+    window.addEventListener("ceiba:new-historia", onNewHistoria);
+    window.addEventListener("ceiba:new-recuerdo", onNewRecuerdo);
+    return () => {
+      window.removeEventListener("ceiba:new-historia", onNewHistoria);
+      window.removeEventListener("ceiba:new-recuerdo", onNewRecuerdo);
+    };
+  }, []);
+
+  // Limpiar badge al entrar a la sección correspondiente
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (pathname === "/historias") {
+      setBadgeHistoria(false);
+      localStorage.removeItem("ceiba-badge-historia");
+    }
+    if (pathname === "/events") {
+      setBadgeRecuerdo(false);
+      localStorage.removeItem("ceiba-badge-recuerdo");
+    }
+  }, [pathname]);
 
   return (
     <nav style={{
@@ -203,6 +234,14 @@ export function CosmicNav() {
               <div style={{ position: "absolute", inset: 0, borderRadius: "50%",
                 background: "radial-gradient(circle at 35% 22%,rgba(255,255,255,0.32) 0%,transparent 55%)" }} />
               <Icon size={22} style={{ color: "#030208", position: "relative" }} />
+              {badgeHistoria && (
+                <div style={{
+                  position: "absolute", top: 0, right: 0,
+                  width: 12, height: 12, borderRadius: "50%",
+                  background: "#e53935",
+                  border: "2px solid #030208",
+                }} />
+              )}
             </div>
           </Link>
         );
@@ -211,6 +250,7 @@ export function CosmicNav() {
           || (href === "/persona/me" && pathname?.startsWith("/persona/"));
         const color = active ? "#d4af37" : "rgba(212,175,55,0.28)";
         const showBadge = href === "/home" && suggCount > 0;
+        const showDot = (href === "/events" && badgeRecuerdo);
         return (
           <Link key={href} href={href}
             style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, textDecoration: "none", minHeight: 44, minWidth: 44 }}>
@@ -229,6 +269,14 @@ export function CosmicNav() {
                 }}>
                   {suggCount > 9 ? "9+" : suggCount}
                 </div>
+              )}
+              {showDot && (
+                <div style={{
+                  position: "absolute", top: -4, right: -5,
+                  width: 10, height: 10, borderRadius: "50%",
+                  background: "#e53935",
+                  border: "1.5px solid #030208",
+                }} />
               )}
             </div>
             <span style={{ fontSize: 9, fontWeight: active ? 700 : 500, color }}>{label}</span>

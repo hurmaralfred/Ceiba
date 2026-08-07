@@ -89,15 +89,22 @@ export function useFamilyNotifications(
           const row = payload.new;
           if (!row || row.created_by === userId) return;
 
-          const msOld = Date.now() - new Date(row.created_at).getTime();
+            const msOld = Date.now() - new Date(row.created_at).getTime();
           const isHistoria = msOld < 86_400_000;
           const eventTitle = row.title as string ?? "Nueva publicación";
 
           if (isHistoria) {
-            toast(`✨ Nueva historia: "${eventTitle}"`, { duration: 6000, icon: "✨" });
+            // Badge en nav + notificación OS (sin toast in-app)
+            if (typeof window !== "undefined") {
+              localStorage.setItem("ceiba-badge-historia", "1");
+              window.dispatchEvent(new CustomEvent("ceiba:new-historia"));
+            }
             sendBrowserNotif("✨ Nueva historia familiar", eventTitle);
           } else {
-            toast(`📚 Nuevo recuerdo: "${eventTitle}"`, { duration: 6000, icon: "📚" });
+            if (typeof window !== "undefined") {
+              localStorage.setItem("ceiba-badge-recuerdo", "1");
+              window.dispatchEvent(new CustomEvent("ceiba:new-recuerdo"));
+            }
             sendBrowserNotif("📚 Nuevo recuerdo familiar", eventTitle);
           }
         }

@@ -924,29 +924,36 @@ export default function HomePage() {
                 borderBottom: "5px solid #030104", borderRight: "1px solid rgba(0,0,0,0.7)",
                 boxShadow: "0 8px 0 #030104, 0 16px 32px rgba(0,0,0,0.92), 0 0 32px rgba(160,100,40,0.12)",
               }}>
+                {/* Foto — thumbnail compacto con fade bottom */}
                 {recent.url && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={recent.url} alt="" style={{ width: "100%", display: "block",
-                    maxHeight: 280, objectFit: "contain", background: "#050210" }} />
+                  <div style={{ position: "relative", lineHeight: 0 }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={recent.url} alt="" style={{ width: "100%", display: "block",
+                      height: 160, objectFit: "cover" }} />
+                    {/* Fade que invita a expandir */}
+                    <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 60,
+                      background: "linear-gradient(to top, rgba(10,6,14,1) 0%, transparent 100%)",
+                      pointerEvents: "none" }} />
+                    <div style={{ position: "absolute", bottom: 8, right: 12,
+                      fontSize: 10, fontWeight: 600, color: "rgba(200,120,48,0.80)",
+                      display: "flex", alignItems: "center", gap: 4 }}>
+                      Toca para ver completa ↗
+                    </div>
+                  </div>
                 )}
                 <div style={{ position: "absolute", top: 16, right: 16,
                   background: "rgba(200,120,48,0.15)", border: "1px solid rgba(200,120,48,0.4)",
                   borderRadius: 100, padding: "3px 10px",
                   fontSize: 9, fontWeight: 800, letterSpacing: "0.14em", color: "#c87830",
                   textTransform: "uppercase" }}>Nueva foto</div>
-                <div style={{ padding: "14px 18px 18px" }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
-                    textTransform: "uppercase", color: "rgba(200,120,48,0.7)", marginBottom: 6 }}>📸 Recuerdo con foto</div>
+                <div style={{ padding: "10px 18px 14px" }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em",
+                    textTransform: "uppercase", color: "rgba(200,120,48,0.65)", marginBottom: 4 }}>📸 Recuerdo con foto</div>
                   {recent.caption && (
-                    <div style={{ fontSize: 15, fontWeight: 700, color: "#fff", marginBottom: 12, lineHeight: 1.3 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: "#fff", lineHeight: 1.3 }}>
                       {recent.caption}
                     </div>
                   )}
-                  <div style={{ display: "inline-flex", alignItems: "center", gap: 8,
-                    background: "rgba(200,120,48,0.15)", border: "1px solid rgba(200,120,48,0.4)",
-                    color: "#c87830", borderRadius: 12, padding: "8px 18px", fontSize: 12, fontWeight: 700 }}>
-                    Ver foto completa →
-                  </div>
                 </div>
               </div>
             </div>
