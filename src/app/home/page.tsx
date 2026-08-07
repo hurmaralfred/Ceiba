@@ -716,53 +716,6 @@ export default function HomePage() {
   const firstName = profile?.first_name ?? "";
   const avatarInitial = firstName[0]?.toUpperCase() ?? "?";
 
-  // Momento del día — aniversario primero, luego frases específicas con datos reales
-  const contextMessage = (() => {
-    const today  = new Date();
-    const todayM = today.getMonth();
-    const todayD = today.getDate();
-
-    // 1. Aniversario exacto hoy
-    const anniversary = events.find(e => {
-      const ed = new Date(e.event_date);
-      return ed.getMonth() === todayM && ed.getDate() === todayD && ed.getFullYear() < today.getFullYear();
-    });
-    if (anniversary) {
-      const years = today.getFullYear() - new Date(anniversary.event_date).getFullYear();
-      return `Hoy hace ${years} año${years !== 1 ? "s" : ""}: "${anniversary.title}".`;
-    }
-
-    // 2. Cumpleaños próximo dentro de 3 días (aún no cubierto por Caso C en el hero)
-    const verySoon = allBirthdays.filter(b => b.days > 0 && b.days <= 3).sort((a, b) => a.days - b.days)[0];
-    if (verySoon) {
-      return verySoon.days === 1
-        ? `Mañana es el cumpleaños de ${verySoon.first_name}. ¿Ya sabes qué le vas a decir?`
-        : `En ${verySoon.days} días cumple años ${verySoon.first_name} ${verySoon.last_name}.`;
-    }
-
-    // 3. Evento reciente esta semana
-    const freshEvent = events.find(e => (Date.now() - new Date(e.created_at).getTime()) < 7 * 86_400_000);
-    if (freshEvent) {
-      return `Esta semana se añadió una nueva historia: "${freshEvent.title}".`;
-    }
-
-    // 4. Fallbacks específicos con datos reales de la familia
-    const n = visibleCount;
-    const h = events.length;
-    const p = photos.length;
-    const dayIndex = Math.floor(Date.now() / 86_400_000);
-
-    const pool: string[] = [
-      n > 1 ? `Tu familia tiene ${n} personas. Cada una guarda una historia única.` : "Empieza construyendo tu árbol. La primera persona lo cambia todo.",
-      h > 0 ? `${h} historia${h !== 1 ? "s" : ""} documentada${h !== 1 ? "s" : ""} en tu árbol. Cada una, un regalo para el futuro.` : "La primera historia que escribas será el inicio de algo que vivirá para siempre.",
-      p > 0 ? `${p} recuerdo${p !== 1 ? "s" : ""} con foto en tu familia. Los momentos visuales son los que más duran.` : "Una foto hoy se convierte en un tesoro en veinte años.",
-      n > 5 ? `¿Cuándo fue la última vez que hablaste con alguien de tu árbol de ${n} personas?` : "Cada persona que añades es una raíz más en el árbol.",
-      "Los momentos que no se documentan desaparecen. Los que sí, permanecen.",
-      h > 0 ? `Tu familia ya ha escrito ${h} capítulo${h !== 1 ? "s" : ""} de su historia.` : "Escribe el primer capítulo de la historia de tu familia.",
-    ].filter(Boolean);
-
-    return pool[dayIndex % pool.length];
-  })();
 
   // Stats — invitan a explorar, no describen el vacío
   const birthdaysThisMonth = allBirthdays.filter(b => b.days > 0 && b.days <= 30).length;
@@ -781,60 +734,6 @@ export default function HomePage() {
     ...events.filter(e => (Date.now() - new Date(e.created_at).getTime()) < 7 * 86_400_000),
   ].length;
 
-  // Tarjeta dinámica — elige el contenido más relevante del momento
-  const dynamicCard: { type: "evento" | "foto" | "cumple" | "mensaje"; label: string; title: string; subtitle: string; href: string; imageUrl?: string } = (() => {
-    // 1. Historia activa (creada en las últimas 24 horas)
-    const freshHistoria = allEvents.find(e => (Date.now() - new Date(e.created_at).getTime()) < 86_400_000);
-    if (freshHistoria) return {
-      type: "evento", label: "✨ Historia del momento",
-      title: freshHistoria.title,
-      subtitle: freshHistoria.description?.slice(0, 80) ?? "Una historia activa en tu familia ahora mismo.",
-      href: "/historias",
-    };
-    // 2. Recuerdo reciente (creado en los últimos 7 días)
-    const freshRecuerdo = allEvents.find(e => {
-      const ms = Date.now() - new Date(e.created_at).getTime();
-      return ms >= 86_400_000 && ms < 7 * 86_400_000;
-    });
-    if (freshRecuerdo) return {
-      type: "evento", label: "📚 Nuevo recuerdo familiar",
-      title: freshRecuerdo.title,
-      subtitle: freshRecuerdo.description?.slice(0, 80) ?? "Un recuerdo guardado para siempre en tu familia.",
-      href: "/events",
-    };
-    // 3. Foto reciente (≤7 días)
-    const freshPhoto = photos.find(p => (Date.now() - new Date(p.created_at).getTime()) < 7 * 86_400_000);
-    if (freshPhoto) return {
-      type: "foto", label: "Foto familiar reciente",
-      title: freshPhoto.caption ?? "Un recuerdo familiar",
-      subtitle: "Foto añadida recientemente a los recuerdos.",
-      href: "/events",
-      imageUrl: freshPhoto.url,
-    };
-    // 3. Cumpleaños próximo ≤14 días
-    const soon = allBirthdays.filter(b => b.days > 0 && b.days <= 14).sort((a, b) => a.days - b.days)[0];
-    if (soon) return {
-      type: "cumple", label: `En ${soon.days} día${soon.days !== 1 ? "s" : ""}`,
-      title: `Cumpleaños de ${soon.first_name}`,
-      subtitle: `${soon.first_name} ${soon.last_name} cumple años pronto. ¿Ya le preparaste algo?`,
-      href: `/persona/${soon.person_id}`,
-    };
-    // 4. Evento futuro próximo
-    const nextEvent = events.filter(e => new Date(e.event_date) > new Date()).sort((a, b) => new Date(a.event_date).getTime() - new Date(b.event_date).getTime())[0];
-    if (nextEvent) return {
-      type: "evento", label: "Próximamente",
-      title: nextEvent.title,
-      subtitle: nextEvent.description?.slice(0, 80) ?? "Un evento importante se acerca.",
-      href: "/events",
-    };
-    // 5. Fallback — mensaje del contexto
-    return {
-      type: "mensaje", label: "Hoy",
-      title: "Tu historia continúa",
-      subtitle: contextMessage,
-      href: "/events",
-    };
-  })();
 
   return (
     <div style={{ minHeight: "100vh", background: "#030208", paddingBottom: 100, color: "#fff" }}>
@@ -1040,48 +939,6 @@ export default function HomePage() {
           </Link>
         )}
 
-        {/* — Caso D: Momento del día — siempre específico, nunca genérico */}
-        {!todayBirthday && !(upcomingBirthday && upcomingBirthday.days <= 7) && (
-          <Link href={events.length > 0 ? "/events" : "/tree"} style={{ textDecoration: "none" }}>
-            <div style={{
-              borderRadius: 22,
-              background: "linear-gradient(145deg,#09080f 0%,#060510 80%,#08060e 100%)",
-              position: "relative", overflow: "hidden", minHeight: 170,
-              borderTop: "1.5px solid rgba(212,175,55,0.22)", borderLeft: "1px solid rgba(212,175,55,0.09)",
-              borderBottom: "4px solid #020108", borderRight: "1px solid rgba(0,0,0,0.65)",
-              boxShadow: "0 8px 0 #020108, 0 16px 32px rgba(0,0,0,0.92), 0 0 60px rgba(212,175,55,0.05)",
-            }}>
-              {/* Nebula de fondo — atmosférica */}
-              <div style={{ position: "absolute", inset: 0, pointerEvents: "none",
-                background: "radial-gradient(ellipse at 18% 55%, rgba(212,175,55,0.09) 0%, transparent 52%), radial-gradient(ellipse at 82% 30%, rgba(80,30,120,0.07) 0%, transparent 45%)" }} />
-              {/* Constelación decorativa — tres estrellas con tamaño variado */}
-              <div style={{ position: "absolute", top: 22, right: 22, display: "flex", gap: 5, alignItems: "center" }}>
-                <span style={{ fontSize: 7, color: "rgba(212,175,55,0.25)", animation: "twinkle-b 5.1s ease-in-out infinite" }}>✦</span>
-                <span style={{ fontSize: 11, color: "rgba(212,175,55,0.35)", animation: "twinkle-a 3.8s ease-in-out infinite" }}>✦</span>
-                <span style={{ fontSize: 6, color: "rgba(212,175,55,0.18)", animation: "twinkle-c 6.3s ease-in-out infinite" }}>✦</span>
-              </div>
-              <div style={{ padding: "26px 22px 22px", position: "relative" }}>
-                {/* Etiqueta de contexto */}
-                <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.18em",
-                  textTransform: "uppercase", color: "rgba(212,175,55,0.42)", marginBottom: 14 }}>
-                  Momento del día
-                </div>
-                {/* Mensaje principal — grande, emocional */}
-                <div style={{ fontSize: 17, fontWeight: 700, color: "rgba(255,255,255,0.88)",
-                  lineHeight: 1.45, marginBottom: 16, maxWidth: 280 }}>
-                  {contextMessage}
-                </div>
-                {/* Call to action sutil */}
-                <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                  <span style={{ fontSize: 11, color: "rgba(212,175,55,0.45)", fontWeight: 600 }}>
-                    {events.length > 0 ? "Ver historias" : "Empezar a escribir"}
-                  </span>
-                  <ChevronRight size={11} style={{ color: "rgba(212,175,55,0.35)" }} />
-                </div>
-              </div>
-            </div>
-          </Link>
-        )}
       </div>
 
       {/* ══ ACCESOS RÁPIDOS — cuadrícula 4×2 de botones circulares ═══════ */}
@@ -1163,59 +1020,6 @@ export default function HomePage() {
           width: 300, height: 300, borderRadius: "50%", pointerEvents: "none", zIndex: 0,
           background: "radial-gradient(circle, rgba(212,175,55,0.07) 0%, rgba(80,30,160,0.04) 40%, transparent 70%)",
           filter: "blur(24px)", animation: "section-glow 6s ease-in-out infinite" }} />
-        {/* ── Momento del día — tratamiento editorial ─────────────────── */}
-        <Link href={dynamicCard.href} style={{ display: "block", marginBottom: 9 }}>
-          <div style={{
-            borderRadius: 20,
-            background: dynamicCard.type === "mensaje" ? "#07050f" : "#08070e",
-            position: "relative", overflow: "hidden", minHeight: 160,
-            border: "1px solid rgba(212,175,55,0.10)",
-            boxShadow: "0 12px 40px rgba(0,0,0,0.7), 0 0 0 0.5px rgba(212,175,55,0.06)",
-          }}>
-            {/* Foto de fondo — mucho más presente si existe */}
-            {dynamicCard.imageUrl && (
-              <>
-                <div style={{ position: "absolute", inset: 0, borderRadius: 20, overflow: "hidden", zIndex: 0 }}>
-                  <img src={dynamicCard.imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.32 }} />
-                </div>
-                <div style={{ position: "absolute", inset: 0, borderRadius: 20, zIndex: 1,
-                  background: "linear-gradient(to bottom, rgba(7,5,15,0.3) 0%, rgba(7,5,15,0.85) 70%)" }} />
-              </>
-            )}
-            {/* Nebula de fondo cuando no hay foto */}
-            {!dynamicCard.imageUrl && (
-              <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0,
-                background: "radial-gradient(ellipse at 20% 40%, rgba(212,175,55,0.07) 0%, transparent 55%), radial-gradient(ellipse at 85% 70%, rgba(80,30,120,0.08) 0%, transparent 45%)" }} />
-            )}
-            <div style={{ padding: "22px 20px 20px", position: "relative", zIndex: 2 }}>
-              {/* Eyebrow */}
-              <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase",
-                color: dynamicCard.type === "mensaje" ? "rgba(152,152,184,0.45)" : "rgba(212,175,55,0.5)",
-                marginBottom: 12 }}>
-                {dynamicCard.type === "mensaje" ? "Momento del día" : dynamicCard.label}
-              </div>
-              {/* Título editorial */}
-              <div style={{ fontSize: 19, fontWeight: 800, color: "#fff", marginBottom: 10, lineHeight: 1.25,
-                letterSpacing: "-0.01em" }}>
-                {dynamicCard.title}
-              </div>
-              {/* Cuerpo con más aire */}
-              <div style={{ fontSize: 13, color: "rgba(255,255,255,0.42)", lineHeight: 1.75, marginBottom: 18 }}>
-                {dynamicCard.subtitle}
-              </div>
-              {/* CTA mínimo */}
-              <div style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-                <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.04em",
-                  color: dynamicCard.type === "mensaje" ? "rgba(152,152,184,0.5)" : "rgba(212,175,55,0.6)",
-                  borderBottom: `1px solid ${dynamicCard.type === "mensaje" ? "rgba(152,152,184,0.2)" : "rgba(212,175,55,0.2)"}`,
-                  paddingBottom: 1 }}>
-                  Abrir
-                </span>
-              </div>
-            </div>
-          </div>
-        </Link>
-
         {/* ── Coincidencias familiares ──────────────────────────────────── */}
         {suggestions.filter(s => !dismissedIds.has(s.id)).length > 0 && (
           <div style={{ marginBottom: 9 }}>
