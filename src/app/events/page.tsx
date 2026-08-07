@@ -151,6 +151,14 @@ export default function EventsPage() {
         : await fetch("/api/events", { method: "POST",  headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
       if (!res.ok) { const b = await res.json().catch(() => ({})); toast.error(b.error || "Error al guardar"); setSaving(false); return; }
       toast.success(editingId ? "Recuerdo actualizado" : photoFile ? "¡Recuerdo y foto guardados!" : "Recuerdo guardado");
+      // Notificar a toda la familia si es nuevo (no edición)
+      if (!editingId) {
+        fetch("/api/notify/new-content", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: "event", title: form.title.trim() }),
+        }).catch(() => {});
+      }
       closeModal();
       await loadEvents();
     } finally {

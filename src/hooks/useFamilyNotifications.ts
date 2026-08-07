@@ -16,6 +16,25 @@ function sendBrowserNotif(title: string, body: string) {
   }
 }
 
+async function subscribeUserToPush() {
+  if (typeof window === "undefined") return;
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+  if (!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) return;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const existing = await reg.pushManager.getSubscription();
+    const sub = existing ?? await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+    });
+    await fetch("/api/push/subscribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(sub.toJSON()),
+    });
+  } catch {}
+}
+
 export function useFamilyNotifications(
   userId: string | null,
   birthdays: Array<{ person_id: string; first_name: string; last_name: string; birth_date: string; days: number }>
@@ -23,11 +42,16 @@ export function useFamilyNotifications(
   const supabase = createClient();
   const birthdayNotifSent = useRef(false);
 
-  // ── Pedir permiso de notificaciones ────────────────────────────────────────
+  // ── Pedir permiso y registrar suscripción push ──────────────────────────────
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if ("Notification" in window && Notification.permission === "default") {
-      Notification.requestPermission();
+    if (!("Notification" in window)) return;
+    if (Notification.permission === "granted") {
+      subscribeUserToPush();
+    } else if (Notification.permission === "default") {
+      Notification.requestPermission().then(p => {
+        if (p === "granted") subscribeUserToPush();
+      });
     }
   }, []);
 

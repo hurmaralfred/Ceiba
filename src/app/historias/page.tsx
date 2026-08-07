@@ -128,6 +128,12 @@ export default function HistoriasPage() {
       });
       if (!res.ok) throw new Error();
       toast.success("Historia compartida con tu familia ✦");
+      // Notificar a toda la familia (fire-and-forget)
+      fetch("/api/notify/new-content", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "event", title: title.trim() }),
+      }).catch(() => {});
       closeModal();
       load();
     } catch {

@@ -92,19 +92,25 @@ async function notifySpaceOwnerOnJoin(
     .maybeSingle();
   if (!membership?.space_id) return;
 
-  // Find the space owner
-  const { data: space } = await service
-    .from("family_spaces")
-    .select("created_by")
-    .eq("id", membership.space_id)
-    .maybeSingle();
-  if (!space?.created_by || space.created_by === joinerUserId) return;
+  // Get all users in this space who have accounts (excluding the joiner)
+  const { data: allMembers } = await service
+    .from("space_memberships")
+    .select("persons!inner(profile_id)")
+    .eq("space_id", membership.space_id)
+    .not("persons.profile_id", "is", null);
 
-  // Get owner's push subscriptions
+  const memberUserIds = (allMembers ?? [])
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .map((m: any) => m.persons?.profile_id as string)
+    .filter((id): id is string => !!id && id !== joinerUserId);
+
+  if (memberUserIds.length === 0) return;
+
+  // Get push subscriptions for all family members
   const { data: subs } = await service
     .from("push_subscriptions")
     .select("endpoint, p256dh, auth")
-    .eq("user_id", space.created_by);
+    .in("user_id", memberUserIds);
   if (!subs || subs.length === 0) return;
 
   const vapidPublic  = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
@@ -115,8 +121,8 @@ async function notifySpaceOwnerOnJoin(
 
   const joinerName = `${firstName} ${firstSurname}`.trim();
   const payload = JSON.stringify({
-    title: "¡Familiar se unió a Ceiba! 🌳",
-    body: `${joinerName} aceptó la invitación y ya está en tu árbol familiar.`,
+    title: "🌳 Nuevo familiar en Ceiba",
+    body: `${joinerName} se unió a la familia. ¡Ya puedes verlo en tu galaxia!`,
     icon: "/icons/icon-192.png",
     url: "/tree",
   });
