@@ -20,7 +20,7 @@ import type { Profile, FamilyMember } from "@/lib/types";
 interface FeedBirthday {
   person_id: string; first_name: string; last_name: string; birth_date: string;
 }
-interface FeedPhoto { id: string; url: string; caption: string | null; created_at: string; }
+interface FeedPhoto { id: string; url: string; caption: string | null; created_at: string; uploader_user_id?: string; }
 interface FeedEvent { id: string; title: string; event_type: string; event_date: string; description: string | null; created_at: string; }
 type BirthdayWithDays = FeedBirthday & { days: number };
 interface FamilyRosterMember {
@@ -528,6 +528,7 @@ export default function HomePage() {
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const [roster,       setRoster]       = useState<FamilyRosterMember[]>([]);
   const [myUserId,     setMyUserId]     = useState<string | null>(null);
+  const [lightboxPhoto, setLightboxPhoto] = useState<FeedPhoto | null>(null);
 
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -916,40 +917,39 @@ export default function HomePage() {
           const recent = photos.find(p => (Date.now() - new Date(p.created_at).getTime()) < 86_400_000);
           if (!recent) return null;
           return (
-            <Link href="/events">
+            <div onClick={() => setLightboxPhoto(recent)} style={{ cursor: "pointer" }}>
               <div style={{
-                borderRadius: 22, background: "#0a060e", position: "relative", overflow: "hidden", minHeight: 200,
+                borderRadius: 22, background: "#0a060e", position: "relative", overflow: "hidden",
                 borderTop: "2px solid rgba(160,100,40,0.6)", borderLeft: "1px solid rgba(160,100,40,0.25)",
                 borderBottom: "5px solid #030104", borderRight: "1px solid rgba(0,0,0,0.7)",
                 boxShadow: "0 8px 0 #030104, 0 16px 32px rgba(0,0,0,0.92), 0 0 32px rgba(160,100,40,0.12)",
               }}>
                 {recent.url && (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={recent.url} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.35 }} />
+                  <img src={recent.url} alt="" style={{ width: "100%", display: "block",
+                    maxHeight: 280, objectFit: "contain", background: "#050210" }} />
                 )}
-                <div style={{ position: "absolute", inset: 0,
-                  background: "linear-gradient(to top, rgba(10,6,14,0.95) 0%, rgba(10,6,14,0.5) 50%, transparent 100%)" }} />
                 <div style={{ position: "absolute", top: 16, right: 16,
                   background: "rgba(200,120,48,0.15)", border: "1px solid rgba(200,120,48,0.4)",
                   borderRadius: 100, padding: "3px 10px",
                   fontSize: 9, fontWeight: 800, letterSpacing: "0.14em", color: "#c87830",
                   textTransform: "uppercase" }}>Nueva foto</div>
-                <div style={{ position: "absolute", bottom: 20, left: 20, right: 20 }}>
+                <div style={{ padding: "14px 18px 18px" }}>
                   <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
-                    textTransform: "uppercase", color: "rgba(200,120,48,0.7)", marginBottom: 6 }}>📸 Nuevo recuerdo con foto</div>
+                    textTransform: "uppercase", color: "rgba(200,120,48,0.7)", marginBottom: 6 }}>📸 Recuerdo con foto</div>
                   {recent.caption && (
-                    <div style={{ fontSize: 16, fontWeight: 700, color: "#fff", marginBottom: 14, lineHeight: 1.3 }}>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: "#fff", marginBottom: 12, lineHeight: 1.3 }}>
                       {recent.caption}
                     </div>
                   )}
                   <div style={{ display: "inline-flex", alignItems: "center", gap: 8,
                     background: "rgba(200,120,48,0.15)", border: "1px solid rgba(200,120,48,0.4)",
                     color: "#c87830", borderRadius: 12, padding: "8px 18px", fontSize: 12, fontWeight: 700 }}>
-                    Ver foto →
+                    Ver foto completa →
                   </div>
                 </div>
               </div>
-            </Link>
+            </div>
           );
         })()}
 
@@ -1421,6 +1421,58 @@ export default function HomePage() {
 
       {/* Navegación inferior cósmica */}
       <CosmicNav pathname={pathname ?? "/home"} suggCount={suggestions.filter(s => !dismissedIds.has(s.id)).length} />
+
+      {/* ── Lightbox de foto ─────────────────────────────────────────────── */}
+      {lightboxPhoto && (
+        <div onClick={() => setLightboxPhoto(null)}
+          style={{ position: "fixed", inset: 0, zIndex: 100,
+            background: "rgba(0,0,0,0.94)", backdropFilter: "blur(12px)",
+            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+          {/* Cerrar */}
+          <button onClick={() => setLightboxPhoto(null)}
+            style={{ position: "absolute", top: "max(env(safe-area-inset-top), 16px)", right: 16,
+              width: 38, height: 38, borderRadius: 12,
+              background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.14)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              cursor: "pointer", color: "rgba(255,255,255,0.7)", fontSize: 20, lineHeight: 1 }}>
+            ×
+          </button>
+
+          {/* Foto completa */}
+          <div onClick={e => e.stopPropagation()}
+            style={{ width: "100%", maxWidth: 520, padding: "0 16px" }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={lightboxPhoto.url} alt=""
+              style={{ width: "100%", maxHeight: "70vh", objectFit: "contain",
+                borderRadius: 18, display: "block",
+                boxShadow: "0 20px 60px rgba(0,0,0,0.80)" }} />
+
+            {lightboxPhoto.caption && (
+              <p style={{ marginTop: 14, fontSize: 15, fontWeight: 700,
+                color: "#F5EDD8", textAlign: "center", lineHeight: 1.4 }}>
+                {lightboxPhoto.caption}
+              </p>
+            )}
+
+            {/* Botón eliminar — solo si es la foto del usuario actual */}
+            {lightboxPhoto.uploader_user_id === myUserId && (
+              <button onClick={async () => {
+                  const res = await fetch(`/api/photos?id=${lightboxPhoto.id}`, { method: "DELETE" });
+                  if (res.ok) {
+                    setPhotos(prev => prev.filter(p => p.id !== lightboxPhoto.id));
+                    setLightboxPhoto(null);
+                  }
+                }}
+                style={{ display: "block", width: "100%", marginTop: 18,
+                  padding: "14px 0", borderRadius: 14, cursor: "pointer",
+                  background: "rgba(220,60,80,0.10)", border: "1px solid rgba(220,60,80,0.35)",
+                  color: "rgba(220,60,80,0.80)", fontWeight: 700, fontSize: 14 }}>
+                Eliminar foto
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

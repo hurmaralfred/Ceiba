@@ -19,6 +19,10 @@ interface FamilyEvent {
   creator?: { first_name: string; last_name: string; photo_path: string | null } | null;
 }
 
+interface FamilyPhoto {
+  id: string; url: string; caption: string | null; created_at: string; uploader_user_id: string;
+}
+
 // ── Event type catalogue ───────────────────────────────────────────────────────
 
 const EVENT_TYPES = [
@@ -101,6 +105,8 @@ export default function EventsPage() {
   const [photoFile,    setPhotoFile]    = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const [familyPhotos, setFamilyPhotos] = useState<FamilyPhoto[]>([]);
+  const [lightboxUrl,  setLightboxUrl]  = useState<{ url: string; photoId: string; ownPhoto: boolean } | null>(null);
 
   useEffect(() => { init(); }, []);
 
@@ -115,6 +121,10 @@ export default function EventsPage() {
     const res = await fetch("/api/events");
     if (res.ok) { setLoadError(false); const { events } = await res.json(); setEvents(events || []); }
     else setLoadError(true);
+    // Cargar fotos para mostrarlas en cada card
+    fetch("/api/photos").then(r => r.ok ? r.json() : { photos: [] }).then(({ photos }) => {
+      setFamilyPhotos((photos || []).map((p: any) => ({ id: p.id, url: p.url, caption: p.caption, created_at: p.created_at, uploader_user_id: p.uploader_user_id })));
+    }).catch(() => {});
     setLoading(false);
   };
 
@@ -315,6 +325,12 @@ export default function EventsPage() {
               {byYear[year].map((event, ei) => {
                 const t = getTypeInfo(event.event_type);
                 const phrase = contextPhrase(event);
+                // Buscar foto asociada por caption coincidente (se sube junto al evento)
+                const eventTs = new Date(event.created_at).getTime();
+                const linkedPhoto = familyPhotos.find(p =>
+                  p.caption?.trim().toLowerCase() === event.title.trim().toLowerCase() &&
+                  Math.abs(new Date(p.created_at).getTime() - eventTs) < 120_000
+                );
                 return (
                   <div key={event.id} style={{
                     background:"rgba(8,5,18,0.85)",
@@ -343,20 +359,43 @@ export default function EventsPage() {
                       </div>
                       {/* Edit/delete — owner only */}
                       {event.created_by === userId && (
-                        <div style={{ display:"flex", gap:2 }}>
+                        <div style={{ display:"flex", gap:6 }}>
                           <button onClick={() => openEdit(event)}
-                            style={{ background:"none", border:"none", cursor:"pointer",
-                              color:"rgba(242,180,60,0.25)", padding:4, lineHeight:0 }}>
-                            <Pencil size={13} />
+                            style={{ display:"flex", alignItems:"center", gap:4,
+                              background:"rgba(242,180,60,0.08)", border:"1px solid rgba(242,180,60,0.22)",
+                              borderRadius:8, cursor:"pointer",
+                              color:"rgba(242,180,60,0.75)", padding:"4px 8px", lineHeight:0 }}>
+                            <Pencil size={11} />
                           </button>
                           <button onClick={() => deleteEvent(event.id)}
-                            style={{ background:"none", border:"none", cursor:"pointer",
-                              color:"rgba(220,60,80,0.25)", padding:4, lineHeight:0 }}>
-                            <Trash2 size={13} />
+                            style={{ display:"flex", alignItems:"center", gap:4,
+                              background:"rgba(220,60,80,0.08)", border:"1px solid rgba(220,60,80,0.22)",
+                              borderRadius:8, cursor:"pointer",
+                              color:"rgba(220,60,80,0.75)", padding:"4px 8px", lineHeight:0 }}>
+                            <Trash2 size={11} />
                           </button>
                         </div>
                       )}
                     </div>
+
+                    {/* Foto asociada al recuerdo */}
+                    {linkedPhoto && (
+                      <div style={{ margin:"0 -18px 16px", overflow:"hidden",
+                        borderBottom:"0.5px solid rgba(255,255,255,0.06)" }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={linkedPhoto.url}
+                          alt=""
+                          onClick={() => setLightboxUrl({ url: linkedPhoto.url, photoId: linkedPhoto.id, ownPhoto: linkedPhoto.uploader_user_id === userId })}
+                          style={{ width:"100%", maxHeight:220, objectFit:"contain",
+                            background:"#050210", display:"block", cursor:"pointer" }}
+                        />
+                        <div style={{ padding:"6px 18px 0",
+                          fontSize:10, color:"rgba(255,255,255,0.25)", letterSpacing:"0.04em" }}>
+                          Toca para ver completa
+                        </div>
+                      </div>
+                    )}
 
                     {/* Title — editorial, large */}
                     <h2 style={{ fontSize:20, fontWeight:700, color:"#F5EDD8",
@@ -569,6 +608,46 @@ export default function EventsPage() {
         )}
 
         <CosmicNav />
+
+        {/* ── Lightbox de foto ────────────────────────────────────────────── */}
+        {lightboxUrl && (
+          <div onClick={() => setLightboxUrl(null)}
+            style={{ position:"fixed", inset:0, zIndex:100,
+              background:"rgba(0,0,0,0.94)", backdropFilter:"blur(12px)",
+              display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" }}>
+            <button onClick={() => setLightboxUrl(null)}
+              style={{ position:"absolute", top:"max(env(safe-area-inset-top),16px)", right:16,
+                width:38, height:38, borderRadius:12,
+                background:"rgba(255,255,255,0.08)", border:"1px solid rgba(255,255,255,0.14)",
+                display:"flex", alignItems:"center", justifyContent:"center",
+                cursor:"pointer", color:"rgba(255,255,255,0.7)", fontSize:20, lineHeight:1 }}>
+              ×
+            </button>
+            <div onClick={e => e.stopPropagation()}
+              style={{ width:"100%", maxWidth:520, padding:"0 16px" }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={lightboxUrl.url} alt=""
+                style={{ width:"100%", maxHeight:"70vh", objectFit:"contain",
+                  borderRadius:18, display:"block",
+                  boxShadow:"0 20px 60px rgba(0,0,0,0.80)" }} />
+              {lightboxUrl.ownPhoto && (
+                <button onClick={async () => {
+                    const res = await fetch(`/api/photos?id=${lightboxUrl.photoId}`, { method:"DELETE" });
+                    if (res.ok) {
+                      setFamilyPhotos(prev => prev.filter(p => p.id !== lightboxUrl.photoId));
+                      setLightboxUrl(null);
+                    }
+                  }}
+                  style={{ display:"block", width:"100%", marginTop:18,
+                    padding:"14px 0", borderRadius:14, cursor:"pointer",
+                    background:"rgba(220,60,80,0.10)", border:"1px solid rgba(220,60,80,0.35)",
+                    color:"rgba(220,60,80,0.80)", fontWeight:700, fontSize:14 }}>
+                  Eliminar foto
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </>
   );
