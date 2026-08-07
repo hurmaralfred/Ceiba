@@ -1092,9 +1092,9 @@ export default function HomePage() {
                 key={photo.id}
                 onClick={() => setLightboxPhoto(photo)}
                 style={{
-                  width: "calc(33.33% - 7px)",
+                  width: "calc(20% - 8px)",
                   aspectRatio: "1",
-                  borderRadius: 16,
+                  borderRadius: 10,
                   overflow: "hidden",
                   cursor: "pointer",
                   position: "relative",
