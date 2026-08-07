@@ -75,9 +75,16 @@ export default function BirthdayCardFeed({
 
   if (birthdays.length === 0) return null;
 
-  // Máximo 5 tarjetas, ordenadas por proximidad
+  // Solo cumpleaños de hoy o futuros este año (excluir los que ya pasaron)
+  const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
   const cards = birthdays
     .slice()
+    .filter(p => {
+      if (p.days === 0) return true;
+      const bd = new Date(p.birth_date);
+      const thisYearBd = new Date(todayStart.getFullYear(), bd.getMonth(), bd.getDate());
+      return thisYearBd >= todayStart;
+    })
     .sort((a, b) => a.days - b.days)
     .slice(0, 5);
 

@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import BirthdayCardFeed from "@/components/BirthdayCardFeed";
 import { useFamilyPresence } from "@/hooks/useFamilyPresence";
+import { useFamilyNotifications } from "@/hooks/useFamilyNotifications";
 import { createClient } from "@/lib/supabase/client";
 import { adaptGraph, type FamilyGraph } from "@/lib/graphAdapter";
 import { buildVisibleMembers } from "@/lib/visibleMembers";
@@ -614,6 +615,8 @@ export default function HomePage() {
   const onlineFamily = roster.filter(m => onlineIds.has(m.user_id));
 
   const allBirthdays: BirthdayWithDays[] = birthdays.map(b => ({ ...b, days: daysUntil(b.birth_date) }));
+  // Notificaciones en tiempo real (cumpleaños + nuevas historias/recuerdos)
+  useFamilyNotifications(myUserId, allBirthdays);
   const todayBirthday    = allBirthdays.find(b => b.days === 0) ?? null;
   const upcomingBirthday = !todayBirthday
     ? allBirthdays.filter(b => b.days > 0).sort((a, b) => a.days - b.days)[0] ?? null
@@ -689,18 +692,29 @@ export default function HomePage() {
 
   // Tarjeta dinámica — elige el contenido más relevante del momento
   const dynamicCard: { type: "evento" | "foto" | "cumple" | "mensaje"; label: string; title: string; subtitle: string; href: string; imageUrl?: string } = (() => {
-    // 1. Evento histórico publicado recientemente (≤7 días)
-    const freshEvent = events.find(e => (Date.now() - new Date(e.created_at).getTime()) < 7 * 86_400_000);
-    if (freshEvent) return {
-      type: "evento", label: "Historia reciente",
-      title: freshEvent.title,
-      subtitle: freshEvent.description?.slice(0, 80) ?? "Un momento guardado en tu historia familiar.",
+    // 1. Historia activa (creada en las últimas 24 horas)
+    const freshHistoria = allEvents.find(e => (Date.now() - new Date(e.created_at).getTime()) < 86_400_000);
+    if (freshHistoria) return {
+      type: "evento", label: "✨ Historia del momento",
+      title: freshHistoria.title,
+      subtitle: freshHistoria.description?.slice(0, 80) ?? "Una historia activa en tu familia ahora mismo.",
+      href: "/historias",
+    };
+    // 2. Recuerdo reciente (creado en los últimos 7 días)
+    const freshRecuerdo = allEvents.find(e => {
+      const ms = Date.now() - new Date(e.created_at).getTime();
+      return ms >= 86_400_000 && ms < 7 * 86_400_000;
+    });
+    if (freshRecuerdo) return {
+      type: "evento", label: "📚 Nuevo recuerdo familiar",
+      title: freshRecuerdo.title,
+      subtitle: freshRecuerdo.description?.slice(0, 80) ?? "Un recuerdo guardado para siempre en tu familia.",
       href: "/events",
     };
-    // 2. Foto reciente (≤7 días)
+    // 3. Foto reciente (≤7 días)
     const freshPhoto = photos.find(p => (Date.now() - new Date(p.created_at).getTime()) < 7 * 86_400_000);
     if (freshPhoto) return {
-      type: "foto", label: "Recuerdo del día",
+      type: "foto", label: "Foto familiar reciente",
       title: freshPhoto.caption ?? "Un recuerdo familiar",
       subtitle: "Foto añadida recientemente a los recuerdos.",
       href: "/events",
