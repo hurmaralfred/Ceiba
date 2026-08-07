@@ -912,48 +912,56 @@ export default function HomePage() {
           </Link>
         )}
 
-        {/* — Caso B: Foto reciente (últimas 24h) — card dominante */}
+        {/* — Caso B: Foto reciente (últimas 24h) — tarjeta compacta */}
         {!todayBirthday && photos.length > 0 && (() => {
           const recent = photos.find(p => (Date.now() - new Date(p.created_at).getTime()) < 86_400_000);
           if (!recent) return null;
           return (
             <div onClick={() => setLightboxPhoto(recent)} style={{ cursor: "pointer" }}>
               <div style={{
-                borderRadius: 22, background: "#0a060e", position: "relative", overflow: "hidden",
-                borderTop: "2px solid rgba(160,100,40,0.6)", borderLeft: "1px solid rgba(160,100,40,0.25)",
-                borderBottom: "5px solid #030104", borderRight: "1px solid rgba(0,0,0,0.7)",
-                boxShadow: "0 8px 0 #030104, 0 16px 32px rgba(0,0,0,0.92), 0 0 32px rgba(160,100,40,0.12)",
+                borderRadius: 18, background: "#0a0710", position: "relative", overflow: "hidden",
+                borderTop: "1.5px solid rgba(200,120,48,0.45)",
+                borderLeft: "1px solid rgba(200,120,48,0.18)",
+                borderBottom: "3px solid #030104",
+                borderRight: "1px solid rgba(0,0,0,0.6)",
+                boxShadow: "0 6px 0 #030104, 0 12px 28px rgba(0,0,0,0.80), 0 0 24px rgba(160,100,40,0.10)",
+                padding: "12px 14px",
+                display: "flex", alignItems: "center", gap: 14,
               }}>
-                {/* Foto — thumbnail compacto con fade bottom */}
+                {/* Thumbnail cuadrado */}
                 {recent.url && (
-                  <div style={{ position: "relative", lineHeight: 0 }}>
+                  <div style={{ width: 72, height: 72, borderRadius: 14, overflow: "hidden", flexShrink: 0,
+                    border: "1.5px solid rgba(200,120,48,0.30)",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.60)" }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={recent.url} alt="" style={{ width: "100%", display: "block",
-                      height: 160, objectFit: "cover" }} />
-                    {/* Fade que invita a expandir */}
-                    <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 60,
-                      background: "linear-gradient(to top, rgba(10,6,14,1) 0%, transparent 100%)",
-                      pointerEvents: "none" }} />
-                    <div style={{ position: "absolute", bottom: 8, right: 12,
-                      fontSize: 10, fontWeight: 600, color: "rgba(200,120,48,0.80)",
-                      display: "flex", alignItems: "center", gap: 4 }}>
-                      Toca para ver completa ↗
-                    </div>
+                    <img src={recent.url} alt=""
+                      style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                   </div>
                 )}
-                <div style={{ position: "absolute", top: 16, right: 16,
-                  background: "rgba(200,120,48,0.15)", border: "1px solid rgba(200,120,48,0.4)",
-                  borderRadius: 100, padding: "3px 10px",
-                  fontSize: 9, fontWeight: 800, letterSpacing: "0.14em", color: "#c87830",
-                  textTransform: "uppercase" }}>Nueva foto</div>
-                <div style={{ padding: "10px 18px 14px" }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em",
-                    textTransform: "uppercase", color: "rgba(200,120,48,0.65)", marginBottom: 4 }}>📸 Recuerdo con foto</div>
+                {/* Contenido */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.14em",
+                    textTransform: "uppercase", color: "rgba(200,120,48,0.70)", marginBottom: 5 }}>
+                    📸 Foto reciente
+                  </div>
                   {recent.caption && (
-                    <div style={{ fontSize: 14, fontWeight: 700, color: "#fff", lineHeight: 1.3 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: "#F5EDD8", lineHeight: 1.25,
+                      overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2,
+                      WebkitBoxOrient: "vertical" as const }}>
                       {recent.caption}
                     </div>
                   )}
+                  <div style={{ fontSize: 10, color: "rgba(200,120,48,0.55)", marginTop: 6, fontWeight: 600 }}>
+                    Toca para verla completa →
+                  </div>
+                </div>
+                {/* Badge nueva */}
+                <div style={{ position: "absolute", top: 10, right: 12,
+                  background: "rgba(200,120,48,0.12)", border: "0.5px solid rgba(200,120,48,0.35)",
+                  borderRadius: 100, padding: "2px 8px",
+                  fontSize: 8, fontWeight: 800, letterSpacing: "0.12em", color: "#c87830",
+                  textTransform: "uppercase" }}>
+                  Nueva
                 </div>
               </div>
             </div>
