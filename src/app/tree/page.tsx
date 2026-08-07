@@ -230,14 +230,21 @@ function TreePageContent() {
       ? ({ ...profile, avatar_config: avatarRow.avatar_config } as typeof profile)
       : profile
 
-    // Enrich avatars: fetch photo_path from persons directly so galaxy nodes
-    // show photos even when the RPC result has a stale or missing photo_path
+    // Enrich avatars from profiles table (service role) so galaxy nodes show
+    // photos even when persons.photo_path is stale or missing
     const personIds = (graph.nodes || []).map((n: any) => n.id as string);
-    const { data: photoRows } = await supabase
-      .from("persons")
-      .select("id, photo_path")
-      .in("id", personIds);
-    const photoMap = new Map((photoRows ?? []).map((r: any) => [r.id as string, r.photo_path as string | null]));
+    let photoMap = new Map<string, string>();
+    try {
+      const res = await fetch("/api/members/avatars", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ personIds }),
+      });
+      if (res.ok) {
+        const { avatars } = await res.json();
+        photoMap = new Map(Object.entries(avatars as Record<string, string>));
+      }
+    } catch { /* non-critical, fall back to RPC data */ }
 
     const enrichMember = (m: any) => {
       const url = photoMap.get(m.id) ?? m.profile?.avatar_url ?? null;
