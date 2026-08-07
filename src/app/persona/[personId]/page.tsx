@@ -38,6 +38,14 @@ interface EventItem {
   description?: string | null;
 }
 
+interface MomentItem {
+  id: string;
+  title: string;
+  event_type: string;
+  created_at: string;
+  creator?: { first_name: string; last_name: string } | null;
+}
+
 // ── Label maps ────────────────────────────────────────────────────────────────
 const RELATION_LABELS: Record<string, string> = {
   father: "Padre", mother: "Madre", son: "Hijo", daughter: "Hija",
@@ -161,6 +169,25 @@ export default function PersonaPage() {
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<TabKey>("historia");
   const [moreOpen, setMoreOpen] = useState(false);
+  const [familyMoments, setFamilyMoments] = useState<{ historias: MomentItem[]; recuerdos: MomentItem[] }>({ historias: [], recuerdos: [] });
+
+  // Carga momentos recientes de toda la familia (historias + recuerdos)
+  useEffect(() => {
+    fetch("/api/events")
+      .then(r => r.ok ? r.json() : { events: [] })
+      .then(({ events: all }) => {
+        const now = Date.now();
+        const h24 = 86_400_000;
+        const h7d = 7 * h24;
+        const historias = (all as MomentItem[]).filter(e => (now - new Date(e.created_at).getTime()) < h24);
+        const recuerdos = (all as MomentItem[]).filter(e => {
+          const age = now - new Date(e.created_at).getTime();
+          return age >= h24 && age < h7d;
+        });
+        setFamilyMoments({ historias: historias.slice(0, 3), recuerdos: recuerdos.slice(0, 3) });
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!personId) return;
@@ -451,6 +478,63 @@ export default function PersonaPage() {
             {/* HISTORIA TAB */}
             {tab === "historia" && (
               <div>
+
+                {/* ── Momento del día ──────────────────────────────────────── */}
+                {(familyMoments.historias.length > 0 || familyMoments.recuerdos.length > 0) && (
+                  <div style={{ marginBottom: 24 }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(160,120,255,0.55)",
+                      letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>
+                      ✦ Momento del día
+                    </div>
+
+                    {/* Historias activas */}
+                    {familyMoments.historias.map(h => (
+                      <div key={h.id} style={{
+                        marginBottom: 8, borderRadius: 14, padding: "12px 14px",
+                        background: "rgba(140,80,255,0.07)",
+                        border: "0.5px solid rgba(160,120,255,0.25)",
+                        borderTop: "1px solid rgba(160,120,255,0.40)",
+                      }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                          <span style={{ fontSize: 13 }}>✨</span>
+                          <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(160,120,255,0.70)",
+                            letterSpacing: "0.04em", textTransform: "uppercase" }}>
+                            Historia · {h.creator?.first_name ?? "Familiar"}
+                          </span>
+                          <span style={{ marginLeft: "auto", fontSize: 9, color: "rgba(255,255,255,0.22)",
+                            background: "rgba(255,255,255,0.04)", padding: "2px 7px", borderRadius: 20 }}>
+                            −24h
+                          </span>
+                        </div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: "#F5EDD8", lineHeight: 1.3 }}>
+                          {h.title}
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Recuerdos recientes */}
+                    {familyMoments.recuerdos.map(r => (
+                      <div key={r.id} style={{
+                        marginBottom: 8, borderRadius: 14, padding: "12px 14px",
+                        background: "rgba(212,175,55,0.05)",
+                        border: "0.5px solid rgba(212,175,55,0.18)",
+                        borderTop: "1px solid rgba(212,175,55,0.32)",
+                      }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                          <span style={{ fontSize: 13 }}>📚</span>
+                          <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(212,175,55,0.70)",
+                            letterSpacing: "0.04em", textTransform: "uppercase" }}>
+                            Recuerdo · {r.creator?.first_name ?? "Familiar"}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: "#F5EDD8", lineHeight: 1.3 }}>
+                          {r.title}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 {isSelf && (
                   <div style={{
                     background: "rgba(212,175,55,0.06)", border: "1px solid rgba(212,175,55,0.15)",
