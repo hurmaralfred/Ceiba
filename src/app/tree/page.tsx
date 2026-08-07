@@ -219,7 +219,7 @@ function TreePageContent() {
     }
 
     const { profile, members, extendedMembers, memberLinks } = adaptGraph(graph, user.id);
-    const unified = buildVisibleMembers(members, extendedMembers);
+
     // Load avatar_config separately (not in adaptGraph)
     const { data: avatarRow } = await supabase
       .from('profiles')
@@ -229,9 +229,34 @@ function TreePageContent() {
     const profileWithConfig = avatarRow?.avatar_config
       ? ({ ...profile, avatar_config: avatarRow.avatar_config } as typeof profile)
       : profile
-    setProfile(profileWithConfig);
-    setMembers(members);
-    setExtendedMembers(extendedMembers);
+
+    // Enrich avatars: fetch photo_path from persons directly so galaxy nodes
+    // show photos even when the RPC result has a stale or missing photo_path
+    const personIds = (graph.nodes || []).map((n: any) => n.id as string);
+    const { data: photoRows } = await supabase
+      .from("persons")
+      .select("id, photo_path")
+      .in("id", personIds);
+    const photoMap = new Map((photoRows ?? []).map((r: any) => [r.id as string, r.photo_path as string | null]));
+
+    const enrichMember = (m: any) => {
+      const url = photoMap.get(m.id) ?? m.profile?.avatar_url ?? null;
+      if (!url || url === m.profile?.avatar_url) return m;
+      return { ...m, profile: { ...(m.profile ?? {}), avatar_url: url } };
+    };
+    const enrichedMembers = members.map(enrichMember);
+    const enrichedExtended = extendedMembers.map((e: any) => ({ ...e, member: enrichMember(e.member) }));
+
+    const rootUrl = photoMap.get(graph.me ?? "") ?? profileWithConfig?.avatar_url ?? null;
+    const enrichedProfile = rootUrl
+      ? ({ ...profileWithConfig, avatar_url: rootUrl } as typeof profileWithConfig)
+      : profileWithConfig;
+
+    const unified = buildVisibleMembers(enrichedMembers, enrichedExtended);
+
+    setProfile(enrichedProfile);
+    setMembers(enrichedMembers);
+    setExtendedMembers(enrichedExtended);
     setMemberLinks(memberLinks);
     setVisibleMembers(unified);
 
