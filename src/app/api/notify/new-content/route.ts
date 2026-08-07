@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { type, title, caption } = await req.json();
-  if (!["photo", "event"].includes(type)) {
+  if (!["photo", "event", "historia"].includes(type)) {
     return NextResponse.json({ error: "Invalid type" }, { status: 400 });
   }
 
@@ -82,12 +82,16 @@ export async function POST(req: NextRequest) {
   const pushPayload = JSON.stringify({
     title: type === "photo"
       ? `📸 Nueva foto de ${uploaderName}`
-      : `📅 Nuevo evento de ${uploaderName}`,
+      : type === "historia"
+        ? `✨ Nueva historia de ${uploaderName}`
+        : `📅 Nuevo recuerdo de ${uploaderName}`,
     body: type === "photo"
       ? (contentTitle ? `"${contentTitle}"` : "Compartió una foto en el árbol familiar")
-      : (contentTitle || "Registró un nuevo evento familiar"),
+      : type === "historia"
+        ? (contentTitle || "Compartió una historia con la familia")
+        : (contentTitle || "Registró un nuevo recuerdo familiar"),
     icon: "/icons/icon-192.png",
-    url: type === "photo" ? "/photos" : "/events",
+    url: type === "photo" ? "/photos" : type === "historia" ? "/historias" : "/events",
   });
 
   const pushResults = await Promise.allSettled(

@@ -31,7 +31,8 @@ const EVENT_TYPES = [
   { value: "other",       label: "Otro",           Icon: BookOpen,      accentRgb: "160,80,240",  iconColor: "#a050f0" },
 ];
 
-const EMPTY_FORM = { title: "", event_type: "birth", event_date: "", description: "", location: "" };
+const todayIso = () => new Date().toISOString().split("T")[0];
+const EMPTY_FORM = () => ({ title: "", event_type: "birth", event_date: todayIso(), description: "", location: "" });
 
 // ── Date helpers ───────────────────────────────────────────────────────────────
 
@@ -161,6 +162,9 @@ export default function EventsPage() {
       }
       closeModal();
       await loadEvents();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Error de red";
+      toast.error(msg || "No se pudo guardar");
     } finally {
       setSaving(false);
     }

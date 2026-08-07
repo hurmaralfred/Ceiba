@@ -126,18 +126,24 @@ export default function HistoriasPage() {
           location: null,
         }),
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        toast.error(body.error || "Error al guardar la historia");
+        setSaving(false);
+        return;
+      }
       toast.success("Historia compartida con tu familia ✦");
       // Notificar a toda la familia (fire-and-forget)
       fetch("/api/notify/new-content", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "event", title: title.trim() }),
+        body: JSON.stringify({ type: "historia", title: title.trim() }),
       }).catch(() => {});
       closeModal();
       load();
-    } catch {
-      toast.error("No se pudo guardar");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Error de red";
+      toast.error(msg || "No se pudo guardar");
     } finally {
       setSaving(false);
     }
