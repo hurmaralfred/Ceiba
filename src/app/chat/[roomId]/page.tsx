@@ -2,7 +2,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Send, Users } from "lucide-react";
+import { ArrowLeft, Send, Users, CheckCheck, Check } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useFamilyPresence } from "@/hooks/useFamilyPresence";
 import toast from "react-hot-toast";
@@ -15,12 +15,15 @@ interface Sender {
   photo_path: string | null;
 }
 
+interface Reaction { emoji: string; count: number; mine: boolean; }
+
 interface Message {
   id: string;
   sender_user_id: string;
   body: string;
   created_at: string;
   sender?: Sender | null;
+  reactions: Reaction[];
 }
 
 function formatTime(iso: string) {
@@ -51,10 +54,13 @@ export default function ChatRoomPage() {
   const [otherUserId, setOtherUserId] = useState<string | null>(null);
   const [roomName, setRoomName] = useState("Chat");
   const [roomType, setRoomType] = useState<"group" | "direct">("group");
+  const [partnerLastReadAt, setPartnerLastReadAt] = useState<string | null>(null);
+  const [emojiTarget, setEmojiTarget] = useState<string | null>(null); // messageId for picker
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastCountRef = useRef(0);
+  const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const onlineIds = useFamilyPresence(myUserId, otherUserId ? [otherUserId] : []);
   const otherIsOnline = otherUserId ? onlineIds.has(otherUserId) : false;
@@ -66,9 +72,10 @@ export default function ChatRoomPage() {
   const loadMessages = useCallback(async (scroll = false) => {
     const res = await fetch(`/api/chat/rooms/${roomId}/messages`);
     if (!res.ok) return;
-    const { messages: data } = await res.json();
-    const list: Message[] = data || [];
+    const data = await res.json();
+    const list: Message[] = (data.messages || []).map((m: any) => ({ ...m, reactions: m.reactions ?? [] }));
     setMessages(list);
+    if (data.partnerLastReadAt) setPartnerLastReadAt(data.partnerLastReadAt);
     if (scroll || list.length !== lastCountRef.current) scrollToBottom();
     lastCountRef.current = list.length;
   }, [roomId, scrollToBottom]);
@@ -124,6 +131,26 @@ export default function ChatRoomPage() {
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+  };
+
+  const EMOJIS = ["👍","❤️","😂","😮","😢","🙏","🔥","✦"];
+
+  const toggleReaction = async (messageId: string, emoji: string) => {
+    setEmojiTarget(null);
+    await fetch(`/api/chat/rooms/${roomId}/reactions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messageId, emoji }),
+    });
+    await loadMessages(false);
+  };
+
+  const startLongPress = (messageId: string) => {
+    longPressRef.current = setTimeout(() => setEmojiTarget(messageId), 500);
+  };
+
+  const cancelLongPress = () => {
+    if (longPressRef.current) { clearTimeout(longPressRef.current); longPressRef.current = null; }
   };
 
   const grouped: { date: string; messages: Message[] }[] = [];
@@ -215,11 +242,12 @@ export default function ChatRoomPage() {
                 const isMe = m.sender_user_id === myUserId;
                 const prev = group.messages[i - 1];
                 const showSender = !isMe && (!prev || prev.sender_user_id !== m.sender_user_id);
+                const isRead = isMe && partnerLastReadAt !== null && partnerLastReadAt >= m.created_at;
 
                 return (
                   <div key={m.id} style={{ display: "flex", alignItems: "flex-end", gap: 8,
                     flexDirection: isMe ? "row-reverse" : "row" }}>
-                    {/* Avatar placeholder for alignment */}
+                    {/* Avatar */}
                     {!isMe && (
                       <div style={{ width: 28, height: 28, flexShrink: 0 }}>
                         {showSender && (
@@ -242,22 +270,64 @@ export default function ChatRoomPage() {
                           {m.sender?.first_name} {m.sender?.last_name}
                         </span>
                       )}
-                      <div style={{
-                        padding: "9px 13px", borderRadius: isMe ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
-                        fontSize: 14, lineHeight: 1.5,
-                        background: isMe ? "#c9a820" : "#0c0a18",
-                        color: isMe ? "#030208" : "#fff",
-                        fontWeight: isMe ? 600 : 400,
-                        borderTop: isMe ? "1.5px solid #f5e060" : "1px solid rgba(212,175,55,0.15)",
-                        borderBottom: isMe ? "3px solid #6a5600" : "2px solid rgba(0,0,0,0.4)",
-                        boxShadow: isMe ? "0 5px 0 #4a3c00, 0 8px 16px rgba(0,0,0,0.5)" : "0 3px 0 #000, 0 5px 12px rgba(0,0,0,0.4)",
-                      }}>
+
+                      {/* Bubble */}
+                      <div
+                        onMouseDown={() => startLongPress(m.id)}
+                        onMouseUp={cancelLongPress}
+                        onMouseLeave={cancelLongPress}
+                        onTouchStart={() => startLongPress(m.id)}
+                        onTouchEnd={cancelLongPress}
+                        style={{
+                          padding: "9px 13px", borderRadius: isMe ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
+                          fontSize: 14, lineHeight: 1.5, userSelect: "none",
+                          background: isMe ? "#c9a820" : "#0c0a18",
+                          color: isMe ? "#030208" : "#fff",
+                          fontWeight: isMe ? 600 : 400,
+                          borderTop: isMe ? "1.5px solid #f5e060" : "1px solid rgba(212,175,55,0.15)",
+                          borderBottom: isMe ? "3px solid #6a5600" : "2px solid rgba(0,0,0,0.4)",
+                          boxShadow: isMe ? "0 5px 0 #4a3c00, 0 8px 16px rgba(0,0,0,0.5)" : "0 3px 0 #000, 0 5px 12px rgba(0,0,0,0.4)",
+                        }}>
                         {m.body}
                       </div>
-                      <span style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", marginTop: 3,
-                        marginLeft: isMe ? 0 : 4, marginRight: isMe ? 4 : 0 }}>
-                        {formatTime(m.created_at)}
-                      </span>
+
+                      {/* Reactions row */}
+                      {m.reactions.length > 0 && (
+                        <div style={{ display: "flex", gap: 4, marginTop: 4, flexWrap: "wrap",
+                          justifyContent: isMe ? "flex-end" : "flex-start" }}>
+                          {m.reactions.map(r => (
+                            <button
+                              key={r.emoji}
+                              onClick={() => toggleReaction(m.id, r.emoji)}
+                              style={{
+                                display: "flex", alignItems: "center", gap: 3,
+                                background: r.mine ? "rgba(212,175,55,0.2)" : "rgba(255,255,255,0.07)",
+                                border: r.mine ? "1px solid rgba(212,175,55,0.4)" : "1px solid rgba(255,255,255,0.1)",
+                                borderRadius: 10, padding: "2px 7px", cursor: "pointer",
+                                fontSize: 12, color: "#fff",
+                              }}>
+                              {r.emoji}
+                              <span style={{ fontSize: 10, fontWeight: 700, color: r.mine ? "#d4af37" : "rgba(255,255,255,0.55)" }}>
+                                {r.count}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Time + read receipt */}
+                      <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 3,
+                        marginLeft: isMe ? 0 : 4, marginRight: isMe ? 4 : 0,
+                        flexDirection: isMe ? "row-reverse" : "row" }}>
+                        <span style={{ fontSize: 10, color: "rgba(255,255,255,0.25)" }}>
+                          {formatTime(m.created_at)}
+                        </span>
+                        {isMe && (
+                          isRead
+                            ? <CheckCheck size={12} style={{ color: "#d4af37" }} />
+                            : <Check size={12} style={{ color: "rgba(255,255,255,0.3)" }} />
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
@@ -267,6 +337,36 @@ export default function ChatRoomPage() {
         ))}
         <div ref={bottomRef} />
       </div>
+
+      {/* Emoji picker overlay */}
+      {emojiTarget && (
+        <div
+          onClick={() => setEmojiTarget(null)}
+          style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.55)" }}>
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              position: "absolute", bottom: 100, left: "50%", transform: "translateX(-50%)",
+              background: "#0e0b1f", border: "1px solid rgba(212,175,55,0.25)",
+              borderRadius: 20, padding: "12px 16px",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.8)",
+              display: "flex", gap: 8,
+            }}>
+            {EMOJIS.map(e => (
+              <button
+                key={e}
+                onClick={() => toggleReaction(emojiTarget, e)}
+                style={{
+                  fontSize: 22, background: "none", border: "none", cursor: "pointer",
+                  padding: "4px 2px", borderRadius: 8,
+                  transition: "transform 0.1s",
+                }}>
+                {e}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Input bar */}
       <div style={{ padding: "10px 14px 28px", borderTop: "0.5px solid rgba(212,175,55,0.14)",

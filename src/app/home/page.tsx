@@ -447,19 +447,34 @@ const SPARKLE_POS = [
   { top: 66,  left: 10 },
   { top: 20,  left: -7 },
 ];
-function CircleBtn({ icon: Icon, label, href, color, shadowColor, delay = 0 }: {
+function CircleBtn({ icon: Icon, label, href, color, shadowColor, delay = 0, badge = 0 }: {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   icon: React.ComponentType<any>;
   label: string; href: string;
   color: string;    // "r,g,b"
   shadowColor: string; // hex for 3D depth shadow
   delay?: number;
+  badge?: number;
 }) {
   return (
     <Link href={href} style={{ display:"flex", flexDirection:"column", alignItems:"center",
       gap:8, flexShrink:0, textDecoration:"none" }}>
       <div style={{ position:"relative", width:72, height:72,
         animation:`btn-float 3.8s ease-in-out infinite ${delay}s` }}>
+        {badge > 0 && (
+          <div style={{
+            position:"absolute", top:-4, right:-4, zIndex:10,
+            minWidth:18, height:18, borderRadius:9,
+            background:"#ef4444", color:"#fff",
+            fontSize:10, fontWeight:800, lineHeight:1,
+            display:"flex", alignItems:"center", justifyContent:"center",
+            padding:"0 4px",
+            boxShadow:"0 2px 6px rgba(0,0,0,0.6), 0 0 10px rgba(239,68,68,0.7)",
+            border:"1.5px solid rgba(255,255,255,0.2)",
+          }}>
+            {badge > 99 ? "99+" : badge}
+          </div>
+        )}
         {SPARKLE_POS.map((p, i) => (
           <div key={i} style={{
             position:"absolute", top:p.top, left:p.left,
@@ -619,6 +634,7 @@ export default function HomePage() {
   const [roster,       setRoster]       = useState<FamilyRosterMember[]>([]);
   const [myUserId,     setMyUserId]     = useState<string | null>(null);
   const [lightboxPhoto, setLightboxPhoto] = useState<FeedPhoto | null>(null);
+  const [unreadChats,  setUnreadChats]  = useState(0);
 
   // Force dark body background — globals.css uses cream which bleeds through
   useEffect(() => {
@@ -638,12 +654,13 @@ export default function HomePage() {
       if (status.needsConfirmation) { router.replace("/confirmar-datos"); return; }
     }
 
-    const [graphRes, feedRes, sugRes, rosterRes, eventsRes] = await Promise.allSettled([
+    const [graphRes, feedRes, sugRes, rosterRes, eventsRes, chatRes] = await Promise.allSettled([
       supabase.rpc("get_my_family_graph", { p_depth: 4 }),
       fetch("/api/feed"),
       fetch("/api/suggestions"),
       fetch("/api/family/roster"),
       fetch("/api/events"),
+      fetch("/api/chat/rooms"),
     ]);
 
     if (graphRes.status === "fulfilled" && !graphRes.value.error) {
@@ -694,6 +711,16 @@ export default function HomePage() {
         if (res.ok) {
           const { events: ev } = await res.json();
           setAllEvents(ev ?? []);
+        }
+      } catch {}
+    }
+
+    if (chatRes.status === "fulfilled") {
+      try {
+        const res = chatRes.value;
+        if (res.ok) {
+          const { conversations } = await res.json();
+          setUnreadChats((conversations ?? []).filter((c: any) => c.unread).length);
         }
       } catch {}
     }
@@ -1005,7 +1032,7 @@ export default function HomePage() {
           <CircleBtn icon={TreePine}      label="Árbol"       href="/tree"      color="240,192,64"  shadowColor="#3a2800" delay={0}    />
           <CircleBtn icon={Sparkles}      label="Historias"   href="/historias" color="160,120,255" shadowColor="#06022a" delay={0.4}  />
           <CircleBtn icon={BookOpen}      label="Recuerdos"   href="/events"    color="242,180,60"  shadowColor="#2a1400" delay={0.8}  />
-          <CircleBtn icon={MessageCircle} label="Chat"        href="/chat"      color="160,170,245" shadowColor="#050328" delay={1.2}  />
+          <CircleBtn icon={MessageCircle} label="Chat"        href="/chat"      color="160,170,245" shadowColor="#050328" delay={1.2} badge={unreadChats} />
           <CircleBtn icon={Lock}          label={"Cápsulas"}  href="/capsulas"  color="150,90,255"  shadowColor="#060010" delay={1.6}  />
           <CircleBtn icon={Map}           label="Mapa"        href="/mapa"      color="80,220,250"  shadowColor="#02101e" delay={2.0}  />
           <CircleBtn icon={Send}          label="Invitar"     href="/invitar"   color="212,175,55"  shadowColor="#362000" delay={2.4}  />

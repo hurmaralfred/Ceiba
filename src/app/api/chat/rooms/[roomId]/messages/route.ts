@@ -41,18 +41,54 @@ export async function GET(_req: NextRequest, { params }: { params: { roomId: str
   const senderIds = [...new Set((messages ?? []).map((m) => m.sender_user_id as string))];
   const people = await resolvePersonsByUserIds(service, senderIds);
 
+  const now = new Date().toISOString();
   await service
     .from("chat_room_members")
-    .update({ last_read_at: new Date().toISOString() })
+    .update({ last_read_at: now })
     .eq("room_id", params.roomId)
     .eq("user_id", user.id);
+
+  // Partner's last_read_at (for read receipts on my own messages)
+  const { data: partnerRow } = await service
+    .from("chat_room_members")
+    .select("last_read_at")
+    .eq("room_id", params.roomId)
+    .neq("user_id", user.id)
+    .order("last_read_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const partnerLastReadAt: string | null = (partnerRow as any)?.last_read_at ?? null;
+
+  // Reactions (graceful if table not yet created)
+  const messageIds = (messages ?? []).map((m) => m.id as string);
+  let reactionRows: any[] = [];
+  if (messageIds.length > 0) {
+    const { data: rx } = await service
+      .from("chat_message_reactions")
+      .select("message_id, user_id, emoji")
+      .in("message_id", messageIds);
+    reactionRows = rx ?? [];
+  }
+  const reactionsByMessage: Record<string, { emoji: string; count: number; mine: boolean }[]> = {};
+  for (const r of reactionRows) {
+    const key = r.message_id as string;
+    if (!reactionsByMessage[key]) reactionsByMessage[key] = [];
+    const existing = reactionsByMessage[key].find((x) => x.emoji === r.emoji);
+    if (existing) {
+      existing.count++;
+      if (r.user_id === user.id) existing.mine = true;
+    } else {
+      reactionsByMessage[key].push({ emoji: r.emoji, count: 1, mine: r.user_id === user.id });
+    }
+  }
 
   const enriched = (messages ?? []).map((m) => ({
     ...m,
     sender: people.get(m.sender_user_id) ?? null,
+    reactions: reactionsByMessage[m.id as string] ?? [],
   }));
 
-  return NextResponse.json({ messages: enriched });
+  return NextResponse.json({ messages: enriched, partnerLastReadAt });
 }
 
 /** POST /api/chat/rooms/[roomId]/messages — Body: { body: string } */

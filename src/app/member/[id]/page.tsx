@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
-import { TreePine, ArrowLeft, Save, AlertCircle } from "lucide-react";
+import { TreePine, ArrowLeft, Save, AlertCircle, MessageCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 interface PersonData {
@@ -27,6 +27,8 @@ export default function MemberEditPage() {
   const [saving, setSaving] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [claimedUserId, setClaimedUserId] = useState<string | null>(null);
+  const [startingChat, setStartingChat] = useState(false);
   const [form, setForm] = useState({
     first_name: "",
     middle_name: "",
@@ -51,6 +53,17 @@ export default function MemberEditPage() {
       .maybeSingle();
 
     if (!data) { setNotFound(true); setLoading(false); return; }
+
+    // Check if another user has claimed this person (for the Mensaje button)
+    const { data: claim } = await supabase
+      .from("person_claims")
+      .select("user_id")
+      .eq("person_id", personId)
+      .eq("claim_status", "approved")
+      .is("revoked_at", null)
+      .neq("user_id", user.id)
+      .maybeSingle();
+    if (claim?.user_id) setClaimedUserId(claim.user_id);
 
     setForm({
       first_name: data.first_name ?? "",
@@ -99,6 +112,20 @@ export default function MemberEditPage() {
     }
 
     router.push("/tree");
+  };
+
+  const startChat = async () => {
+    if (!claimedUserId) return;
+    setStartingChat(true);
+    const res = await fetch("/api/chat/rooms", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ otherUserId: claimedUserId }),
+    });
+    setStartingChat(false);
+    if (!res.ok) return;
+    const { roomId } = await res.json();
+    router.push(`/chat/${roomId}`);
   };
 
   if (loading) return (
@@ -209,6 +236,23 @@ export default function MemberEditPage() {
             <span className="text-sm text-ceiba-700">Fallecido/a</span>
           </label>
         </div>
+
+        {claimedUserId && (
+          <button
+            onClick={startChat}
+            disabled={startingChat}
+            className="w-full flex items-center justify-center gap-2 disabled:opacity-60"
+            style={{
+              padding: "12px 16px", borderRadius: 14, fontSize: 14, fontWeight: 700,
+              color: "#fff", background: "linear-gradient(135deg,#1a1030,#0c0a18)",
+              border: "1.5px solid rgba(212,175,55,0.35)", cursor: "pointer",
+              boxShadow: "0 4px 14px rgba(0,0,0,0.3)",
+            }}
+          >
+            <MessageCircle size={16} />
+            {startingChat ? "Abriendo chat..." : `Enviar mensaje a ${form.first_name}`}
+          </button>
+        )}
 
         <button
           onClick={handleSave}
