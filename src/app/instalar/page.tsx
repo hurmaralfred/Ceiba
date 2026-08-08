@@ -25,7 +25,7 @@ export default function InstalarPage() {
 
       {/* Header */}
       <div style={{
-        padding: "52px 20px 16px", textAlign: "center",
+        padding: "calc(env(safe-area-inset-top,20px) + 14px) 20px 16px", textAlign: "center",
         borderBottom: "0.5px solid rgba(212,175,55,0.14)",
         background: "rgba(3,2,8,0.97)",
       }}>

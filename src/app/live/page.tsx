@@ -211,7 +211,7 @@ export default function LivePage() {
   const withLocation = members.filter(m => m.live_lat && m.location_sharing);
 
   return (
-    <div className="min-h-screen bg-ceiba-950 text-white flex flex-col">
+    <div className="min-h-screen bg-ceiba-950 text-white flex flex-col overflow-x-hidden">
       {/* Header */}
       <header className="px-4 pt-5 pb-3">
         <div className="flex items-center justify-between mb-1">
@@ -320,7 +320,7 @@ export default function LivePage() {
       </div>
 
       {/* Family list */}
-      <div className="flex-1 overflow-y-auto px-4 pb-28 space-y-2">
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 pb-28 space-y-2">
         {loading ? (
           [...Array(4)].map((_, i) => (
             <div key={i} className="h-16 bg-gray-800/40 rounded-2xl animate-pulse" />

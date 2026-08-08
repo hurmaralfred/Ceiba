@@ -867,7 +867,7 @@ export default function OnboardingPage() {
         </svg>
 
         {/* Progress */}
-        <div style={{ position: "relative", zIndex: 10, padding: "52px 20px 12px", display: "flex", gap: 6 }}>
+        <div style={{ position: "relative", zIndex: 10, padding: "calc(env(safe-area-inset-top,20px) + 14px) 20px 12px", display: "flex", gap: 6 }}>
           {Array.from({ length: TOTAL_STEPS }, (_, i) => (
             <div key={i} style={{
               flex: 1, height: 3, borderRadius: 100,

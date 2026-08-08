@@ -214,7 +214,7 @@ export default function PersonaPage() {
       {/* Floating header overlay */}
       <div style={{
         position: "fixed", top: 0, left: 0, right: 0, zIndex: 30,
-        padding: "52px 20px 14px",
+        padding: "calc(env(safe-area-inset-top,20px) + 14px) 20px 14px",
         display: "flex", justifyContent: "space-between", alignItems: "center",
         background: "linear-gradient(180deg, rgba(3,2,8,0.82) 0%, transparent 100%)",
         pointerEvents: "none",

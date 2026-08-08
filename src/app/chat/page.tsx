@@ -358,7 +358,7 @@ export default function ChatListPage() {
         {/* ── Header ─────────────────────────────────────────────────────── */}
         <div style={{ background:"rgba(4,2,12,0.88)", backdropFilter:"blur(18px)",
           WebkitBackdropFilter:"blur(18px)", borderBottom:"0.5px solid rgba(242,180,60,0.10)",
-          padding:"52px 20px 16px" }}>
+          padding:"calc(env(safe-area-inset-top,20px) + 14px) 20px 16px" }}>
           <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10 }}>
             <Link href="/home">
               <div style={{ width:36, height:36, borderRadius:11, background:"rgba(8,5,18,0.95)",

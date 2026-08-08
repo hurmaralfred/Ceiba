@@ -503,7 +503,7 @@ function InvitarPageInner() {
     return (
       <div style={{ minHeight:"100vh", background:"#030208", display:"flex", flexDirection:"column" }}>
         <StarBackground />
-        <header style={{ position:"relative", zIndex:10, padding:"52px 20px 16px",
+        <header style={{ position:"relative", zIndex:10, padding:"calc(env(safe-area-inset-top,20px) + 14px) 20px 16px",
           display:"flex", alignItems:"center", gap:12,
           borderBottom:"0.5px solid rgba(242,180,60,0.10)", backdropFilter:"blur(12px)" }}>
           <button onClick={() => router.back()}
@@ -584,7 +584,7 @@ function InvitarPageInner() {
         <header style={{ background:"rgba(6,3,14,0.85)", backdropFilter:"blur(16px)",
           WebkitBackdropFilter:"blur(16px)",
           borderBottom:"0.5px solid rgba(242,180,60,0.10)",
-          padding:"52px 20px 14px", position:"sticky", top:0, zIndex:20 }}>
+          padding:"calc(env(safe-area-inset-top,20px) + 14px) 20px 14px", position:"sticky", top:0, zIndex:20 }}>
           <div style={{ display:"flex", alignItems:"center", gap:12 }}>
             <button onClick={() => router.back()}
               style={{ background:"none", border:"none", cursor:"pointer",

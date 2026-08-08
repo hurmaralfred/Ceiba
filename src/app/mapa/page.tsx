@@ -50,12 +50,12 @@ export default function MapaPage() {
 
   return (
     <div style={{ height: "100dvh", display: "flex", flexDirection: "column",
-      background: "#030208", color: "#fff", overflow: "hidden" }}>
+      background: "#030208", color: "#fff", overflow: "hidden", maxWidth: "100vw" }}>
 
       {/* Header */}
       <div style={{
         display: "flex", alignItems: "center", gap: 12,
-        padding: "52px 18px 14px",
+        padding: "calc(env(safe-area-inset-top, 20px) + 14px) 18px 14px",
         background: "rgba(3,2,8,0.97)", borderBottom: "0.5px solid rgba(212,175,55,0.14)",
         backdropFilter: "blur(12px)", flexShrink: 0, zIndex: 10,
       }}>
@@ -173,7 +173,7 @@ export default function MapaPage() {
             </div>
 
             {/* People list */}
-            <div style={{ overflowY: "auto", padding: "0 20px", flex: 1 }}>
+            <div style={{ overflowY: "auto", overflowX: "hidden", minHeight: 0, padding: "0 20px", flex: 1 }}>
               {selected.people.map((p, i) => (
                 <div key={i} style={{ display: "flex", alignItems: "center", gap: 12,
                   padding: "10px 0",

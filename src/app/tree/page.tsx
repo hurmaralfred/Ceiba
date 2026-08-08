@@ -1053,7 +1053,7 @@ function TreePageContent() {
       <nav style={{
         background: "rgba(3,2,8,0.97)", backdropFilter: "blur(12px)",
         borderBottom: "0.5px solid rgba(212,175,55,0.18)",
-        padding: "52px 18px 12px",
+        padding: "calc(env(safe-area-inset-top,20px) + 14px) 18px 12px",
         display: "flex", alignItems: "center", justifyContent: "space-between",
         position: "sticky", top: 0, zIndex: 40,
       }}>
@@ -2090,7 +2090,7 @@ function SearchModal({ onClose }: { onClose: () => void }) {
     }}>
       {/* Header */}
       <div style={{
-        padding: "52px 16px 12px",
+        padding: "calc(env(safe-area-inset-top,20px) + 14px) 16px 12px",
         borderBottom: "0.5px solid rgba(212,175,55,0.18)",
         display: "flex", alignItems: "center", gap: 10,
       }}>
@@ -2128,7 +2128,7 @@ function SearchModal({ onClose }: { onClose: () => void }) {
       </div>
 
       {/* Results */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px 100px" }}>
+      <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden", padding: "12px 16px 100px" }}>
         {loading && (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {[1,2,3].map(i => (

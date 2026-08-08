@@ -153,7 +153,7 @@ export default function SugerenciaPage() {
 
       {/* header */}
       <div style={{ display: "flex", alignItems: "center", gap: 12,
-        padding: "52px 20px 14px",
+        padding: "calc(env(safe-area-inset-top,20px) + 14px) 20px 14px",
         borderBottom: "0.5px solid rgba(212,175,55,0.12)" }}>
         <Link href="/feed">
           <div style={{ width: 36, height: 36, borderRadius: 11, background: "#0c0a1a",

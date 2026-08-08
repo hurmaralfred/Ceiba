@@ -307,7 +307,7 @@ export default function AvatarBuilderPage() {
       <div style={{ minHeight: '100vh', position: 'relative', zIndex: 5, paddingBottom: 50 }}>
 
         {/* ── Back button ─────────────────────────────────────────────────── */}
-        <div style={{ padding: '52px 18px 0', display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div style={{ padding: "calc(env(safe-area-inset-top,20px) + 14px) 18px 0", display: 'flex', alignItems: 'center', gap: 14 }}>
           <Link href="/profile" style={{ textDecoration: 'none' }}>
             <div style={{ width: 36, height: 36, borderRadius: 11, background: 'rgba(12,10,26,0.95)',
               borderTop: '1px solid rgba(212,175,55,0.28)', borderBottom: '2px solid #000',
