@@ -2,7 +2,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Plus, X, Sparkles, Clock, ImagePlus } from "lucide-react";
+import { Plus, X, Sparkles, Clock, ImagePlus, Eye } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 import { CosmicNav, CosmicHeader, s3dInput, C } from "@/components/ui/cosmic";
@@ -61,6 +61,7 @@ export default function HistoriasPage() {
   const [historias, setHistorias] = useState<Historia[]>([]);
   const [loading, setLoading]     = useState(true);
   const [userId, setUserId]       = useState<string | null>(null);
+  const [viewCounts, setViewCounts] = useState<Record<string, number>>({});
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving]       = useState(false);
   const [title, setTitle]         = useState("");
@@ -82,6 +83,21 @@ export default function HistoriasPage() {
           e => new Date(e.created_at).getTime() > cutoff
         );
         setHistorias(recent);
+
+        if (recent.length > 0) {
+          const ids = recent.map(h => h.id);
+          // Record views (fire-and-forget — graceful if table not yet created)
+          fetch("/api/stories/views", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ story_ids: ids }),
+          }).catch(() => {});
+          // Fetch view counts
+          fetch(`/api/stories/views?ids=${ids.join(",")}`)
+            .then(r => r.ok ? r.json() : null)
+            .then(data => { if (data?.counts) setViewCounts(data.counts); })
+            .catch(() => {});
+        }
       }
     } catch {}
     setLoading(false);
@@ -247,11 +263,19 @@ export default function HistoriasPage() {
                               {h.creator?.first_name ?? "Un familiar"}
                               {isOwn && <span style={{ fontSize: 9, color: `rgba(${ac},0.45)`, marginLeft: 5 }}>· tú</span>}
                             </span>
-                            <span style={{ fontSize: 9, fontWeight: 600, color: "rgba(255,255,255,0.25)",
-                              background: "rgba(255,255,255,0.04)", padding: "2px 7px", borderRadius: 20,
-                              display: "flex", alignItems: "center", gap: 4 }}>
-                              <Clock size={8} /> {remaining}
-                            </span>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              {(viewCounts[h.id] ?? 0) > 0 && (
+                                <span style={{ fontSize: 9, fontWeight: 600, color: `rgba(${ac},0.45)`,
+                                  display: "flex", alignItems: "center", gap: 3 }}>
+                                  <Eye size={8} /> {viewCounts[h.id]}
+                                </span>
+                              )}
+                              <span style={{ fontSize: 9, fontWeight: 600, color: "rgba(255,255,255,0.25)",
+                                background: "rgba(255,255,255,0.04)", padding: "2px 7px", borderRadius: 20,
+                                display: "flex", alignItems: "center", gap: 4 }}>
+                                <Clock size={8} /> {remaining}
+                              </span>
+                            </div>
                           </div>
                           {/* Title */}
                           <div style={{ fontSize: 15, fontWeight: 700, color: "#F5EDD8", lineHeight: 1.3, marginBottom: 4 }}>
