@@ -663,6 +663,15 @@ const CONNECTOR_RELATIONS = new Set<RelationType>([
   "great_granddaughter",
   "great_great_grandson",
   "great_great_granddaughter",
+  // Colaterales y políticos — requieren un familiar intermedio existente
+  "uncle",
+  "aunt",
+  "nephew",
+  "niece",
+  "father_in_law",
+  "mother_in_law",
+  "brother_in_law",
+  "sister_in_law",
 ]);
 
 export function relationRequiresConnector(
@@ -700,6 +709,14 @@ const ADD_RELATIVE_SUPPORTED = new Set<RelationType>([
   "great_granddaughter",
   "great_great_grandson",
   "great_great_granddaughter",
+  "uncle",
+  "aunt",
+  "nephew",
+  "niece",
+  "father_in_law",
+  "mother_in_law",
+  "brother_in_law",
+  "sister_in_law",
 ]);
 
 export function isAddRelativeSupported(relation: string): boolean {
@@ -773,6 +790,28 @@ export function buildAddRelativeRequest(
     case "great_granddaughter":
     case "great_great_granddaughter":
       return { primitive: "parent", backendRelationKey: "daughter", relatedPersonId: connector, parentKind: "biological", gender: "female" };
+
+    // Tíos: hermano/hermana de uno de tus padres.
+    case "uncle":
+      return { primitive: "parent", backendRelationKey: "brother", relatedPersonId: connector, parentKind: "unknown", gender: "male" };
+    case "aunt":
+      return { primitive: "parent", backendRelationKey: "sister", relatedPersonId: connector, parentKind: "unknown", gender: "female" };
+
+    // Sobrinos: hijo/hija de uno de tus hermanos.
+    case "nephew":
+      return { primitive: "parent", backendRelationKey: "son", relatedPersonId: connector, parentKind: "biological", gender: "male" };
+    case "niece":
+      return { primitive: "parent", backendRelationKey: "daughter", relatedPersonId: connector, parentKind: "biological", gender: "female" };
+
+    // Familia política: pariente de tu pareja.
+    case "father_in_law":
+      return { primitive: "parent", backendRelationKey: "father", relatedPersonId: connector, parentKind: "biological", gender: "male" };
+    case "mother_in_law":
+      return { primitive: "parent", backendRelationKey: "mother", relatedPersonId: connector, parentKind: "biological", gender: "female" };
+    case "brother_in_law":
+      return { primitive: "parent", backendRelationKey: "brother", relatedPersonId: connector, parentKind: "unknown", gender: "male" };
+    case "sister_in_law":
+      return { primitive: "parent", backendRelationKey: "sister", relatedPersonId: connector, parentKind: "unknown", gender: "female" };
 
     default:
       // Parentescos directos no cubiertos arriba (p. ej. guardian si se

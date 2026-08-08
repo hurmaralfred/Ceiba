@@ -257,6 +257,19 @@ function TreePageContent() {
         const firstName = [node.first_name, node.middle_name].filter(Boolean).join(" ");
         const lastName = [node.first_surname, node.second_surname].filter(Boolean).join(" ");
 
+        // Determine if the missing node is the PARENT in this link (fromMemberId = parent)
+        const isParent = link.fromMemberId === missingId &&
+          (link.relation === "son" || link.relation === "daughter");
+        const g = String(node.gender ?? "").toLowerCase();
+        const isFem = ["f", "female", "femenino", "femenina", "mujer"].includes(g);
+        const isMasc = ["m", "male", "masculino", "hombre"].includes(g);
+        const relType = isParent
+          ? (isFem ? "mother" as const : isMasc ? "father" as const : "other" as const)
+          : "other" as const;
+
+        // Build photo URL from photo_path (persons without a claimed account)
+        const photoPath: string | null = node.photo_path ?? null;
+
         addedCoParentIds.add(missingId);
         knownPersonIds.add(missingId);
         coParentExtras.push({
@@ -266,15 +279,18 @@ function TreePageContent() {
             profile_id: node.id,
             first_name: firstName,
             last_name: lastName || undefined,
-            relation_type: "other" as const,
+            relation_type: relType,
             relation_kind: "blood" as const,
             invitation_sent: false,
             is_deceased: Boolean(node.is_deceased),
             created_at: node.created_at || "",
             generation: connectedGen - 1,
+            profile: photoPath
+              ? ({ id: node.id, first_name: firstName, last_name: lastName || undefined, avatar_url: photoPath, location_enabled: false, created_at: node.created_at || "", updated_at: node.updated_at || "" } as any)
+              : undefined,
           },
           parentMemberId: knownId,
-          inferredRelation: null,
+          inferredRelation: relType !== "other" ? relType : null,
         });
       }
     }
@@ -556,6 +572,10 @@ function TreePageContent() {
     if (rt === "great_great_grandfather" || rt === "great_great_grandmother") return "¿Padre o madre de cuál de tus bisabuelos?";
     if (rt === "grandson" || rt === "granddaughter") return "¿Hijo o hija de cuál de tus hijos?";
     if (rt === "great_grandson" || rt === "great_granddaughter") return "¿Hijo o hija de cuál de tus nietos?";
+    if (rt === "uncle" || rt === "aunt") return "¿Hermano/a de cuál de tus padres es?";
+    if (rt === "nephew" || rt === "niece") return "¿Hijo/a de cuál de tus hermanos/as es?";
+    if (rt === "father_in_law" || rt === "mother_in_law") return "¿Padre o madre de cuál de tus parejas?";
+    if (rt === "brother_in_law" || rt === "sister_in_law") return "¿Hermano/a de cuál de tus parejas?";
     return "";
   };
 
@@ -578,6 +598,12 @@ function TreePageContent() {
       allowed = ["son", "daughter"];
     } else if (rt === "great_grandson" || rt === "great_granddaughter") {
       allowed = ["grandson", "granddaughter"];
+    } else if (rt === "uncle" || rt === "aunt") {
+      allowed = ["father", "mother"];
+    } else if (rt === "nephew" || rt === "niece") {
+      allowed = ["brother", "sister"];
+    } else if (rt === "father_in_law" || rt === "mother_in_law" || rt === "brother_in_law" || rt === "sister_in_law") {
+      allowed = ["spouse", "partner"];
     }
     const allowedSet = new Set(allowed);
     const seen = new Set<string>();
@@ -1746,7 +1772,13 @@ function TreePageContent() {
                   </label>
                   {connectorCandidates(form.relation_type).length === 0 ? (
                     <p style={{ fontSize: 11, color: "rgba(212,175,55,0.75)", background: "rgba(180,120,0,0.10)", border: "1px solid rgba(212,175,55,0.22)", borderRadius: 8, padding: "8px 10px" }}>
-                      Primero agrega el familiar intermedio (el {(form.relation_type.startsWith("great_grand") ? "abuelo/a o nieto/a" : "padre/madre o hijo/a")} correspondiente) para poder conectar este parentesco.
+                      {(() => {
+                        const rt = form.relation_type;
+                        if (rt === "uncle" || rt === "aunt") return "Primero agrega a tu padre o madre para poder conectar este tío/a.";
+                        if (rt === "nephew" || rt === "niece") return "Primero agrega a tu hermano o hermana para poder conectar este sobrino/a.";
+                        if (rt === "father_in_law" || rt === "mother_in_law" || rt === "brother_in_law" || rt === "sister_in_law") return "Primero agrega a tu pareja (esposo/a o pareja) para poder conectar este familiar político.";
+                        return `Primero agrega el familiar intermedio (el ${rt.startsWith("great_grand") ? "abuelo/a o nieto/a" : "padre/madre o hijo/a"} correspondiente) para poder conectar este parentesco.`;
+                      })()}
                     </p>
                   ) : (
                     <select
