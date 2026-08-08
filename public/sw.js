@@ -52,24 +52,39 @@ self.addEventListener('fetch', (event) => {
 self.addEventListener('push', (event) => {
   if (!event.data) return;
   const data = event.data.json();
-  event.waitUntil(
-    self.registration.showNotification(data.title, {
-      body: data.body,
-      icon: data.icon || '/icons/icon-192.png',
-      badge: '/icons/icon-192.png',
-      data: { url: data.url || '/tree' },
-      vibrate: [200, 100, 200],
-    })
-  );
+
+  const notifPromise = self.registration.showNotification(data.title, {
+    body: data.body,
+    icon: data.icon || '/icons/icon-192.png',
+    badge: '/icons/icon-72.png',
+    data: { url: data.url || '/chat' },
+    vibrate: [200, 100, 200],
+    tag: 'ceiba-chat',
+    renotify: true,
+  });
+
+  // Set app icon badge (iOS 17+ / Android Chrome)
+  const badgePromise = self.navigator?.setAppBadge
+    ? self.navigator.setAppBadge(data.badge ?? 1).catch(() => {})
+    : Promise.resolve();
+
+  event.waitUntil(Promise.all([notifPromise, badgePromise]));
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const url = event.notification.data?.url || '/tree';
+  const url = event.notification.data?.url || '/chat';
+
+  // Clear badge when user taps the notification
+  if (self.navigator?.clearAppBadge) self.navigator.clearAppBadge().catch(() => {});
+
   event.waitUntil(
-    clients.matchAll({ type: 'window' }).then((clientList) => {
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
-        if (client.url.includes(url) && 'focus' in client) return client.focus();
+        if ('focus' in client) {
+          client.navigate(url);
+          return client.focus();
+        }
       }
       return clients.openWindow(url);
     })

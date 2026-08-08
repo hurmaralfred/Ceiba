@@ -83,16 +83,18 @@ export function usePushNotifications() {
 
         if (cancelled) return;
 
-        // ── VAPID Web Push fallback (iOS Safari PWA + Firefox + Edge) ────
-        // Siempre se intenta, complementa FCM cuando ambos están disponibles.
-        // En iOS el permiso ya fue pedido o será pedido aquí.
+        // ── VAPID Web Push — iOS Safari PWA + Android + Firefox + Edge ──
+        // Siempre se intenta independientemente de si FCM funcionó.
+        // FCM no funciona en iOS Safari; VAPID es el único canal ahí.
         if (!VAPID_PUB_KEY) return;
         try {
           const reg = await navigator.serviceWorker.ready;
           if (!reg.pushManager) return;
 
-          // Solo pedimos permiso si FCM no lo hizo ya
-          if (!fcmRegistered) {
+          // Pedir permiso si aún no está concedido
+          const currentPermission = Notification.permission;
+          if (currentPermission === "denied") return;
+          if (currentPermission !== "granted") {
             const permission = await Notification.requestPermission();
             if (permission !== "granted" || cancelled) return;
           }

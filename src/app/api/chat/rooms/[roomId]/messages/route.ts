@@ -169,7 +169,7 @@ async function pushChatNotification(
 
   const title   = isGroup ? `💬 ${senderName} (familia)` : `💬 ${senderName}`;
   const body    = messageBody.length > 120 ? messageBody.slice(0, 117) + "…" : messageBody;
-  const payload = JSON.stringify({ title, body, icon: "/icons/icon-192.png", url: "/chat" });
+  const payload = JSON.stringify({ title, body, icon: "/icons/icon-192.png", url: `/chat/${roomId}`, badge: 1 });
 
   // ── VAPID (iOS PWA + Android Chrome + desktop) ────────────────────────────
   const { data: subs } = await service

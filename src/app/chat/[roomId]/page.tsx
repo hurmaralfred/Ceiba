@@ -69,6 +69,11 @@ export default function ChatRoomPage() {
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
   }, []);
 
+  // Clear app badge when entering any chat room
+  useEffect(() => {
+    if ("clearAppBadge" in navigator) navigator.clearAppBadge().catch(() => {});
+  }, []);
+
   const loadMessages = useCallback(async (scroll = false) => {
     const res = await fetch(`/api/chat/rooms/${roomId}/messages`);
     if (!res.ok) return;

@@ -720,7 +720,13 @@ export default function HomePage() {
         const res = chatRes.value;
         if (res.ok) {
           const { conversations } = await res.json();
-          setUnreadChats((conversations ?? []).filter((c: any) => c.unread).length);
+          const count = (conversations ?? []).filter((c: any) => c.unread).length;
+          setUnreadChats(count);
+          // Update app icon badge (iOS 17+ / Android Chrome / desktop)
+          if ("setAppBadge" in navigator) {
+            if (count > 0) navigator.setAppBadge(count).catch(() => {});
+            else navigator.clearAppBadge().catch(() => {});
+          }
         }
       } catch {}
     }
