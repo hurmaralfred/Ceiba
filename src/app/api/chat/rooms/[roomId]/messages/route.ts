@@ -172,14 +172,16 @@ async function pushChatNotification(
   const payload = JSON.stringify({ title, body, icon: "/icons/icon-192.png", url: `/chat/${roomId}`, badge: 1 });
 
   // ── VAPID (iOS PWA + Android Chrome + desktop) ────────────────────────────
-  const { data: subs } = await service
+  const { data: subs, error: subsError } = await service
     .from("push_subscriptions")
-    .select("endpoint, p256dh, auth")
+    .select("endpoint, p256dh, auth, user_id")
     .in("user_id", otherIds);
+
+  console.log(`[push] recipients=${otherIds.length} subscriptions=${subs?.length ?? 0}`, subsError ?? "");
 
   if (subs && subs.length > 0) {
     webpush.setVapidDetails("mailto:ceiba-app@noreply.com", publicKey, privateKey);
-    await Promise.allSettled(
+    const results = await Promise.allSettled(
       (subs as any[]).map((sub) =>
         webpush.sendNotification(
           { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
@@ -187,6 +189,11 @@ async function pushChatNotification(
         )
       )
     );
+    const sent = results.filter(r => r.status === "fulfilled").length;
+    const failed = results.filter(r => r.status === "rejected").map(r => (r as any).reason?.message ?? "unknown");
+    console.log(`[push] sent=${sent}/${subs.length}`, failed.length ? `errors=${JSON.stringify(failed)}` : "");
+  } else {
+    console.log(`[push] no subscriptions found for recipients=${JSON.stringify(otherIds)}`);
   }
 
   // ── FCM tokens (Android Chrome before PWA install / fallback) ────────────
