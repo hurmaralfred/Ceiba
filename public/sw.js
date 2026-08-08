@@ -20,16 +20,31 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
-  if (event.request.url.includes('supabase.co')) return;
+
+  const url = new URL(event.request.url);
+
+  // Never intercept: Supabase, external origins, or API routes
+  if (url.hostname !== self.location.hostname) return;
+  if (url.pathname.startsWith('/api/')) return;
+  if (url.pathname.startsWith('/_next/')) return;
 
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        const clone = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+        // Only cache successful HTML/static responses
+        if (response.ok) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+        }
         return response;
       })
-      .catch(() => caches.match(event.request))
+      .catch(async () => {
+        // Offline fallback: serve from cache if available, otherwise let it fail naturally
+        const cached = await caches.match(event.request);
+        if (cached) return cached;
+        // Return a minimal offline response instead of undefined (which causes "Failed to fetch")
+        return new Response('Offline', { status: 503, statusText: 'Service Unavailable' });
+      })
   );
 });
 
