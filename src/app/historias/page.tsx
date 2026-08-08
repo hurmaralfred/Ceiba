@@ -124,6 +124,7 @@ export default function HistoriasPage() {
           event_date: today,
           description: description.trim() || null,
           location: null,
+          is_story: true,
         }),
       });
       if (!res.ok) {

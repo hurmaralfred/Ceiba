@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
 
-  const { title, event_type, event_date, description, location } = await req.json();
+  const { title, event_type, event_date, description, location, is_story } = await req.json();
   if (!title?.trim()) return NextResponse.json({ error: "El título es obligatorio" }, { status: 400 });
   if (!event_date) return NextResponse.json({ error: "La fecha es obligatoria" }, { status: 400 });
   const type = VALID_TYPES.includes(event_type) ? event_type : "other";
@@ -67,6 +67,7 @@ export async function POST(req: NextRequest) {
       event_date,
       description: description?.trim() || null,
       location: location?.trim() || null,
+      is_story: is_story === true,
     })
     .select("id, created_by, title, event_type, event_date, description, location, created_at")
     .single();
