@@ -173,11 +173,15 @@ export default function ChatRoomPage() {
   );
 
   return (
-    <div style={{ height: "100dvh", display: "flex", flexDirection: "column", background: "#030208", color: "#fff" }}>
-      <style>{`@keyframes online-pulse{0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,0.5)}50%{box-shadow:0 0 0 5px rgba(34,197,94,0)}}`}</style>
+    <div style={{ height: "100dvh", display: "flex", flexDirection: "column", background: "#030208", color: "#fff", overflow: "hidden", maxWidth: "100vw" }}>
+      <style>{`
+        @keyframes online-pulse{0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,0.5)}50%{box-shadow:0 0 0 5px rgba(34,197,94,0)}}
+        .chat-header{padding: calc(env(safe-area-inset-top, 20px) + 14px) 16px 14px !important;}
+        .chat-input-bar{padding-bottom: max(env(safe-area-inset-bottom, 16px), 16px) !important;}
+      `}</style>
 
       {/* Header */}
-      <div style={{
+      <div className="chat-header" style={{
         display: "flex", alignItems: "center", gap: 12, padding: "52px 16px 14px",
         borderBottom: "0.5px solid rgba(212,175,55,0.14)", flexShrink: 0,
         background: "rgba(3,2,8,0.98)", backdropFilter: "blur(10px)",
@@ -222,7 +226,7 @@ export default function ChatRoomPage() {
       </div>
 
       {/* Messages */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "16px 16px 8px" }}>
+      <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", minHeight: 0, padding: "16px 16px 8px" }}>
         {messages.length === 0 && (
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
             height: "100%", textAlign: "center", gap: 8 }}>
@@ -286,6 +290,7 @@ export default function ChatRoomPage() {
                         style={{
                           padding: "9px 13px", borderRadius: isMe ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
                           fontSize: 14, lineHeight: 1.5, userSelect: "none",
+                          wordBreak: "break-word", overflowWrap: "break-word",
                           background: isMe ? "#c9a820" : "#0c0a18",
                           color: isMe ? "#030208" : "#fff",
                           fontWeight: isMe ? 600 : 400,
@@ -374,7 +379,7 @@ export default function ChatRoomPage() {
       )}
 
       {/* Input bar */}
-      <div style={{ padding: "10px 14px 28px", borderTop: "0.5px solid rgba(212,175,55,0.14)",
+      <div className="chat-input-bar" style={{ padding: "10px 14px 28px", borderTop: "0.5px solid rgba(212,175,55,0.14)",
         background: "rgba(3,2,8,0.98)", backdropFilter: "blur(10px)", flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "flex-end", gap: 10 }}>
           <textarea
