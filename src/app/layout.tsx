@@ -3,6 +3,7 @@ import { Inter, Playfair_Display } from "next/font/google";
 import { Toaster } from "react-hot-toast";
 import { Analytics } from "@vercel/analytics/react";
 import InstallPrompt from "@/components/InstallPrompt";
+import PushRegistrar from "@/components/PushRegistrar";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -40,6 +41,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Toaster position="top-center" />
         {children}
         <InstallPrompt />
+        <PushRegistrar />
         <Analytics />
         <script dangerouslySetInnerHTML={{
           __html: `

@@ -131,29 +131,87 @@ async function pushChatNotification(
     .maybeSingle();
   const isGroup = (room as any)?.type === "group";
 
-  // Push subscriptions for recipients
+  const title   = isGroup ? `💬 ${senderName} (familia)` : `💬 ${senderName}`;
+  const body    = messageBody.length > 120 ? messageBody.slice(0, 117) + "…" : messageBody;
+  const payload = JSON.stringify({ title, body, icon: "/icons/icon-192.png", url: "/chat" });
+
+  // ── VAPID (iOS PWA + Android Chrome + desktop) ────────────────────────────
   const { data: subs } = await service
     .from("push_subscriptions")
     .select("endpoint, p256dh, auth")
     .in("user_id", otherIds);
 
-  if (!subs || subs.length === 0) return;
-
-  webpush.setVapidDetails("mailto:ceiba-app@noreply.com", publicKey, privateKey);
-
-  const payload = JSON.stringify({
-    title: isGroup ? `💬 ${senderName} (familia)` : `💬 ${senderName}`,
-    body:  messageBody.length > 120 ? messageBody.slice(0, 117) + "…" : messageBody,
-    icon:  "/icons/icon-192.png",
-    url:   "/chat",
-  });
-
-  await Promise.allSettled(
-    (subs as any[]).map((sub) =>
-      webpush.sendNotification(
-        { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-        payload,
+  if (subs && subs.length > 0) {
+    webpush.setVapidDetails("mailto:ceiba-app@noreply.com", publicKey, privateKey);
+    await Promise.allSettled(
+      (subs as any[]).map((sub) =>
+        webpush.sendNotification(
+          { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+          payload,
+        )
       )
-    )
-  );
+    );
+  }
+
+  // ── FCM tokens (Android Chrome before PWA install / fallback) ────────────
+  // Sends via Firebase HTTP v1 when FIREBASE_SERVICE_ACCOUNT_JSON is set.
+  const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+  if (serviceAccountJson) {
+    try {
+      const { data: tokenRows } = await service
+        .from("push_tokens")
+        .select("token")
+        .in("user_id", otherIds);
+
+      if (tokenRows && tokenRows.length > 0) {
+        const sa = JSON.parse(serviceAccountJson);
+        const projectId = sa.project_id;
+
+        // Get an OAuth2 access token via service account JWT
+        const now = Math.floor(Date.now() / 1000);
+        const header  = Buffer.from(JSON.stringify({ alg: "RS256", typ: "JWT" })).toString("base64url");
+        const claimset = Buffer.from(JSON.stringify({
+          iss: sa.client_email,
+          scope: "https://www.googleapis.com/auth/firebase.messaging",
+          aud: "https://oauth2.googleapis.com/token",
+          exp: now + 3600,
+          iat: now,
+        })).toString("base64url");
+
+        const { createSign } = await import("crypto");
+        const sign = createSign("RSA-SHA256");
+        sign.update(`${header}.${claimset}`);
+        const sig = sign.sign(sa.private_key, "base64url");
+        const jwt = `${header}.${claimset}.${sig}`;
+
+        const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: `grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${jwt}`,
+        });
+        const { access_token } = await tokenRes.json();
+
+        await Promise.allSettled(
+          (tokenRows as any[]).map((row) =>
+            fetch(`https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${access_token}`,
+              },
+              body: JSON.stringify({
+                message: {
+                  token: row.token,
+                  notification: { title, body },
+                  webpush: { fcm_options: { link: "/chat" } },
+                },
+              }),
+            })
+          )
+        );
+      }
+    } catch {
+      // FCM is optional — never block message delivery
+    }
+  }
 }
