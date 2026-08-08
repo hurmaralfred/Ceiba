@@ -218,7 +218,68 @@ function TreePageContent() {
       return;
     }
 
-    const { profile, members, extendedMembers, memberLinks } = adaptGraph(graph, user.id);
+    const { profile, members, extendedMembers: baseExtended, memberLinks } = adaptGraph(graph, user.id);
+
+    // Post-process: inject co-parents that the inference engine can't label
+    // (e.g. "the mother of my son" has no defined relation type from the
+    // father's perspective). These persons ARE in graph.nodes (reachable via
+    // the RPC's graph traversal) but get dropped by resolveRelationsFromRoot
+    // because inferRelation("son","mother") returns null. We surface them as
+    // extended members of the child node they share, at generation 0.
+    const knownPersonIds = new Set<string>([
+      graph.me,
+      ...members.map((m: any) => m.id as string),
+      ...baseExtended.map((e: any) => e.member.id as string),
+    ]);
+    const graphNodeById = new Map<string, any>(
+      (graph.nodes || []).map((n: any) => [n.id as string, n])
+    );
+    const addedCoParentIds = new Set<string>();
+    const coParentExtras: typeof baseExtended = [];
+
+    for (const link of memberLinks) {
+      for (const [missingId, knownId] of [
+        [link.fromMemberId, link.toMemberId],
+        [link.toMemberId, link.fromMemberId],
+      ] as [string, string][]) {
+        if (knownPersonIds.has(missingId)) continue;
+        if (addedCoParentIds.has(missingId)) continue;
+
+        const node = graphNodeById.get(missingId);
+        if (!node || node.deleted_at || (node.status && node.status !== "active")) continue;
+
+        const connectedMember: any =
+          members.find((m: any) => m.id === knownId) ??
+          baseExtended.find((e: any) => e.member.id === knownId)?.member;
+        if (!connectedMember) continue;
+
+        const connectedGen: number = connectedMember.generation ?? 0;
+        const firstName = [node.first_name, node.middle_name].filter(Boolean).join(" ");
+        const lastName = [node.first_surname, node.second_surname].filter(Boolean).join(" ");
+
+        addedCoParentIds.add(missingId);
+        knownPersonIds.add(missingId);
+        coParentExtras.push({
+          member: {
+            id: missingId,
+            added_by: user.id,
+            profile_id: node.id,
+            first_name: firstName,
+            last_name: lastName || undefined,
+            relation_type: "other" as const,
+            relation_kind: "blood" as const,
+            invitation_sent: false,
+            is_deceased: Boolean(node.is_deceased),
+            created_at: node.created_at || "",
+            generation: connectedGen - 1,
+          },
+          parentMemberId: knownId,
+          inferredRelation: null,
+        });
+      }
+    }
+
+    const extendedMembers = [...baseExtended, ...coParentExtras];
 
     // Load avatar_config separately (not in adaptGraph)
     const { data: avatarRow } = await supabase
