@@ -47,6 +47,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           __html: `
             if ('serviceWorker' in navigator) {
               window.addEventListener('load', function() {
+                // Desregistrar cualquier SW ajeno (firebase-messaging-sw.js, etc.)
+                // que compita por el scope '/' e interfiera con los push VAPID.
+                navigator.serviceWorker.getRegistrations().then(function(regs) {
+                  regs.forEach(function(reg) {
+                    var sw = reg.active || reg.installing || reg.waiting;
+                    if (sw && sw.scriptURL && !sw.scriptURL.endsWith('/sw.js')) {
+                      reg.unregister();
+                    }
+                  });
+                });
                 navigator.serviceWorker.register('/sw.js');
               });
             }
