@@ -635,6 +635,7 @@ export default function HomePage() {
   const [myUserId,     setMyUserId]     = useState<string | null>(null);
   const [lightboxPhoto, setLightboxPhoto] = useState<FeedPhoto | null>(null);
   const [unreadChats,  setUnreadChats]  = useState(0);
+  const [pendingCapsulas, setPendingCapsulas] = useState(0);
 
   // Force dark body background — globals.css uses cream which bleeds through
   useEffect(() => {
@@ -654,13 +655,14 @@ export default function HomePage() {
       if (status.needsConfirmation) { router.replace("/confirmar-datos"); return; }
     }
 
-    const [graphRes, feedRes, sugRes, rosterRes, eventsRes, chatRes] = await Promise.allSettled([
+    const [graphRes, feedRes, sugRes, rosterRes, eventsRes, chatRes, capsulasRes] = await Promise.allSettled([
       supabase.rpc("get_my_family_graph", { p_depth: 4 }),
       fetch("/api/feed"),
       fetch("/api/suggestions"),
       fetch("/api/family/roster"),
       fetch("/api/events"),
       fetch("/api/chat/rooms"),
+      fetch("/api/capsulas"),
     ]);
 
     if (graphRes.status === "fulfilled" && !graphRes.value.error) {
@@ -727,6 +729,18 @@ export default function HomePage() {
             if (count > 0) navigator.setAppBadge(count).catch(() => {});
             else navigator.clearAppBadge().catch(() => {});
           }
+        }
+      } catch {}
+    }
+
+    if (capsulasRes.status === "fulfilled") {
+      try {
+        const res = capsulasRes.value;
+        if (res.ok) {
+          const { capsulas } = await res.json();
+          // Cápsulas para mí que aún no he abierto (locked or unlocked but unopened)
+          const pending = (capsulas ?? []).filter((c: any) => c.is_recipient && !c.opened_at).length;
+          setPendingCapsulas(pending);
         }
       } catch {}
     }
@@ -1039,7 +1053,7 @@ export default function HomePage() {
           <CircleBtn icon={Sparkles}      label="Historias"   href="/historias" color="160,120,255" shadowColor="#06022a" delay={0.4}  />
           <CircleBtn icon={BookOpen}      label="Recuerdos"   href="/events"    color="242,180,60"  shadowColor="#2a1400" delay={0.8}  />
           <CircleBtn icon={MessageCircle} label="Chat"        href="/chat"      color="160,170,245" shadowColor="#050328" delay={1.2} badge={unreadChats} />
-          <CircleBtn icon={Lock}          label={"Cápsulas"}  href="/capsulas"  color="150,90,255"  shadowColor="#060010" delay={1.6}  />
+          <CircleBtn icon={Lock}          label={"Cápsulas"}  href="/capsulas"  color="150,90,255"  shadowColor="#060010" delay={1.6} badge={pendingCapsulas} />
           <CircleBtn icon={Map}           label="Mapa"        href="/mapa"      color="80,220,250"  shadowColor="#02101e" delay={2.0}  />
           <CircleBtn icon={Send}          label="Invitar"     href="/invitar"   color="212,175,55"  shadowColor="#362000" delay={2.4}  />
           <CircleBtn icon={Trophy}        label="Logros"      href="/profile"   color="210,150,40"  shadowColor="#070500" delay={2.8}  />

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import webpush from "web-push";
 import { createClient } from "@/lib/supabase/server";
 import { getServiceClient, resolveFamilySpaceMemberIds } from "@/lib/server/family";
 
@@ -155,5 +156,54 @@ export async function POST(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+  // Notify the recipient via push — fire and forget
+  notifyRecipient(service, recipient_person_id, newRow.unlock_date).catch(() => {});
+
   return NextResponse.json({ capsula: newRow }, { status: 201 });
+}
+
+async function notifyRecipient(
+  service: ReturnType<typeof getServiceClient>,
+  recipientPersonId: string,
+  unlockDate: string,
+) {
+  const publicKey  = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  const privateKey = process.env.VAPID_PRIVATE_KEY;
+  if (!publicKey || !privateKey) return;
+
+  // Get recipient's user_id
+  const { data: claim } = await service
+    .from("person_claims")
+    .select("user_id")
+    .eq("person_id", recipientPersonId)
+    .eq("claim_status", "approved")
+    .is("revoked_at", null)
+    .maybeSingle();
+  if (!claim?.user_id) return;
+
+  // Get their push subscriptions
+  const { data: subs } = await service
+    .from("push_subscriptions")
+    .select("endpoint, p256dh, auth")
+    .eq("user_id", claim.user_id);
+  if (!subs || subs.length === 0) return;
+
+  const unlock = new Date(unlockDate).toLocaleDateString("es", { day: "numeric", month: "long", year: "numeric" });
+  const payload = JSON.stringify({
+    title: "📦 Te enviaron una cápsula del tiempo",
+    body: `Alguien de tu familia te escribió un mensaje que se abrirá el ${unlock}.`,
+    icon: "/icons/icon-192.png",
+    url: "/capsulas",
+    badge: 1,
+  });
+
+  webpush.setVapidDetails("mailto:ceiba-app@noreply.com", publicKey, privateKey);
+  await Promise.allSettled(
+    (subs as any[]).map(sub =>
+      webpush.sendNotification(
+        { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+        payload,
+      )
+    )
+  );
 }
