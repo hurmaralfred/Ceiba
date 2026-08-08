@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import webpush from "web-push";
 import { createClient } from "@/lib/supabase/server";
 import { getServiceClient, resolvePersonsByUserIds } from "@/lib/server/family";
 
@@ -77,5 +78,82 @@ export async function POST(req: NextRequest, { params }: { params: { roomId: str
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+  // Push notifications — fire-and-forget, never blocks the response
+  pushChatNotification(service, params.roomId, user.id, body.trim()).catch(() => {});
+
   return NextResponse.json({ message });
+}
+
+async function pushChatNotification(
+  service: ReturnType<typeof getServiceClient>,
+  roomId: string,
+  senderUserId: string,
+  messageBody: string,
+) {
+  const publicKey  = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  const privateKey = process.env.VAPID_PRIVATE_KEY;
+  if (!publicKey || !privateKey) return;
+
+  // Other room members
+  const { data: memberships } = await service
+    .from("chat_room_members")
+    .select("user_id")
+    .eq("room_id", roomId)
+    .neq("user_id", senderUserId);
+
+  const otherIds = ((memberships ?? []) as any[]).map((m) => m.user_id as string);
+  if (otherIds.length === 0) return;
+
+  // Sender's display name
+  const { data: senderClaim } = await service
+    .from("person_claims")
+    .select("person_id")
+    .eq("user_id", senderUserId)
+    .eq("claim_status", "approved")
+    .is("revoked_at", null)
+    .maybeSingle();
+
+  let senderName = "Familiar";
+  if (senderClaim?.person_id) {
+    const { data: p } = await service
+      .from("persons")
+      .select("first_name")
+      .eq("id", senderClaim.person_id)
+      .maybeSingle();
+    if (p?.first_name) senderName = p.first_name;
+  }
+
+  // Room type (group vs direct)
+  const { data: room } = await service
+    .from("chat_rooms")
+    .select("type")
+    .eq("id", roomId)
+    .maybeSingle();
+  const isGroup = (room as any)?.type === "group";
+
+  // Push subscriptions for recipients
+  const { data: subs } = await service
+    .from("push_subscriptions")
+    .select("endpoint, p256dh, auth")
+    .in("user_id", otherIds);
+
+  if (!subs || subs.length === 0) return;
+
+  webpush.setVapidDetails("mailto:ceiba-app@noreply.com", publicKey, privateKey);
+
+  const payload = JSON.stringify({
+    title: isGroup ? `💬 ${senderName} (familia)` : `💬 ${senderName}`,
+    body:  messageBody.length > 120 ? messageBody.slice(0, 117) + "…" : messageBody,
+    icon:  "/icons/icon-192.png",
+    url:   "/chat",
+  });
+
+  await Promise.allSettled(
+    (subs as any[]).map((sub) =>
+      webpush.sendNotification(
+        { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+        payload,
+      )
+    )
+  );
 }

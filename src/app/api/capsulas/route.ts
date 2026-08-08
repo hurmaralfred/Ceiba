@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { getServiceClient } from "@/lib/server/family";
+import { getServiceClient, resolveFamilySpaceMemberIds } from "@/lib/server/family";
 
 // GET /api/capsulas
 // Returns all capsulas visible to this family (metadata only — no content)
@@ -84,26 +84,23 @@ export async function GET() {
     };
   });
 
-  // Family members for compose picker (all persons with an approved claim)
-  const { data: allClaims } = await service
-    .from("person_claims")
-    .select("person_id, user_id")
-    .eq("claim_status", "approved")
-    .is("revoked_at", null);
+  // Family members for compose picker — only persons in my family space (same tree)
+  const myFamilyPersonIds = myClaim?.person_id
+    ? await resolveFamilySpaceMemberIds(service, myClaim.person_id)
+    : [];
 
-  const familyPersonIds = (allClaims ?? []).map((c: any) => c.person_id as string);
-  const { data: familyPersons } = await service
-    .from("persons")
-    .select("id, first_name, first_surname, second_surname, photo_path")
-    .in("id", familyPersonIds);
+  const { data: familyPersons } = myFamilyPersonIds.length > 0
+    ? await service
+        .from("persons")
+        .select("id, first_name, first_surname, second_surname, photo_path")
+        .in("id", myFamilyPersonIds)
+    : { data: [] as any[] };
 
-  const familyMembers = (familyPersons ?? [])
-    .filter((p: any) => p.id !== myClaim?.person_id)
-    .map((p: any) => ({
-      person_id: p.id,
-      name: `${p.first_name} ${p.first_surname ?? ""}`.trim(),
-      photo: p.photo_path ?? null,
-    }));
+  const familyMembers = (familyPersons ?? []).map((p: any) => ({
+    person_id: p.id,
+    name: `${p.first_name} ${p.first_surname ?? ""}`.trim(),
+    photo: p.photo_path ?? null,
+  }));
 
   return NextResponse.json({ capsulas: enriched, familyMembers, myPersonId: myClaim?.person_id ?? null });
 }
