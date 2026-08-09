@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { getDiceBearUrl } from "@/lib/dicebear";
@@ -191,13 +191,13 @@ function FamilyRow({ members }: { members: FamilyMember[] }) {
   );
 }
 
-function GalaxyHero({ children, avatarInitial, avatarUrl, firstName, visibleCount, directCount, generationsCount, historyCount }: {
+function GalaxyHero({ children, avatarInitial, avatarUrl, firstName, visibleCount, activeCount, generationsCount, historyCount }: {
   children: React.ReactNode;
   avatarInitial: string;
   avatarUrl?: string | null;
   firstName: string;
   visibleCount: number;
-  directCount: number;
+  activeCount: number;
   generationsCount: number;
   historyCount: number;
 }) {
@@ -415,31 +415,49 @@ function GalaxyHero({ children, avatarInitial, avatarUrl, firstName, visibleCoun
         Tu universo familiar
       </div>
 
-      {/* Stats strip — 4 métricas en línea horizontal */}
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"center",
-        marginBottom:24, position:"relative", zIndex:5 }}>
-        <div style={{ padding:"0 14px", textAlign:"center" }}>
-          <div style={{ fontSize:18, fontWeight:800, color:"#d4af37", lineHeight:1 }}>{visibleCount}</div>
-          <div style={{ fontSize:9, color:"rgba(255,255,255,0.40)", textTransform:"uppercase",
-            letterSpacing:"0.08em", marginTop:3, lineHeight:1 }}>familiares</div>
-        </div>
-        <div style={{ width:1, height:24, background:"rgba(212,175,55,0.16)", flexShrink:0 }} />
-        <div style={{ padding:"0 14px", textAlign:"center" }}>
-          <div style={{ fontSize:18, fontWeight:800, color:"#d4af37", lineHeight:1 }}>{directCount}</div>
-          <div style={{ fontSize:9, color:"rgba(255,255,255,0.40)", textTransform:"uppercase",
-            letterSpacing:"0.08em", marginTop:3, lineHeight:1 }}>conexiones</div>
-        </div>
-        <div style={{ width:1, height:24, background:"rgba(212,175,55,0.16)", flexShrink:0 }} />
-        <div style={{ padding:"0 14px", textAlign:"center" }}>
-          <div style={{ fontSize:18, fontWeight:800, color:"#d4af37", lineHeight:1 }}>{generationsCount}</div>
-          <div style={{ fontSize:9, color:"rgba(255,255,255,0.40)", textTransform:"uppercase",
-            letterSpacing:"0.08em", marginTop:3, lineHeight:1 }}>generaciones</div>
-        </div>
-        <div style={{ width:1, height:24, background:"rgba(212,175,55,0.16)", flexShrink:0 }} />
-        <div style={{ padding:"0 14px", textAlign:"center" }}>
-          <div style={{ fontSize:18, fontWeight:800, color:"#d4af37", lineHeight:1 }}>{historyCount}</div>
-          <div style={{ fontSize:9, color:"rgba(255,255,255,0.40)", textTransform:"uppercase",
-            letterSpacing:"0.08em", marginTop:3, lineHeight:1 }}>recuerdos</div>
+      {/* Stats strip — luxury glass pill */}
+      <div style={{ position:"relative", zIndex:5, marginBottom:24, padding:"0 20px" }}>
+        <div style={{
+          display:"flex", alignItems:"center", justifyContent:"center",
+          background:"linear-gradient(135deg, rgba(18,12,38,0.82) 0%, rgba(10,8,24,0.90) 100%)",
+          border:"1px solid rgba(212,175,55,0.22)",
+          borderTop:"1px solid rgba(212,175,55,0.42)",
+          borderRadius:22,
+          padding:"14px 8px",
+          backdropFilter:"blur(16px)",
+          boxShadow:"0 4px 0 rgba(0,0,0,0.5), 0 8px 28px rgba(0,0,0,0.6), inset 0 1px 0 rgba(212,175,55,0.12)",
+        }}>
+          {[
+            { value: visibleCount,    label: "Familiares"   },
+            { value: generationsCount, label: "Generaciones" },
+            { value: historyCount,    label: "Recuerdos"    },
+            { value: activeCount,     label: "Activos"      },
+          ].map((stat, i) => (
+            <React.Fragment key={stat.label}>
+              {i > 0 && (
+                <span style={{ fontSize:10, color:"rgba(212,175,55,0.22)", flexShrink:0, padding:"0 2px" }}>✦</span>
+              )}
+              <div style={{ flex:1, textAlign:"center", padding:"0 2px" }}>
+                <div style={{
+                  fontSize:22, fontWeight:900, lineHeight:1,
+                  color:"#e8c84a",
+                  fontVariantNumeric:"tabular-nums",
+                  textShadow:"0 0 18px rgba(212,175,55,0.55), 0 0 36px rgba(212,175,55,0.20)",
+                  letterSpacing:"-0.02em",
+                }}>
+                  {stat.value}
+                </div>
+                <div style={{
+                  fontSize:7.5, fontWeight:700,
+                  color:"rgba(212,175,55,0.40)",
+                  textTransform:"uppercase", letterSpacing:"0.14em",
+                  marginTop:5, lineHeight:1,
+                }}>
+                  {stat.label}
+                </div>
+              </div>
+            </React.Fragment>
+          ))}
         </div>
       </div>
 
@@ -795,8 +813,8 @@ export default function HomePage() {
 
   // Stats — invitan a explorar, no describen el vacío
   const birthdaysThisMonth = allBirthdays.filter(b => b.days > 0 && b.days <= 30).length;
-  const historyCount = events.length;
-  const directCount = members.length;
+  const historyCount = allEvents.length;
+  const activeCount  = roster.length;
   const generationsCount = allGenSpan;
   const recentMemories = [
     ...photos.filter(p => (Date.now() - new Date(p.created_at).getTime()) < 7 * 86_400_000),
@@ -814,7 +832,7 @@ export default function HomePage() {
         avatarUrl={profile?.avatar_url ?? getDiceBearUrl(profile?.first_name ?? 'user')}
         firstName={profile?.first_name ?? ""}
         visibleCount={visibleCount}
-        directCount={directCount}
+        activeCount={activeCount}
         generationsCount={generationsCount}
         historyCount={historyCount}
       >
