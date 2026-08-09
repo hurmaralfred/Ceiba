@@ -1,8 +1,8 @@
 "use client";
-import { useEffect, useState, useCallback, Suspense } from "react";
+import { useEffect, useState, useCallback, Suspense, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Lock, Unlock, Send, X, ChevronDown } from "lucide-react";
+import { ArrowLeft, Lock, Unlock, Send, X, ChevronDown, Paperclip, Play } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 interface Capsula {
@@ -65,7 +65,7 @@ function CapsulaPageInner() {
   const [myPersonId, setMyPersonId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [composing, setComposing] = useState(false);
-  const [openedContent, setOpenedContent] = useState<{ id: string; content: string } | null>(null);
+  const [openedContent, setOpenedContent] = useState<{ id: string; content: string; media_url?: string | null } | null>(null);
   const [opening, setOpening] = useState<string | null>(null);
 
   // Compose form state
@@ -75,6 +75,12 @@ function CapsulaPageInner() {
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState("");
   const [showPicker, setShowPicker] = useState(false);
+
+  // Media attachment state
+  const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const [mediaPreview, setMediaPreview] = useState<string | null>(null);
+  const [mediaIsVideo, setMediaIsVideo] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const supabase = createClient();
 
@@ -101,20 +107,51 @@ function CapsulaPageInner() {
     if (target) handleOpen(target.id);
   }, [openParam, loading, capsulas]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const clearMedia = () => {
+    if (mediaPreview) URL.revokeObjectURL(mediaPreview);
+    setMediaFile(null);
+    setMediaPreview(null);
+    setMediaIsVideo(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (mediaPreview) URL.revokeObjectURL(mediaPreview);
+    setMediaFile(file);
+    setMediaIsVideo(file.type.startsWith("video/"));
+    setMediaPreview(URL.createObjectURL(file));
+  };
+
   const handleSend = async () => {
     setSendError("");
     if (!recipientId) { setSendError("Elige un destinatario"); return; }
     if (!unlockDate) { setSendError("Elige una fecha de apertura"); return; }
     if (!message.trim()) { setSendError("Escribe tu mensaje"); return; }
     setSending(true);
+
+    let media_url: string | null = null;
+    if (mediaFile) {
+      const ext = mediaFile.name.split(".").pop() ?? "bin";
+      const path = `capsulas/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { data: upload, error: upErr } = await supabase.storage
+        .from("family-photos")
+        .upload(path, mediaFile, { cacheControl: "3600", upsert: false });
+      if (upErr) { setSendError("Error al subir el archivo"); setSending(false); return; }
+      const { data: pub } = supabase.storage.from("family-photos").getPublicUrl(upload.path);
+      media_url = pub.publicUrl;
+    }
+
     const res = await fetch("/api/capsulas", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ recipient_person_id: recipientId, unlock_date: unlockDate, content: message }),
+      body: JSON.stringify({ recipient_person_id: recipientId, unlock_date: unlockDate, content: message, ...(media_url ? { media_url } : {}) }),
     });
     if (res.ok) {
       setComposing(false);
       setRecipientId(""); setUnlockDate(""); setMessage(""); setSendError("");
+      clearMedia();
       load();
     } else {
       const d = await res.json().catch(() => ({}));
@@ -128,7 +165,7 @@ function CapsulaPageInner() {
     const res = await fetch(`/api/capsulas/${id}`);
     if (res.ok) {
       const d = await res.json();
-      setOpenedContent({ id, content: d.content });
+      setOpenedContent({ id, content: d.content, media_url: d.media_url ?? null });
       load();
     }
     setOpening(null);
@@ -216,10 +253,22 @@ function CapsulaPageInner() {
                       <Unlock size={16} style={{ marginLeft: "auto", color: "#d4af37" }} />
                     </div>
                     {openedContent?.id === c.id ? (
-                      <div style={{ fontSize: 14, color: "rgba(255,255,255,0.88)", lineHeight: 1.65,
-                        background: "rgba(212,175,55,0.06)", borderRadius: 12, padding: "12px 14px",
-                        border: "1px solid rgba(212,175,55,0.14)" }}>
-                        {openedContent.content}
+                      <div>
+                        {openedContent.media_url && (
+                          openedContent.media_url.match(/\.(mp4|mov|webm|ogg)(\?|$)/i) ? (
+                            <video controls src={openedContent.media_url}
+                              style={{ width: "100%", borderRadius: 12, marginBottom: 10, maxHeight: 280, background: "#000" }} />
+                          ) : (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={openedContent.media_url} alt="Archivo adjunto"
+                              style={{ width: "100%", borderRadius: 12, marginBottom: 10, objectFit: "cover", maxHeight: 280 }} />
+                          )
+                        )}
+                        <div style={{ fontSize: 14, color: "rgba(255,255,255,0.88)", lineHeight: 1.65,
+                          background: "rgba(212,175,55,0.06)", borderRadius: 12, padding: "12px 14px",
+                          border: "1px solid rgba(212,175,55,0.14)" }}>
+                          {openedContent.content}
+                        </div>
                       </div>
                     ) : (
                       <button onClick={() => handleOpen(c.id)} disabled={opening === c.id}
@@ -298,9 +347,20 @@ function CapsulaPageInner() {
                       )}
                     </div>
                     {openedContent?.id === c.id && (
-                      <div style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", lineHeight: 1.6,
-                        marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-                        {openedContent.content}
+                      <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                        {openedContent.media_url && (
+                          openedContent.media_url.match(/\.(mp4|mov|webm|ogg)(\?|$)/i) ? (
+                            <video controls src={openedContent.media_url}
+                              style={{ width: "100%", borderRadius: 10, marginBottom: 8, maxHeight: 220, background: "#000" }} />
+                          ) : (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={openedContent.media_url} alt="Archivo adjunto"
+                              style={{ width: "100%", borderRadius: 10, marginBottom: 8, objectFit: "cover", maxHeight: 220 }} />
+                          )
+                        )}
+                        <div style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", lineHeight: 1.6 }}>
+                          {openedContent.content}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -402,7 +462,7 @@ function CapsulaPageInner() {
             </div>
 
             {/* Message */}
-            <div style={{ marginBottom: 20 }}>
+            <div style={{ marginBottom: 16 }}>
               <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase",
                 color: "rgba(150,90,255,0.55)", marginBottom: 8 }}>
                 Tu mensaje · {message.length}/2000
@@ -415,6 +475,48 @@ function CapsulaPageInner() {
                   fontSize: 14, lineHeight: 1.6, boxSizing: "border-box",
                   fontFamily: "inherit" }} />
             </div>
+
+            {/* Media attachment */}
+            <input ref={fileInputRef} type="file" accept="image/*,video/*" style={{ display: "none" }}
+              onChange={handleFileChange} />
+
+            {mediaPreview ? (
+              <div style={{ marginBottom: 16, position: "relative" }}>
+                {mediaIsVideo ? (
+                  <div style={{ position: "relative", borderRadius: 14, overflow: "hidden",
+                    background: "#000", border: "1.5px solid rgba(150,90,255,0.28)" }}>
+                    <video src={mediaPreview} style={{ width: "100%", maxHeight: 160, objectFit: "contain" }} />
+                    <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center",
+                      justifyContent: "center", background: "rgba(0,0,0,0.4)", pointerEvents: "none" }}>
+                      <Play size={28} fill="white" color="white" style={{ opacity: 0.8 }} />
+                    </div>
+                  </div>
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={mediaPreview} alt="Vista previa"
+                    style={{ width: "100%", maxHeight: 160, objectFit: "cover",
+                      borderRadius: 14, border: "1.5px solid rgba(150,90,255,0.28)" }} />
+                )}
+                <button onClick={clearMedia}
+                  style={{ position: "absolute", top: 8, right: 8, background: "rgba(0,0,0,0.65)",
+                    border: "none", borderRadius: "50%", width: 28, height: 28, display: "flex",
+                    alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff" }}>
+                  <X size={14} />
+                </button>
+                <div style={{ marginTop: 6, fontSize: 10, color: "rgba(150,90,255,0.50)", textAlign: "center" }}>
+                  {mediaIsVideo ? "Video adjunto" : "Foto adjunta"}
+                </div>
+              </div>
+            ) : (
+              <button onClick={() => fileInputRef.current?.click()}
+                style={{ width: "100%", background: "rgba(150,90,255,0.08)",
+                  border: "1.5px dashed rgba(150,90,255,0.25)", borderRadius: 14,
+                  color: "rgba(150,90,255,0.55)", padding: "10px 14px", cursor: "pointer",
+                  fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center",
+                  justifyContent: "center", gap: 7, marginBottom: 16 }}>
+                <Paperclip size={14} /> Adjuntar foto o video
+              </button>
+            )}
 
             {sendError && (
               <div style={{ fontSize: 12, color: "#ff6b8a", marginBottom: 12, textAlign: "center" }}>

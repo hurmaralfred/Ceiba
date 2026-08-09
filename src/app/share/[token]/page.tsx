@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { TreePine, MapPin, Users } from "lucide-react";
+import { Sparkles, MapPin, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { RELATION_LABELS, RelationType } from "@/lib/types";
 
@@ -51,14 +51,14 @@ export default function SharePage() {
 
   if (loading) return (
     <div style={{ minHeight: "100svh", background: BG, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <TreePine size={40} style={{ color: GOLD, opacity: 0.7, animation: "pulse 2s infinite" }} />
+      <Sparkles size={40} style={{ color: GOLD, opacity: 0.7, animation: "pulse 2s infinite" }} />
     </div>
   );
 
   if (notFound) return (
     <main style={{ minHeight: "100svh", background: BG, display: "flex", alignItems: "center", justifyContent: "center", padding: "24px" }}>
       <div style={{ textAlign: "center", color: "#fff" }}>
-        <TreePine size={48} style={{ color: GOLD, margin: "0 auto 16px" }} />
+        <Sparkles size={48} style={{ color: GOLD, margin: "0 auto 16px" }} />
         <h1 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: 8 }}>Galaxia no encontrado</h1>
         <p style={{ color: MUTED, marginBottom: 24 }}>Este link no existe o ya expiró.</p>
         <Link href="/" style={{ background: GOLD, color: "#000", padding: "10px 24px", borderRadius: 10, fontWeight: 700, textDecoration: "none" }}>
@@ -86,7 +86,7 @@ export default function SharePage() {
         position: "sticky", top: 0, zIndex: 10,
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 800, fontSize: "1.1rem", color: GOLD }}>
-          <TreePine size={20} style={{ color: GOLD }} />
+          <Sparkles size={20} style={{ color: GOLD }} />
           Ceiba
         </div>
         <Link href="/auth/register" style={{
@@ -158,7 +158,7 @@ export default function SharePage() {
             display: "flex", alignItems: "center", justifyContent: "center",
             margin: "0 auto 16px",
           }}>
-            <TreePine size={26} style={{ color: GOLD }} />
+            <Sparkles size={26} style={{ color: GOLD }} />
           </div>
           <h2 style={{ fontSize: "1.15rem", fontWeight: 700, marginBottom: 8 }}>
             ¿Eres parte de esta familia?

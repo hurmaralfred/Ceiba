@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import {
-  Home, TreePine, BookOpen, Images, User, Star, Heart,
+  Home, Sparkles, BookOpen, Images, User, Star, Heart,
   UserPlus, BookMarked, Feather, ArrowRight,
   Baby, Plane,
 } from "lucide-react";
@@ -33,7 +33,7 @@ const PALETTE = [
 
 const NAV_ITEMS = [
   { href: "/",        icon: Home,     label: "Inicio"             },
-  { href: "/tree",    icon: TreePine, label: "Galaxia"              },
+  { href: "/tree",    icon: Sparkles, label: "Galaxia"              },
   { href: "/feed",    icon: Feather,  label: "Historias", center: true },
   { href: "/photos",  icon: Images,   label: "Álbumes"            },
   { href: "/profile", icon: User,     label: "Perfil"             },

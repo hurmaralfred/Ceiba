@@ -4,9 +4,9 @@ import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { getDiceBearUrl } from "@/lib/dicebear";
 import {
-  Home, TreePine, BookOpen, User, Bell, Menu,
+  Home, Sparkles, BookOpen, User, Bell, Menu,
   Users, GitBranch, Send,
-  Trophy, ChevronRight, CalendarDays, Sparkles, X, MessageCircle, Map, Share2, Lock,
+  Trophy, ChevronRight, CalendarDays, X, MessageCircle, Map, Share2, Lock,
 } from "lucide-react";
 import BirthdayCardFeed from "@/components/BirthdayCardFeed";
 import { useFamilyPresence } from "@/hooks/useFamilyPresence";
@@ -593,7 +593,7 @@ function CardShine({ ar }: { ar: string }) {
 function CosmicNav({ pathname, suggCount = 0 }: { pathname: string; suggCount?: number }) {
   const items = [
     { href: "/home",      Icon: Home,     label: "Inicio"   },
-    { href: "/tree",      Icon: TreePine, label: "Galaxia"    },
+    { href: "/tree",      Icon: Sparkles, label: "Galaxia"    },
     { href: "/hoy", Icon: CalendarDays, label: "Un día como hoy", center: true },
     { href: "/events",    Icon: BookOpen, label: "Recuerdos" },
     { href: "/profile",   Icon: User,     label: "Perfil"   },
@@ -850,7 +850,7 @@ export default function HomePage() {
           </Link>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "center" }}>
-              <TreePine size={15} style={{ color: "#d4af37" }} />
+              <Sparkles size={15} style={{ color: "#d4af37" }} />
               <span style={{ fontSize: 21, fontWeight: 700, color: "#d4af37", letterSpacing: 2.5 }}>CEIBA</span>
               <span style={{ fontSize: 12, color: "#f0d060" }}>✦</span>
             </div>

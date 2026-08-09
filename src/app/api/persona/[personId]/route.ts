@@ -39,7 +39,7 @@ export async function GET(
   // Get person data
   const { data: person } = await service
     .from("persons")
-    .select("id, first_name, middle_name, first_surname, second_surname, birth_date, birth_city, birth_country, photo_path")
+    .select("id, first_name, middle_name, first_surname, second_surname, birth_date, birth_city, birth_country, photo_path, created_by")
     .eq("id", personId)
     .single();
 
@@ -155,6 +155,7 @@ export async function GET(
       avatarUrl,
       avatarConfig,
       hasAccount: !!claim,
+      is_claimed: !!claim,
       is_deceased,
     },
     relationType,
@@ -163,4 +164,75 @@ export async function GET(
     totalInSpace: allPersonIds.length,
     events,
   });
+}
+
+// PATCH /api/persona/[personId]
+// Allows the original creator to edit an unclaimed person's data
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: { personId: string } }
+) {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+
+  const service = getServiceClient();
+  const { personId } = params;
+
+  // Fetch person to verify creator and claim status
+  const { data: person } = await service
+    .from("persons")
+    .select("id, created_by")
+    .eq("id", personId)
+    .single();
+
+  if (!person) return NextResponse.json({ error: "Persona no encontrada" }, { status: 404 });
+
+  // Only the original creator can edit
+  if (person.created_by !== user.id)
+    return NextResponse.json({ error: "No tienes permiso para editar este perfil" }, { status: 403 });
+
+  // Editing is blocked once someone has claimed the profile
+  const { data: existingClaim } = await service
+    .from("person_claims")
+    .select("id")
+    .eq("person_id", personId)
+    .eq("claim_status", "approved")
+    .is("revoked_at", null)
+    .maybeSingle();
+
+  if (existingClaim)
+    return NextResponse.json({ error: "Este perfil ya fue reclamado y no puede editarse" }, { status: 403 });
+
+  const body = await req.json().catch(() => ({}));
+  const {
+    first_name, middle_name, first_surname, second_surname,
+    birth_date, birth_city, birth_country, photo_path,
+  } = body;
+
+  if (!first_name || typeof first_name !== "string" || first_name.trim().length < 1)
+    return NextResponse.json({ error: "El nombre es requerido" }, { status: 400 });
+
+  const updates: Record<string, unknown> = {
+    first_name: first_name.trim(),
+    middle_name: middle_name?.trim() || null,
+    first_surname: first_surname?.trim() || null,
+    second_surname: second_surname?.trim() || null,
+    birth_date: birth_date || null,
+    birth_city: birth_city?.trim() || null,
+    birth_country: birth_country?.trim() || null,
+  };
+
+  if (photo_path && typeof photo_path === "string") {
+    updates.photo_path = photo_path;
+  }
+
+  const { error } = await service
+    .from("persons")
+    .update(updates)
+    .eq("id", personId);
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  return NextResponse.json({ ok: true });
 }

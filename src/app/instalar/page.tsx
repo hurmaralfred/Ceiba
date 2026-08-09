@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { TreePine, Share, MoreVertical, Plus, CheckCircle } from "lucide-react";
+import { Sparkles, Share, MoreVertical, Plus, CheckCircle } from "lucide-react";
 
 export default function InstalarPage() {
   const [tab, setTab] = useState<"ios" | "android">("ios");
@@ -30,7 +30,7 @@ export default function InstalarPage() {
         background: "rgba(3,2,8,0.97)",
       }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 6 }}>
-          <TreePine size={22} style={{ color: "#d4af37" }} />
+          <Sparkles size={22} style={{ color: "#d4af37" }} />
           <span style={{ fontSize: 20, fontWeight: 800, color: "#d4af37" }}>Ceiba</span>
         </div>
         <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", margin: 0 }}>

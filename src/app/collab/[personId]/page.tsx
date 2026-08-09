@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
-import { TreePine, ArrowLeft, Users, Edit3, ArrowRightLeft, CheckCircle, XCircle, Clock, AlertCircle } from "lucide-react";
+import { Sparkles, ArrowLeft, Users, Edit3, ArrowRightLeft, CheckCircle, XCircle, Clock, AlertCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 interface CollabInfo {
@@ -81,7 +81,7 @@ export default function CollabPage() {
 
   if (loading) return (
     <div className="min-h-screen bg-cream-100 flex items-center justify-center">
-      <TreePine size={36} className="text-ceiba-600 animate-pulse" />
+      <Sparkles size={36} className="text-ceiba-600 animate-pulse" />
     </div>
   );
 
@@ -97,7 +97,7 @@ export default function CollabPage() {
           <ArrowLeft size={20} />
         </button>
         <div className="flex items-center gap-2 font-display text-lg font-bold">
-          <TreePine size={20} className="text-ceiba-300" /> Edición colaborativa
+          <Sparkles size={20} className="text-ceiba-300" /> Edición colaborativa
         </div>
       </nav>
 

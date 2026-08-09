@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
-  TreePine, ChevronLeft, Check, Users,
+  Sparkles, ChevronLeft, Check, Users,
   Phone, Copy, Send, Plus, X,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";

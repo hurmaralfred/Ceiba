@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { TreePine, CheckCircle, Edit3, Shield } from "lucide-react";
+import { Sparkles, CheckCircle, Edit3, Shield } from "lucide-react";
 
 interface PersonData {
   first_name: string;
@@ -98,7 +98,7 @@ export default function ConfirmarDatosPage() {
     return (
       <div style={{ minHeight: "100vh", background: "#030208", display: "flex",
         alignItems: "center", justifyContent: "center" }}>
-        <TreePine size={36} style={{ color: "#d4af37", opacity: 0.6 }} />
+        <Sparkles size={36} style={{ color: "#d4af37", opacity: 0.6 }} />
       </div>
     );
   }

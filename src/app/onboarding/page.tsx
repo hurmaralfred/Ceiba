@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
-  TreePine, ChevronRight, ChevronLeft, Check, Plus, X,
+  Sparkles, ChevronRight, ChevronLeft, Check, Plus, X,
   Eye, EyeOff, Bell, BellOff, Send, Users, Cake,
   AlertTriangle, Megaphone
 } from "lucide-react";
@@ -880,7 +880,7 @@ export default function OnboardingPage() {
         {/* ── CHECKING ──────────────────────────────────────────── */}
         {step === "checking" && (
           <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, padding: "0 20px", position: "relative", zIndex: 10 }}>
-            <TreePine size={48} style={{ color: "rgba(212,175,55,0.5)", animation: "pulse 2s ease-in-out infinite" }} />
+            <Sparkles size={48} style={{ color: "rgba(212,175,55,0.5)", animation: "pulse 2s ease-in-out infinite" }} />
             <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 14 }}>Verificando tu cuenta...</p>
           </div>
         )}
@@ -1098,7 +1098,7 @@ export default function OnboardingPage() {
         {/* ── AHA MOMENT ─────────────────────────────────────── */}
         {step === "aha" && (
           <div className="flex flex-col items-center px-5 pt-10 pb-10 gap-6 flex-1 text-center">
-            <TreePine size={72} className="text-ceiba-400 animate-bounce" />
+            <Sparkles size={72} className="text-ceiba-400 animate-bounce" />
             <div>
               <h1 className="text-3xl font-bold text-ceiba-900 mb-2">
                 ¡Aquí está tu ceiba, {myFirstName}!
@@ -1242,7 +1242,7 @@ export default function OnboardingPage() {
         {step === "done" && (
           <div className="flex flex-col items-center px-5 pt-16 pb-10 gap-6 flex-1 text-center">
             <div className="relative">
-              <TreePine size={80} className="text-ceiba-400" />
+              <Sparkles size={80} className="text-ceiba-400" />
               <div className="absolute -top-2 -right-2 w-8 h-8 bg-green-400 rounded-full flex items-center justify-center shadow-lg">
                 <Check size={18} className="text-white" />
               </div>

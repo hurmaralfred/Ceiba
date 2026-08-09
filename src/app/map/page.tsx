@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { TreePine, MapPin, ToggleLeft, ToggleRight, ChevronLeft, AlertTriangle, Loader2 } from "lucide-react";
+import { Sparkles, MapPin, ToggleLeft, ToggleRight, ChevronLeft, AlertTriangle, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { FamilyTreeNode } from "@/lib/types";
 import toast from "react-hot-toast";
@@ -157,7 +157,7 @@ export default function MapPage() {
             <ChevronLeft size={22} />
           </Link>
           <div className="flex items-center gap-2 font-display text-xl font-bold">
-            <TreePine size={22} className="text-ceiba-300" /> Mapa familiar
+            <Sparkles size={22} className="text-ceiba-300" /> Mapa familiar
           </div>
         </div>
         <button

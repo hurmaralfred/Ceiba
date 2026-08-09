@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { TreePine } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 
@@ -31,7 +31,7 @@ export default function ForgotPasswordPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2 text-white">
-            <TreePine size={32} className="text-ceiba-300" />
+            <Sparkles size={32} className="text-ceiba-300" />
             <span className="font-display text-3xl font-bold">Ceiba</span>
           </Link>
           <p className="text-ceiba-300 mt-2">Recuperar contraseña</p>

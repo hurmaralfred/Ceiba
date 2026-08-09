@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
-import { TreePine, ArrowLeft, Save, AlertCircle, MessageCircle } from "lucide-react";
+import { Sparkles, ArrowLeft, Save, AlertCircle, MessageCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 interface PersonData {
@@ -130,13 +130,13 @@ export default function MemberEditPage() {
 
   if (loading) return (
     <div className="min-h-screen bg-cream-100 flex items-center justify-center">
-      <TreePine size={36} className="text-ceiba-600 animate-pulse" />
+      <Sparkles size={36} className="text-ceiba-600 animate-pulse" />
     </div>
   );
 
   if (notFound) return (
     <div className="min-h-screen bg-cream-100 flex flex-col items-center justify-center gap-4">
-      <TreePine size={48} className="text-ceiba-300" />
+      <Sparkles size={48} className="text-ceiba-300" />
       <p className="text-ceiba-500">Familiar no encontrado</p>
       <Link href="/tree" className="btn-primary">Volver a la galaxia</Link>
     </div>

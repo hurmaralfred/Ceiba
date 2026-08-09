@@ -125,7 +125,7 @@ export async function POST(req: NextRequest) {
   if (!checkRateLimit(`capsulas-create:${user.id}`, 5, 60_000)) return rateLimitResponse();
 
   const body = await req.json().catch(() => ({}));
-  const { recipient_person_id, unlock_date, content } = body;
+  const { recipient_person_id, unlock_date, content, media_url } = body;
 
   if (!recipient_person_id || typeof recipient_person_id !== "string")
     return NextResponse.json({ error: "Destinatario requerido" }, { status: 400 });
@@ -154,6 +154,8 @@ export async function POST(req: NextRequest) {
   if (!recipientClaim)
     return NextResponse.json({ error: "Destinatario no encontrado" }, { status: 404 });
 
+  const mediaUrlValue = media_url && typeof media_url === "string" ? media_url : null;
+
   const { data: newRow, error } = await service
     .from("future_messages")
     .insert({
@@ -161,6 +163,7 @@ export async function POST(req: NextRequest) {
       recipient_person_id,
       unlock_date,
       content: content.trim(),
+      ...(mediaUrlValue ? { media_url: mediaUrlValue } : {}),
     })
     .select("id, unlock_date, created_at")
     .single();

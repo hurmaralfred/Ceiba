@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { RefreshCw, ChevronLeft, TrendingUp, Users, Clock, TreePine, AlertTriangle } from "lucide-react";
+import { RefreshCw, ChevronLeft, TrendingUp, Users, Clock, Sparkles, AlertTriangle } from "lucide-react";
 
 // ============================================================
 // Tipos (reflejan las columnas de las vistas SQL)
@@ -235,7 +235,7 @@ export default function MetricsDashboard() {
             />
             <KpiCard
               title="Familias ≥5"
-              icon={TreePine}
+              icon={Sparkles}
               value={data?.families ? `${data.families.pct_family_5plus}%` : "—"}
               color={
                 data?.families

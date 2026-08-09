@@ -2,7 +2,7 @@
 import { useEffect, useState, useRef, Suspense } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, MoreHorizontal, MapPin, Settings, Camera, Plus, X } from "lucide-react";
+import { ArrowLeft, MoreHorizontal, MapPin, Settings, Camera, Plus, X, Pencil, Check } from "lucide-react";
 import { CosmicNav, CosmicSpinner, C } from "@/components/ui/cosmic";
 import { getDiceBearUrl } from "@/lib/dicebear";
 import { createClient } from "@/lib/supabase/client";
@@ -17,9 +17,12 @@ interface PersonData {
   birth_date?: string | null;
   birth_city?: string | null;
   birth_country?: string | null;
+  photo_path?: string | null;
+  created_by?: string | null;
   avatarUrl?: string | null;
   avatarConfig?: any;
   hasAccount: boolean;
+  is_claimed?: boolean;
   is_deceased?: boolean;
 }
 
@@ -177,6 +180,26 @@ function PersonaPageInner() {
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
+  // Edit state (for unclaimed persons created by current user)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editFirstName, setEditFirstName] = useState("");
+  const [editMiddleName, setEditMiddleName] = useState("");
+  const [editFirstSurname, setEditFirstSurname] = useState("");
+  const [editSecondSurname, setEditSecondSurname] = useState("");
+  const [editBirthDate, setEditBirthDate] = useState("");
+  const [editBirthCity, setEditBirthCity] = useState("");
+  const [editBirthCountry, setEditBirthCountry] = useState("");
+  const [editPhotoFile, setEditPhotoFile] = useState<File | null>(null);
+  const [editPhotoPreview, setEditPhotoPreview] = useState<string | null>(null);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState("");
+  const editPhotoRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null));
+  }, [supabase]);
+
   useEffect(() => {
     if (!personId) return;
     fetch(`/api/persona/${personId}`)
@@ -255,8 +278,82 @@ function PersonaPageInner() {
     ? [person.first_name, person.middle_name, person.first_surname, person.second_surname].filter(Boolean).join(" ")
     : "";
   const bYear = birthYear(person?.birth_date);
-  const avatarSrc = person?.avatarUrl ?? (person ? getDiceBearUrl(person.id) : null);
+  const avatarSrc = person?.avatarUrl ?? (person?.photo_path ?? (person ? getDiceBearUrl(person.id) : null));
   const relationLabel = relationType ? (RELATION_LABELS[relationType] ?? relationType) : null;
+
+  const canEditProfile = !!(
+    currentUserId &&
+    person?.created_by &&
+    currentUserId === person.created_by &&
+    !person.is_claimed
+  );
+
+  const openEditModal = () => {
+    if (!person) return;
+    setEditFirstName(person.first_name ?? "");
+    setEditMiddleName(person.middle_name ?? "");
+    setEditFirstSurname(person.first_surname ?? "");
+    setEditSecondSurname(person.second_surname ?? "");
+    setEditBirthDate(person.birth_date ?? "");
+    setEditBirthCity(person.birth_city ?? "");
+    setEditBirthCountry(person.birth_country ?? "");
+    setEditPhotoFile(null);
+    setEditPhotoPreview(person.photo_path ?? null);
+    setEditError("");
+    setEditOpen(true);
+    setMoreOpen(false);
+  };
+
+  const handleEditSave = async () => {
+    setEditError("");
+    if (!editFirstName.trim()) { setEditError("El nombre es requerido"); return; }
+    setEditSaving(true);
+    try {
+      let photo_path: string | undefined;
+      if (editPhotoFile) {
+        const ext = editPhotoFile.name.split(".").pop() ?? "jpg";
+        const path = `persons/${person!.id}.${ext}`;
+        const { data: upData, error: upErr } = await supabase.storage
+          .from("family-photos")
+          .upload(path, editPhotoFile, { upsert: true, cacheControl: "3600" });
+        if (upErr) throw upErr;
+        const { data: pubData } = supabase.storage.from("family-photos").getPublicUrl(upData.path);
+        photo_path = pubData.publicUrl;
+      }
+      const res = await fetch(`/api/persona/${personId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          first_name: editFirstName.trim(),
+          middle_name: editMiddleName.trim() || null,
+          first_surname: editFirstSurname.trim() || null,
+          second_surname: editSecondSurname.trim() || null,
+          birth_date: editBirthDate || null,
+          birth_city: editBirthCity.trim() || null,
+          birth_country: editBirthCountry.trim() || null,
+          ...(photo_path ? { photo_path } : {}),
+        }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d.error ?? "Error al guardar");
+      }
+      // Refresh person data
+      const freshRes = await fetch(`/api/persona/${personId}`);
+      if (freshRes.ok) {
+        const { person: p, relatives: rel, events: ev, relationType: rt } = await freshRes.json();
+        setPerson(p);
+        setRelatives(rel ?? []);
+        setEvents(ev ?? []);
+        setRelationType(rt ?? null);
+      }
+      setEditOpen(false);
+    } catch (e: any) {
+      setEditError(e.message ?? "Error al guardar");
+    } finally {
+      setEditSaving(false);
+    }
+  };
 
   // Years display
   const yearsLine = person?.is_deceased
@@ -323,6 +420,17 @@ function PersonaPageInner() {
                   Ver en la galaxia
                 </div>
               </Link>
+              {canEditProfile && (
+                <button onClick={openEditModal}
+                  style={{ width: "100%", background: "none", border: "none", cursor: "pointer",
+                    borderBottom: "0.5px solid rgba(212,175,55,0.1)", textAlign: "left" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8,
+                    padding: "12px 16px", fontSize: 13, color: "#d4af37" }}>
+                    <Pencil size={13} style={{ color: "rgba(212,175,55,0.6)" }} />
+                    Editar perfil
+                  </div>
+                </button>
+              )}
               {isSelf && (
                 <Link href="/profile" style={{ textDecoration: "none" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8,
@@ -799,6 +907,117 @@ function PersonaPageInner() {
       )}
 
       <CosmicNav />
+
+      {/* ── EDIT MODAL (unclaimed profiles only) ───────────────────────────── */}
+      {editOpen && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 120, background: "rgba(0,0,0,0.82)",
+          backdropFilter: "blur(10px)", display: "flex", alignItems: "flex-end" }}
+          onClick={e => { if (e.target === e.currentTarget) setEditOpen(false); }}>
+          <div style={{ width: "100%", background: "#06030f", borderRadius: "24px 24px 0 0",
+            padding: "20px 16px calc(env(safe-area-inset-bottom,16px) + 24px)",
+            border: "1px solid rgba(212,175,55,0.2)", borderBottom: "none",
+            maxHeight: "92dvh", overflowY: "auto" }}>
+
+            {/* Header */}
+            <div style={{ display: "flex", alignItems: "center", marginBottom: 22 }}>
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 800, letterSpacing: -0.3 }}>Editar perfil</div>
+                <div style={{ fontSize: 10, color: "rgba(212,175,55,0.45)", marginTop: 2 }}>
+                  Solo tú puedes editar hasta que el familiar reclame su cuenta
+                </div>
+              </div>
+              <button onClick={() => setEditOpen(false)}
+                style={{ marginLeft: "auto", background: "none", border: "none",
+                  color: "rgba(255,255,255,0.35)", cursor: "pointer" }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Photo picker */}
+            <input ref={editPhotoRef} type="file" accept="image/*" style={{ display: "none" }}
+              onChange={e => {
+                const f = e.target.files?.[0];
+                if (!f) return;
+                setEditPhotoFile(f);
+                if (editPhotoPreview?.startsWith("blob:")) URL.revokeObjectURL(editPhotoPreview);
+                setEditPhotoPreview(URL.createObjectURL(f));
+              }} />
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}>
+              <div style={{ position: "relative" }}>
+                <div style={{ width: 80, height: 80, borderRadius: "50%", overflow: "hidden",
+                  border: "2px solid rgba(212,175,55,0.4)", background: "#0c0a18",
+                  cursor: "pointer" }} onClick={() => editPhotoRef.current?.click()}>
+                  {editPhotoPreview ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={editPhotoPreview} alt="Foto" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  ) : (
+                    <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center",
+                      justifyContent: "center", fontSize: 28, color: "rgba(212,175,55,0.3)" }}>
+                      {(editFirstName || person?.first_name || "?").charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+                <button onClick={() => editPhotoRef.current?.click()}
+                  style={{ position: "absolute", bottom: -2, right: -2, width: 26, height: 26,
+                    borderRadius: "50%", background: "#d4af37", border: "2px solid #06030f",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    cursor: "pointer", padding: 0 }}>
+                  <Camera size={12} style={{ color: "#030208" }} />
+                </button>
+              </div>
+            </div>
+            <div style={{ textAlign: "center", fontSize: 10, color: "rgba(212,175,55,0.4)", marginBottom: 20 }}>
+              Toca la foto para cambiarla
+            </div>
+
+            {/* Fields */}
+            {[
+              { label: "Nombre*", value: editFirstName, set: setEditFirstName, placeholder: "Nombre" },
+              { label: "Segundo nombre", value: editMiddleName, set: setEditMiddleName, placeholder: "Opcional" },
+              { label: "Primer apellido", value: editFirstSurname, set: setEditFirstSurname, placeholder: "Apellido" },
+              { label: "Segundo apellido", value: editSecondSurname, set: setEditSecondSurname, placeholder: "Opcional" },
+              { label: "Ciudad de nacimiento", value: editBirthCity, set: setEditBirthCity, placeholder: "Ciudad" },
+              { label: "País de nacimiento", value: editBirthCountry, set: setEditBirthCountry, placeholder: "País" },
+            ].map(({ label, value, set, placeholder }) => (
+              <div key={label} style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase",
+                  color: "rgba(212,175,55,0.5)", marginBottom: 6 }}>{label}</div>
+                <input value={value} onChange={e => set(e.target.value)} placeholder={placeholder}
+                  style={{ width: "100%", background: "#0a0618", border: "1.5px solid rgba(212,175,55,0.2)",
+                    borderRadius: 12, padding: "11px 14px", color: "#fff", fontSize: 14,
+                    boxSizing: "border-box", fontFamily: "inherit" }} />
+              </div>
+            ))}
+
+            {/* Birth date */}
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase",
+                color: "rgba(212,175,55,0.5)", marginBottom: 6 }}>Fecha de nacimiento</div>
+              <input type="date" value={editBirthDate} onChange={e => setEditBirthDate(e.target.value)}
+                style={{ width: "100%", background: "#0a0618", border: "1.5px solid rgba(212,175,55,0.2)",
+                  borderRadius: 12, padding: "11px 14px",
+                  color: editBirthDate ? "#fff" : "rgba(255,255,255,0.3)", fontSize: 14,
+                  boxSizing: "border-box" }} />
+            </div>
+
+            {editError && (
+              <div style={{ fontSize: 12, color: "#ff6b8a", marginBottom: 12, textAlign: "center" }}>
+                {editError}
+              </div>
+            )}
+
+            <button onClick={handleEditSave} disabled={editSaving}
+              style={{ width: "100%", background: editSaving ? "rgba(212,175,55,0.08)" : "rgba(212,175,55,0.16)",
+                border: "1.5px solid rgba(212,175,55,0.45)", borderRadius: 16,
+                color: editSaving ? "rgba(212,175,55,0.35)" : "#d4af37",
+                padding: "14px", cursor: editSaving ? "default" : "pointer",
+                fontSize: 14, fontWeight: 800, display: "flex", alignItems: "center",
+                justifyContent: "center", gap: 8 }}>
+              {editSaving ? "Guardando…" : <><Check size={16} /> Guardar cambios</>}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

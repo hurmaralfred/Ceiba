@@ -34,7 +34,7 @@ export async function GET(
 
   const { data: row, error } = await service
     .from("future_messages")
-    .select("id, recipient_person_id, unlock_date, content, opened_at, sender_user_id")
+    .select("id, recipient_person_id, unlock_date, content, opened_at, sender_user_id, media_url")
     .eq("id", id)
     .maybeSingle();
 
@@ -56,5 +56,5 @@ export async function GET(
       .eq("id", id);
   }
 
-  return NextResponse.json({ content: row.content, opened_at: row.opened_at ?? new Date().toISOString() });
+  return NextResponse.json({ content: row.content, media_url: row.media_url ?? null, opened_at: row.opened_at ?? new Date().toISOString() });
 }

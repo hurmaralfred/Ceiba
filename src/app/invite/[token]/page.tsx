@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
-import { TreePine, Check, Users } from "lucide-react";
+import { Sparkles, Check, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 
@@ -118,7 +118,7 @@ export default function AcceptInvitePage() {
   if (loading || accepting) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-ceiba-950 to-ceiba-800 flex flex-col items-center justify-center gap-4">
-        <TreePine size={40} className="text-ceiba-300 animate-pulse" />
+        <Sparkles size={40} className="text-ceiba-300 animate-pulse" />
         {accepting && (
           <p className="text-ceiba-300 text-sm">Conectando con tu familia…</p>
         )}
@@ -129,7 +129,7 @@ export default function AcceptInvitePage() {
   if (notFound || !invitation) {
     return (
       <main className="min-h-screen bg-gradient-to-b from-ceiba-950 via-ceiba-900 to-ceiba-800 px-4 py-10 flex flex-col items-center justify-center text-center">
-        <TreePine size={36} className="text-ceiba-300 mb-3" />
+        <Sparkles size={36} className="text-ceiba-300 mb-3" />
         <h1 className="text-white text-xl font-bold mb-2">
           Este enlace ya no es válido
         </h1>
@@ -152,7 +152,7 @@ export default function AcceptInvitePage() {
     };
     return (
       <main className="min-h-screen bg-gradient-to-b from-ceiba-950 via-ceiba-900 to-ceiba-800 px-4 py-10 flex flex-col items-center justify-center text-center">
-        <TreePine size={36} className="text-ceiba-300 mb-3" />
+        <Sparkles size={36} className="text-ceiba-300 mb-3" />
         <h1 className="text-white text-xl font-bold mb-2">
           {messages[invitation.status] ?? "Esta invitación no está activa."}
         </h1>
@@ -173,7 +173,7 @@ export default function AcceptInvitePage() {
         {/* Header brand */}
         <div className="text-center mb-2">
           <div className="flex items-center justify-center gap-2 mb-1">
-            <TreePine size={28} className="text-ceiba-300" />
+            <Sparkles size={28} className="text-ceiba-300" />
             <span className="font-display text-2xl font-bold text-white">Ceiba</span>
           </div>
           <p className="text-ceiba-400 text-xs">La galaxia de tu familia</p>

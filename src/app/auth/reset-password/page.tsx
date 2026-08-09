@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { TreePine, Eye, EyeOff } from "lucide-react";
+import { Sparkles, Eye, EyeOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 
@@ -40,7 +40,7 @@ export default function ResetPasswordPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2 text-white">
-            <TreePine size={32} className="text-ceiba-300" />
+            <Sparkles size={32} className="text-ceiba-300" />
             <span className="font-display text-3xl font-bold">Ceiba</span>
           </Link>
           <p className="text-ceiba-300 mt-2">Nueva contraseña</p>

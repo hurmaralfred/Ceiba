@@ -3,7 +3,7 @@ import { useEffect, useState, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import lazyLoad from "next/dynamic";
-import { TreePine, MapPin, Users, Share2, LogOut, User, Send, List, GitFork, Plus, X, Pencil, Map as MapIcon, Image, Calendar, MessageCircle, Megaphone, Camera, AlertTriangle, Search } from "lucide-react";
+import { Sparkles, MapPin, Users, Share2, LogOut, User, Send, List, GitFork, Plus, X, Pencil, Map as MapIcon, Image, Calendar, MessageCircle, Megaphone, Camera, AlertTriangle, Search } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Profile, FamilyMember, RelationType, RELATION_LABELS } from "@/lib/types";
 import { adaptGraph, buildAddRelativeRequest, isAddRelativeSupported, relationRequiresConnector, type FamilyGraph } from "@/lib/graphAdapter";
@@ -1207,7 +1207,7 @@ function TreePageContent() {
             background: "#0c0a18", border: "0.5px solid rgba(212,175,55,0.12)", marginTop: 16 }}>
             <div style={{ width: 72, height: 72, borderRadius: 20, background: "rgba(212,175,55,0.08)",
               display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
-              <TreePine size={36} style={{ color: "rgba(212,175,55,0.4)" }} />
+              <Sparkles size={36} style={{ color: "rgba(212,175,55,0.4)" }} />
             </div>
             <h3 style={{ fontSize: 17, fontWeight: 800, color: "#fff", marginBottom: 8 }}>Tu galaxia familiar te espera</h3>
             <p style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", marginBottom: 24, maxWidth: 280, margin: "0 auto 24px", lineHeight: 1.6 }}>
@@ -2287,7 +2287,7 @@ function LoadingScreen() {
   return (
     <div style={{ minHeight: "100vh", background: "#030208", display: "flex", alignItems: "center", justifyContent: "center" }}>
       <div style={{ textAlign: "center" }}>
-        <TreePine size={40} style={{ color: "#d4af37", opacity: 0.6, display: "block", margin: "0 auto 12px" }} />
+        <Sparkles size={40} style={{ color: "#d4af37", opacity: 0.6, display: "block", margin: "0 auto 12px" }} />
         <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 14 }}>Cargando tu galaxia...</p>
       </div>
     </div>

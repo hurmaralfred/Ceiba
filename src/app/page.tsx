@@ -53,12 +53,31 @@ function CeibaLogo({ small }: { small?: boolean }) {
   return (
     <div style={{ display:"flex", alignItems:"center", gap: small ? 7 : 9 }}>
       <svg width={sz} height={sz} viewBox="0 0 32 32" fill="none">
-        <rect x="13.5" y="21" width="5" height="8" rx="2.5" fill={GOLD} opacity="0.75"/>
-        <ellipse cx="16" cy="13.5" rx="11" ry="9.5" fill={GOLD} opacity="0.85"/>
-        <ellipse cx="13" cy="10.5" rx="5.5" ry="3.5" fill={GOLD_L} opacity="0.22"/>
-        {/* roots */}
-        <path d="M14.5 29 Q10 30 6 32" stroke={GOLD} strokeWidth="1" strokeOpacity="0.28" fill="none"/>
-        <path d="M17.5 29 Q22 30 26 32" stroke={GOLD} strokeWidth="1" strokeOpacity="0.28" fill="none"/>
+        {/* Orbital ring */}
+        <ellipse cx="16" cy="16" rx="12" ry="4.5" stroke={GOLD} strokeWidth="0.7" fill="none" strokeOpacity="0.5" transform="rotate(-22 16 16)"/>
+        {/* Spiral arms */}
+        <path d="M16 16 Q20 11 24 8"  stroke={GOLD} strokeWidth="1.1" strokeLinecap="round" fill="none" opacity="0.7"/>
+        <path d="M16 16 Q12 21 8 24"  stroke={GOLD} strokeWidth="0.9" strokeLinecap="round" fill="none" opacity="0.6"/>
+        <path d="M16 16 Q11 11 8 8"   stroke={GOLD} strokeWidth="0.8" strokeLinecap="round" fill="none" opacity="0.5"/>
+        <path d="M16 16 Q21 21 24 24" stroke={GOLD} strokeWidth="0.7" strokeLinecap="round" fill="none" opacity="0.45"/>
+        {/* Star clusters */}
+        <circle cx="22" cy="9.5" r="1.1" fill={GOLD_L} opacity="0.9"/>
+        <circle cx="10" cy="22" r="1"   fill={GOLD_L} opacity="0.8"/>
+        <circle cx="10" cy="10" r="0.8" fill={GOLD}   opacity="0.65"/>
+        <circle cx="22" cy="22" r="0.7" fill={GOLD}   opacity="0.6"/>
+        {/* Field stars */}
+        <circle cx="5"  cy="5"  r="0.45" fill="white" opacity="0.55"/>
+        <circle cx="27" cy="6"  r="0.45" fill="white" opacity="0.45"/>
+        <circle cx="6"  cy="26" r="0.4"  fill="white" opacity="0.45"/>
+        <circle cx="27" cy="26" r="0.4"  fill="white" opacity="0.4"/>
+        {/* 4-point core star */}
+        <path d="M16 11.5 L16.5 15.5 L16 20.5 L15.5 15.5 Z" fill="rgba(255,245,200,0.92)"/>
+        <path d="M11.5 16 L15.5 16.5 L20.5 16 L15.5 15.5 Z" fill="rgba(255,245,200,0.92)"/>
+        <path d="M13 13 L15.8 15.8 L19 19 L15.8 15.8 Z" fill="rgba(255,245,200,0.4)"/>
+        <path d="M19 13 L15.8 15.8 L13 19 L15.8 15.8 Z" fill="rgba(255,245,200,0.4)"/>
+        {/* Core */}
+        <circle cx="16" cy="16" r="2.2" fill="rgba(255,245,200,0.95)"/>
+        <circle cx="16" cy="16" r="1"   fill="white"/>
       </svg>
       <div>
         <div style={{ fontWeight:800, fontSize: small ? 15 : 17, color:"#fff", lineHeight:1, letterSpacing:"-0.02em" }}>CEIBA</div>

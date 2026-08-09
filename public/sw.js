@@ -1,5 +1,5 @@
 // Ceiba Service Worker
-const CACHE_NAME = 'ceiba-v2';
+const CACHE_NAME = 'ceiba-v3';
 const STATIC_ASSETS = ['/', '/tree', '/map'];
 
 self.addEventListener('install', (event) => {

@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import {
-  Home, TreePine, Send, Camera, Settings, Bell,
+  Home, Sparkles, Send, Camera, Settings, Bell,
   Users, Layers, BookOpen, Image as ImageIcon,
   ChevronRight, Calendar, Cake, UserPlus,
 } from "lucide-react";
@@ -87,7 +87,7 @@ export function HomeDashboardPreview() {
         style={{ background: "rgba(253,248,241,0.92)" }}>
         <div className="flex items-center justify-between px-4 py-3 max-w-lg mx-auto">
           <div className="flex items-center gap-2">
-            <TreePine size={19} className="text-ceiba-600" strokeWidth={2} />
+            <Sparkles size={19} className="text-ceiba-600" strokeWidth={2} />
             <span className="font-display font-bold text-title text-brown-800 tracking-tight">Ceiba</span>
           </div>
           <div className="flex items-center gap-1.5">
@@ -160,7 +160,7 @@ export function HomeDashboardPreview() {
               className="flex items-center justify-center gap-2 px-6 py-3 border-t"
               style={{ borderColor: "rgba(193,96,58,0.15)" }}
             >
-              <TreePine size={14} className="text-brown-500" />
+              <Sparkles size={14} className="text-brown-500" />
               <span className="text-caption text-brown-500 font-medium">Ver galaxia familiar</span>
               <ChevronRight size={13} className="text-brown-400" />
             </div>

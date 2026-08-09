@@ -7,7 +7,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, TreePine, BookOpen, Sparkles, User, ArrowLeft, type LucideIcon } from "lucide-react";
+import { Home, Sparkles, BookOpen, User, ArrowLeft, type LucideIcon } from "lucide-react";
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 export const C = {
@@ -126,7 +126,7 @@ export function CosmicSpinner() {
   return (
     <div style={{ minHeight: "100vh", background: "#030208",
       display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <TreePine size={36} style={{ color: "#d4af37", opacity: 0.6 }} />
+      <Sparkles size={36} style={{ color: "#d4af37", opacity: 0.6 }} />
     </div>
   );
 }
@@ -163,7 +163,7 @@ export function CosmicHeader({
 // ── Navegación inferior cósmica ───────────────────────────────────────────────
 const NAV_ITEMS: Array<{ href: string; Icon: LucideIcon; label: string; center?: boolean }> = [
   { href: "/home",      Icon: Home,     label: "Inicio"   },
-  { href: "/tree",      Icon: TreePine, label: "Galaxia"    },
+  { href: "/tree",      Icon: Sparkles, label: "Galaxia"    },
   { href: "/historias", Icon: Sparkles, label: "Historias", center: true },
   { href: "/events",    Icon: BookOpen, label: "Recuerdos" },
   { href: "/persona/me", Icon: User,     label: "Perfil"   },
