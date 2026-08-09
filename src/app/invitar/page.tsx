@@ -34,6 +34,7 @@ interface FamilyMember {
   is_living?: boolean;
   relation?: string;
   relationPlain?: string;
+  joined?: boolean;
 }
 
 type CardState = "idle" | "loading" | "sent" | "adding_phone";
@@ -234,11 +235,11 @@ function MemberCard({
   return (
     <div
       style={{
-        background: isSent ? "rgba(12,30,18,0.85)" : "rgba(8,5,18,0.85)",
+        background: member.joined ? "rgba(8,22,18,0.85)" : isSent ? "rgba(12,30,18,0.85)" : "rgba(8,5,18,0.85)",
         backdropFilter: "blur(20px)",
         WebkitBackdropFilter: "blur(20px)",
-        border: `0.5px solid ${isSent ? "rgba(60,180,100,0.25)" : "rgba(242,180,60,0.12)"}`,
-        borderTop: `0.5px solid ${isSent ? "rgba(60,180,100,0.35)" : "rgba(242,180,60,0.22)"}`,
+        border: `0.5px solid ${member.joined ? "rgba(60,200,160,0.20)" : isSent ? "rgba(60,180,100,0.25)" : "rgba(242,180,60,0.12)"}`,
+        borderTop: `0.5px solid ${member.joined ? "rgba(60,200,160,0.30)" : isSent ? "rgba(60,180,100,0.35)" : "rgba(242,180,60,0.22)"}`,
         borderRadius: 20,
         padding: "18px 16px 16px",
         display: "flex",
@@ -268,12 +269,12 @@ function MemberCard({
 
           {/* Estado */}
           <div style={{ fontSize:10, marginTop:7, letterSpacing:"0.04em",
-            color: isSent ? "rgba(100,220,130,0.70)" : "rgba(255,255,255,0.28)" }}>
-            {isSent ? "✦ Invitación enviada" : "🌑 Sin invitar"}
+            color: member.joined ? "rgba(100,220,180,0.85)" : isSent ? "rgba(100,220,130,0.70)" : "rgba(255,255,255,0.28)" }}>
+            {member.joined ? "✓ Ya se unió" : isSent ? "✦ Invitación enviada" : "🌑 Sin invitar"}
           </div>
 
           {/* Teléfono (discreto) */}
-          {!isSent && (
+          {!isSent && !member.joined && (
             editingPhone ? (
               <div style={{ display:"flex", gap:6, marginTop:8 }} onClick={e => e.stopPropagation()}>
                 <input type="tel" value={phone} autoFocus
@@ -323,7 +324,7 @@ function MemberCard({
       </div>
 
       {/* CTA */}
-      {!batchMode && (
+      {!batchMode && !member.joined && (
         isSent ? (
           <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
             <div style={{ display:"flex", alignItems:"center", gap:6,
@@ -414,23 +415,28 @@ function InvitarPageInner() {
 
       const { byPersonId: relationsById } = resolveRelationsFromRoot({ me: myId, nodes, edges } as unknown as FamilyGraph);
 
+      const toMember = (n: any, joined: boolean): FamilyMember => ({
+        id: n.id,
+        first_names: [n.first_name, n.middle_name].filter(Boolean).join(" "),
+        last_names: [n.first_surname, n.second_surname].filter(Boolean).join(" "),
+        profile_photo_url: n.photo_path ?? null,
+        phone: null,
+        linked_user_id: null,
+        is_living: n.is_deceased !== true,
+        relation: describeRelationPossessive(relationsById.get(n.id)),
+        relationPlain: describeRelation(relationsById.get(n.id)).toLowerCase(),
+        joined,
+      });
+
       const pending: FamilyMember[] = nodes
         .filter((n: any) => n.id !== myId && n.deleted_at == null && n.is_deceased !== true && !claimedPersonIds.has(n.id))
-        .map((n: any) => ({
-          id: n.id,
-          first_names: [n.first_name, n.middle_name].filter(Boolean).join(" "),
-          last_names: [n.first_surname, n.second_surname].filter(Boolean).join(" "),
-          profile_photo_url: n.photo_path ?? null,
-          phone: null,
-          linked_user_id: null,
-          is_living: n.is_deceased !== true,
-          relation: describeRelationPossessive(relationsById.get(n.id)),
-          relationPlain: describeRelation(relationsById.get(n.id)).toLowerCase(),
-        }));
+        .map((n: any) => toMember(n, false));
 
-      const active = nodes
+      const joinedMembers: FamilyMember[] = nodes
         .filter((n: any) => n.id !== myId && n.deleted_at == null && claimedPersonIds.has(n.id))
-        .slice(0, 3).map((n: any) => n.first_name).filter(Boolean);
+        .map((n: any) => toMember(n, true));
+
+      const active = joinedMembers.slice(0, 3).map(m => m.first_names.split(" ")[0]).filter(Boolean);
       setPreviewNames(active);
 
       const highlightId = searchParams.get("person");
@@ -438,7 +444,7 @@ function InvitarPageInner() {
         const idx = pending.findIndex(m => m.id === highlightId);
         if (idx > 0) { const [hit] = pending.splice(idx, 1); pending.unshift(hit); }
       }
-      setMembers(pending);
+      setMembers([...pending, ...joinedMembers]);
     } catch (err) {
       console.error("Error cargando familiares:", err);
       toast.error("No se pudieron cargar los familiares");
@@ -499,7 +505,7 @@ function InvitarPageInner() {
 
   // ── Empty state ──
 
-  if (!loading && members.length === 0) {
+  if (!loading && members.filter(m => !m.joined).length === 0 && members.length === 0) {
     return (
       <div style={{ minHeight:"100vh", background:"#030208", display:"flex", flexDirection:"column" }}>
         <StarBackground />
@@ -633,7 +639,7 @@ function InvitarPageInner() {
               borderRadius:20, background:"rgba(242,180,60,0.07)",
               border:"0.5px solid rgba(242,180,60,0.18)" }}>
               <span style={{ fontSize:13, color:"rgba(242,180,60,0.65)" }}>✦</span>
-              <span style={{ fontSize:14, fontWeight:700, color:"#F2B43C" }}>{members.length}</span>
+              <span style={{ fontSize:14, fontWeight:700, color:"#F2B43C" }}>{members.filter(m => !m.joined).length}</span>
               <span style={{ fontSize:12, color:"rgba(255,255,255,0.40)", letterSpacing:"0.02em" }}>
                 estrellas esperan ser descubiertas
               </span>

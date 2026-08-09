@@ -1,10 +1,11 @@
 "use client";
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, useRef, Suspense } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, MoreHorizontal, MapPin, Settings } from "lucide-react";
+import { ArrowLeft, MoreHorizontal, MapPin, Settings, Camera, Plus, X } from "lucide-react";
 import { CosmicNav, CosmicSpinner, C } from "@/components/ui/cosmic";
 import { getDiceBearUrl } from "@/lib/dicebear";
+import { createClient } from "@/lib/supabase/client";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface PersonData {
@@ -163,6 +164,19 @@ function PersonaPageInner() {
   const [tab, setTab] = useState<TabKey>("historia");
   const [moreOpen, setMoreOpen] = useState(false);
 
+  // Gallery state
+  const supabase = createClient();
+  const [galleryPhotos, setGalleryPhotos] = useState<Array<{ id: string; photo_path: string; body: string; memory_date: string }>>([]);
+  const [galleryLoading, setGalleryLoading] = useState(false);
+  const [galleryLoaded, setGalleryLoaded] = useState(false);
+  const [showUploadForm, setShowUploadForm] = useState(false);
+  const [uploadCaption, setUploadCaption] = useState("");
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadPreview, setUploadPreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     if (!personId) return;
     fetch(`/api/persona/${personId}`)
@@ -176,6 +190,65 @@ function PersonaPageInner() {
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
   }, [personId]);
+
+  useEffect(() => {
+    if (tab !== "galeria" || galleryLoaded) return;
+    setGalleryLoading(true);
+    (async () => {
+      const { data } = await supabase
+        .from("family_memories")
+        .select("id, photo_path, body, memory_date")
+        .not("photo_path", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(40);
+      setGalleryPhotos((data ?? []).filter((d): d is typeof d & { photo_path: string } => Boolean(d.photo_path)));
+      setGalleryLoaded(true);
+      setGalleryLoading(false);
+    })();
+  }, [tab, galleryLoaded, supabase]);
+
+  const handleGalleryUpload = async () => {
+    if (!uploadFile) return;
+    setUploading(true);
+    try {
+      const ext = uploadFile.name.split(".").pop() ?? "jpg";
+      const path = `memories/${Date.now()}.${ext}`;
+      const { data: upData, error: upErr } = await supabase.storage
+        .from("family-photos")
+        .upload(path, uploadFile, { upsert: false });
+      if (upErr) throw upErr;
+      const { data: urlData } = supabase.storage.from("family-photos").getPublicUrl(upData.path);
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: spaceData } = await supabase
+        .from("family_space_members")
+        .select("family_space_id")
+        .eq("user_id", user!.id)
+        .limit(1)
+        .single();
+      if (!spaceData) throw new Error("Sin espacio familiar");
+      await supabase.from("family_memories").insert({
+        author_user_id: user!.id,
+        family_space_id: spaceData.family_space_id,
+        body: uploadCaption || `Foto de ${person?.first_name ?? "familiar"}`,
+        memory_date: new Date().toISOString().slice(0, 10),
+        photo_path: urlData.publicUrl,
+      });
+      setGalleryPhotos(prev => [{
+        id: Date.now().toString(),
+        photo_path: urlData.publicUrl,
+        body: uploadCaption || `Foto de ${person?.first_name ?? "familiar"}`,
+        memory_date: new Date().toISOString().slice(0, 10),
+      }, ...prev]);
+      setShowUploadForm(false);
+      setUploadFile(null);
+      setUploadPreview(null);
+      setUploadCaption("");
+    } catch {
+      // silent — stay in upload state
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const firstName = person?.first_name ?? "";
   const fullName = person
@@ -558,22 +631,109 @@ function PersonaPageInner() {
 
             {/* GALERÍA TAB */}
             {tab === "galeria" && (
-              <div style={{ padding: "48px 0", textAlign: "center" }}>
-                <div style={{ fontSize: 42, marginBottom: 16, opacity: 0.35 }}>◻</div>
-                <p style={{ color: "rgba(255,255,255,0.45)", fontSize: 14, fontWeight: 600, marginBottom: 6 }}>
-                  Galería no disponible aún
-                </p>
-                <p style={{ color: "rgba(255,255,255,0.25)", fontSize: 12, lineHeight: 1.6 }}>
-                  Las fotos de {firstName} aparecerán aquí<br />cuando se agreguen al álbum familiar.
-                </p>
-                <Link href="/photos" style={{
-                  display: "inline-block", marginTop: 22,
-                  background: "rgba(212,175,55,0.1)", border: "1px solid rgba(212,175,55,0.25)",
-                  borderRadius: 100, padding: "9px 22px", textDecoration: "none",
-                  fontSize: 12, fontWeight: 600, color: "#d4af37",
-                }}>
-                  Abrir álbum familiar
-                </Link>
+              <div>
+                {/* Hidden file input */}
+                <input ref={photoInputRef} type="file" accept="image/*" style={{ display: "none" }}
+                  onChange={e => {
+                    const f = e.target.files?.[0];
+                    if (!f) return;
+                    setUploadFile(f);
+                    setUploadPreview(URL.createObjectURL(f));
+                    setShowUploadForm(true);
+                  }} />
+
+                {/* Lightbox */}
+                {lightboxSrc && (
+                  <div onClick={() => setLightboxSrc(null)}
+                    style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.92)", zIndex: 100,
+                      display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={lightboxSrc} alt="" style={{ maxWidth: "100%", maxHeight: "90vh",
+                      borderRadius: 12, objectFit: "contain" }} />
+                    <button onClick={() => setLightboxSrc(null)}
+                      style={{ position: "absolute", top: 20, right: 20, background: "rgba(255,255,255,0.1)",
+                        border: "none", borderRadius: "50%", width: 36, height: 36, color: "#fff",
+                        display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                      <X size={18} />
+                    </button>
+                  </div>
+                )}
+
+                {/* Upload form */}
+                {showUploadForm && uploadPreview && (
+                  <div style={{ marginBottom: 16, background: "rgba(12,10,24,0.95)", borderRadius: 16,
+                    padding: 16, border: "1px solid rgba(212,175,55,0.2)" }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={uploadPreview} alt="" style={{ width: "100%", maxHeight: 220,
+                      objectFit: "cover", borderRadius: 12, marginBottom: 12 }} />
+                    <input
+                      type="text"
+                      placeholder="Añadir una descripción…"
+                      value={uploadCaption}
+                      onChange={e => setUploadCaption(e.target.value)}
+                      style={{ width: "100%", background: "rgba(255,255,255,0.05)",
+                        border: "1px solid rgba(212,175,55,0.18)", borderRadius: 10,
+                        padding: "10px 12px", color: "#fff", fontSize: 13, outline: "none",
+                        marginBottom: 12, boxSizing: "border-box" }}
+                    />
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button onClick={() => { setShowUploadForm(false); setUploadFile(null); setUploadPreview(null); setUploadCaption(""); }}
+                        style={{ flex: 1, padding: "11px 0", borderRadius: 12, background: "transparent",
+                          border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.5)",
+                          fontSize: 13, cursor: "pointer" }}>
+                        Cancelar
+                      </button>
+                      <button onClick={handleGalleryUpload} disabled={uploading}
+                        style={{ flex: 2, padding: "11px 0", borderRadius: 12,
+                          background: uploading ? "rgba(212,175,55,0.15)" : "rgba(212,175,55,0.2)",
+                          border: "1px solid rgba(212,175,55,0.4)", color: "#d4af37",
+                          fontSize: 13, fontWeight: 700, cursor: uploading ? "default" : "pointer" }}>
+                        {uploading ? "Subiendo…" : "Guardar foto"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Add photo button */}
+                {!showUploadForm && (
+                  <button onClick={() => photoInputRef.current?.click()}
+                    style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
+                      gap: 8, padding: "13px 0", borderRadius: 14, marginBottom: 16,
+                      background: "rgba(212,175,55,0.07)",
+                      border: "1px dashed rgba(212,175,55,0.28)",
+                      color: "rgba(212,175,55,0.7)", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                    <Plus size={15} />
+                    Agregar foto al álbum
+                  </button>
+                )}
+
+                {/* Grid */}
+                {galleryLoading ? (
+                  <div style={{ display: "flex", justifyContent: "center", padding: 40 }}>
+                    <CosmicSpinner />
+                  </div>
+                ) : galleryPhotos.length === 0 ? (
+                  <div style={{ padding: "36px 0", textAlign: "center" }}>
+                    <Camera size={32} style={{ color: "rgba(212,175,55,0.25)", marginBottom: 12 }} />
+                    <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, lineHeight: 1.6 }}>
+                      Todavía no hay fotos en el álbum.<br />
+                      Sé el primero en agregar una.
+                    </p>
+                  </div>
+                ) : (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 3 }}>
+                    {galleryPhotos.map(p => (
+                      <div key={p.id} onClick={() => setLightboxSrc(p.photo_path)}
+                        style={{ aspectRatio: "1", borderRadius: 8, overflow: "hidden",
+                          background: "rgba(255,255,255,0.04)", cursor: "pointer" }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={p.photo_path} alt={p.body}
+                          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                          loading="lazy" />
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 

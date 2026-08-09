@@ -835,12 +835,23 @@ export default function HomePage() {
             </div>
           </div>
           <Link href="/feed">
-            <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#0c0a1a",
+            <div style={{ position: "relative", width: 36, height: 36, borderRadius: "50%", background: "#0c0a1a",
               borderTop: "1px solid rgba(212,175,55,0.28)", borderLeft: "1px solid rgba(212,175,55,0.12)",
               borderBottom: "2px solid #000", borderRight: "1px solid rgba(0,0,0,0.6)",
               boxShadow: "0 5px 0 #02010a, 0 7px 14px rgba(0,0,0,0.7)",
               display: "flex", alignItems: "center", justifyContent: "center" }}>
               <Bell size={16} style={{ color: "rgba(212,175,55,0.75)" }} />
+              {suggestions.filter(s => !dismissedIds.has(s.id)).length > 0 && (
+                <div style={{
+                  position: "absolute", top: -3, right: -3,
+                  width: 14, height: 14, borderRadius: "50%",
+                  background: "#d4af37", border: "1.5px solid #030208",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 8, fontWeight: 800, color: "#030208", lineHeight: 1,
+                }}>
+                  {suggestions.filter(s => !dismissedIds.has(s.id)).length}
+                </div>
+              )}
             </div>
           </Link>
         </div>
@@ -849,25 +860,75 @@ export default function HomePage() {
       {/* ── FAMILIA DIRECTA ─────────────────────────────────────────────── */}
       <FamilyRow members={members} />
 
-      {/* ── CTA PRINCIPAL ───────────────────────────────────────────────── */}
-      <div style={{ padding: "16px 16px 0" }}>
-        <Link href="/tree" style={{ textDecoration: "none" }}>
+      {/* ── EMPTY STATE — sin familia aún ──────────────────────────────── */}
+      {profile !== null && members.length === 0 && (
+        <div style={{ padding: "20px 16px 0" }}>
           <div style={{
-            display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-            padding: "16px 24px", borderRadius: 16,
-            background: "linear-gradient(135deg, #c9a820 0%, #a07010 100%)",
-            borderTop: "1.5px solid rgba(255,240,100,0.38)",
-            borderBottom: "3px solid #6a5600",
-            boxShadow: "0 6px 0 #4a3c00, 0 10px 28px rgba(0,0,0,0.55), 0 0 28px rgba(212,175,55,0.2)",
-            color: "#030208",
-            fontSize: 15, fontWeight: 800, letterSpacing: "0.01em",
+            borderRadius: 18, padding: "22px 20px",
+            background: "linear-gradient(135deg, #0e0b1f 0%, #0a0818 100%)",
+            border: "1px solid rgba(212,175,55,0.18)",
+            borderTop: "1.5px solid rgba(212,175,55,0.3)",
+            boxShadow: "0 4px 0 #000, 0 8px 24px rgba(0,0,0,0.5)",
           }}>
-            <TreePine size={18} style={{ color: "#030208" }} />
-            Ver mi árbol completo
-            <ChevronRight size={16} style={{ color: "rgba(3,2,8,0.55)" }} />
+            <div style={{ fontSize: 36, marginBottom: 12 }}>🌱</div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: "#fff", marginBottom: 6 }}>
+              Tu árbol está esperando
+            </div>
+            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", lineHeight: 1.6, marginBottom: 18 }}>
+              Agrega a tu primer familiar para comenzar a construir tu universo familiar.
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <Link href="/tree" style={{ textDecoration: "none" }}>
+                <div style={{
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                  padding: "13px 20px", borderRadius: 14,
+                  background: "linear-gradient(135deg, #c9a820, #a07010)",
+                  borderBottom: "2.5px solid #6a5600",
+                  boxShadow: "0 5px 0 #4a3c00, 0 8px 20px rgba(0,0,0,0.5)",
+                  fontSize: 14, fontWeight: 800, color: "#030208",
+                }}>
+                  <Users size={16} style={{ color: "#030208" }} />
+                  Agregar mi primer familiar
+                </div>
+              </Link>
+              <Link href="/invitar" style={{ textDecoration: "none" }}>
+                <div style={{
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                  padding: "12px 20px", borderRadius: 14,
+                  background: "rgba(212,175,55,0.06)",
+                  border: "1px solid rgba(212,175,55,0.2)",
+                  fontSize: 13, fontWeight: 700, color: "rgba(212,175,55,0.8)",
+                }}>
+                  <Send size={14} style={{ color: "rgba(212,175,55,0.7)" }} />
+                  Invitar a un familiar
+                </div>
+              </Link>
+            </div>
           </div>
-        </Link>
-      </div>
+        </div>
+      )}
+
+      {/* ── CTA PRINCIPAL ───────────────────────────────────────────────── */}
+      {members.length > 0 && (
+        <div style={{ padding: "16px 16px 0" }}>
+          <Link href="/tree" style={{ textDecoration: "none" }}>
+            <div style={{
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+              padding: "16px 24px", borderRadius: 16,
+              background: "linear-gradient(135deg, #c9a820 0%, #a07010 100%)",
+              borderTop: "1.5px solid rgba(255,240,100,0.38)",
+              borderBottom: "3px solid #6a5600",
+              boxShadow: "0 6px 0 #4a3c00, 0 10px 28px rgba(0,0,0,0.55), 0 0 28px rgba(212,175,55,0.2)",
+              color: "#030208",
+              fontSize: 15, fontWeight: 800, letterSpacing: "0.01em",
+            }}>
+              <TreePine size={18} style={{ color: "#030208" }} />
+              Ver mi árbol completo
+              <ChevronRight size={16} style={{ color: "rgba(3,2,8,0.55)" }} />
+            </div>
+          </Link>
+        </div>
+      )}
 
       {/* ── EN LÍNEA AHORA ──────────────────────────────────────────────── */}
       {onlineFamily.length > 0 && (
