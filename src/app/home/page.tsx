@@ -130,13 +130,21 @@ function StatNode({ icon: Icon, value, label }: {
 }
 
 // ── Fila de grupos familiares ─────────────────────────────────────────────────
+const GROUP_AVATARS: Record<string, string> = {
+  padres:   "/avatars/avatar_elder_m_1.png",
+  pareja:   "/avatars/avatar_adult_f_1.png",
+  hijos:    "/avatars/avatar_child_m_1.png",
+  hermanos: "/avatars/avatar_adult_m_2.png",
+  abuelos:  "/avatars/avatar_elder_f_1.png",
+};
+
 function FamilyRow({ members }: { members: FamilyMember[] }) {
   const GROUPS = [
-    { key: "padres",   label: "Padres",    types: ["father","stepfather","mother","stepmother","parent"], emoji: "👴" },
-    { key: "pareja",   label: "Pareja",    types: ["husband","wife","spouse","partner"],                  emoji: "💑" },
-    { key: "hijos",    label: "Hijos",     types: ["son","daughter","child","stepson","stepdaughter"],    emoji: "👶" },
-    { key: "hermanos", label: "Hermanos",  types: ["brother","sister","sibling","half_brother","half_sister"], emoji: "👫" },
-    { key: "abuelos",  label: "Abuelos",   types: ["grandfather","grandmother","grandparent"],             emoji: "👴" },
+    { key: "padres",   label: "Padres",    types: ["father","stepfather","mother","stepmother","parent"] },
+    { key: "pareja",   label: "Pareja",    types: ["husband","wife","spouse","partner"] },
+    { key: "hijos",    label: "Hijos",     types: ["son","daughter","child","stepson","stepdaughter"] },
+    { key: "hermanos", label: "Hermanos",  types: ["brother","sister","sibling","half_brother","half_sister"] },
+    { key: "abuelos",  label: "Abuelos",   types: ["grandfather","grandmother","grandparent"] },
   ];
   const groups = GROUPS.map(g => {
     const ms = members.filter(m => {
@@ -156,20 +164,20 @@ function FamilyRow({ members }: { members: FamilyMember[] }) {
       </div>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-around" }}>
         {groups.map(g => {
-          const src = g.first?.profile?.avatar_url ?? null;
+          const realSrc = g.first?.profile?.avatar_url ?? null;
+          const fallbackSrc = GROUP_AVATARS[g.key] ?? "/avatars/avatar_adult_m_1.png";
+          const imgSrc = realSrc ?? fallbackSrc;
           return (
             <Link key={g.key} href="/tree" style={{ textDecoration: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
               <div style={{
-                width: 56, height: 56, borderRadius: "50%",
-                background: "#0e0c1e", border: "1.5px solid rgba(212,175,55,0.22)",
-                boxShadow: "0 4px 16px rgba(0,0,0,0.5)",
-                display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden",
-                fontSize: 26,
+                width: 58, height: 58, borderRadius: "50%",
+                background: "#0e0c1e",
+                border: "1.5px solid rgba(212,175,55,0.28)",
+                boxShadow: "0 6px 20px rgba(0,0,0,0.65), 0 0 0 3px rgba(212,175,55,0.07)",
+                overflow: "hidden",
               }}>
-                {src
-                  // eslint-disable-next-line @next/next/no-img-element
-                  ? <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  : <span>{g.emoji}</span>}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={imgSrc} alt={g.label} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               </div>
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
                 <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.6)" }}>{g.label}</span>
@@ -923,7 +931,7 @@ export default function HomePage() {
               fontSize: 15, fontWeight: 800, letterSpacing: "0.01em",
             }}>
               <TreePine size={18} style={{ color: "#030208" }} />
-              Ver mi árbol completo
+              Ver mi galaxia completa
               <ChevronRight size={16} style={{ color: "rgba(3,2,8,0.55)" }} />
             </div>
           </Link>
@@ -1073,50 +1081,78 @@ export default function HomePage() {
           <CircleBtn icon={Send}          label="Invitar"   href="/invitar"  color="212,175,55"  shadowColor="#362000" delay={1.2} />
         </div>
         {/* Tier 2 — accesos también visibles en la navegación inferior */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
-          <QuickLink icon={TreePine}     label="Árbol"     href="/tree"    color="240,192,64" />
-          <QuickLink icon={CalendarDays} label="Un día hoy" href="/hoy"   color="212,175,55" />
-          <QuickLink icon={BookOpen}     label="Recuerdos" href="/events"  color="242,180,60" />
-          <QuickLink icon={Trophy}       label="Logros"    href="/profile" color="210,150,40" />
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+          <QuickLink icon={CalendarDays} label="Un día hoy" href="/hoy"    color="212,175,55" />
+          <QuickLink icon={BookOpen}     label="Recuerdos"  href="/events" color="242,180,60" />
+          <QuickLink icon={Trophy}       label="Logros"     href="/profile" color="210,150,40" />
         </div>
       </div>
 
       {/* ── GALERÍA FAMILIAR ─────────────────────────────────────────────── */}
       {photos.length > 0 && (
-        <div style={{ padding: "20px 16px 8px" }}>
+        <div style={{ padding: "20px 0 8px" }}>
           <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.14em",
-            textTransform: "uppercase", color: "rgba(212,175,55,0.4)", marginBottom: 14 }}>
+            textTransform: "uppercase", color: "rgba(212,175,55,0.4)", marginBottom: 16, paddingLeft: 16 }}>
             Fotos de la familia
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 6 }}>
-            {photos.map((photo) => (
-              <div
-                key={photo.id}
-                onClick={() => setLightboxPhoto(photo)}
-                style={{
-                  aspectRatio: "1",
-                  borderRadius: 10,
-                  overflow: "hidden",
-                  cursor: "pointer",
-                  position: "relative",
-                  border: "1px solid rgba(212,175,55,0.12)",
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
-                }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={photo.url} alt={photo.caption ?? ""}
-                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                {photo.caption && (
-                  <div style={{ position: "absolute", bottom: 0, left: 0, right: 0,
-                    background: "linear-gradient(to top, rgba(3,2,8,0.88) 0%, transparent 100%)",
-                    padding: "16px 5px 5px",
-                    fontSize: 8, fontWeight: 600, color: "rgba(255,255,255,0.7)",
-                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                    pointerEvents: "none" }}>
-                    {photo.caption}
+          <div style={{
+            display: "flex", gap: 14,
+            overflowX: "auto", paddingLeft: 16, paddingRight: 16, paddingBottom: 16,
+            scrollbarWidth: "none",
+          }}>
+            {photos.map((photo, idx) => {
+              const tilt = idx % 2 === 0 ? "rotate(-2deg)" : "rotate(1.5deg)";
+              return (
+                <div
+                  key={photo.id}
+                  onClick={() => setLightboxPhoto(photo)}
+                  style={{
+                    flexShrink: 0,
+                    width: 140, height: 160,
+                    borderRadius: 4,
+                    overflow: "visible",
+                    cursor: "pointer",
+                    position: "relative",
+                    transform: tilt,
+                    transition: "transform 0.2s ease",
+                  }}>
+                  {/* Polaroid frame */}
+                  <div style={{
+                    width: "100%", height: "100%",
+                    background: "#fff",
+                    borderRadius: 4,
+                    padding: "8px 8px 28px",
+                    boxSizing: "border-box",
+                    boxShadow: "0 8px 0 rgba(0,0,0,0.35), 0 14px 36px rgba(0,0,0,0.7), 0 0 0 1px rgba(0,0,0,0.25)",
+                    display: "flex", flexDirection: "column",
+                  }}>
+                    <div style={{ flex: 1, overflow: "hidden", borderRadius: 2 }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={photo.url} alt={photo.caption ?? ""}
+                        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                    </div>
+                    {photo.caption && (
+                      <div style={{
+                        fontSize: 8.5, color: "rgba(0,0,0,0.5)", textAlign: "center",
+                        marginTop: 6, fontFamily: "cursive",
+                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                        lineHeight: 1.3,
+                      }}>
+                        {photo.caption}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            ))}
+                  {/* Gold pin */}
+                  <div style={{
+                    position: "absolute", top: -7, left: "50%", transform: "translateX(-50%)",
+                    width: 12, height: 12, borderRadius: "50%",
+                    background: "radial-gradient(circle at 35% 35%, #ffe066, #b8860b)",
+                    boxShadow: "0 2px 6px rgba(0,0,0,0.6), 0 0 8px rgba(212,175,55,0.4)",
+                    zIndex: 2,
+                  }} />
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
