@@ -1075,16 +1075,16 @@ export default function HomePage() {
         </div>
         {/* Tier 1 — funciones no duplicadas en la navegación inferior */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "18px 8px", marginBottom: 16 }}>
-          <CircleBtn icon={MessageCircle} label="Chat"      href="/chat"     color="160,170,245" shadowColor="#050328" delay={0}   badge={unreadChats} />
-          <CircleBtn icon={Lock}          label="Cápsulas"  href="/capsulas" color="150,90,255"  shadowColor="#060010" delay={0.4} badge={pendingCapsulas} />
-          <CircleBtn icon={Map}           label="Mapa"      href="/mapa"     color="80,220,250"  shadowColor="#02101e" delay={0.8} />
-          <CircleBtn icon={Send}          label="Invitar"   href="/invitar"  color="212,175,55"  shadowColor="#362000" delay={1.2} />
+          <CircleBtn icon={CalendarDays} label={"Un día\ncomo hoy"} href="/hoy"     color="212,175,55"  shadowColor="#362000" delay={0}   />
+          <CircleBtn icon={Lock}         label="Cápsulas"           href="/capsulas" color="150,90,255"  shadowColor="#060010" delay={0.4} badge={pendingCapsulas} />
+          <CircleBtn icon={Map}          label="Mapa"               href="/mapa"     color="80,220,250"  shadowColor="#02101e" delay={0.8} />
+          <CircleBtn icon={Send}         label="Invitar"            href="/invitar"  color="212,175,55"  shadowColor="#362000" delay={1.2} />
         </div>
         {/* Tier 2 — accesos también visibles en la navegación inferior */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
-          <QuickLink icon={CalendarDays} label="Un día hoy" href="/hoy"    color="212,175,55" />
-          <QuickLink icon={BookOpen}     label="Recuerdos"  href="/events" color="242,180,60" />
-          <QuickLink icon={Trophy}       label="Logros"     href="/profile" color="210,150,40" />
+          <QuickLink icon={MessageCircle} label="Chat"      href="/chat"    color="160,170,245" />
+          <QuickLink icon={BookOpen}      label="Recuerdos" href="/events"  color="242,180,60" />
+          <QuickLink icon={Trophy}        label="Logros"    href="/profile" color="210,150,40" />
         </div>
       </div>
 
@@ -1096,60 +1096,30 @@ export default function HomePage() {
             Fotos de la familia
           </div>
           <div style={{
-            display: "flex", gap: 14,
-            overflowX: "auto", paddingLeft: 16, paddingRight: 16, paddingBottom: 16,
-            scrollbarWidth: "none",
+            display: "flex", flexWrap: "wrap", gap: 10,
+            justifyContent: "center",
+            paddingLeft: 16, paddingRight: 16, paddingBottom: 8,
           }}>
             {photos.map((photo, idx) => {
-              const tilt = idx % 2 === 0 ? "rotate(-2deg)" : "rotate(1.5deg)";
+              const tilt = idx % 2 === 0 ? "rotate(-1.5deg)" : "rotate(1deg)";
               return (
                 <div
                   key={photo.id}
                   onClick={() => setLightboxPhoto(photo)}
                   style={{
-                    flexShrink: 0,
-                    width: 140, height: 160,
-                    borderRadius: 4,
-                    overflow: "visible",
+                    width: 68, height: 68,
+                    borderRadius: 8,
+                    overflow: "hidden",
                     cursor: "pointer",
                     position: "relative",
                     transform: tilt,
-                    transition: "transform 0.2s ease",
+                    border: "1.5px solid rgba(212,175,55,0.22)",
+                    boxShadow: "0 6px 0 rgba(0,0,0,0.5), 0 10px 22px rgba(0,0,0,0.65), 0 0 10px rgba(212,175,55,0.08)",
+                    flexShrink: 0,
                   }}>
-                  {/* Polaroid frame */}
-                  <div style={{
-                    width: "100%", height: "100%",
-                    background: "#fff",
-                    borderRadius: 4,
-                    padding: "8px 8px 28px",
-                    boxSizing: "border-box",
-                    boxShadow: "0 8px 0 rgba(0,0,0,0.35), 0 14px 36px rgba(0,0,0,0.7), 0 0 0 1px rgba(0,0,0,0.25)",
-                    display: "flex", flexDirection: "column",
-                  }}>
-                    <div style={{ flex: 1, overflow: "hidden", borderRadius: 2 }}>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={photo.url} alt={photo.caption ?? ""}
-                        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                    </div>
-                    {photo.caption && (
-                      <div style={{
-                        fontSize: 8.5, color: "rgba(0,0,0,0.5)", textAlign: "center",
-                        marginTop: 6, fontFamily: "cursive",
-                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                        lineHeight: 1.3,
-                      }}>
-                        {photo.caption}
-                      </div>
-                    )}
-                  </div>
-                  {/* Gold pin */}
-                  <div style={{
-                    position: "absolute", top: -7, left: "50%", transform: "translateX(-50%)",
-                    width: 12, height: 12, borderRadius: "50%",
-                    background: "radial-gradient(circle at 35% 35%, #ffe066, #b8860b)",
-                    boxShadow: "0 2px 6px rgba(0,0,0,0.6), 0 0 8px rgba(212,175,55,0.4)",
-                    zIndex: 2,
-                  }} />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={photo.url} alt={photo.caption ?? ""}
+                    style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                 </div>
               );
             })}
