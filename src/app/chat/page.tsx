@@ -322,7 +322,7 @@ export default function ChatListPage() {
         const { conversations: convs } = await roomsRes.json();
         for (const conv of (convs || [])) {
           const ch = supabase
-            .channel(`chat-list:${conv.roomId}`)
+            .channel(`chat:${conv.roomId}`)
             .on("broadcast", { event: "new_message" }, () => { loadConversations(); })
             .subscribe();
           channels.push(ch);
@@ -330,8 +330,13 @@ export default function ChatListPage() {
       }
     })();
 
+    // Refresh when app comes back to foreground
+    const onVisible = () => { if (document.visibilityState === "visible") loadConversations(); };
+    document.addEventListener("visibilitychange", onVisible);
+
     return () => {
       channels.forEach(ch => supabase.removeChannel(ch));
+      document.removeEventListener("visibilitychange", onVisible);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

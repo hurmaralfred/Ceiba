@@ -113,12 +113,18 @@ export default function ChatRoomPage() {
         .subscribe();
       channelRef.current = ch;
 
-      // Fallback poll every 30s (catches any missed broadcasts)
-      pollRef.current = setInterval(() => { loadMessages(false); }, 30_000);
+      // Fallback poll every 5s (catches missed broadcasts when app is in background)
+      pollRef.current = setInterval(() => { loadMessages(false); }, 5_000);
     })();
+
+    // Reload messages when app comes back to foreground
+    const onVisible = () => { if (document.visibilityState === "visible") loadMessages(false); };
+    document.addEventListener("visibilitychange", onVisible);
+
     return () => {
       if (channelRef.current) supabase.removeChannel(channelRef.current);
       if (pollRef.current) clearInterval(pollRef.current);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, [roomId]);
 
