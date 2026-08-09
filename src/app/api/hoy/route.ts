@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getServiceClient } from "@/lib/server/family";
+import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 async function getSpaceId(service: ReturnType<typeof getServiceClient>, userId: string): Promise<string | null> {
   const { data: claim } = await service
@@ -93,6 +94,8 @@ export async function POST(req: NextRequest) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+
+  if (!checkRateLimit(`hoy-create:${user.id}`, 10, 60_000)) return rateLimitResponse();
 
   const { body, memory_date, photo_path } = await req.json().catch(() => ({}));
   if (!body?.trim()) return NextResponse.json({ error: "El recuerdo no puede estar vacío" }, { status: 400 });

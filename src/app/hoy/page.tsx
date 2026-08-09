@@ -1,8 +1,8 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Plus, Clock, Trash2, X, CalendarDays } from "lucide-react";
+import { ArrowLeft, Plus, Clock, Trash2, X, CalendarDays, Camera } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 
@@ -38,6 +38,11 @@ export default function HoyPage() {
   const [date, setDate] = useState("");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -59,13 +64,35 @@ export default function HoyPage() {
     setDate(d.toISOString().slice(0, 10));
   }, []);
 
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoFile(file);
+    setPhotoPreview(URL.createObjectURL(file));
+  };
+
   const save = async () => {
     if (!body.trim()) return;
     setSaving(true);
+
+    let photo_path: string | null = null;
+    if (photoFile) {
+      setUploadingPhoto(true);
+      const ext = photoFile.name.split(".").pop() ?? "jpg";
+      const path = `memories/${Date.now()}.${ext}`;
+      const { data: upData, error: upError } = await supabase.storage
+        .from("family-photos")
+        .upload(path, photoFile, { upsert: false });
+      setUploadingPhoto(false);
+      if (upError) { toast.error("Error subiendo foto"); setSaving(false); return; }
+      const { data: urlData } = supabase.storage.from("family-photos").getPublicUrl(upData.path);
+      photo_path = urlData.publicUrl;
+    }
+
     const res = await fetch("/api/hoy", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ body, memory_date: date }),
+      body: JSON.stringify({ body, memory_date: date, photo_path }),
     });
     setSaving(false);
     if (!res.ok) {
@@ -76,11 +103,14 @@ export default function HoyPage() {
     toast.success("Recuerdo guardado ✨");
     setShowForm(false);
     setBody("");
+    setPhotoFile(null);
+    setPhotoPreview(null);
     load();
   };
 
   const remove = async (id: string) => {
     setDeleting(id);
+    setConfirmDelete(null);
     await fetch(`/api/hoy?id=${id}`, { method: "DELETE" });
     setMemories(m => m.filter(x => x.id !== id));
     setDeleting(null);
@@ -232,19 +262,30 @@ export default function HoyPage() {
                   {m.body}
                 </p>
 
-                {/* Delete */}
+                {/* Delete with confirm */}
                 {m.is_mine && (
-                  <button
-                    onClick={() => remove(m.id)}
-                    disabled={deleting === m.id}
-                    style={{
-                      marginTop: 12, display: "flex", alignItems: "center", gap: 5,
-                      background: "none", border: "none", cursor: "pointer", padding: 0,
-                      fontSize: 11, color: "rgba(255,100,100,0.5)",
-                      opacity: deleting === m.id ? 0.4 : 1,
-                    }}>
-                    <Trash2 size={11} /> Eliminar
-                  </button>
+                  confirmDelete === m.id ? (
+                    <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 10 }}>
+                      <span style={{ fontSize: 11, color: "rgba(255,255,255,0.5)" }}>¿Eliminar este recuerdo?</span>
+                      <button onClick={() => remove(m.id)} disabled={deleting === m.id}
+                        style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,80,80,0.9)",
+                          background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+                        {deleting === m.id ? "…" : "Sí, eliminar"}
+                      </button>
+                      <button onClick={() => setConfirmDelete(null)}
+                        style={{ fontSize: 11, color: "rgba(255,255,255,0.35)",
+                          background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+                        Cancelar
+                      </button>
+                    </div>
+                  ) : (
+                    <button onClick={() => setConfirmDelete(m.id)}
+                      style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 5,
+                        background: "none", border: "none", cursor: "pointer", padding: 0,
+                        fontSize: 11, color: "rgba(255,100,100,0.5)" }}>
+                      <Trash2 size={11} /> Eliminar
+                    </button>
+                  )
                 )}
               </div>
             </div>
@@ -313,6 +354,47 @@ export default function HoyPage() {
               </div>
             </div>
 
+            {/* Photo picker */}
+            <div style={{ marginBottom: 16 }}>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handlePhotoSelect}
+                style={{ display: "none" }}
+              />
+              {photoPreview ? (
+                <div style={{ position: "relative", borderRadius: 12, overflow: "hidden" }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={photoPreview} alt="Vista previa"
+                    style={{ width: "100%", maxHeight: 160, objectFit: "cover", display: "block" }} />
+                  <button
+                    onClick={() => { setPhotoFile(null); setPhotoPreview(null); }}
+                    style={{
+                      position: "absolute", top: 8, right: 8,
+                      width: 28, height: 28, borderRadius: "50%",
+                      background: "rgba(0,0,0,0.65)", border: "none", cursor: "pointer",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}>
+                    <X size={14} style={{ color: "#fff" }} />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 8,
+                    padding: "10px 16px", borderRadius: 12, fontSize: 13, fontWeight: 600,
+                    color: "rgba(212,175,55,0.7)",
+                    background: "rgba(212,175,55,0.07)",
+                    border: "1px dashed rgba(212,175,55,0.25)",
+                    cursor: "pointer", width: "100%", justifyContent: "center",
+                  }}>
+                  <Camera size={16} /> Agregar foto (opcional)
+                </button>
+              )}
+            </div>
+
             <button onClick={save} disabled={!body.trim() || saving} style={{
               width: "100%", padding: "14px", borderRadius: 14, fontSize: 14, fontWeight: 700,
               color: "#030208", background: "linear-gradient(135deg,#f0c040,#c8902a)",
@@ -320,7 +402,7 @@ export default function HoyPage() {
               opacity: !body.trim() || saving ? 0.5 : 1,
               boxShadow: "0 6px 20px rgba(212,175,55,0.35)",
             }}>
-              {saving ? "Guardando..." : "Guardar recuerdo ✨"}
+              {uploadingPhoto ? "Subiendo foto…" : saving ? "Guardando..." : "Guardar recuerdo ✨"}
             </button>
           </div>
         </div>

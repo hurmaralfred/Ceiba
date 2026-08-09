@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import webpush from "web-push";
 import { createClient } from "@/lib/supabase/server";
 import { getServiceClient, resolveFamilySpaceMemberIds } from "@/lib/server/family";
+import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 // GET /api/capsulas
 // Returns all capsulas visible to this family (metadata only — no content)
@@ -121,6 +122,8 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
 
+  if (!checkRateLimit(`capsulas-create:${user.id}`, 5, 60_000)) return rateLimitResponse();
+
   const body = await req.json().catch(() => ({}));
   const { recipient_person_id, unlock_date, content } = body;
 
@@ -165,7 +168,7 @@ export async function POST(req: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   // Notify the recipient via push — fire and forget
-  notifyRecipient(service, recipient_person_id, newRow.unlock_date).catch(() => {});
+  notifyRecipient(service, recipient_person_id, newRow.id, newRow.unlock_date).catch(() => {});
 
   return NextResponse.json({ capsula: newRow }, { status: 201 });
 }
@@ -173,6 +176,7 @@ export async function POST(req: NextRequest) {
 async function notifyRecipient(
   service: ReturnType<typeof getServiceClient>,
   recipientPersonId: string,
+  capsulaId: string,
   unlockDate: string,
 ) {
   const publicKey  = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
@@ -201,7 +205,7 @@ async function notifyRecipient(
     title: "📦 Te enviaron una cápsula del tiempo",
     body: `Alguien de tu familia te escribió un mensaje que se abrirá el ${unlock}.`,
     icon: "/icons/icon-192.png",
-    url: "/capsulas",
+    url: `/capsulas?open=${capsulaId}`,
     badge: 1,
   });
 

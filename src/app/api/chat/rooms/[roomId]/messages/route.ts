@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import webpush from "web-push";
 import { createClient } from "@/lib/supabase/server";
 import { getServiceClient, resolvePersonsByUserIds } from "@/lib/server/family";
+import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 /**
  * La pertenencia a la sala es la única puerta de acceso: tanto los grupos
@@ -97,6 +98,8 @@ export async function POST(req: NextRequest, { params }: { params: { roomId: str
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
 
+  if (!checkRateLimit(`chat-send:${user.id}`, 20, 60_000)) return rateLimitResponse();
+
   const { body } = await req.json();
   if (!body || !body.trim()) {
     return NextResponse.json({ error: "Mensaje vacío" }, { status: 400 });
@@ -114,10 +117,33 @@ export async function POST(req: NextRequest, { params }: { params: { roomId: str
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+  // Broadcast to realtime channel (fire-and-forget) so the recipient's client refreshes instantly
+  broadcastNewMessage(params.roomId).catch(() => {});
+
   // Push notifications — fire-and-forget, never blocks the response
   pushChatNotification(service, params.roomId, user.id, body.trim()).catch(() => {});
 
   return NextResponse.json({ message });
+}
+
+// Broadcast via Supabase Realtime REST so the recipient's browser refreshes instantly.
+async function broadcastNewMessage(roomId: string) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey  = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const anonKey     = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !serviceKey || !anonKey) return;
+
+  await fetch(`${supabaseUrl}/realtime/v1/api/broadcast`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${serviceKey}`,
+      "apikey": anonKey,
+    },
+    body: JSON.stringify({
+      messages: [{ topic: `chat:${roomId}`, event: "new_message", payload: {} }],
+    }),
+  });
 }
 
 async function pushChatNotification(

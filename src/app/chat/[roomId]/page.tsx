@@ -58,6 +58,7 @@ export default function ChatRoomPage() {
   const [emojiTarget, setEmojiTarget] = useState<string | null>(null); // messageId for picker
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastCountRef = useRef(0);
   const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -104,9 +105,21 @@ export default function ChatRoomPage() {
 
       await loadMessages(true);
       setLoading(false);
-      pollRef.current = setInterval(() => { loadMessages(false); }, 4000);
+
+      // Realtime: subscribe to broadcast channel for instant message delivery
+      const ch = supabase
+        .channel(`chat:${roomId}`)
+        .on("broadcast", { event: "new_message" }, () => { loadMessages(false); })
+        .subscribe();
+      channelRef.current = ch;
+
+      // Fallback poll every 30s (catches any missed broadcasts)
+      pollRef.current = setInterval(() => { loadMessages(false); }, 30_000);
     })();
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+    return () => {
+      if (channelRef.current) supabase.removeChannel(channelRef.current);
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
   }, [roomId]);
 
   const send = async () => {

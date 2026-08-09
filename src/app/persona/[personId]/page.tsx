@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, MoreHorizontal, MapPin, Settings } from "lucide-react";
@@ -148,7 +148,7 @@ const TAB_LABELS: Record<TabKey, string> = {
 };
 
 // ── Page ──────────────────────────────────────────────────────────────────────
-export default function PersonaPage() {
+function PersonaPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isSelf = searchParams.get("self") === "true";
@@ -640,6 +640,14 @@ export default function PersonaPage() {
 
       <CosmicNav />
     </div>
+  );
+}
+
+export default function PersonaPage() {
+  return (
+    <Suspense fallback={null}>
+      <PersonaPageInner />
+    </Suspense>
   );
 }
 

@@ -1,6 +1,6 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, useCallback, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Lock, Unlock, Send, X, ChevronDown } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -57,8 +57,9 @@ function daysUntil(dateStr: string): number {
   return Math.ceil((target.getTime() - today.getTime()) / 86400000);
 }
 
-export default function CapsulaPage() {
+function CapsulaPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [capsulas, setCapsulas] = useState<Capsula[]>([]);
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
   const [myPersonId, setMyPersonId] = useState<string | null>(null);
@@ -91,6 +92,14 @@ export default function CapsulaPage() {
   }, [router]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Deep link: open a specific capsula from push notification (?open=id)
+  const openParam = searchParams.get("open");
+  useEffect(() => {
+    if (!openParam || loading || openedContent) return;
+    const target = capsulas.find(c => c.id === openParam && c.can_open && !c.opened_at);
+    if (target) handleOpen(target.id);
+  }, [openParam, loading, capsulas]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSend = async () => {
     setSendError("");
@@ -425,5 +434,13 @@ export default function CapsulaPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function CapsulaPage() {
+  return (
+    <Suspense fallback={null}>
+      <CapsulaPageInner />
+    </Suspense>
   );
 }

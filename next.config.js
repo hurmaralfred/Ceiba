@@ -8,6 +8,12 @@ const nextConfig = {
     ],
   },
 
+  async redirects() {
+    return [
+      { source: "/historias", destination: "/hoy", permanent: false },
+    ];
+  },
+
   async headers() {
     return [
       {
