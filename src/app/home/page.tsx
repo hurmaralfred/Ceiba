@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { getDiceBearUrl } from "@/lib/dicebear";
@@ -76,7 +76,172 @@ function daysUntil(birth_date: string): number {
   return diff === 365 ? 0 : diff;
 }
 
-// ── Fondo galáctico completo ──────────────────────────────────────────────────
+// ── Full-screen universe background ──────────────────────────────────────────
+function UniverseBackground() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const resize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    resize();
+    window.addEventListener("resize", resize);
+
+    const rng = (n: number) => Math.random() * n;
+
+    const stars = Array.from({ length: 240 }, () => ({
+      x: rng(1), y: rng(1),
+      r: rng(0.85) + 0.18,
+      baseOpacity: rng(0.45) + 0.18,
+      twinkleAmp: rng(0.28) + 0.08,
+      twinkleSpeed: rng(0.014) + 0.003,
+      twinklePhase: rng(Math.PI * 2),
+    }));
+
+    const goldStars = Array.from({ length: 10 }, () => ({
+      x: rng(1), y: rng(1),
+      r: rng(0.65) + 0.75,
+      phase: rng(Math.PI * 2),
+    }));
+
+    const dust = Array.from({ length: 70 }, () => ({
+      x: rng(1), y: rng(1),
+      r: rng(0.55) + 0.12,
+      vx: (Math.random() - 0.5) * 0.00011,
+      vy: (Math.random() - 0.5) * 0.000075,
+      opacity: rng(0.32) + 0.06,
+      phase: rng(Math.PI * 2),
+    }));
+
+    type ShootStar = { x: number; y: number; vx: number; vy: number; len: number; life: number; maxLife: number };
+    const shootingStars: ShootStar[] = [];
+    let shootCooldown = 150;
+
+    let frame = 0;
+    let animId: number;
+
+    const draw = () => {
+      frame++;
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+
+      // White stars with twinkling
+      for (const s of stars) {
+        const o = s.baseOpacity + s.twinkleAmp * Math.sin(frame * s.twinkleSpeed + s.twinklePhase);
+        ctx.beginPath();
+        ctx.arc(s.x * w, s.y * h, s.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,255,255,${Math.max(0, o)})`;
+        ctx.fill();
+      }
+
+      // Gold accent stars
+      for (const s of goldStars) {
+        const o = 0.65 + 0.28 * Math.sin(frame * 0.018 + s.phase);
+        ctx.beginPath();
+        ctx.arc(s.x * w, s.y * h, s.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(212,175,55,${o})`;
+        ctx.fill();
+      }
+
+      // Floating star dust
+      for (const d of dust) {
+        d.x = ((d.x + d.vx) + 1) % 1;
+        d.y = ((d.y + d.vy) + 1) % 1;
+        const pulse = 0.7 + 0.3 * Math.sin(frame * 0.012 + d.phase);
+        ctx.beginPath();
+        ctx.arc(d.x * w, d.y * h, d.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(212,175,55,${d.opacity * pulse})`;
+        ctx.fill();
+      }
+
+      // Shooting stars — spawn every 3-7s
+      shootCooldown--;
+      if (shootCooldown <= 0) {
+        shootCooldown = 180 + Math.floor(Math.random() * 240);
+        const angle = (Math.random() * 35 + 18) * (Math.PI / 180);
+        const speed = Math.random() * 6 + 5;
+        shootingStars.push({
+          x: Math.random() * w * 0.85 + w * 0.05,
+          y: Math.random() * h * 0.55,
+          vx: -Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          len: Math.random() * 110 + 80,
+          life: 0,
+          maxLife: 32 + Math.floor(Math.random() * 22),
+        });
+      }
+
+      for (let i = shootingStars.length - 1; i >= 0; i--) {
+        const s = shootingStars[i];
+        s.x += s.vx;
+        s.y += s.vy;
+        s.life++;
+        if (s.life >= s.maxLife) { shootingStars.splice(i, 1); continue; }
+
+        const progress = s.life / s.maxLife;
+        const opacity = progress < 0.15 ? progress / 0.15 : 1 - (progress - 0.15) / 0.85;
+        const mag = Math.sqrt(s.vx * s.vx + s.vy * s.vy);
+        const tailX = s.x - (s.vx / mag) * s.len;
+        const tailY = s.y - (s.vy / mag) * s.len;
+
+        const grad = ctx.createLinearGradient(s.x, s.y, tailX, tailY);
+        grad.addColorStop(0, `rgba(255,255,255,${opacity})`);
+        grad.addColorStop(0.25, `rgba(212,175,55,${opacity * 0.55})`);
+        grad.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.beginPath();
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = 1.6;
+        ctx.moveTo(s.x, s.y);
+        ctx.lineTo(tailX, tailY);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, 2.2, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,255,255,${opacity})`;
+        ctx.fill();
+      }
+
+      animId = requestAnimationFrame(draw);
+    };
+
+    draw();
+    return () => {
+      cancelAnimationFrame(animId);
+      window.removeEventListener("resize", resize);
+    };
+  }, []);
+
+  return (
+    <>
+      <style>{`
+        @keyframes nebula-drift {
+          0%   { transform: scale(1)    translate(0px,   0px); }
+          25%  { transform: scale(1.08) translate(12px, -16px); }
+          50%  { transform: scale(0.94) translate(-8px,  10px); }
+          75%  { transform: scale(1.05) translate(6px,  -6px); }
+          100% { transform: scale(1)    translate(0px,   0px); }
+        }
+      `}</style>
+      <canvas ref={canvasRef} style={{ position:"fixed", inset:0, width:"100%", height:"100%", pointerEvents:"none", zIndex:-1 }} />
+      {/* Nebulae — GPU-accelerated CSS blur, cover the whole viewport */}
+      <div style={{ position:"fixed", top:"-5%",  left:"-8%",   width:300, height:300, borderRadius:"50%", background:"radial-gradient(circle,rgba(100,30,220,0.16) 0%,transparent 70%)", filter:"blur(45px)", pointerEvents:"none", zIndex:-1, animation:"nebula-drift 52s ease-in-out infinite" }} />
+      <div style={{ position:"fixed", top:"0%",   right:"-10%", width:260, height:260, borderRadius:"50%", background:"radial-gradient(circle,rgba(20,60,200,0.13) 0%,transparent 70%)", filter:"blur(38px)", pointerEvents:"none", zIndex:-1, animation:"nebula-drift 44s ease-in-out infinite 8s" }} />
+      <div style={{ position:"fixed", top:"28%",  left:"10%",   width:360, height:220, borderRadius:"50%", background:"radial-gradient(ellipse,rgba(212,175,55,0.07) 0%,transparent 65%)", filter:"blur(32px)", pointerEvents:"none", zIndex:-1, animation:"nebula-drift 68s ease-in-out infinite 3s" }} />
+      <div style={{ position:"fixed", top:"50%",  left:"-10%",  width:280, height:240, borderRadius:"50%", background:"radial-gradient(circle,rgba(80,20,160,0.12) 0%,transparent 70%)", filter:"blur(42px)", pointerEvents:"none", zIndex:-1, animation:"nebula-drift 58s ease-in-out infinite 15s" }} />
+      <div style={{ position:"fixed", top:"55%",  right:"-12%", width:320, height:280, borderRadius:"50%", background:"radial-gradient(circle,rgba(150,40,200,0.10) 0%,transparent 70%)", filter:"blur(48px)", pointerEvents:"none", zIndex:-1, animation:"nebula-drift 72s ease-in-out infinite 22s" }} />
+      <div style={{ position:"fixed", top:"78%",  left:"20%",   width:340, height:220, borderRadius:"50%", background:"radial-gradient(ellipse,rgba(30,80,180,0.11) 0%,transparent 65%)", filter:"blur(36px)", pointerEvents:"none", zIndex:-1, animation:"nebula-drift 62s ease-in-out infinite 10s" }} />
+      <div style={{ position:"fixed", top:"35%",  right:"2%",   width:220, height:220, borderRadius:"50%", background:"radial-gradient(circle,rgba(180,60,30,0.08) 0%,transparent 70%)", filter:"blur(34px)", pointerEvents:"none", zIndex:-1, animation:"nebula-drift 55s ease-in-out infinite 18s" }} />
+    </>
+  );
+}
+
 // ── Family constellation: 3 orbital rings, each slowly rotating ─────────────
 // dx/dy are offsets from SVG center (150,150). Colors signal family line.
 // Gold=#F2B43C (focal line), Blue=#7BAFD4 (maternal/paternal), Copper=#c87830 (siblings), Lavender=#B8A0D8 (extended)
@@ -823,8 +988,10 @@ export default function HomePage() {
 
 
   return (
-    <div style={{ minHeight: "100vh", background: "#030208", paddingBottom: 100, color: "#fff" }}>
+    <div style={{ minHeight: "100vh", background: "#030208", paddingBottom: 100, color: "#fff", position: "relative" }}>
 
+      {/* Full-screen universe background */}
+      <UniverseBackground />
 
       {/* ── HERO ─────────────────────────────────────────────────────────── */}
       <GalaxyHero
