@@ -29,22 +29,26 @@ export function usePushNotifications() {
 
         if (cancelled) return;
 
-        // Pedir permiso solo si no está ya definido
-        if (Notification.permission === "denied") return;
-        if (Notification.permission !== "granted") {
-          const result = await Notification.requestPermission();
-          if (result !== "granted" || cancelled) return;
-        }
+        // Never auto-request permission — requires a user gesture on iOS PWA.
+        // The NotificationBanner component handles the user-gesture flow.
+        if (Notification.permission !== "granted") return;
 
-        // Desuscribir y limpiar cualquier suscripción anterior a un SW diferente
         const existing = await reg.pushManager.getSubscription();
         let sub = existing;
 
         if (!sub) {
-          sub = await reg.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(VAPID_PUB_KEY),
-          });
+          // Permission was granted earlier but subscription was lost (e.g. reinstall, SW change).
+          // Try to re-subscribe — may succeed on desktop/Android; on iOS it may require a gesture,
+          // but since permission is already granted iOS does allow it here.
+          try {
+            sub = await reg.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: urlBase64ToUint8Array(VAPID_PUB_KEY),
+            });
+          } catch {
+            // iOS may still block without gesture; the NotificationBanner will handle it.
+            return;
+          }
         }
 
         if (cancelled || !sub) return;

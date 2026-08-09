@@ -18,20 +18,31 @@ export default function NotificationBanner() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (!("Notification" in window) || !("serviceWorker" in navigator)) return;
-    if (Notification.permission === "granted") return;
+    if (!("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) return;
     if (Notification.permission === "denied") return;
-    // Solo mostrar si es PWA instalada o desktop — en browser tab normal es menos útil
-    const isStandalone = window.matchMedia("(display-mode: standalone)").matches
-      || (navigator as any).standalone === true;
-    if (isStandalone || window.innerWidth >= 768) {
-      // Slight delay so it doesn't flash on every page load
+
+    const check = async () => {
+      if (Notification.permission === "granted") {
+        // Permission granted — check if subscription actually exists
+        try {
+          const reg = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+          const sub = await reg.pushManager.getSubscription();
+          if (sub) return; // All good — subscription is active
+          // Permission granted but subscription lost — need to re-subscribe
+          setShow(true);
+        } catch {
+          // Can't check — skip
+        }
+        return;
+      }
+      // Permission not yet requested — show banner
       const t = setTimeout(() => setShow(true), 2000);
-      return () => clearTimeout(t);
-    }
-    // En móvil sin instalar, mostrar igual — el banner explica que deben instalar
-    const t = setTimeout(() => setShow(true), 2000);
-    return () => clearTimeout(t);
+      return t;
+    };
+
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    check().then(t => { timer = t; });
+    return () => { if (timer) clearTimeout(timer); };
   }, []);
 
   const enable = async () => {

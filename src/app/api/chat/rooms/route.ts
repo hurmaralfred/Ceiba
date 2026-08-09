@@ -28,13 +28,22 @@ export async function GET(_req: NextRequest) {
       .limit(1)
       .maybeSingle();
 
+    const { data: groupMembership } = await service
+      .from("chat_room_members")
+      .select("last_read_at")
+      .eq("room_id", groupRoomId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    const groupUnread = !!(lastGroupMsg && new Date(lastGroupMsg.created_at) > new Date((groupMembership as any)?.last_read_at || 0));
+
     conversations.push({
       roomId: groupRoomId,
       type: "group",
       name: "Chat Familiar",
       lastMessage: lastGroupMsg?.body ?? null,
       lastAt: lastGroupMsg?.created_at ?? null,
-      unread: false,
+      unread: groupUnread,
     });
   }
 

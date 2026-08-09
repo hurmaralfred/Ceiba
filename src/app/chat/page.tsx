@@ -307,13 +307,32 @@ export default function ChatListPage() {
   }, []);
 
   useEffect(() => {
+    let channels: ReturnType<typeof supabase.channel>[] = [];
+
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push("/auth/login"); return; }
       setMyUserId(user.id);
       await Promise.all([loadConversations(), loadFamilyMembers()]);
       setLoading(false);
+
+      // Subscribe to all my rooms for realtime unread updates
+      const roomsRes = await fetch("/api/chat/rooms");
+      if (roomsRes.ok) {
+        const { conversations: convs } = await roomsRes.json();
+        for (const conv of (convs || [])) {
+          const ch = supabase
+            .channel(`chat-list:${conv.roomId}`)
+            .on("broadcast", { event: "new_message" }, () => { loadConversations(); })
+            .subscribe();
+          channels.push(ch);
+        }
+      }
     })();
+
+    return () => {
+      channels.forEach(ch => supabase.removeChannel(ch));
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

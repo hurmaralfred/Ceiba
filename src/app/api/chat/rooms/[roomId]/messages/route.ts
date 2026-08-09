@@ -205,14 +205,23 @@ async function pushChatNotification(
 
   if (subs && subs.length > 0) {
     webpush.setVapidDetails("mailto:ceiba-app@noreply.com", publicKey, privateKey);
-    await Promise.allSettled(
+    const results = await Promise.allSettled(
       (subs as any[]).map((sub) =>
         webpush.sendNotification(
           { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
           payload,
-        )
+        ).then(() => ({ ok: true, endpoint: sub.endpoint }))
+         .catch((err: any) => ({ ok: false, endpoint: sub.endpoint, status: err?.statusCode }))
       )
     );
+    // Clean up expired/invalid subscriptions (410 Gone or 404 Not Found)
+    const deadEndpoints = results
+      .filter((r): r is PromiseFulfilledResult<{ ok: boolean; endpoint: string; status?: number }> => r.status === "fulfilled")
+      .filter(r => !r.value.ok && (r.value.status === 410 || r.value.status === 404))
+      .map(r => r.value.endpoint);
+    if (deadEndpoints.length > 0) {
+      await service.from("push_subscriptions").delete().in("endpoint", deadEndpoints);
+    }
   }
 
   // ── FCM tokens (Android Chrome before PWA install / fallback) ────────────
