@@ -6,7 +6,7 @@ import { getDiceBearUrl } from "@/lib/dicebear";
 import {
   Home, TreePine, BookOpen, User, Bell, Menu,
   Users, GitBranch, Send,
-  Trophy, ChevronRight, Sparkles, X, MessageCircle, Map, Share2, Lock,
+  Trophy, ChevronRight, CalendarDays, Sparkles, X, MessageCircle, Map, Share2, Lock,
 } from "lucide-react";
 import BirthdayCardFeed from "@/components/BirthdayCardFeed";
 import { useFamilyPresence } from "@/hooks/useFamilyPresence";
@@ -559,7 +559,7 @@ function CosmicNav({ pathname, suggCount = 0 }: { pathname: string; suggCount?: 
   const items = [
     { href: "/home",      Icon: Home,     label: "Inicio"   },
     { href: "/tree",      Icon: TreePine, label: "Árbol"    },
-    { href: "/historias", Icon: Sparkles, label: "Historias", center: true },
+    { href: "/hoy", Icon: CalendarDays, label: "Un día como hoy", center: true },
     { href: "/events",    Icon: BookOpen, label: "Recuerdos" },
     { href: "/profile",   Icon: User,     label: "Perfil"   },
   ];
@@ -1050,7 +1050,7 @@ export default function HomePage() {
       <div style={{ padding: "20px 14px 8px" }}>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "18px 8px" }}>
           <CircleBtn icon={TreePine}      label="Árbol"       href="/tree"      color="240,192,64"  shadowColor="#3a2800" delay={0}    />
-          <CircleBtn icon={Sparkles}      label="Historias"   href="/historias" color="160,120,255" shadowColor="#06022a" delay={0.4}  />
+          <CircleBtn icon={CalendarDays}  label="Un día como hoy" href="/hoy"  color="212,175,55"  shadowColor="#1a0f00"  delay={0.4}  />
           <CircleBtn icon={BookOpen}      label="Recuerdos"   href="/events"    color="242,180,60"  shadowColor="#2a1400" delay={0.8}  />
           <CircleBtn icon={MessageCircle} label="Chat"        href="/chat"      color="160,170,245" shadowColor="#050328" delay={1.2} badge={unreadChats} />
           <CircleBtn icon={Lock}          label={"Cápsulas"}  href="/capsulas"  color="150,90,255"  shadowColor="#060010" delay={1.6} badge={pendingCapsulas} />
