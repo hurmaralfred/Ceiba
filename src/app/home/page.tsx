@@ -149,23 +149,22 @@ function FamilyRow({ members }: { members: FamilyMember[] }) {
   if (groups.length === 0) return null;
 
   return (
-    <div style={{ padding: "14px 14px 0" }}>
-      <div style={{ position: "relative", display: "flex", alignItems: "flex-start", justifyContent: "space-around" }}>
-        {/* Línea dorada punteada */}
-        <div style={{
-          position: "absolute", top: 28, left: "8%", right: "8%", height: 1, pointerEvents: "none",
-          backgroundImage: "repeating-linear-gradient(90deg,rgba(212,175,55,0.3) 0px,rgba(212,175,55,0.3) 4px,transparent 4px,transparent 10px)",
-        }} />
+    <div style={{ padding: "16px 16px 0" }}>
+      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.14em",
+        textTransform: "uppercase", color: "rgba(212,175,55,0.4)", marginBottom: 14 }}>
+        Familia cercana
+      </div>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-around" }}>
         {groups.map(g => {
           const src = g.first?.profile?.avatar_url ?? null;
           return (
-            <Link key={g.key} href="/tree" style={{ textDecoration: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 5, zIndex: 1 }}>
+            <Link key={g.key} href="/tree" style={{ textDecoration: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
               <div style={{
-                width: 54, height: 54, borderRadius: "50%",
-                background: "#0c0a18", border: "2px solid rgba(212,175,55,0.28)",
-                boxShadow: "0 0 14px rgba(212,175,55,0.1), 0 4px 12px rgba(0,0,0,0.5)",
+                width: 56, height: 56, borderRadius: "50%",
+                background: "#0e0c1e", border: "1.5px solid rgba(212,175,55,0.22)",
+                boxShadow: "0 4px 16px rgba(0,0,0,0.5)",
                 display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden",
-                fontSize: 24,
+                fontSize: 26,
               }}>
                 {src
                   // eslint-disable-next-line @next/next/no-img-element
@@ -173,26 +172,12 @@ function FamilyRow({ members }: { members: FamilyMember[] }) {
                   : <span>{g.emoji}</span>}
               </div>
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
-                <span style={{ fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.65)" }}>{g.label}</span>
-                <span style={{ fontSize: 10, fontWeight: 800, color: "rgba(212,175,55,0.7)" }}>{g.count}</span>
+                <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.6)" }}>{g.label}</span>
+                <span style={{ fontSize: 12, fontWeight: 800, color: "rgba(212,175,55,0.75)" }}>{g.count}</span>
               </div>
             </Link>
           );
         })}
-      </div>
-      <div style={{ display: "flex", justifyContent: "center", marginTop: 18 }}>
-        <Link href="/tree">
-          <div style={{
-            display: "inline-flex", alignItems: "center", gap: 7,
-            padding: "10px 24px", borderRadius: 24,
-            border: "1px solid rgba(212,175,55,0.32)",
-            background: "rgba(212,175,55,0.06)",
-            fontSize: 12, fontWeight: 700, color: "rgba(212,175,55,0.85)", letterSpacing: "0.02em",
-          }}>
-            <TreePine size={13} style={{ color: "#d4af37" }} />
-            Ver mi árbol completo
-          </div>
-        </Link>
       </div>
     </div>
   );
@@ -228,7 +213,6 @@ function GalaxyHero({ children, avatarInitial, avatarUrl, firstName, visibleCoun
         @keyframes home-ring-spin    { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
         @keyframes home-ring-breathe { 0%,100%{opacity:0.72;transform:scale(1)} 50%{opacity:1;transform:scale(1.055)} }
         @keyframes btn-float { 0%,100%{transform:translateY(0px)} 50%{transform:translateY(-6px)} }
-        @keyframes spdot { 0%,100%{opacity:0;transform:scale(0.3)} 50%{opacity:1;transform:scale(1)} }
         a:active > div { transform: scale(0.97) translateY(1px) !important; }
         button:active { transform: scale(0.97) !important; }
       `}</style>
@@ -278,15 +262,9 @@ function GalaxyHero({ children, avatarInitial, avatarUrl, firstName, visibleCoun
       {/* Top bar */}
       {children}
 
-      {/* Avatar + stat nodes layout */}
-      <div style={{ position:"relative", width:"100%", display:"flex", alignItems:"center",
-        justifyContent:"center", gap:0, marginBottom:14, zIndex:5 }}>
-
-        {/* Stat nodes — columna izquierda */}
-        <div style={{ display:"flex", flexDirection:"column", gap:12, alignItems:"center", flex:"0 0 72px", zIndex:2 }}>
-          <StatNode icon={Users}   value={visibleCount}     label="personas" />
-          <StatNode icon={Share2}  value={directCount}      label={"conexiones\ndirectas"} />
-        </div>
+      {/* Avatar + constelación — centrado */}
+      <div style={{ position:"relative", width:"100%", display:"flex",
+        justifyContent:"center", marginBottom:10, zIndex:5 }}>
 
         {/* Constelación + avatar — centro */}
         <div style={{ position:"relative", display:"inline-block", flexShrink:0 }}>
@@ -415,24 +393,46 @@ function GalaxyHero({ children, avatarInitial, avatarUrl, firstName, visibleCoun
         </div>
         </div>{/* /center */}
 
-        {/* Stat nodes — columna derecha */}
-        <div style={{ display:"flex", flexDirection:"column", gap:12, alignItems:"center", flex:"0 0 72px", zIndex:2 }}>
-          <StatNode icon={GitBranch} value={generationsCount} label="generaciones" />
-          <StatNode icon={BookOpen}  value={historyCount}     label="recuerdos" />
-        </div>
-
-      </div>{/* /outer flex */}
+      </div>{/* /avatar row */}
 
       {/* Name */}
-      <div style={{ fontSize:22, fontWeight:800, color:"#fff", letterSpacing:0.3, marginBottom:4,
+      <div style={{ fontSize:25, fontWeight:800, color:"#fff", letterSpacing:0.2, marginBottom:4,
         position:"relative", zIndex:5, animation:"name-glow 5s ease-in-out infinite" }}>
         {firstName || "Cargando..."}
       </div>
 
       {/* Universe label */}
-      <div style={{ fontSize:10, color:"rgba(212,175,55,0.55)", fontStyle:"italic",
-        marginBottom:16, position:"relative", zIndex:5, letterSpacing:"0.1em" }}>
-        ✦ Tu universo familiar ✦
+      <div style={{ fontSize:11, color:"rgba(212,175,55,0.48)",
+        marginBottom:14, position:"relative", zIndex:5, letterSpacing:"0.05em" }}>
+        Tu universo familiar
+      </div>
+
+      {/* Stats strip — 4 métricas en línea horizontal */}
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"center",
+        marginBottom:24, position:"relative", zIndex:5 }}>
+        <div style={{ padding:"0 14px", textAlign:"center" }}>
+          <div style={{ fontSize:18, fontWeight:800, color:"#d4af37", lineHeight:1 }}>{visibleCount}</div>
+          <div style={{ fontSize:9, color:"rgba(255,255,255,0.40)", textTransform:"uppercase",
+            letterSpacing:"0.08em", marginTop:3, lineHeight:1 }}>familiares</div>
+        </div>
+        <div style={{ width:1, height:24, background:"rgba(212,175,55,0.16)", flexShrink:0 }} />
+        <div style={{ padding:"0 14px", textAlign:"center" }}>
+          <div style={{ fontSize:18, fontWeight:800, color:"#d4af37", lineHeight:1 }}>{directCount}</div>
+          <div style={{ fontSize:9, color:"rgba(255,255,255,0.40)", textTransform:"uppercase",
+            letterSpacing:"0.08em", marginTop:3, lineHeight:1 }}>conexiones</div>
+        </div>
+        <div style={{ width:1, height:24, background:"rgba(212,175,55,0.16)", flexShrink:0 }} />
+        <div style={{ padding:"0 14px", textAlign:"center" }}>
+          <div style={{ fontSize:18, fontWeight:800, color:"#d4af37", lineHeight:1 }}>{generationsCount}</div>
+          <div style={{ fontSize:9, color:"rgba(255,255,255,0.40)", textTransform:"uppercase",
+            letterSpacing:"0.08em", marginTop:3, lineHeight:1 }}>generaciones</div>
+        </div>
+        <div style={{ width:1, height:24, background:"rgba(212,175,55,0.16)", flexShrink:0 }} />
+        <div style={{ padding:"0 14px", textAlign:"center" }}>
+          <div style={{ fontSize:18, fontWeight:800, color:"#d4af37", lineHeight:1 }}>{historyCount}</div>
+          <div style={{ fontSize:9, color:"rgba(255,255,255,0.40)", textTransform:"uppercase",
+            letterSpacing:"0.08em", marginTop:3, lineHeight:1 }}>recuerdos</div>
+        </div>
       </div>
 
     </div>
@@ -440,13 +440,6 @@ function GalaxyHero({ children, avatarInitial, avatarUrl, firstName, visibleCoun
 }
 
 // ── Botón circular 3D flotante ────────────────────────────────────────────────
-const SPARKLE_POS = [
-  { top: -8,  left: 32 },
-  { top: 11,  left: 66 },
-  { top: 50,  left: 71 },
-  { top: 66,  left: 10 },
-  { top: 20,  left: -7 },
-];
 function CircleBtn({ icon: Icon, label, href, color, shadowColor, delay = 0, badge = 0 }: {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   icon: React.ComponentType<any>;
@@ -475,15 +468,6 @@ function CircleBtn({ icon: Icon, label, href, color, shadowColor, delay = 0, bad
             {badge > 99 ? "99+" : badge}
           </div>
         )}
-        {SPARKLE_POS.map((p, i) => (
-          <div key={i} style={{
-            position:"absolute", top:p.top, left:p.left,
-            width:3.5, height:3.5, borderRadius:"50%",
-            background:`rgba(${color},0.95)`,
-            boxShadow:`0 0 6px rgba(${color},0.85)`,
-            animation:`spdot 2.4s ease-in-out infinite ${i * 0.48}s`,
-          }}/>
-        ))}
         <div style={{
           width:72, height:72, borderRadius:"50%",
           background:[
@@ -519,6 +503,31 @@ function CircleBtn({ icon: Icon, label, href, color, shadowColor, delay = 0, bad
         maxWidth:68, whiteSpace:"pre-line" }}>
         {label}
       </span>
+    </Link>
+  );
+}
+
+// ── Shortcut secundario (también visible en nav inferior) ─────────────────────
+function QuickLink({ icon: Icon, label, href, color }: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  icon: React.ComponentType<any>;
+  label: string; href: string; color: string;
+}) {
+  return (
+    <Link href={href} style={{ textDecoration: "none" }}>
+      <div style={{
+        display: "flex", flexDirection: "column", alignItems: "center", gap: 7,
+        padding: "12px 6px 10px",
+        borderRadius: 14,
+        background: "rgba(255,255,255,0.03)",
+        border: "1px solid rgba(212,175,55,0.1)",
+      }}>
+        <Icon size={17} style={{ color: `rgb(${color})`, opacity: 0.7 }} />
+        <span style={{
+          fontSize: 9.5, fontWeight: 600, color: "rgba(255,255,255,0.42)",
+          textAlign: "center", lineHeight: 1.2, letterSpacing: "0.01em",
+        }}>{label}</span>
+      </div>
     </Link>
   );
 }
@@ -791,57 +800,6 @@ export default function HomePage() {
   return (
     <div style={{ minHeight: "100vh", background: "#030208", paddingBottom: 100, color: "#fff" }}>
 
-      {/* ── MARCO LUMINOSO VIVO ─────────────────────────────────────────── */}
-      <div style={{ position:"fixed", inset:0, pointerEvents:"none", zIndex:998, overflow:"hidden" }}>
-        <style>{`
-          @keyframes fglow{0%,100%{opacity:0.42}50%{opacity:1}}
-          @keyframes fglow2{0%,100%{opacity:0.55}50%{opacity:0.18}}
-        `}</style>
-        {/* Borde superior */}
-        <div style={{ position:"absolute",top:0,left:0,right:0,height:2.5,
-          background:"linear-gradient(90deg,transparent 4%,rgba(212,175,55,0.95) 25%,rgba(160,95,255,0.95) 55%,rgba(212,175,55,0.80) 80%,transparent 96%)",
-          animation:"fglow 2.6s ease-in-out infinite",
-          boxShadow:"0 0 10px rgba(212,175,55,0.7),0 0 28px rgba(212,175,55,0.25),0 0 50px rgba(160,95,255,0.15)" }} />
-        {/* Borde inferior */}
-        <div style={{ position:"absolute",bottom:0,left:0,right:0,height:2.5,
-          background:"linear-gradient(90deg,transparent 4%,rgba(160,95,255,0.95) 25%,rgba(212,175,55,0.95) 55%,rgba(160,95,255,0.80) 80%,transparent 96%)",
-          animation:"fglow 2.6s ease-in-out infinite 1.3s",
-          boxShadow:"0 0 10px rgba(160,95,255,0.7),0 0 28px rgba(160,95,255,0.25),0 0 50px rgba(212,175,55,0.15)" }} />
-        {/* Borde izquierdo */}
-        <div style={{ position:"absolute",top:0,bottom:0,left:0,width:2.5,
-          background:"linear-gradient(180deg,transparent 4%,rgba(212,175,55,0.90) 28%,rgba(160,95,255,0.75) 65%,transparent 96%)",
-          animation:"fglow 3.1s ease-in-out infinite 0.65s",
-          boxShadow:"0 0 10px rgba(212,175,55,0.5),0 0 22px rgba(212,175,55,0.18)" }} />
-        {/* Borde derecho */}
-        <div style={{ position:"absolute",top:0,bottom:0,right:0,width:2.5,
-          background:"linear-gradient(180deg,transparent 4%,rgba(160,95,255,0.90) 28%,rgba(212,175,55,0.75) 65%,transparent 96%)",
-          animation:"fglow 3.1s ease-in-out infinite 1.95s",
-          boxShadow:"0 0 10px rgba(160,95,255,0.5),0 0 22px rgba(160,95,255,0.18)" }} />
-        {/* Esquina sup-izq */}
-        <div style={{ position:"absolute",top:0,left:0,width:100,height:100,
-          background:"radial-gradient(circle at 0% 0%,rgba(212,175,55,0.50) 0%,transparent 72%)",
-          animation:"fglow 4s ease-in-out infinite" }} />
-        {/* Esquina sup-der */}
-        <div style={{ position:"absolute",top:0,right:0,width:100,height:100,
-          background:"radial-gradient(circle at 100% 0%,rgba(160,95,255,0.50) 0%,transparent 72%)",
-          animation:"fglow 4s ease-in-out infinite 2s" }} />
-        {/* Esquina inf-izq */}
-        <div style={{ position:"absolute",bottom:0,left:0,width:100,height:100,
-          background:"radial-gradient(circle at 0% 100%,rgba(160,95,255,0.40) 0%,transparent 72%)",
-          animation:"fglow 4s ease-in-out infinite 1s" }} />
-        {/* Esquina inf-der */}
-        <div style={{ position:"absolute",bottom:0,right:0,width:100,height:100,
-          background:"radial-gradient(circle at 100% 100%,rgba(212,175,55,0.40) 0%,transparent 72%)",
-          animation:"fglow 4s ease-in-out infinite 3s" }} />
-        {/* Destello viajero superior */}
-        <div style={{ position:"absolute",top:0,left:0,width:80,height:2.5,
-          background:"linear-gradient(90deg,transparent,rgba(255,255,255,0.9),transparent)",
-          animation:"fglow2 3.8s ease-in-out infinite 0.4s" }} />
-        {/* Destello viajero inferior */}
-        <div style={{ position:"absolute",bottom:0,right:0,width:80,height:2.5,
-          background:"linear-gradient(90deg,transparent,rgba(255,255,255,0.8),transparent)",
-          animation:"fglow2 3.8s ease-in-out infinite 2.2s" }} />
-      </div>
 
       {/* ── HERO ─────────────────────────────────────────────────────────── */}
       <GalaxyHero
@@ -891,7 +849,25 @@ export default function HomePage() {
       {/* ── FAMILIA DIRECTA ─────────────────────────────────────────────── */}
       <FamilyRow members={members} />
 
-      {/* Stats integradas en hero — sin cajas */}
+      {/* ── CTA PRINCIPAL ───────────────────────────────────────────────── */}
+      <div style={{ padding: "16px 16px 0" }}>
+        <Link href="/tree" style={{ textDecoration: "none" }}>
+          <div style={{
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+            padding: "16px 24px", borderRadius: 16,
+            background: "linear-gradient(135deg, #c9a820 0%, #a07010 100%)",
+            borderTop: "1.5px solid rgba(255,240,100,0.38)",
+            borderBottom: "3px solid #6a5600",
+            boxShadow: "0 6px 0 #4a3c00, 0 10px 28px rgba(0,0,0,0.55), 0 0 28px rgba(212,175,55,0.2)",
+            color: "#030208",
+            fontSize: 15, fontWeight: 800, letterSpacing: "0.01em",
+          }}>
+            <TreePine size={18} style={{ color: "#030208" }} />
+            Ver mi árbol completo
+            <ChevronRight size={16} style={{ color: "rgba(3,2,8,0.55)" }} />
+          </div>
+        </Link>
+      </div>
 
       {/* ── EN LÍNEA AHORA ──────────────────────────────────────────────── */}
       {onlineFamily.length > 0 && (
@@ -930,33 +906,9 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Divisor atmosférico — nebula + línea + constelación */}
-      <div style={{ position: "relative", margin: "0 0 2px", height: 48, overflow: "hidden" }}>
-        {/* Capa de luz nebulosa */}
-        <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
-          width: 280, height: 48, borderRadius: "50%", pointerEvents: "none",
-          background: "radial-gradient(ellipse at 50% 50%, rgba(212,175,55,0.12) 0%, rgba(80,30,120,0.06) 40%, transparent 70%)",
-          filter: "blur(8px)" }} />
-        {/* Línea divisoria */}
-        <div style={{ position: "absolute", top: "50%", left: "12%", right: "12%",
-          height: 0.5, background: "linear-gradient(90deg,transparent,rgba(212,175,55,0.28),transparent)",
-          transform: "translateY(-50%)" }} />
-        {/* Partículas decorativas — 5 estrellas pequeñas */}
-        {[
-          { l: "18%", t: "28%", s: 7, a: "twinkle-a", d: "0s",   op: 0.30 },
-          { l: "35%", t: "62%", s: 6, a: "twinkle-c", d: "-1.2s", op: 0.22 },
-          { l: "50%", t: "22%", s: 9, a: "twinkle-b", d: "-0.7s", op: 0.40 },
-          { l: "67%", t: "68%", s: 6, a: "twinkle-a", d: "-2.1s", op: 0.20 },
-          { l: "82%", t: "30%", s: 7, a: "twinkle-c", d: "-1.5s", op: 0.28 },
-        ].map((p, i) => (
-          <span key={i} style={{
-            position: "absolute", left: p.l, top: p.t,
-            fontSize: p.s, color: "#d4af37", opacity: p.op,
-            animation: `${p.a} ${3.5 + i * 0.8}s ease-in-out ${p.d} infinite`,
-            pointerEvents: "none",
-          }}>✦</span>
-        ))}
-      </div>
+      {/* Divisor */}
+      <div style={{ margin: "20px 16px 0", height: 1,
+        background: "linear-gradient(90deg, transparent, rgba(212,175,55,0.18), transparent)" }} />
 
       {/* ══ MOMENTO DEL DÍA ══════════════════════════════════════════════ */}
       <div style={{ padding: "14px 14px 0" }}>
@@ -1046,67 +998,57 @@ export default function HomePage() {
 
       </div>
 
-      {/* ══ ACCESOS RÁPIDOS — cuadrícula 4×2 de botones circulares ═══════ */}
-      <div style={{ padding: "20px 14px 8px" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "18px 8px" }}>
-          <CircleBtn icon={TreePine}      label="Árbol"       href="/tree"      color="240,192,64"  shadowColor="#3a2800" delay={0}    />
-          <CircleBtn icon={CalendarDays}  label="Un día como hoy" href="/hoy"  color="212,175,55"  shadowColor="#1a0f00"  delay={0.4}  />
-          <CircleBtn icon={BookOpen}      label="Recuerdos"   href="/events"    color="242,180,60"  shadowColor="#2a1400" delay={0.8}  />
-          <CircleBtn icon={MessageCircle} label="Chat"        href="/chat"      color="160,170,245" shadowColor="#050328" delay={1.2} badge={unreadChats} />
-          <CircleBtn icon={Lock}          label={"Cápsulas"}  href="/capsulas"  color="150,90,255"  shadowColor="#060010" delay={1.6} badge={pendingCapsulas} />
-          <CircleBtn icon={Map}           label="Mapa"        href="/mapa"      color="80,220,250"  shadowColor="#02101e" delay={2.0}  />
-          <CircleBtn icon={Send}          label="Invitar"     href="/invitar"   color="212,175,55"  shadowColor="#362000" delay={2.4}  />
-          <CircleBtn icon={Trophy}        label="Logros"      href="/profile"   color="210,150,40"  shadowColor="#070500" delay={2.8}  />
+      {/* ══ ACCESOS RÁPIDOS ══════════════════════════════════════════════ */}
+      <div style={{ padding: "20px 16px 8px" }}>
+        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.14em",
+          textTransform: "uppercase", color: "rgba(212,175,55,0.4)", marginBottom: 16 }}>
+          Accesos rápidos
+        </div>
+        {/* Tier 1 — funciones no duplicadas en la navegación inferior */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "18px 8px", marginBottom: 16 }}>
+          <CircleBtn icon={MessageCircle} label="Chat"      href="/chat"     color="160,170,245" shadowColor="#050328" delay={0}   badge={unreadChats} />
+          <CircleBtn icon={Lock}          label="Cápsulas"  href="/capsulas" color="150,90,255"  shadowColor="#060010" delay={0.4} badge={pendingCapsulas} />
+          <CircleBtn icon={Map}           label="Mapa"      href="/mapa"     color="80,220,250"  shadowColor="#02101e" delay={0.8} />
+          <CircleBtn icon={Send}          label="Invitar"   href="/invitar"  color="212,175,55"  shadowColor="#362000" delay={1.2} />
+        </div>
+        {/* Tier 2 — accesos también visibles en la navegación inferior */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+          <QuickLink icon={TreePine}     label="Árbol"     href="/tree"    color="240,192,64" />
+          <QuickLink icon={CalendarDays} label="Un día hoy" href="/hoy"   color="212,175,55" />
+          <QuickLink icon={BookOpen}     label="Recuerdos" href="/events"  color="242,180,60" />
+          <QuickLink icon={Trophy}       label="Logros"    href="/profile" color="210,150,40" />
         </div>
       </div>
 
       {/* ── GALERÍA FAMILIAR ─────────────────────────────────────────────── */}
       {photos.length > 0 && (
-        <div style={{ padding: "20px 14px 8px" }}>
-          <style>{`
-            @keyframes pf0{0%,100%{transform:translateY(0px) rotate(-0.5deg)}50%{transform:translateY(-7px) rotate(0.3deg)}}
-            @keyframes pf1{0%,100%{transform:translateY(0px) rotate(0.4deg)}50%{transform:translateY(-5px) rotate(-0.2deg)}}
-            @keyframes pf2{0%,100%{transform:translateY(0px) rotate(-0.3deg)}50%{transform:translateY(-8px) rotate(0.4deg)}}
-            @keyframes pf3{0%,100%{transform:translateY(0px) rotate(0.5deg)}50%{transform:translateY(-6px) rotate(-0.3deg)}}
-            @keyframes pf4{0%,100%{transform:translateY(0px) rotate(-0.4deg)}50%{transform:translateY(-7px) rotate(0.2deg)}}
-            @keyframes pf5{0%,100%{transform:translateY(0px) rotate(0.3deg)}50%{transform:translateY(-5px) rotate(-0.4deg)}}
-            @keyframes pglow0{0%,100%{box-shadow:0 14px 30px rgba(0,0,0,0.75),0 5px 10px rgba(0,0,0,0.55),inset 0 1px 0 rgba(255,255,255,0.12),0 0 0 3px rgba(212,175,55,0.55),0 0 22px rgba(212,175,55,0.35),0 0 44px rgba(212,175,55,0.12)}50%{box-shadow:0 14px 30px rgba(0,0,0,0.75),0 5px 10px rgba(0,0,0,0.55),inset 0 1px 0 rgba(255,255,255,0.12),0 0 0 3px rgba(212,175,55,1.0),0 0 24px rgba(212,175,55,0.90),0 0 55px rgba(212,175,55,0.55),0 0 90px rgba(212,175,55,0.22)}}
-            @keyframes pglow1{0%,100%{box-shadow:0 14px 30px rgba(0,0,0,0.75),0 5px 10px rgba(0,0,0,0.55),inset 0 1px 0 rgba(255,255,255,0.12),0 0 0 3px rgba(255,200,80,0.50),0 0 20px rgba(255,200,80,0.32),0 0 40px rgba(255,200,80,0.10)}50%{box-shadow:0 14px 30px rgba(0,0,0,0.75),0 5px 10px rgba(0,0,0,0.55),inset 0 1px 0 rgba(255,255,255,0.12),0 0 0 3px rgba(255,200,80,1.0),0 0 22px rgba(255,200,80,0.88),0 0 52px rgba(255,200,80,0.50),0 0 85px rgba(255,200,80,0.18)}}
-            @keyframes pglow2{0%,100%{box-shadow:0 14px 30px rgba(0,0,0,0.75),0 5px 10px rgba(0,0,0,0.55),inset 0 1px 0 rgba(255,255,255,0.12),0 0 0 3px rgba(180,140,255,0.50),0 0 20px rgba(180,140,255,0.30),0 0 42px rgba(180,140,255,0.10)}50%{box-shadow:0 14px 30px rgba(0,0,0,0.75),0 5px 10px rgba(0,0,0,0.55),inset 0 1px 0 rgba(255,255,255,0.12),0 0 0 3px rgba(180,140,255,1.0),0 0 22px rgba(180,140,255,0.85),0 0 50px rgba(180,140,255,0.48),0 0 82px rgba(180,140,255,0.16)}}
-          `}</style>
-          <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.18em",
-            textTransform: "uppercase", color: "rgba(212,175,55,0.45)", marginBottom: 14, paddingLeft: 2 }}>
-            📸 Fotos de la familia
+        <div style={{ padding: "20px 16px 8px" }}>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.14em",
+            textTransform: "uppercase", color: "rgba(212,175,55,0.4)", marginBottom: 14 }}>
+            Fotos de la familia
           </div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "center" }}>
-            {photos.map((photo, idx) => (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 6 }}>
+            {photos.map((photo) => (
               <div
                 key={photo.id}
                 onClick={() => setLightboxPhoto(photo)}
                 style={{
-                  width: "calc(20% - 8px)",
                   aspectRatio: "1",
                   borderRadius: 10,
                   overflow: "hidden",
                   cursor: "pointer",
                   position: "relative",
-                  flexShrink: 0,
-                  animation: `pf${idx % 6} ${3.8 + (idx % 3) * 0.55}s ease-in-out infinite ${(idx % 5) * 0.5}s, pglow${idx % 3} ${2.8 + (idx % 3) * 0.7}s ease-in-out infinite ${(idx % 4) * 0.8}s`,
-                  willChange: "transform",
+                  border: "1px solid rgba(212,175,55,0.12)",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
                 }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={photo.url} alt={photo.caption ?? ""}
                   style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                {/* Brillo superior — simula luz */}
-                <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "45%",
-                  background: "linear-gradient(to bottom, rgba(255,255,255,0.13) 0%, transparent 100%)",
-                  borderRadius: "16px 16px 0 0", pointerEvents: "none" }} />
-                {/* Caption al fondo si existe */}
                 {photo.caption && (
                   <div style={{ position: "absolute", bottom: 0, left: 0, right: 0,
                     background: "linear-gradient(to top, rgba(3,2,8,0.88) 0%, transparent 100%)",
-                    padding: "20px 7px 6px",
-                    fontSize: 8.5, fontWeight: 600, color: "rgba(255,255,255,0.72)",
+                    padding: "16px 5px 5px",
+                    fontSize: 8, fontWeight: 600, color: "rgba(255,255,255,0.7)",
                     overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                     pointerEvents: "none" }}>
                     {photo.caption}
