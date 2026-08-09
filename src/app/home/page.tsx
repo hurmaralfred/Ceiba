@@ -917,22 +917,39 @@ export default function HomePage() {
 
       {/* ── CTA PRINCIPAL ───────────────────────────────────────────────── */}
       {members.length > 0 && (
-        <div style={{ padding: "16px 16px 0" }}>
-          <Link href="/tree" style={{ textDecoration: "none" }}>
-            <div style={{
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-              padding: "16px 24px", borderRadius: 16,
-              background: "linear-gradient(135deg, #c9a820 0%, #a07010 100%)",
-              borderTop: "1.5px solid rgba(255,240,100,0.38)",
-              borderBottom: "3px solid #6a5600",
-              boxShadow: "0 6px 0 #4a3c00, 0 10px 28px rgba(0,0,0,0.55), 0 0 28px rgba(212,175,55,0.2)",
-              color: "#030208",
-              fontSize: 15, fontWeight: 800, letterSpacing: "0.01em",
-            }}>
-              <TreePine size={18} style={{ color: "#030208" }} />
-              Ver mi galaxia completa
-              <ChevronRight size={16} style={{ color: "rgba(3,2,8,0.55)" }} />
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "20px 16px 4px", gap: 10 }}>
+          <Link href="/tree" style={{ textDecoration: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+            {/* 108px — mismo efecto 3D que el avatar principal (135px × 0.8) */}
+            <div style={{ position: "relative", width: 108, height: 108 }}>
+              {/* Glow exterior pulsante */}
+              <div style={{ position: "absolute", inset: -14, borderRadius: "50%", pointerEvents: "none",
+                background: "radial-gradient(circle, rgba(242,180,60,0.32) 0%, rgba(130,60,230,0.12) 40%, transparent 70%)",
+                animation: "home-ring-breathe 3.5s ease-in-out infinite" }} />
+              {/* Anillo cónico giratorio */}
+              <div style={{ position: "absolute", inset: -6, borderRadius: "50%", pointerEvents: "none",
+                background: "conic-gradient(from 0deg, rgba(242,180,60,0.95) 0deg, rgba(200,120,48,0.55) 80deg, rgba(184,160,216,0.30) 160deg, rgba(123,175,212,0.55) 230deg, rgba(242,180,60,0.80) 295deg, rgba(242,180,60,0.95) 360deg)",
+                animation: "home-ring-spin 7s linear infinite",
+                filter: "blur(1.5px)" }} />
+              {/* Gap oscuro entre anillo y botón */}
+              <div style={{ position: "absolute", inset: -1, borderRadius: "50%",
+                background: "#030208", pointerEvents: "none", zIndex: 1 }} />
+              {/* Cuerpo del botón */}
+              <div style={{
+                width: 108, height: 108, borderRadius: "50%", position: "relative", zIndex: 2,
+                background: "radial-gradient(circle at 38% 28%, rgba(242,180,60,0.55) 0%, rgba(180,100,20,0.25) 35%, rgba(8,5,20,0.98) 70%)",
+                boxShadow: "inset 0 3px 22px rgba(120,60,220,0.28), inset 0 -3px 12px rgba(0,0,0,0.7), 0 12px 0 rgba(90,60,0,0.7), 0 20px 36px rgba(0,0,0,0.9)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <div style={{ position: "absolute", inset: 0, borderRadius: "50%",
+                  background: "radial-gradient(circle at 35% 25%, rgba(212,175,55,0.22) 0%, transparent 55%)" }} />
+                <Sparkles size={28} style={{ color: "#d4af37", position: "relative",
+                  filter: "drop-shadow(0 0 8px rgba(212,175,55,0.7))" }} />
+              </div>
             </div>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(212,175,55,0.75)",
+              letterSpacing: "0.1em", textTransform: "uppercase", textAlign: "center" }}>
+              Ver mi galaxia
+            </span>
           </Link>
         </div>
       )}
