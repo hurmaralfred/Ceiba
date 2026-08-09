@@ -22,38 +22,54 @@ export async function GET() {
     .is("revoked_at", null)
     .maybeSingle();
 
-  // Get all future_messages (metadata only — no content column)
+  const myPersonId = myClaim?.person_id ?? null;
+
+  // Resolve family scope — needed both for filtering capsulas and for the compose picker
+  const myFamilyPersonIds = myPersonId
+    ? await resolveFamilySpaceMemberIds(service, myPersonId)
+    : [];
+  const allFamilyPersonIds = myPersonId ? [myPersonId, ...myFamilyPersonIds] : [];
+
+  // Resolve family user IDs (for sender matching)
+  const { data: familyClaims } = allFamilyPersonIds.length > 0
+    ? await service
+        .from("person_claims")
+        .select("user_id, person_id")
+        .in("person_id", allFamilyPersonIds)
+        .eq("claim_status", "approved")
+        .is("revoked_at", null)
+    : { data: [] as any[] };
+
+  const familyUserIds = [...new Set([user.id, ...(familyClaims ?? []).map((c: any) => c.user_id as string)])];
+
+  // Only fetch capsulas involving this family — scoped to prevent cross-family metadata leaks
+  if (allFamilyPersonIds.length === 0) {
+    return NextResponse.json({ capsulas: [], familyMembers: [], myPersonId: null });
+  }
+
   const { data: rows, error } = await service
     .from("future_messages")
     .select("id, sender_user_id, recipient_person_id, unlock_date, created_at, opened_at")
+    .or(`sender_user_id.in.(${familyUserIds.join(",")}),recipient_person_id.in.(${allFamilyPersonIds.join(",")})`)
     .order("created_at", { ascending: false });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   const capsulas = rows ?? [];
 
-  // Collect all unique user/person ids to resolve names
-  const senderUserIds = [...new Set(capsulas.map((r: any) => r.sender_user_id as string))];
+  // Build person lookup for name resolution (reuse familyClaims data + recipient person IDs)
+  const claimByUser = new Map((familyClaims ?? []).map((c: any) => [c.user_id as string, c.person_id as string]));
   const recipientPersonIds = [...new Set(capsulas.map((r: any) => r.recipient_person_id as string))];
+  const allPersonIds = [...new Set([...allFamilyPersonIds, ...recipientPersonIds])];
 
-  // Resolve sender names via person_claims → persons
-  const { data: senderClaims } = await service
-    .from("person_claims")
-    .select("user_id, person_id")
-    .in("user_id", senderUserIds)
-    .eq("claim_status", "approved")
-    .is("revoked_at", null);
-
-  const senderPersonIds = (senderClaims ?? []).map((c: any) => c.person_id as string);
-  const allPersonIds = [...new Set([...senderPersonIds, ...recipientPersonIds])];
-
-  const { data: persons } = await service
-    .from("persons")
-    .select("id, first_name, first_surname, second_surname, photo_path")
-    .in("id", allPersonIds);
+  const { data: persons } = allPersonIds.length > 0
+    ? await service
+        .from("persons")
+        .select("id, first_name, first_surname, second_surname, photo_path")
+        .in("id", allPersonIds)
+    : { data: [] as any[] };
 
   const personMap = new Map((persons ?? []).map((p: any) => [p.id as string, p]));
-  const claimByUser = new Map((senderClaims ?? []).map((c: any) => [c.user_id as string, c.person_id as string]));
 
   const today = new Date().toISOString().slice(0, 10);
 
@@ -62,7 +78,7 @@ export async function GET() {
     const senderPerson = senderPersonId ? personMap.get(senderPersonId) : null;
     const recipientPerson = personMap.get(r.recipient_person_id);
     const isMyCapsula = r.sender_user_id === user.id;
-    const isMyRecipient = myClaim?.person_id === r.recipient_person_id;
+    const isMyRecipient = myPersonId === r.recipient_person_id;
     const unlocked = r.unlock_date <= today;
 
     return {
@@ -85,25 +101,17 @@ export async function GET() {
     };
   });
 
-  // Family members for compose picker — only persons in my family space (same tree)
-  const myFamilyPersonIds = myClaim?.person_id
-    ? await resolveFamilySpaceMemberIds(service, myClaim.person_id)
-    : [];
+  // Family members for compose picker (reuse already-resolved persons)
+  const familyMembers = (familyClaims ?? []).map((c: any) => {
+    const p = personMap.get(c.person_id);
+    return p ? {
+      person_id: p.id,
+      name: `${p.first_name} ${p.first_surname ?? ""}`.trim(),
+      photo: p.photo_path ?? null,
+    } : null;
+  }).filter(Boolean);
 
-  const { data: familyPersons } = myFamilyPersonIds.length > 0
-    ? await service
-        .from("persons")
-        .select("id, first_name, first_surname, second_surname, photo_path")
-        .in("id", myFamilyPersonIds)
-    : { data: [] as any[] };
-
-  const familyMembers = (familyPersons ?? []).map((p: any) => ({
-    person_id: p.id,
-    name: `${p.first_name} ${p.first_surname ?? ""}`.trim(),
-    photo: p.photo_path ?? null,
-  }));
-
-  return NextResponse.json({ capsulas: enriched, familyMembers, myPersonId: myClaim?.person_id ?? null });
+  return NextResponse.json({ capsulas: enriched, familyMembers, myPersonId });
 }
 
 // POST /api/capsulas
