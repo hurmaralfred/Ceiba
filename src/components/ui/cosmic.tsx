@@ -163,7 +163,7 @@ export function CosmicHeader({
 // ── Navegación inferior cósmica ───────────────────────────────────────────────
 const NAV_ITEMS: Array<{ href: string; Icon: LucideIcon; label: string; center?: boolean }> = [
   { href: "/home",      Icon: Home,     label: "Inicio"   },
-  { href: "/tree",      Icon: TreePine, label: "Árbol"    },
+  { href: "/tree",      Icon: TreePine, label: "Galaxia"    },
   { href: "/historias", Icon: Sparkles, label: "Historias", center: true },
   { href: "/events",    Icon: BookOpen, label: "Recuerdos" },
   { href: "/persona/me", Icon: User,     label: "Perfil"   },

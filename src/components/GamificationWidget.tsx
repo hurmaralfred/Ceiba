@@ -46,7 +46,7 @@ export default function GamificationWidget() {
                 <Trophy size={15} className="text-amber-600" />
               </div>
               <div>
-                <p className="text-sm font-bold text-brown-800">Completitud del árbol</p>
+                <p className="text-sm font-bold text-brown-800">Completitud de la galaxia</p>
                 <p className="text-[11px] text-brown-400">{stats.totalPersons} personas · {earnedAchievements.length}/{stats.achievements.length} logros</p>
               </div>
             </div>

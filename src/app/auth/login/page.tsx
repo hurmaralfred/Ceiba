@@ -128,7 +128,7 @@ export default function LoginPage() {
             <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-earth-400 border-2 border-ceiba-950 animate-pulse" />
           </div>
           <span className="font-display text-2xl font-bold text-white mt-2 tracking-tight">Ceiba</span>
-          <span className="text-earth-300 text-xs font-medium tracking-widest uppercase">Tu árbol familiar</span>
+          <span className="text-earth-300 text-xs font-medium tracking-widest uppercase">Tu galaxia familiar</span>
         </Link>
 
         {/* Headline */}
@@ -137,7 +137,7 @@ export default function LoginPage() {
             Tu familia<br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-earth-400 to-earth-300">te espera</span>
           </h1>
-          <p className="text-ceiba-300 text-sm">Inicia sesión y reconéctate con tu árbol</p>
+          <p className="text-ceiba-300 text-sm">Inicia sesión y reconéctate con tu galaxia</p>
         </div>
 
         {/* Card */}

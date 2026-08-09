@@ -236,7 +236,7 @@ export default function ProfilePage() {
               </div>
               <div>
                 <p style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>Mi avatar</p>
-                <p style={{ fontSize: 11, color: "rgba(212,175,55,0.4)" }}>Personaliza tu figura en el árbol</p>
+                <p style={{ fontSize: 11, color: "rgba(212,175,55,0.4)" }}>Personaliza tu figura en la galaxia</p>
               </div>
             </div>
             <ChevronRight size={14} style={{ color: "rgba(212,175,55,0.35)" }} />
@@ -271,7 +271,7 @@ export default function ProfilePage() {
           {noClaim && (
             <div style={{ ...s3dCard("#0c0a18","212,175,55","#040300"), padding: "16px" }}>
               <p style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", lineHeight: 1.6 }}>
-                Todavía no tienes una identidad reclamada en el árbol, así que no hay datos genealógicos que editar aquí.
+                Todavía no tienes una identidad reclamada en la galaxia, así que no hay datos genealógicos que editar aquí.
               </p>
             </div>
           )}

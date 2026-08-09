@@ -59,7 +59,7 @@ export default function SharePage() {
     <main style={{ minHeight: "100svh", background: BG, display: "flex", alignItems: "center", justifyContent: "center", padding: "24px" }}>
       <div style={{ textAlign: "center", color: "#fff" }}>
         <TreePine size={48} style={{ color: GOLD, margin: "0 auto 16px" }} />
-        <h1 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: 8 }}>Árbol no encontrado</h1>
+        <h1 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: 8 }}>Galaxia no encontrado</h1>
         <p style={{ color: MUTED, marginBottom: 24 }}>Este link no existe o ya expiró.</p>
         <Link href="/" style={{ background: GOLD, color: "#000", padding: "10px 24px", borderRadius: 10, fontWeight: 700, textDecoration: "none" }}>
           Ir a Ceiba
@@ -164,7 +164,7 @@ export default function SharePage() {
             ¿Eres parte de esta familia?
           </h2>
           <p style={{ color: MUTED, fontSize: "0.875rem", marginBottom: 24, lineHeight: 1.6 }}>
-            Crea tu propio árbol en Ceiba —gratis— y conecta con tu familia, cerca o lejos.
+            Crea tu propio galaxia en Ceiba —gratis— y conecta con tu familia, cerca o lejos.
           </p>
           <Link href="/auth/register" style={{
             background: GOLD, color: "#000",
@@ -172,7 +172,7 @@ export default function SharePage() {
             fontWeight: 800, fontSize: "0.95rem", textDecoration: "none",
             display: "inline-block",
           }}>
-            Crear mi árbol familiar
+            Crear mi galaxia familiar
           </Link>
         </div>
       </div>

@@ -32,7 +32,7 @@ function layout(content: string) {
           <td style="background:linear-gradient(135deg,#166534,#15803d);padding:28px 32px;text-align:center;">
             <div style="font-size:28px;margin-bottom:4px;">🌳</div>
             <div style="color:#ffffff;font-size:22px;font-weight:700;letter-spacing:-0.5px;">Ceiba</div>
-            <div style="color:#86efac;font-size:13px;margin-top:2px;">El árbol de tu familia</div>
+            <div style="color:#86efac;font-size:13px;margin-top:2px;">La galaxia de tu familia</div>
           </td>
         </tr>
         <!-- Body -->
@@ -63,7 +63,7 @@ export async function sendWelcomeEmail(to: string, firstName: string) {
   const html = layout(`
     <h2 style="margin:0 0 8px;font-size:22px;color:#166534;">¡Bienvenido a Ceiba, ${firstName}! 🌳</h2>
     <p style="color:#475569;line-height:1.6;margin:0 0 20px;">
-      Tu árbol familiar ya está listo. Cada familiar que invites hará crecer la red y
+      Tu galaxia familiar ya está listo. Cada familiar que invites hará crecer la red y
       descubrirás conexiones que ni sabías que tenías.
     </p>
     <div style="background:#f0fdf4;border-radius:12px;padding:20px;margin-bottom:24px;">
@@ -74,14 +74,14 @@ export async function sendWelcomeEmail(to: string, firstName: string) {
       <p style="margin:4px 0;color:#475569;font-size:14px;">📸 Comparte fotos e historias familiares</p>
     </div>
     <div style="text-align:center;">
-      ${btn("Ver mi árbol familiar →", `${APP_URL}/tree`)}
+      ${btn("Ver mi galaxia familiar →", `${APP_URL}/tree`)}
     </div>
   `);
 
   return getResend().emails.send({
     from: FROM,
     to,
-    subject: "🌳 Tu árbol familiar te espera en Ceiba",
+    subject: "🌳 Tu galaxia familiar te espera en Ceiba",
     html,
   });
 }
@@ -97,7 +97,7 @@ export async function sendMemberJoinedEmail(
     <h2 style="margin:0 0 8px;font-size:22px;color:#166534;">¡${joinerName} se unió a Ceiba! 🎉</h2>
     <p style="color:#475569;line-height:1.6;margin:0 0 20px;">
       Hola ${ownerName}, tu <strong>${relationLabel.toLowerCase()}</strong> <strong>${joinerName}</strong>
-      aceptó la invitación y ya está conectado en tu árbol familiar.
+      aceptó la invitación y ya está conectado en tu galaxia familiar.
     </p>
     <div style="background:#f0fdf4;border-radius:12px;padding:20px;margin-bottom:24px;text-align:center;">
       <div style="font-size:40px;margin-bottom:8px;">👤</div>
@@ -109,14 +109,14 @@ export async function sendMemberJoinedEmail(
       ver las fotos que comparta.
     </p>
     <div style="text-align:center;">
-      ${btn("Ver árbol familiar →", `${APP_URL}/tree`)}
+      ${btn("Ver galaxia familiar →", `${APP_URL}/tree`)}
     </div>
   `);
 
   return getResend().emails.send({
     from: FROM,
     to,
-    subject: `🌳 ${joinerName} se unió a tu árbol familiar`,
+    subject: `🌳 ${joinerName} se unió a tu galaxia familiar`,
     html,
   });
 }
@@ -163,7 +163,7 @@ export async function sendBirthdayEmail(
       ${listHtml}
     </div>
     <div style="text-align:center;">
-      ${btn("Ver árbol familiar →", `${APP_URL}/tree`)}
+      ${btn("Ver galaxia familiar →", `${APP_URL}/tree`)}
     </div>
   `);
 
@@ -238,7 +238,7 @@ export async function sendWeeklyDigestEmail(
     sections.push(`
       <div style="margin-bottom:20px;">
         <div style="font-weight:600;color:#166534;margin-bottom:8px;">🌳 Nuevos en Ceiba esta semana</div>
-        <p style="margin:0;color:#475569;font-size:14px;">${names} se unieron a tu árbol familiar.</p>
+        <p style="margin:0;color:#475569;font-size:14px;">${names} se unieron a tu galaxia familiar.</p>
       </div>
     `);
   }
@@ -296,7 +296,7 @@ export async function sendWeeklyDigestEmail(
       ${sections.join('<div style="border-top:1px solid #e2e8f0;margin:16px 0;"></div>')}
     </div>
     <div style="text-align:center;margin-top:24px;">
-      ${btn("Abrir mi árbol →", `${APP_URL}/tree`)}
+      ${btn("Abrir mi galaxia →", `${APP_URL}/tree`)}
     </div>
   `);
 

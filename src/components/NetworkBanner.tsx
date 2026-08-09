@@ -16,7 +16,7 @@ export default function NetworkBanner({ totalMembers, joinedMembers }: Props) {
   // Message based on progress
   let message = "";
   if (joinedMembers === 0) {
-    message = "Invita a tu familia para conectar el árbol";
+    message = "Invita a tu familia para conectar la galaxia";
   } else if (pct < 30) {
     message = `${remaining} familiar${remaining !== 1 ? "es" : ""} aún no ha entrado`;
   } else if (pct < 70) {

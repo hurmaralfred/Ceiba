@@ -5,8 +5,8 @@
 
 /**
  * Si la persona identificada YA tiene relaciones familiares activas, el
- * onboarding no debe pedirle construir un árbol desde cero: hay que
- * saltar "Construye tu árbol" y llevarla directo a /tree. Si no tiene
+ * onboarding no debe pedirle construir una galaxia desde cero: hay que
+ * saltar "Construye tu galaxia" y llevarla directo a /tree. Si no tiene
  * ninguna, el paso de agregar familiares sigue siendo útil (pero nunca
  * obligatorio — ver `getAddFamilyContinueLabel`).
  */
@@ -19,15 +19,15 @@ export function decideExistingIdentityStep(
 }
 
 /**
- * Etiqueta del botón de "Construye tu árbol". 0/5 es progreso recomendado,
+ * Etiqueta del botón de "Construye tu galaxia". 0/5 es progreso recomendado,
  * nunca un requisito: el botón existe y está habilitado desde 0.
  */
 export function getAddFamilyContinueLabel(filledCount: number): string {
-  return filledCount === 0 ? "Omitir por ahora" : "Continuar al árbol";
+  return filledCount === 0 ? "Omitir por ahora" : "Continuar a la galaxia";
 }
 
 /**
- * El botón de continuar/omitir de "Construye tu árbol" SIEMPRE está
+ * El botón de continuar/omitir de "Construye tu galaxia" SIEMPRE está
  * habilitado, sin importar cuántos familiares se hayan agregado — el
  * conteo es solo informativo.
  */

@@ -283,7 +283,7 @@ function RegisterFormInner() {
                 {/* Headline */}
                 <div className="text-center mb-2">
                   <h2 className="text-white font-bold text-lg">¿Cómo te llamas?</h2>
-                  <p className="text-gray-500 text-xs mt-1">Así aparecerás en el árbol familiar</p>
+                  <p className="text-gray-500 text-xs mt-1">Así aparecerás en la galaxia familiar</p>
                 </div>
 
                 {/* Avatar upload — centered */}
@@ -416,7 +416,7 @@ function RegisterFormInner() {
                     boxShadow: loading ? "none" : "0 4px 24px rgba(193,96,58,0.4)",
                   }}
                 >
-                  {loading ? "Creando tu árbol..." : <>Entrar a Ceiba <ArrowRight size={16} /></>}
+                  {loading ? "Creando tu galaxia..." : <>Entrar a Ceiba <ArrowRight size={16} /></>}
                 </button>
 
                 <p className="text-center text-gray-700 text-xs">

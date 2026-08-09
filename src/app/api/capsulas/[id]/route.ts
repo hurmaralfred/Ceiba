@@ -30,7 +30,7 @@ export async function GET(
     .maybeSingle();
 
   if (!myClaim?.person_id)
-    return NextResponse.json({ error: "Sin identidad en el árbol" }, { status: 403 });
+    return NextResponse.json({ error: "Sin identidad en la galaxia" }, { status: 403 });
 
   const { data: row, error } = await service
     .from("future_messages")

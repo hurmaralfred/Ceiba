@@ -123,7 +123,7 @@ export default function SugerenciaPage() {
             </h2>
             <p style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", maxWidth: 300, lineHeight: 1.6 }}>
               La posible familia en común quedó marcada. Cuando alguien identifique al antepasado
-              en común, los árboles quedarán enlazados.
+              en común, los galaxias quedarán enlazados.
             </p>
           </>
         ) : (
@@ -248,7 +248,7 @@ export default function SugerenciaPage() {
           <p style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", lineHeight: 1.7, margin: 0 }}>
             Si confirmas esta conexión, el nodo{" "}
             <span style={{ color: "rgba(100,200,120,0.7)", fontWeight: 700 }}>?</span>{" "}
-            quedará visible en ambos árboles como un ancestro sin identificar en común.
+            quedará visible en ambos galaxias como un ancestro sin identificar en común.
             Cualquier familiar podrá más adelante completar quién fue esa persona.
           </p>
         </div>

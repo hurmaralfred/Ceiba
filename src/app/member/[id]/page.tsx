@@ -138,7 +138,7 @@ export default function MemberEditPage() {
     <div className="min-h-screen bg-cream-100 flex flex-col items-center justify-center gap-4">
       <TreePine size={48} className="text-ceiba-300" />
       <p className="text-ceiba-500">Familiar no encontrado</p>
-      <Link href="/tree" className="btn-primary">Volver al árbol</Link>
+      <Link href="/tree" className="btn-primary">Volver a la galaxia</Link>
     </div>
   );
 

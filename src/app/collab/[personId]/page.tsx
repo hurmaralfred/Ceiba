@@ -152,8 +152,8 @@ export default function CollabPage() {
                 {isApproved && (
                   <p className="text-xs text-green-700 mt-1 font-medium">
                     {existing.request_type === "transfer"
-                      ? "Ya eres el administrador de esta persona. Puedes editarla en el árbol."
-                      : "Ya puedes co-editar esta persona. Abre el árbol para editar."}
+                      ? "Ya eres el administrador de esta persona. Puedes editarla en la galaxia."
+                      : "Ya puedes co-editar esta persona. Abre la galaxia para editar."}
                   </p>
                 )}
                 {isRejected && (
@@ -165,7 +165,7 @@ export default function CollabPage() {
             </div>
             {isApproved && (
               <Link href="/tree" className="btn-primary mt-3 text-sm w-full text-center block">
-                Ir al árbol familiar
+                Ir a la galaxia familiar
               </Link>
             )}
           </div>

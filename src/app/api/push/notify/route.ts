@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
     title: "¡Familiar se unió a Ceiba! 🌳",
     body: message
       ? `${joinerName} (${relationLabel}) ${message}.`
-      : `${joinerName} (${relationLabel}) aceptó tu invitación y ya está en tu árbol.`,
+      : `${joinerName} (${relationLabel}) aceptó tu invitación y ya está en tu galaxia.`,
     icon: "/icons/icon-192.png",
     url: "/tree",
   });

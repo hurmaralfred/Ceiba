@@ -844,7 +844,7 @@ export function FamilyUniverse({
             fontSize: 13, fontWeight: 600,
             zIndex: 40, whiteSpace: 'nowrap',
           }}
-          aria-label="Volver a mi árbol"
+          aria-label="Volver a mi galaxia"
         >
           <svg width="15" height="15" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
             <path d="M10 12L6 8l4-4" stroke="#d4af37" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>

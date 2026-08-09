@@ -7,8 +7,8 @@ import type { ExtendedEntry } from "@/components/tree/FamilyTreeGraph";
  *   - extendedMembers (grado ≥2: abuelos, bisabuelos, nietos, suegros,
  *                      cuñados, sobrinos, ...)
  *
- * Es la fuente de verdad compartida por la vista Árbol, la vista Lista, el
- * contador y el selector de edición: si una persona aparece en el Árbol,
+ * Es la fuente de verdad compartida por la vista Galaxia, la vista Lista, el
+ * contador y el selector de edición: si una persona aparece en el Galaxia,
  * aparece aquí (y por tanto en Lista y en el contador). Deduplica por id de
  * persona — el grafo genealógico no depende de que tengan cuenta ni claim.
  */

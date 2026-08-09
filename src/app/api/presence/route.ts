@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
   const personId = await resolveApprovedPersonId(service, user.id);
   if (!personId) {
     return NextResponse.json(
-      { error: "No tienes una identidad reclamada en el árbol familiar todavía." },
+      { error: "No tienes una identidad reclamada en la galaxia familiar todavía." },
       { status: 400 }
     );
   }

@@ -46,21 +46,21 @@ export function buildInviteMessage(
   switch (template) {
     case "v1_direct":
       return (
-        `Hola ${ctx.invitedFirstName}, te agregué a nuestro árbol familiar en Ceiba. ` +
+        `Hola ${ctx.invitedFirstName}, te agregué a nuestro galaxia familiar en Ceiba. ` +
         `Cuando entres ya vas a ver a ${members}. Tardas 30 segundos: ${link}`
       );
 
     case "v2_emotional":
       return (
-        `${ctx.invitedFirstName}, hice el árbol de ${family} en una app que se llama Ceiba. ` +
+        `${ctx.invitedFirstName}, hice la galaxia de ${family} en una app que se llama Ceiba. ` +
         `Ya somos varios adentro (${members}). Te dejo el link para que tú también estés: ${link}`
       );
 
     case "v3_specific":
       return (
         `Hola ${ctx.invitedFirstName} 👋 ` +
-        `Estoy armando el árbol de la familia y me faltas tú. ` +
-        `Cuando abras el link vas a ver el árbol ya listo con ${members}. ` +
+        `Estoy armando la galaxia de la familia y me faltas tú. ` +
+        `Cuando abras el link vas a ver la galaxia ya listo con ${members}. ` +
         `Toma 30 segundos: ${link}`
       );
 
@@ -71,7 +71,7 @@ export function buildInviteMessage(
       );
 
     case "v5_short":
-      return `${ctx.invitedFirstName}, únete al árbol de ${family}: ${link}`;
+      return `${ctx.invitedFirstName}, únete a la galaxia de ${family}: ${link}`;
   }
 }
 

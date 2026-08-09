@@ -320,7 +320,7 @@ function PersonaPageInner() {
               <Link href="/tree" style={{ textDecoration: "none" }}>
                 <div style={{ padding: "12px 16px", fontSize: 13, color: "#fff",
                   borderBottom: "0.5px solid rgba(212,175,55,0.1)" }}>
-                  Ver en el árbol
+                  Ver en la galaxia
                 </div>
               </Link>
               {isSelf && (

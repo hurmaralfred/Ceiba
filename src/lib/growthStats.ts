@@ -6,7 +6,7 @@
  * la forma de la respuesta y se construye el texto de la cabecera.
  *
  * Regla de degradación: si la RPC falla, se oculta únicamente el contador
- * global. El árbol debe seguir cargando con normalidad.
+ * global. La galaxia debe seguir cargando con normalidad.
  */
 
 export interface CeibaGrowthStats {

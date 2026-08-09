@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
 
   if (!claim?.person_id) {
     return NextResponse.json(
-      { error: "Sin identidad reclamada en el árbol" },
+      { error: "Sin identidad reclamada en la galaxia" },
       { status: 409 }
     );
   }
@@ -168,7 +168,7 @@ export async function POST(req: NextRequest) {
     } catch { /* ignore compensation error */ }
     await service.storage.from("avatars").remove([storagePath]).catch(() => {});
     return NextResponse.json(
-      { error: "La foto no pudo persistirse en el árbol genealógico" },
+      { error: "La foto no pudo persistirse en la galaxia genealógica" },
       { status: 500 }
     );
   }

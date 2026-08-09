@@ -33,7 +33,7 @@ const PALETTE = [
 
 const NAV_ITEMS = [
   { href: "/",        icon: Home,     label: "Inicio"             },
-  { href: "/tree",    icon: TreePine, label: "Árbol"              },
+  { href: "/tree",    icon: TreePine, label: "Galaxia"              },
   { href: "/feed",    icon: Feather,  label: "Historias", center: true },
   { href: "/photos",  icon: Images,   label: "Álbumes"            },
   { href: "/profile", icon: User,     label: "Perfil"             },
@@ -162,7 +162,7 @@ export function DesignSystemPreview() {
             <div className="bg-brown-800 rounded-2xl p-1">
               <Card variant="dark-glass" padding="md">
                 <p className="text-caption text-white/50 font-mono mb-2">dark-glass</p>
-                <p className="text-body text-white/85">Perfil familiar, árbol oscuro.</p>
+                <p className="text-body text-white/85">Perfil familiar, galaxia oscuro.</p>
               </Card>
             </div>
             <Card variant="stat" padding="md" className="flex items-center gap-3">
@@ -226,7 +226,7 @@ export function DesignSystemPreview() {
             <div className="bg-brown-800 rounded-xl p-4">
               <div className="flex flex-wrap gap-2">
                 <Badge variant="dark" icon={<Heart size={10} />}>Familia unida</Badge>
-                <Badge variant="dark">Árbol oscuro</Badge>
+                <Badge variant="dark">Galaxia oscuro</Badge>
               </div>
             </div>
           </Card>
@@ -369,7 +369,7 @@ export function DesignSystemPreview() {
               </nav>
             </Card>
             <div className="bg-[#0d1320] rounded-2xl p-4">
-              <p className="text-caption text-white/40 font-mono mb-3">dark (árbol)</p>
+              <p className="text-caption text-white/40 font-mono mb-3">dark (galaxia)</p>
               <div className="bg-brown-900/90 border border-white/10 rounded-full px-2 py-1 flex items-center justify-around">
                 {NAV_ITEMS.map(({ icon: Icon, label, href, center }) => (
                   <div key={label} className="relative flex flex-col items-center gap-0.5 px-3 py-1.5 flex-1">

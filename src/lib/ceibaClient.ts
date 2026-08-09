@@ -33,7 +33,7 @@ export interface CeibaClient {
   getMyProfile(): Promise<PersonRow | null>;
   updateMyProfile(patch: Partial<PersonUpdate>): Promise<PersonRow | null>;
 
-  // Árbol
+  // Galaxia
   getMyFamilyGraph(depth?: number): Promise<Record<string, unknown>>;
 
   addRelative(payload: {
@@ -176,7 +176,7 @@ export function createCeibaClient(
     },
 
     // ----------------------------------------------------------------
-    // ÁRBOL
+    // GALAXIA
     // ----------------------------------------------------------------
     async getMyFamilyGraph(depth = 3) {
       const { data, error } = await supabase.rpc("get_my_family_graph", {

@@ -136,7 +136,7 @@ function TreePageContent() {
   const [sosSending, setSosSending] = useState(false);
   const [sosActive, setSosActive] = useState(false);
   // Contador global. `null` = no disponible -> se oculta solo esa línea,
-  // el árbol sigue cargando con normalidad.
+  // la galaxia sigue cargando con normalidad.
   const [growthStats, setGrowthStats] = useState<CeibaGrowthStats | null>(null);
   const [canEditMember, setCanEditMember] = useState(false);
   const [checkingEditPermission, setCheckingEditPermission] = useState(false);
@@ -145,7 +145,7 @@ function TreePageContent() {
   const [showSearch, setShowSearch] = useState(false);
   const [invitePrompt, setInvitePrompt] = useState<{ name: string; firstName: string } | null>(null);
 
-  // El contador global es informativo: nunca debe impedir que el árbol
+  // El contador global es informativo: nunca debe impedir que la galaxia
   // cargue. Si la RPC falla se registra en consola y se oculta la línea,
   // sin toast invasivo.
   const loadGrowthStats = async () => {
@@ -459,7 +459,7 @@ function TreePageContent() {
         p_action:     action,
       });
       if (error) throw error;
-      toast.success(action === "approve" ? "Conexión aceptada — ya estás en el árbol" : "Solicitud rechazada");
+      toast.success(action === "approve" ? "Conexión aceptada — ya estás en la galaxia" : "Solicitud rechazada");
       loadData();
     } catch (err: any) {
       toast.error(err?.message || "Error al procesar la solicitud");
@@ -547,7 +547,7 @@ function TreePageContent() {
       }
 
       const addedName = `${form.primer_nombre.trim()} ${form.primer_apellido.trim()}`.trim();
-      toast.success(`${addedName} agregado al árbol`);
+      toast.success(`${addedName} agregado a la galaxia`);
       setShowModal(false);
       setForm(EMPTY_FORM);
       loadData();
@@ -741,7 +741,7 @@ function TreePageContent() {
     if (!editingMember || !profile) return;
 
     const confirmed = confirm(
-      `¿Quitar a ${editingMember.first_name} ${editingMember.last_name || ""} de tu árbol?`
+      `¿Quitar a ${editingMember.first_name} ${editingMember.last_name || ""} de tu galaxia?`
     );
 
     if (!confirmed) return;
@@ -781,7 +781,7 @@ function TreePageContent() {
         }
       }
 
-      toast.success("Familiar retirado del árbol");
+      toast.success("Familiar retirado de la galaxia");
       setShowModal(false);
       setEditingMember(null);
       setForm(EMPTY_FORM);
@@ -889,8 +889,8 @@ function TreePageContent() {
     if (typeof navigator.share === "function") {
       try {
         await navigator.share({
-          title: "Mi árbol familiar en Ceiba",
-          text: "Te comparto mi árbol familiar 🌳 — únete para ver toda la familia conectada.",
+          title: "Mi galaxia familiar en Ceiba",
+          text: "Te comparto mi galaxia familiar 🌳 — únete para ver toda la familia conectada.",
           url: link,
         });
         return;
@@ -1005,10 +1005,10 @@ function TreePageContent() {
             <div style={{ textAlign: "center", marginBottom: 24 }}>
               <div style={{ fontSize: 48, marginBottom: 12 }}>🌳</div>
               <h2 style={{ fontSize: 22, fontWeight: 800, color: "#fff", marginBottom: 8, letterSpacing: "-0.02em" }}>
-                ¡Tu árbol familiar está vivo!
+                ¡Tu galaxia familiar está vivo!
               </h2>
               <p style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", lineHeight: 1.6 }}>
-                Cuando tus familiares entren, el árbol ya estará listo para ellos.
+                Cuando tus familiares entren, la galaxia ya estará listo para ellos.
               </p>
             </div>
 
@@ -1042,7 +1042,7 @@ function TreePageContent() {
                   color: "rgba(212,175,55,0.7)", fontWeight: 600, fontSize: 14, cursor: "pointer",
                 }}
               >
-                Explorar mi árbol
+                Explorar mi galaxia
               </button>
             </div>
           </div>
@@ -1209,9 +1209,9 @@ function TreePageContent() {
               display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
               <TreePine size={36} style={{ color: "rgba(212,175,55,0.4)" }} />
             </div>
-            <h3 style={{ fontSize: 17, fontWeight: 800, color: "#fff", marginBottom: 8 }}>Tu árbol familiar te espera</h3>
+            <h3 style={{ fontSize: 17, fontWeight: 800, color: "#fff", marginBottom: 8 }}>Tu galaxia familiar te espera</h3>
             <p style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", marginBottom: 24, maxWidth: 280, margin: "0 auto 24px", lineHeight: 1.6 }}>
-              Agrega a tu mamá, papá, hermanos o pareja. Cuando ellos se registren, sus familiares se conectarán solos a tu árbol.
+              Agrega a tu mamá, papá, hermanos o pareja. Cuando ellos se registren, sus familiares se conectarán solos a tu galaxia.
             </p>
             <button onClick={() => setShowModal(true)} style={{
               background: "#c9a820", border: "none", borderRadius: 12, padding: "12px 24px",
@@ -1242,7 +1242,7 @@ function TreePageContent() {
                   borderRadius: 12, padding: 3, gap: 2, flexShrink: 0,
                   border: "0.5px solid rgba(212,175,55,0.14)" }}>
                   {([
-                    { v: "graph", Icon: GitFork, label: "Árbol" },
+                    { v: "graph", Icon: GitFork, label: "Galaxia" },
                     { v: "list",  Icon: List,    label: "Lista" },
                     { v: "map",   Icon: MapIcon, label: "Mapa" },
                   ] as const).map(({ v, Icon, label }) => (
@@ -1620,7 +1620,7 @@ function TreePageContent() {
                       style={{ fontSize: 13, fontWeight: 600, color: "rgba(212,175,55,0.85)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
                       {modalPhotoPreview ? "Cambiar foto" : "Añadir foto"}
                     </button>
-                    <p style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", marginTop: 2 }}>Aparecerá en el árbol hasta que se registre</p>
+                    <p style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", marginTop: 2 }}>Aparecerá en la galaxia hasta que se registre</p>
                   </div>
                   <input ref={modalPhotoRef} type="file" accept="image/*" className="hidden"
                     onChange={e => {
@@ -1736,7 +1736,7 @@ function TreePageContent() {
                 </div>
                 <span style={{ fontSize: 13, color: "rgba(255,255,255,0.65)" }}>
                   Fallecido(a){" "}
-                  <span style={{ color: "rgba(255,255,255,0.30)", fontWeight: 400 }}>— aparecerá con † en el árbol</span>
+                  <span style={{ color: "rgba(255,255,255,0.30)", fontWeight: 400 }}>— aparecerá con † en la galaxia</span>
                 </span>
               </label>
 
@@ -2018,10 +2018,10 @@ function TreePageContent() {
               {invitePrompt.name}
             </div>
             <div style={{ fontSize: 14, color: "rgba(255,255,255,0.55)", marginBottom: 28, lineHeight: 1.5 }}>
-              ¿Le invitarías a ver y completar el árbol familiar en Ceiba?
+              ¿Le invitarías a ver y completar la galaxia familiar en Ceiba?
             </div>
             <a
-              href={`https://wa.me/?text=${encodeURIComponent(`Hola ${invitePrompt.firstName}, te agregué al árbol familiar en Ceiba. Únetenos para ver a toda la familia en un solo lugar 🌳\n\nceibapp.com/invitar`)}`}
+              href={`https://wa.me/?text=${encodeURIComponent(`Hola ${invitePrompt.firstName}, te agregué a la galaxia familiar en Ceiba. Únetenos para ver a toda la familia en un solo lugar 🌳\n\nceibapp.com/invitar`)}`}
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => setInvitePrompt(null)}
@@ -2288,7 +2288,7 @@ function LoadingScreen() {
     <div style={{ minHeight: "100vh", background: "#030208", display: "flex", alignItems: "center", justifyContent: "center" }}>
       <div style={{ textAlign: "center" }}>
         <TreePine size={40} style={{ color: "#d4af37", opacity: 0.6, display: "block", margin: "0 auto 12px" }} />
-        <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 14 }}>Cargando tu árbol...</p>
+        <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 14 }}>Cargando tu galaxia...</p>
       </div>
     </div>
   );

@@ -43,7 +43,7 @@ function baseLevel(evidence: Evidence): ConfidenceLevel {
       return "strong";
 
     case "shared_children":
-      // Patrón repetido dentro del propio árbol.
+      // Patrón repetido dentro del propio galaxia.
       if (evidence.siblingCount >= 2) return "strong";
       if (evidence.siblingCount === 1) return "medium";
       // siblingCount <= 0 no debería ocurrir; defensivo, nunca eleva.

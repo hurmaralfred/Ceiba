@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
         ? `✨ Nueva historia de ${uploaderName}`
         : `📅 Nuevo recuerdo de ${uploaderName}`,
     body: type === "photo"
-      ? (contentTitle ? `"${contentTitle}"` : "Compartió una foto en el árbol familiar")
+      ? (contentTitle ? `"${contentTitle}"` : "Compartió una foto en la galaxia familiar")
       : type === "historia"
         ? (contentTitle || "Compartió una historia con la familia")
         : (contentTitle || "Registró un nuevo recuerdo familiar"),

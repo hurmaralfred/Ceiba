@@ -916,7 +916,7 @@ export default function FamilyTreeGraph({
         <defs>
           <style>{`
             /* ── Bloque A1: sin animaciones infinitas en reposo ──────────
-               El árbol permanece estático mientras el usuario no interactúa. */
+               La galaxia permanece estático mientras el usuario no interactúa. */
 
             /* ── Bloque A2: foco visual por selección ────────────────────
                Transiciones cortas y puntuales (150–250ms), nunca infinitas.

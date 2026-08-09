@@ -22,10 +22,10 @@ export async function generateMetadata({
     ? [profile.city, profile.country].filter(Boolean).join(", ")
     : null;
 
-  const title = `Árbol familiar de ${ownerName} en Ceiba`;
+  const title = `Galaxia familiar de ${ownerName} en Ceiba`;
   const description = location
-    ? `${ownerName} te invita a ver su árbol familiar. Ubicado en ${location}. Únete a Ceiba y conecta con tu familia.`
-    : `${ownerName} te invita a ver su árbol familiar en Ceiba. Conecta con tu familia donde estés.`;
+    ? `${ownerName} te invita a ver su galaxia familiar. Ubicado en ${location}. Únete a Ceiba y conecta con tu familia.`
+    : `${ownerName} te invita a ver su galaxia familiar en Ceiba. Conecta con tu familia donde estés.`;
 
   const avatarUrl = profile?.avatar_url || null;
 

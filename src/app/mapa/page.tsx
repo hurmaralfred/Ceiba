@@ -222,14 +222,14 @@ function EmptyMap() {
       <div>
         <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>Sin ubicaciones aún</p>
         <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", lineHeight: 1.6 }}>
-          Agrega la ciudad y país de nacimiento a tus familiares en el árbol para verlos aquí.
+          Agrega la ciudad y país de nacimiento a tus familiares en la galaxia para verlos aquí.
         </p>
       </div>
       <Link href="/tree" style={{ textDecoration: "none" }}>
         <div style={{ background: "#c9a820", borderRadius: 12, padding: "10px 22px",
           borderTop: "2px solid #f5e060", borderBottom: "3px solid #6a5600",
           boxShadow: "0 6px 0 #4a3c00", fontSize: 13, fontWeight: 700, color: "#030208" }}>
-          Ir al árbol
+          Ir a la galaxia
         </div>
       </Link>
     </div>

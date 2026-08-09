@@ -140,17 +140,17 @@ export function onOnboardingComplete(state: OnboardingState) {
 // Onboarding especial del INVITADO (menos pasos)
 // ------------------------------------------------------------
 // El invitado ya tiene un person pre-creado. Solo debe:
-//   1) Ver el árbol
+//   1) Ver la galaxia
 //   2) Confirmar "este soy yo" o "no soy yo"
 //   3) Completar contraseña + foto opcional
-//   4) Ver su árbol lleno
+//   4) Ver su galaxia lleno
 // ============================================================
 
 export type InvitedStep =
-  | "preview"         // ve su árbol precargado
+  | "preview"         // ve su galaxia precargado
   | "confirm_identity" // "¿este eres tú?"
   | "set_password"    // pone contraseña
-  | "welcome_home";   // ¡bienvenido a tu árbol!
+  | "welcome_home";   // ¡bienvenido a tu galaxia!
 
 export const INVITED_ONBOARDING_MAX_SECONDS = 30;
 

@@ -46,12 +46,12 @@ const MOCK = {
 };
 
 const STATUS: Record<number, string> = {
-  0: "Comienza tu árbol familiar",
+  0: "Comienza tu galaxia familiar",
   1: "Tu familia da sus primeros pasos",
   2: "Tu familia empieza a conectarse",
-  3: "Tu árbol está creciendo",
-  4: "Tu árbol florece",
-  5: "Tu árbol está completo",
+  3: "Tu galaxia está creciendo",
+  4: "Tu galaxia florece",
+  5: "Tu galaxia está completo",
 };
 
 function ProgressRing({ score, total }: { score: number; total: number }) {
@@ -155,13 +155,13 @@ export function HomeDashboardPreview() {
               </Button>
             </div>
 
-            {/* Enlace discreto al árbol */}
+            {/* Enlace discreto a la galaxia */}
             <div
               className="flex items-center justify-center gap-2 px-6 py-3 border-t"
               style={{ borderColor: "rgba(193,96,58,0.15)" }}
             >
               <TreePine size={14} className="text-brown-500" />
-              <span className="text-caption text-brown-500 font-medium">Ver árbol familiar</span>
+              <span className="text-caption text-brown-500 font-medium">Ver galaxia familiar</span>
               <ChevronRight size={13} className="text-brown-400" />
             </div>
           </div>

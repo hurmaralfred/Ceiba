@@ -38,9 +38,9 @@ const ACHIEVEMENTS_DEFINITIONS = [
   },
   {
     id: "growing",
-    name: "Árbol en crecimiento",
+    name: "Galaxia en crecimiento",
     emoji: "🌳",
-    description: "10 o más familiares en el árbol",
+    description: "10 o más familiares en la galaxia",
     check: (s: any) => s.totalPersons >= 10,
     progress: (s: any) => Math.min(s.totalPersons / 10, 1),
   },
@@ -86,9 +86,9 @@ const ACHIEVEMENTS_DEFINITIONS = [
   },
   {
     id: "complete_tree",
-    name: "Árbol completo",
+    name: "Galaxia completo",
     emoji: "⭐",
-    description: "Árbol con 90% o más de completitud",
+    description: "Galaxia con 90% o más de completitud",
     check: (s: any) => s.treeCompletion >= 90,
     progress: (s: any) => s.treeCompletion / 100,
   },

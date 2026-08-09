@@ -34,7 +34,7 @@ type Step =
 /**
  * ¿La persona identificada (nueva, reclamada o ya vinculada) tiene
  * relaciones familiares activas? Se usa para decidir si el onboarding debe
- * saltar "Construye tu árbol" y llevar directo a /tree (ver
+ * saltar "Construye tu galaxia" y llevar directo a /tree (ver
  * decideExistingIdentityStep en @/lib/onboardingFlow).
  */
 async function personHasActiveRelationships(
@@ -254,7 +254,7 @@ function AddRelativeModal({
                 transition: "transform 0.2s",
               }} />
             </div>
-            Fallecido/a — aparece con † en el árbol
+            Fallecido/a — aparece con † en la galaxia
           </button>
 
           <button
@@ -330,7 +330,7 @@ export default function OnboardingPage() {
   // Si la tiene y esa persona ya tiene relaciones familiares reales, el
   // onboarding no debe mostrarse en absoluto — se salta directo a /tree.
   // Cualquier error en el camino cae en "init_error" (Reintentar / Continuar
-  // al árbol), nunca deja al usuario atrapado en una pantalla en blanco.
+  // a la galaxia), nunca deja al usuario atrapado en una pantalla en blanco.
   const runInitialCheck = async () => {
     setInitError(null);
     setStep("checking");
@@ -419,8 +419,8 @@ export default function OnboardingPage() {
         return;
       }
 
-      // Identidad ya reclamada pero sin árbol todavía: directo a
-      // "Construye tu árbol" (el nombre ya se conoce, no hace falta
+      // Identidad ya reclamada pero sin galaxia todavía: directo a
+      // "Construye tu galaxia" (el nombre ya se conoce, no hace falta
       // repetir el paso de perfil).
       setStep("add_family");
     } catch (err: unknown) {
@@ -554,7 +554,7 @@ export default function OnboardingPage() {
       setMyLastName(profLastNames.trim());
 
       // Igual que en claimMatch: si esta identidad (nueva o retomada) ya
-      // tiene relaciones reales, saltar "Construye tu árbol" directo a
+      // tiene relaciones reales, saltar "Construye tu galaxia" directo a
       // /tree. complete_onboarding no expone has_relationships todavía,
       // así que se verifica del lado del cliente (misma regla, mismo
       // helper que usa la verificación inicial).
@@ -628,11 +628,11 @@ export default function OnboardingPage() {
       }
 
       setMyPersonId(personId);
-      toast.success("¡Te conectamos con tu árbol existente!");
+      toast.success("¡Te conectamos con tu galaxia existente!");
 
       // has_relationships lo calcula el propio RPC (relaciones activas de
-      // la persona reclamada) — si ya tiene árbol, saltar "Construye tu
-      // árbol" por completo (escenario A). Si no, seguir el onboarding
+      // la persona reclamada) — si ya tiene galaxia, saltar "Construye tu
+      // galaxia" por completo (escenario A). Si no, seguir el onboarding
       // normal, pero sin exigir 5/5 (escenario B).
       if (decideExistingIdentityStep(!!result?.has_relationships) === "redirect_to_tree") {
         router.push("/tree");
@@ -888,7 +888,7 @@ export default function OnboardingPage() {
         {/* ── INIT ERROR ────────────────────────────────────────── */}
         {/* Escenario D: un fallo aquí (person_claims/persons/relationships)
             nunca debe atrapar al usuario — siempre ofrece Reintentar o
-            Continuar al árbol igual. */}
+            Continuar a la galaxia igual. */}
         {step === "init_error" && (
           <div className="flex flex-col items-center justify-center px-5 flex-1 gap-4 text-center">
             <AlertTriangle size={48} className="text-red-400" />
@@ -907,7 +907,7 @@ export default function OnboardingPage() {
                 onClick={() => router.push("/tree")}
                 className="w-full text-ceiba-600 hover:text-ceiba-800 text-sm py-2"
               >
-                Continuar al árbol
+                Continuar a la galaxia
               </button>
             </div>
           </div>
@@ -996,7 +996,7 @@ export default function OnboardingPage() {
                 opacity: (profLoading || !getProfileGenderFormState(profGender).canSubmit || !profFirstNames.trim() || !profLastNames.trim()) ? 0.5 : 1,
               }}
             >
-              {profLoading ? "Conectando tu árbol..." : "Continuar →"}
+              {profLoading ? "Conectando tu galaxia..." : "Continuar →"}
             </button>
           </div>
         )}
@@ -1046,9 +1046,9 @@ export default function OnboardingPage() {
         {step === "add_family" && (
           <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "20px 20px 140px", gap: 18, position: "relative", zIndex: 10 }}>
             <div>
-              <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "rgba(212,175,55,0.5)", marginBottom: 8 }}>Tu árbol familiar</p>
+              <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "rgba(212,175,55,0.5)", marginBottom: 8 }}>Tu galaxia familiar</p>
               <h1 style={{ fontSize: 24, fontWeight: 800, color: "#fff", lineHeight: 1.2, letterSpacing: "-0.02em", marginBottom: 4 }}>¿Quién está en tu familia?</h1>
-              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)" }}>Agrega al menos uno para ver tu árbol.</p>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)" }}>Agrega al menos uno para ver tu galaxia.</p>
             </div>
 
             {/* Barra de progreso */}
@@ -1103,7 +1103,7 @@ export default function OnboardingPage() {
               <h1 className="text-3xl font-bold text-ceiba-900 mb-2">
                 ¡Aquí está tu ceiba, {myFirstName}!
               </h1>
-              <p className="text-ceiba-500">Tu árbol familiar ya está tomando forma.</p>
+              <p className="text-ceiba-500">Tu galaxia familiar ya está tomando forma.</p>
             </div>
 
             <div className="w-full flex flex-col gap-2">
@@ -1138,7 +1138,7 @@ export default function OnboardingPage() {
                 onClick={() => router.push("/tree?welcome=1")}
                 className="w-full border border-ceiba-200 text-ceiba-600 hover:bg-ceiba-50 font-semibold text-sm py-3 rounded-2xl transition-colors"
               >
-                Ver mi árbol ahora →
+                Ver mi galaxia ahora →
               </button>
             </div>
           </div>
@@ -1150,7 +1150,7 @@ export default function OnboardingPage() {
             <div>
               <h1 className="text-2xl font-bold text-ceiba-900 mb-1">Invita a los que agregaste</h1>
               <p className="text-ceiba-500 text-sm">
-                Cuando entren, cada uno verá el árbol ya listo.
+                Cuando entren, cada uno verá la galaxia ya listo.
               </p>
             </div>
 
@@ -1232,7 +1232,7 @@ export default function OnboardingPage() {
                 onClick={() => router.push("/tree?welcome=1")}
                 className="w-full border border-ceiba-200 text-ceiba-600 hover:bg-ceiba-50 font-semibold text-sm py-3 rounded-2xl transition-colors"
               >
-                Ver mi árbol primero →
+                Ver mi galaxia primero →
               </button>
             </div>
           </div>
@@ -1251,13 +1251,13 @@ export default function OnboardingPage() {
               <h1 className="text-3xl font-bold text-ceiba-900 mb-2">
                 ¡Bienvenido/a, {myFirstName}!
               </h1>
-              <p className="text-ceiba-500">Tu árbol familiar te está esperando.</p>
+              <p className="text-ceiba-500">Tu galaxia familiar te está esperando.</p>
             </div>
             <button
               onClick={() => router.push("/tree")}
               className="w-full flex items-center justify-center gap-2 bg-ceiba-500 hover:bg-ceiba-400 text-white font-bold py-4 rounded-2xl text-lg mt-auto"
             >
-              Entrar a mi árbol
+              Entrar a mi galaxia
               <ChevronRight size={22} />
             </button>
           </div>

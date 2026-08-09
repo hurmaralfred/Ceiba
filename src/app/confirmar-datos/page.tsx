@@ -141,7 +141,7 @@ export default function ConfirmarDatosPage() {
           ¿Estos son tus datos?
         </div>
         <div style={{ fontSize: 12, color: "rgba(212,175,55,0.55)", lineHeight: 1.55, maxWidth: 290, margin: "0 auto" }}>
-          Un familiar te agregó al árbol. Confirma que la información es correcta — solo tú puedes editarla.
+          Un familiar te agregó a la galaxia. Confirma que la información es correcta — solo tú puedes editarla.
         </div>
       </div>
 
@@ -187,7 +187,7 @@ export default function ConfirmarDatosPage() {
         borderRadius: 12, background: "rgba(212,175,55,0.05)",
         borderLeft: "2px solid rgba(212,175,55,0.25)", fontSize: 11,
         color: "rgba(212,175,55,0.5)", lineHeight: 1.5 }}>
-        Estos datos son tuyos. Nadie más en el árbol puede cambiarlos una vez que los confirmes.
+        Estos datos son tuyos. Nadie más en la galaxia puede cambiarlos una vez que los confirmes.
       </div>
 
       {/* Botón confirmar */}

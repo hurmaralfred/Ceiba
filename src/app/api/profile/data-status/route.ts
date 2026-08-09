@@ -4,7 +4,7 @@ import { getServiceClient } from "@/lib/server/family";
 
 /**
  * GET /api/profile/data-status
- * Devuelve si el usuario tiene datos no confirmados en su nodo del árbol.
+ * Devuelve si el usuario tiene datos no confirmados en su nodo de la galaxia.
  * Necesita confirmación cuando:
  *   - tiene un claim aprobado
  *   - data_confirmed_at IS NULL

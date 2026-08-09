@@ -176,7 +176,7 @@ export default function AcceptInvitePage() {
             <TreePine size={28} className="text-ceiba-300" />
             <span className="font-display text-2xl font-bold text-white">Ceiba</span>
           </div>
-          <p className="text-ceiba-400 text-xs">El árbol de tu familia</p>
+          <p className="text-ceiba-400 text-xs">La galaxia de tu familia</p>
         </div>
 
         {/* Invitation card */}
@@ -199,7 +199,7 @@ export default function AcceptInvitePage() {
               <div>
                 <p className="text-ceiba-200 text-xs font-medium mb-0.5">Te invita</p>
                 <h2 className="text-xl font-bold">{inviterName}</h2>
-                <p className="text-ceiba-200 text-sm">al árbol familiar</p>
+                <p className="text-ceiba-200 text-sm">a la galaxia familiar</p>
               </div>
             </div>
           </div>
@@ -209,7 +209,7 @@ export default function AcceptInvitePage() {
 
             <div className="bg-ceiba-50 rounded-2xl px-4 py-3 border border-ceiba-100">
               <p className="text-sm text-ceiba-800">
-                Te guardaron un lugar en el árbol como{" "}
+                Te guardaron un lugar en la galaxia como{" "}
                 <span className="font-bold text-ceiba-700">{memberName}</span>.
                 Al aceptar, quedarás conectado con toda tu familia en Ceiba.
               </p>
@@ -219,7 +219,7 @@ export default function AcceptInvitePage() {
             <div className="bg-gray-50 rounded-2xl px-4 py-3 space-y-2">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Al unirte podrás</p>
               {[
-                "Ver y completar el árbol familiar",
+                "Ver y completar la galaxia familiar",
                 "Ver dónde vive tu familia en el mapa",
                 "Chatear con grupos de la familia",
                 "Compartir fotos e historias familiares",

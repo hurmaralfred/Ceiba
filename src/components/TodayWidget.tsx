@@ -93,7 +93,7 @@ export default function TodayWidget({ userId }: { userId: string }) {
       const rel = RELATION_LABELS[(recentJoin as any).relation_type as RelationType] || (recentJoin as any).relation_type;
       setItem({
         type: "joined",
-        text: `${(recentJoin as any).first_name} se unió al árbol`,
+        text: `${(recentJoin as any).first_name} se unió a la galaxia`,
         subtext: `Tu ${rel.toLowerCase()}`,
         dismissKey,
       });

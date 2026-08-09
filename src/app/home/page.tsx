@@ -593,7 +593,7 @@ function CardShine({ ar }: { ar: string }) {
 function CosmicNav({ pathname, suggCount = 0 }: { pathname: string; suggCount?: number }) {
   const items = [
     { href: "/home",      Icon: Home,     label: "Inicio"   },
-    { href: "/tree",      Icon: TreePine, label: "Árbol"    },
+    { href: "/tree",      Icon: TreePine, label: "Galaxia"    },
     { href: "/hoy", Icon: CalendarDays, label: "Un día como hoy", center: true },
     { href: "/events",    Icon: BookOpen, label: "Recuerdos" },
     { href: "/profile",   Icon: User,     label: "Perfil"   },
@@ -897,7 +897,7 @@ export default function HomePage() {
           }}>
             <div style={{ fontSize: 36, marginBottom: 12 }}>🌱</div>
             <div style={{ fontSize: 16, fontWeight: 800, color: "#fff", marginBottom: 6 }}>
-              Tu árbol está esperando
+              Tu galaxia está esperando
             </div>
             <div style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", lineHeight: 1.6, marginBottom: 18 }}>
               Agrega a tu primer familiar para comenzar a construir tu universo familiar.

@@ -260,7 +260,7 @@ function BirthdayHeroCard({ birthdays }: { birthdays: FeedItem[] }) {
           </p>
         )}
         <p style={{ margin: "10px 0 0", fontSize: 11, color: "rgba(212,175,55,0.5)" }}>
-          Toca para ver en el árbol familiar →
+          Toca para ver en la galaxia familiar →
         </p>
       </div>
     </Link>
@@ -446,7 +446,7 @@ function EmptyFeed() {
             <Plus size={20} style={{ color: "#d4af37" }} />
           </div>
           <div>
-            <p style={{ fontSize: 13, fontWeight: 700, color: "#fff", margin: 0 }}>Agregar familiares al árbol</p>
+            <p style={{ fontSize: 13, fontWeight: 700, color: "#fff", margin: 0 }}>Agregar familiares a la galaxia</p>
             <p style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", margin: "2px 0 0" }}>
               Cada persona que agregas trae contenido al feed
             </p>

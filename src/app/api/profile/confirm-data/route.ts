@@ -5,7 +5,7 @@ import { getServiceClient } from "@/lib/server/family";
 
 /**
  * POST /api/profile/confirm-data
- * Guarda los datos corregidos del usuario en su nodo del árbol y
+ * Guarda los datos corregidos del usuario en su nodo de la galaxia y
  * marca data_confirmed_at para no volver a mostrar la pantalla.
  */
 export async function POST(req: NextRequest) {
