@@ -639,8 +639,8 @@ export default function HomePage() {
   const supabase = createClient();
 
   const [profile,      setProfile]      = useState<Profile | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [members,      setMembers]      = useState<FamilyMember[]>([]);
+  const [allGenSpan,   setAllGenSpan]   = useState(1);
   const [visibleCount, setVisibleCount] = useState(0);
   const [birthdays,    setBirthdays]    = useState<FeedBirthday[]>([]);
   const [photos,       setPhotos]       = useState<FeedPhoto[]>([]);
@@ -689,6 +689,12 @@ export default function HomePage() {
         setProfile(p);
         setMembers(m);
         setVisibleCount(buildVisibleMembers(m, em).length);
+        const allGens = [
+          ...m.map(x => x.generation ?? 0),
+          ...em.map(x => x.member.generation ?? 0),
+          0,
+        ];
+        setAllGenSpan(Math.max(...allGens) - Math.min(...allGens) + 1);
       }
     }
 
@@ -791,14 +797,7 @@ export default function HomePage() {
   const birthdaysThisMonth = allBirthdays.filter(b => b.days > 0 && b.days <= 30).length;
   const historyCount = events.length;
   const directCount = members.length;
-  const generationsCount = (() => {
-    const types = new Set(members.map(m => m.relation_type ?? ""));
-    let gen = 1;
-    if ([...types].some(t => t.includes("grand"))) gen = Math.max(gen, 2);
-    if ([...types].some(t => t.includes("great_grand"))) gen = Math.max(gen, 3);
-    if ([...types].some(t => t.includes("great_great"))) gen = Math.max(gen, 4);
-    return gen;
-  })();
+  const generationsCount = allGenSpan;
   const recentMemories = [
     ...photos.filter(p => (Date.now() - new Date(p.created_at).getTime()) < 7 * 86_400_000),
     ...events.filter(e => (Date.now() - new Date(e.created_at).getTime()) < 7 * 86_400_000),
