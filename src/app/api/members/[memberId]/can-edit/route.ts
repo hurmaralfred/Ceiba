@@ -25,7 +25,7 @@ export async function GET(
     // Obtener datos de la persona
     const { data: member, error: memberError } = await service
       .from("persons")
-      .select("id, added_by")
+      .select("id, created_by")
       .eq("id", params.memberId)
       .maybeSingle();
 
@@ -37,7 +37,7 @@ export async function GET(
       service,
       params.memberId,
       user.id,
-      member.added_by
+      member.created_by ?? ""
     );
 
     return NextResponse.json({ can_edit: canEdit, member_id: params.memberId });

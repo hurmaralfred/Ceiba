@@ -307,6 +307,7 @@ export default function ChatListPage() {
   }, []);
 
   useEffect(() => {
+    let unmounted = false;
     let channels: ReturnType<typeof supabase.channel>[] = [];
 
     (async () => {
@@ -325,6 +326,7 @@ export default function ChatListPage() {
             .channel(`chat:${conv.roomId}`)
             .on("broadcast", { event: "new_message" }, () => { loadConversations(); })
             .subscribe();
+          if (unmounted) { supabase.removeChannel(ch); break; }
           channels.push(ch);
         }
       }
@@ -335,6 +337,7 @@ export default function ChatListPage() {
     document.addEventListener("visibilitychange", onVisible);
 
     return () => {
+      unmounted = true;
       channels.forEach(ch => supabase.removeChannel(ch));
       document.removeEventListener("visibilitychange", onVisible);
     };

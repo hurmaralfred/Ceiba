@@ -221,6 +221,7 @@ function PersonaPageInner() {
       const { data } = await supabase
         .from("family_memories")
         .select("id, photo_path, body, memory_date")
+        .eq("person_id", personId)
         .not("photo_path", "is", null)
         .order("created_at", { ascending: false })
         .limit(40);
@@ -252,6 +253,7 @@ function PersonaPageInner() {
       await supabase.from("family_memories").insert({
         author_user_id: user!.id,
         family_space_id: spaceData.family_space_id,
+        person_id: personId,
         body: uploadCaption || `Foto de ${person?.first_name ?? "familiar"}`,
         memory_date: new Date().toISOString().slice(0, 10),
         photo_path: urlData.publicUrl,

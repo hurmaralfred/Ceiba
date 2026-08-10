@@ -46,6 +46,7 @@ export default function NotificationBanner() {
   }, []);
 
   const enable = async () => {
+    if (!VAPID_PUB_KEY) { setShow(false); return; }
     setLoading(true);
     try {
       const permission = await Notification.requestPermission();

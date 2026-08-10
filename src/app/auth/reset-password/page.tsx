@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Sparkles, Eye, EyeOff } from "lucide-react";
@@ -13,6 +13,28 @@ export default function ResetPasswordPage() {
   const [confirm, setConfirm] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [ready, setReady] = useState(false);
+  const [expired, setExpired] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) setReady(true);
+    });
+
+    const timer = setTimeout(() => setExpired(true), 15000);
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if ((event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") && session) {
+        clearTimeout(timer);
+        setReady(true);
+      }
+    });
+
+    return () => {
+      clearTimeout(timer);
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,7 +54,8 @@ export default function ResetPasswordPage() {
       return;
     }
     toast.success("¡Contraseña actualizada!");
-    router.push("/tree");
+    router.refresh();
+    router.push("/home");
   };
 
   return (
@@ -47,50 +70,63 @@ export default function ResetPasswordPage() {
         </div>
 
         <div className="card">
-          <p className="text-gray-500 text-sm mb-5">
-            Elige una contraseña segura de al menos 6 caracteres.
-          </p>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Nueva contraseña
-              </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  className="input-field pr-12"
-                  placeholder="Mínimo 6 caracteres"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  required
-                  autoFocus
-                />
-                <button
-                  type="button"
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          {expired ? (
+            <div className="text-center py-4">
+              <p className="text-gray-700 font-semibold mb-3">Enlace expirado</p>
+              <Link href="/auth/forgot-password" className="text-ceiba-700 font-semibold hover:underline text-sm">
+                Solicitar un nuevo enlace
+              </Link>
+            </div>
+          ) : !ready ? (
+            <div className="text-center py-8 text-gray-500 text-sm">Verificando enlace…</div>
+          ) : (
+            <>
+              <p className="text-gray-500 text-sm mb-5">
+                Elige una contraseña segura de al menos 6 caracteres.
+              </p>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Nueva contraseña
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      className="input-field pr-12"
+                      placeholder="Mínimo 6 caracteres"
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      required
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Confirmar contraseña
+                  </label>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    className="input-field"
+                    placeholder="Repite la contraseña"
+                    value={confirm}
+                    onChange={e => setConfirm(e.target.value)}
+                    required
+                  />
+                </div>
+                <button type="submit" disabled={loading} className="btn-primary w-full">
+                  {loading ? "Guardando..." : "Guardar nueva contraseña"}
                 </button>
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Confirmar contraseña
-              </label>
-              <input
-                type={showPassword ? "text" : "password"}
-                className="input-field"
-                placeholder="Repite la contraseña"
-                value={confirm}
-                onChange={e => setConfirm(e.target.value)}
-                required
-              />
-            </div>
-            <button type="submit" disabled={loading} className="btn-primary w-full">
-              {loading ? "Guardando..." : "Guardar nueva contraseña"}
-            </button>
-          </form>
+              </form>
+            </>
+          )}
         </div>
       </div>
     </main>

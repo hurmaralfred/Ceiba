@@ -34,7 +34,7 @@ export async function GET(_req: NextRequest, { params }: { params: { roomId: str
     .select("id, room_id, sender_user_id, body, media_url, created_at")
     .eq("room_id", params.roomId)
     .is("deleted_at", null)
-    .order("created_at", { ascending: true })
+    .order("created_at", { ascending: false })
     .limit(200);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -87,7 +87,7 @@ export async function GET(_req: NextRequest, { params }: { params: { roomId: str
     ...m,
     sender: people.get(m.sender_user_id) ?? null,
     reactions: reactionsByMessage[m.id as string] ?? [],
-  }));
+  })).reverse();
 
   return NextResponse.json({ messages: enriched, partnerLastReadAt });
 }

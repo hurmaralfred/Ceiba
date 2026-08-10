@@ -39,6 +39,9 @@ export async function DELETE(req: NextRequest) {
   if (!photoId || !personId) return NextResponse.json({ error: "Falta photoId o personId" }, { status: 400 });
 
   const service = getServiceClient();
+  const allowed = await assertTaggablePerson(service, user.id, personId);
+  if (!allowed) return NextResponse.json({ error: "Solo puedes etiquetar a tu familia" }, { status: 403 });
+
   const { error } = await service.from("photo_tags").delete().eq("photo_id", photoId).eq("person_id", personId);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 

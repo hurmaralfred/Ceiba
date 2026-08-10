@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { getServiceClient } from "@/lib/server/family";
+import { getServiceClient, resolveApprovedPersonId, resolveFamilySpaceMemberIds } from "@/lib/server/family";
 
 /**
  * GET /api/people/search?q=nombre
@@ -16,13 +16,18 @@ export async function GET(req: NextRequest) {
 
   const service = getServiceClient();
 
-  // Search by first_name, first_surname, or second_surname using ilike
+  const myPersonId = await resolveApprovedPersonId(service, user.id);
+  if (!myPersonId) return NextResponse.json({ results: [] });
+
+  const familyMemberIds = await resolveFamilySpaceMemberIds(service, myPersonId);
+
   const term = `%${q}%`;
   const { data, error } = await service
     .from("persons")
     .select("id, first_name, first_surname, second_surname, birth_city, birth_country, birth_date")
     .or(`first_name.ilike.${term},first_surname.ilike.${term},second_surname.ilike.${term}`)
     .is("deleted_at", null)
+    .in("id", familyMemberIds.length > 0 ? familyMemberIds : [myPersonId])
     .limit(20);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

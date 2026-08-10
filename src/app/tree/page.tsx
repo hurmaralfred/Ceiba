@@ -24,6 +24,7 @@ import {
   formatGrowthLine,
   type CeibaGrowthStats,
 } from "@/lib/growthStats";
+import { createInviteLink } from "@/lib/viral/inviteFlow";
 import { CosmicNav } from "@/components/ui/cosmic";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import toast from "react-hot-toast";
@@ -812,17 +813,14 @@ function TreePageContent() {
   };
 
   const sendInvite = async (member: FamilyMember) => {
-    if (!member.email) { toast.error("Este familiar no tiene correo registrado"); return; }
-    const { data, error } = await supabase
-      .from("invitations")
-      .insert({ invited_by: profile!.id, email: member.email, relation_type: member.relation_type })
-      .select("token").single();
-    if (error) { toast.error("Error al generar invitación"); return; }
-    const inviteLink = `${window.location.origin}/invite/${data.token}`;
-    await navigator.clipboard.writeText(inviteLink);
-    toast.success("¡Enlace copiado! Compártelo con tu familiar.");
-    // invitation_sent ya no se trackea en family_members — se refleja vía invitations table
-    loadData();
+    try {
+      const { universalLink } = await createInviteLink(supabase, member.id, "v1_direct");
+      await navigator.clipboard.writeText(universalLink);
+      toast.success("¡Enlace copiado! Compártelo con tu familiar.");
+      loadData();
+    } catch {
+      toast.error("Error al generar invitación");
+    }
   };
 
   const logout = async () => { await supabase.auth.signOut(); router.push("/"); };

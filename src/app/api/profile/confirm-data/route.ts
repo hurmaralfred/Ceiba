@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
 
   const now = new Date().toISOString();
 
-  const [updateResult] = await Promise.all([
+  const [updateResult, claimResult] = await Promise.all([
     service
       .from("persons")
       .update({
@@ -60,6 +60,10 @@ export async function POST(req: NextRequest) {
 
   if (updateResult.error) {
     return NextResponse.json({ error: "Error al guardar" }, { status: 500 });
+  }
+
+  if (claimResult.error) {
+    return NextResponse.json({ error: "Error al confirmar" }, { status: 500 });
   }
 
   await service.from("audit_logs").insert({

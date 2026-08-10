@@ -197,11 +197,11 @@ export default function AvatarBuilderPage() {
       setUserId(user.id)
       const { data } = await supabase
         .from('profiles')
-        .select('first_name, last_name, avatar_config')
-        .eq('id', user.id)
+        .select('display_name, avatar_config')
+        .eq('user_id', user.id)
         .single()
       if (data) {
-        setDisplayName([data.first_name, data.last_name].filter(Boolean).join(' ') || 'Tú')
+        setDisplayName(data.display_name || 'Tú')
         if (data.avatar_config) setConfig({ ...DEFAULT_AVATAR_CONFIG, ...(data.avatar_config as AvatarConfig) })
       }
       setLoading(false)
@@ -216,7 +216,7 @@ export default function AvatarBuilderPage() {
 
   const save = async () => {
     setSaving(true); setSaved(false)
-    await supabase.from('profiles').update({ avatar_config: config }).eq('id', userId)
+    await supabase.from('profiles').update({ avatar_config: config }).eq('user_id', userId)
     setSaving(false); setSaved(true)
     setShowBorn(true)
     setTimeout(() => setShowBorn(false), 2600)
@@ -229,7 +229,7 @@ export default function AvatarBuilderPage() {
     if (!svgEl) return
     setExporting(true); setExported(false)
     try {
-      await supabase.from('profiles').update({ avatar_config: config }).eq('id', userId)
+      await supabase.from('profiles').update({ avatar_config: config }).eq('user_id', userId)
       const svgData = new XMLSerializer().serializeToString(svgEl)
       const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
       const svgUrl  = URL.createObjectURL(svgBlob)
@@ -251,7 +251,7 @@ export default function AvatarBuilderPage() {
             const { error } = await supabase.storage
               .from('avatars').upload(path, blob, { contentType: 'image/png', upsert: true })
             if (error) { reject(error); return }
-            await supabase.from('profiles').update({ avatar_path: path }).eq('id', userId)
+            await supabase.from('profiles').update({ avatar_path: path }).eq('user_id', userId)
             resolve()
           }, 'image/png')
         }

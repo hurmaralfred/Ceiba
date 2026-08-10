@@ -87,6 +87,7 @@ export default function ChatRoomPage() {
   }, [roomId, scrollToBottom]);
 
   useEffect(() => {
+    let unmounted = false;
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push("/auth/login"); return; }
@@ -111,6 +112,7 @@ export default function ChatRoomPage() {
         .channel(`chat:${roomId}`)
         .on("broadcast", { event: "new_message" }, () => { loadMessages(false); })
         .subscribe();
+      if (unmounted) { supabase.removeChannel(ch); return; }
       channelRef.current = ch;
 
       // Fallback poll every 5s (catches missed broadcasts when app is in background)
@@ -122,6 +124,7 @@ export default function ChatRoomPage() {
     document.addEventListener("visibilitychange", onVisible);
 
     return () => {
+      unmounted = true;
       if (channelRef.current) supabase.removeChannel(channelRef.current);
       if (pollRef.current) clearInterval(pollRef.current);
       document.removeEventListener("visibilitychange", onVisible);
@@ -134,23 +137,25 @@ export default function ChatRoomPage() {
     setSending(true);
     setText("");
 
-    const res = await fetch(`/api/chat/rooms/${roomId}/messages`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ body }),
-    });
+    try {
+      const res = await fetch(`/api/chat/rooms/${roomId}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ body }),
+      });
 
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      toast.error(err.error || "Error al enviar");
-      setText(body);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        toast.error(err.error || "Error al enviar");
+        setText(body);
+        return;
+      }
+
+      await loadMessages(true);
+      inputRef.current?.focus();
+    } finally {
       setSending(false);
-      return;
     }
-
-    await loadMessages(true);
-    setSending(false);
-    inputRef.current?.focus();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

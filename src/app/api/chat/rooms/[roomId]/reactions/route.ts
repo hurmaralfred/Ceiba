@@ -4,6 +4,16 @@ import { getServiceClient } from "@/lib/server/family";
 
 const ALLOWED_EMOJIS = ["👍","❤️","😂","😮","😢","🙏","🔥","✦"];
 
+async function assertMember(service: ReturnType<typeof getServiceClient>, roomId: string, userId: string) {
+  const { data } = await service
+    .from("chat_room_members")
+    .select("room_id")
+    .eq("room_id", roomId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  return !!data;
+}
+
 /** POST /api/chat/rooms/[roomId]/reactions — toggle an emoji reaction on a message. */
 export async function POST(req: NextRequest, { params }: { params: { roomId: string } }) {
   const supabase = createClient();
@@ -15,6 +25,8 @@ export async function POST(req: NextRequest, { params }: { params: { roomId: str
   if (!ALLOWED_EMOJIS.includes(emoji)) return NextResponse.json({ error: "Emoji no permitido" }, { status: 400 });
 
   const service = getServiceClient();
+  const isMember = await assertMember(service, params.roomId, user.id);
+  if (!isMember) return NextResponse.json({ error: "No perteneces a esta sala" }, { status: 403 });
 
   // Verify the message belongs to this room
   const { data: msg } = await service

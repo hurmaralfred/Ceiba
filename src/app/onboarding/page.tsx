@@ -1033,7 +1033,7 @@ export default function OnboardingPage() {
                 <Check size={20} /> Sí, soy yo
               </button>
               <button
-                onClick={() => { setMatch(null); setStep("add_family"); }}
+                onClick={() => { setMatch(null); setStep("profile"); }}
                 className="w-full text-ceiba-500 hover:text-ceiba-800 py-3 text-sm"
               >
                 No, es otra persona
@@ -1275,7 +1275,7 @@ export default function OnboardingPage() {
             padding: "14px 20px 32px", backdropFilter: "blur(12px)", zIndex: 50,
           }}>
             <button
-              onClick={() => router.push(filledCount > 0 ? "/tree?welcome=1" : "/tree")}
+              onClick={() => setStep("aha")}
               style={{
                 width: "100%", padding: "15px 0", borderRadius: 14,
                 background: "#c9a820",

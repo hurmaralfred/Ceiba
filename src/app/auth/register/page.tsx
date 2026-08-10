@@ -169,6 +169,12 @@ function RegisterFormInner() {
       // `persons` no tiene una columna `linked_user_id` — el vinculo
       // usuario<->persona vive en `person_claims`.
 
+      if (!authData.session) {
+        toast.success("Revisa tu correo para confirmar tu cuenta");
+        router.push("/auth/login?registered=1");
+        return;
+      }
+
       toast.success("¡Bienvenido a Ceiba! 🌳");
 
       // Si llegamos aqui desde /invite/[token] (invitacion personalizada),

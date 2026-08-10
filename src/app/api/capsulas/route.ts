@@ -142,7 +142,24 @@ export async function POST(req: NextRequest) {
 
   const service = getServiceClient();
 
-  // Verify recipient_person_id exists and has an approved claim (is an active family member)
+  const { data: myClaim } = await service
+    .from("person_claims")
+    .select("person_id")
+    .eq("user_id", user.id)
+    .eq("claim_status", "approved")
+    .is("revoked_at", null)
+    .maybeSingle();
+
+  const myPersonId = myClaim?.person_id ?? null;
+  if (!myPersonId)
+    return NextResponse.json({ error: "No encontrado" }, { status: 403 });
+
+  const familyMemberIds = await resolveFamilySpaceMemberIds(service, myPersonId);
+  const allFamilyPersonIds = new Set([myPersonId, ...familyMemberIds]);
+
+  if (!allFamilyPersonIds.has(recipient_person_id))
+    return NextResponse.json({ error: "Destinatario no pertenece a tu familia" }, { status: 403 });
+
   const { data: recipientClaim } = await service
     .from("person_claims")
     .select("person_id")
