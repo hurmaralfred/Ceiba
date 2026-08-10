@@ -59,6 +59,10 @@ export default function InstallPrompt() {
       await prompt.prompt();
       const { outcome } = await prompt.userChoice;
       if (outcome === "accepted") { setShow(false); cachedPrompt = null; }
+    } else {
+      // Browser didn't fire beforeinstallprompt (already dismissed, policy, etc.)
+      // Fall back to manual instructions page.
+      window.location.href = "/instalar";
     }
   };
 
