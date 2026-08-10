@@ -678,6 +678,11 @@ function TreePageContent() {
       is_deceased: !!(member as any).is_deceased,
       parent_member_id: (member as any).parent_member_id || "",
     });
+    // Pre-populate photo preview with current photo
+    const currentPhoto = member.profile?.avatar_url ?? (member as any).photo_path ?? null;
+    setModalPhotoPreview(currentPhoto);
+    setModalPhotoFile(null);
+
     setShowModal(true);
     setCheckingEditPermission(false);
   };
@@ -688,6 +693,17 @@ function TreePageContent() {
     setSaving(true);
 
     try {
+      // Upload new photo if one was selected
+      if (modalPhotoFile) {
+        const fd = new FormData();
+        fd.append("photo", modalPhotoFile);
+        const upRes = await fetch(`/api/persona/${editingMember.id}/photo`, { method: "POST", body: fd });
+        if (!upRes.ok) {
+          const d = await upRes.json().catch(() => ({}));
+          throw new Error(d.error ?? "Error al subir la foto");
+        }
+      }
+
       const res = await fetch(`/api/members/${editingMember.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -711,6 +727,8 @@ function TreePageContent() {
       setShowModal(false);
       setEditingMember(null);
       setForm(EMPTY_FORM);
+      setModalPhotoFile(null);
+      setModalPhotoPreview(null);
       setPendingCollabRequests([]);
       await loadData();
     } catch (err: any) {
@@ -1603,36 +1621,33 @@ function TreePageContent() {
                 </div>
               )}
               {/* Foto del familiar */}
-              {!editingMember && (
-                <div className="flex items-center gap-3 pb-1">
-                  <div
-                    onClick={() => modalPhotoRef.current?.click()}
-                    style={{ width: 56, height: 56, borderRadius: "50%", flexShrink: 0, cursor: "pointer", overflow: "hidden",
-                      border: "2px dashed rgba(212,175,55,0.35)", background: "rgba(212,175,55,0.05)",
-                      display: "flex", alignItems: "center", justifyContent: "center" }}
-                  >
-                    {modalPhotoPreview
-                      ? <img src={modalPhotoPreview} className="w-full h-full object-cover" alt="" />
-                      : <Camera size={20} style={{ color: "rgba(212,175,55,0.5)" }} />}
-                  </div>
-                  <div>
-                    <button type="button" onClick={() => modalPhotoRef.current?.click()}
-                      style={{ fontSize: 13, fontWeight: 600, color: "rgba(212,175,55,0.85)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-                      {modalPhotoPreview ? "Cambiar foto" : "Añadir foto"}
-                    </button>
-                    <p style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", marginTop: 2 }}>Aparecerá en la galaxia hasta que se registre</p>
-                  </div>
-                  <input ref={modalPhotoRef} type="file" accept="image/*" className="hidden"
-                    onChange={e => {
-                      const f = e.target.files?.[0];
-                      if (!f) return;
-                      if (f.size > 5 * 1024 * 1024) { toast.error("Foto menor a 5MB"); return; }
-                      setModalPhotoFile(f);
-                      setModalPhotoPreview(URL.createObjectURL(f));
-                    }}
-                  />
+              <div className="flex items-center gap-3 pb-1">
+                <label htmlFor="modal-photo-input" style={{ width: 56, height: 56, borderRadius: "50%", flexShrink: 0, cursor: "pointer", overflow: "hidden",
+                  border: "2px dashed rgba(212,175,55,0.35)", background: "rgba(212,175,55,0.05)",
+                  display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  {modalPhotoPreview
+                    ? <img src={modalPhotoPreview} className="w-full h-full object-cover" alt="" />
+                    : <Camera size={20} style={{ color: "rgba(212,175,55,0.5)" }} />}
+                </label>
+                <div>
+                  <label htmlFor="modal-photo-input"
+                    style={{ fontSize: 13, fontWeight: 600, color: "rgba(212,175,55,0.85)", cursor: "pointer" }}>
+                    {modalPhotoPreview ? "Cambiar foto" : "Añadir foto"}
+                  </label>
+                  <p style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", marginTop: 2 }}>
+                    {editingMember ? "Se actualizará en la galaxia" : "Aparecerá en la galaxia hasta que se registre"}
+                  </p>
                 </div>
-              )}
+                <input id="modal-photo-input" ref={modalPhotoRef} type="file" accept="image/*" className="hidden"
+                  onChange={e => {
+                    const f = e.target.files?.[0];
+                    if (!f) return;
+                    if (f.size > 5 * 1024 * 1024) { toast.error("Foto menor a 5MB"); return; }
+                    setModalPhotoFile(f);
+                    setModalPhotoPreview(URL.createObjectURL(f));
+                  }}
+                />
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label style={{ display: "block", fontSize: 10, fontWeight: 600, color: "rgba(212,175,55,0.6)", marginBottom: 4, letterSpacing: "0.04em" }}>Primer nombre <span style={{ color: "#f87171" }}>*</span></label>
