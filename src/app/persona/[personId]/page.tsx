@@ -311,14 +311,15 @@ function PersonaPageInner() {
     try {
       let photo_path: string | undefined;
       if (editPhotoFile) {
-        const ext = editPhotoFile.name.split(".").pop() ?? "jpg";
-        const path = `persons/${person!.id}.${ext}`;
-        const { data: upData, error: upErr } = await supabase.storage
-          .from("family-photos")
-          .upload(path, editPhotoFile, { upsert: true, cacheControl: "3600" });
-        if (upErr) throw upErr;
-        const { data: pubData } = supabase.storage.from("family-photos").getPublicUrl(upData.path);
-        photo_path = pubData.publicUrl;
+        const fd = new FormData();
+        fd.append("photo", editPhotoFile);
+        const upRes = await fetch(`/api/persona/${personId}/photo`, { method: "POST", body: fd });
+        if (!upRes.ok) {
+          const d = await upRes.json().catch(() => ({}));
+          throw new Error(d.error ?? "Error al subir la foto");
+        }
+        const upData = await upRes.json();
+        photo_path = upData.photo_path;
       }
       const res = await fetch(`/api/persona/${personId}`, {
         method: "PATCH",
@@ -933,20 +934,11 @@ function PersonaPageInner() {
               </button>
             </div>
 
-            {/* Photo picker */}
-            <input ref={editPhotoRef} type="file" accept="image/*" style={{ display: "none" }}
-              onChange={e => {
-                const f = e.target.files?.[0];
-                if (!f) return;
-                setEditPhotoFile(f);
-                if (editPhotoPreview?.startsWith("blob:")) URL.revokeObjectURL(editPhotoPreview);
-                setEditPhotoPreview(URL.createObjectURL(f));
-              }} />
+            {/* Photo picker — label wrapper for reliable iOS file picker */}
             <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}>
-              <div style={{ position: "relative" }}>
+              <label htmlFor="edit-photo-input" style={{ display: "block", position: "relative", cursor: "pointer" }}>
                 <div style={{ width: 80, height: 80, borderRadius: "50%", overflow: "hidden",
-                  border: "2px solid rgba(212,175,55,0.4)", background: "#0c0a18",
-                  cursor: "pointer" }} onClick={() => editPhotoRef.current?.click()}>
+                  border: "2px solid rgba(212,175,55,0.4)", background: "#0c0a18" }}>
                   {editPhotoPreview ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={editPhotoPreview} alt="Foto" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
@@ -957,14 +949,26 @@ function PersonaPageInner() {
                     </div>
                   )}
                 </div>
-                <button onClick={() => editPhotoRef.current?.click()}
-                  style={{ position: "absolute", bottom: -2, right: -2, width: 26, height: 26,
-                    borderRadius: "50%", background: "#d4af37", border: "2px solid #06030f",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    cursor: "pointer", padding: 0 }}>
+                <div style={{ position: "absolute", bottom: -2, right: -2, width: 26, height: 26,
+                  borderRadius: "50%", background: "#d4af37", border: "2px solid #06030f",
+                  display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <Camera size={12} style={{ color: "#030208" }} />
-                </button>
-              </div>
+                </div>
+              </label>
+              <input
+                id="edit-photo-input"
+                ref={editPhotoRef}
+                type="file"
+                accept="image/*"
+                style={{ display: "none" }}
+                onChange={e => {
+                  const f = e.target.files?.[0];
+                  if (!f) return;
+                  setEditPhotoFile(f);
+                  if (editPhotoPreview?.startsWith("blob:")) URL.revokeObjectURL(editPhotoPreview);
+                  setEditPhotoPreview(URL.createObjectURL(f));
+                }}
+              />
             </div>
             <div style={{ textAlign: "center", fontSize: 10, color: "rgba(212,175,55,0.4)", marginBottom: 20 }}>
               Toca la foto para cambiarla
