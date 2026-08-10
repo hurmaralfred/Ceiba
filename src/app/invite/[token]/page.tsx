@@ -75,6 +75,22 @@ export default function AcceptInvitePage() {
     // quien abre el link ya con sesión iniciada de antes.
     const { data: { user } } = await supabase.auth.getUser();
     if (user && !autoAcceptedRef.current) {
+      const inv = data as InvitationPreview;
+      const isExpired =
+        inv.expires_at && new Date(inv.expires_at) < new Date();
+
+      // Guard: only auto-accept when the invitation is still valid.
+      if (inv.status !== "pending" || isExpired) {
+        // If the record still says 'pending' but the client clock sees it
+        // past expires_at, normalise to 'expired' so the render shows the
+        // right message ("Este enlace de invitación expiró.").
+        if (isExpired && inv.status === "pending") {
+          setInvitation({ ...inv, status: "expired" });
+        }
+        setLoading(false);
+        return;
+      }
+
       autoAcceptedRef.current = true;
       await accept();
       return;

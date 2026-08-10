@@ -129,6 +129,12 @@ function RegisterFormInner() {
       const userId = authData.user?.id;
       if (!userId) throw new Error("No se pudo crear la cuenta");
 
+      if (!authData.session) {
+        toast.success("Revisa tu correo para confirmar tu cuenta");
+        router.push("/auth/login?registered=1");
+        return;
+      }
+
       let avatarPath: string | null = null;
       let avatarPublicUrl: string | null = null;
 
@@ -169,12 +175,6 @@ function RegisterFormInner() {
       // `persons` no tiene una columna `linked_user_id` — el vinculo
       // usuario<->persona vive en `person_claims`.
 
-      if (!authData.session) {
-        toast.success("Revisa tu correo para confirmar tu cuenta");
-        router.push("/auth/login?registered=1");
-        return;
-      }
-
       toast.success("¡Bienvenido a Ceiba! 🌳");
 
       // Si llegamos aqui desde /invite/[token] (invitacion personalizada),
@@ -183,6 +183,7 @@ function RegisterFormInner() {
         ? sessionStorage.getItem("pending_invite_token")
         : null;
 
+      router.refresh();
       if (pendingInviteToken) {
         sessionStorage.removeItem("pending_invite_token");
         router.push(`/invite/${pendingInviteToken}`);

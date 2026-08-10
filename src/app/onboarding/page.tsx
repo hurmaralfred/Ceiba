@@ -477,6 +477,7 @@ export default function OnboardingPage() {
         .filter(Boolean);
 
       const firstName = names[0];
+      const middleName = names.length > 1 ? names.slice(1).join(" ") : null;
       const firstSurname = surnames[0];
 
       const secondSurname =
@@ -484,6 +485,7 @@ export default function OnboardingPage() {
 
       const { data, error } = await supabase.rpc("complete_onboarding", {
         p_first_name: firstName,
+        p_middle_name: middleName,
         p_first_surname: firstSurname,
         p_second_surname: secondSurname,
         p_birth_date: profBirthDate || null,

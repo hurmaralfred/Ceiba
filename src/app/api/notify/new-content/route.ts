@@ -112,7 +112,7 @@ export async function POST(req: NextRequest) {
           p.email!,
           p.first_name || "",
           uploaderName,
-          type as "photo" | "event",
+          type as "photo" | "event" | "historia",
           contentTitle || undefined
         )
       )

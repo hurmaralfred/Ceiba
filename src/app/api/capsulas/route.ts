@@ -187,8 +187,7 @@ export async function POST(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Notify the recipient via push — fire and forget
-  notifyRecipient(service, recipient_person_id, newRow.id, newRow.unlock_date).catch(() => {});
+  // TODO: call notifyRecipient() from a delivery cron once unlock_date arrives, not at creation time.
 
   return NextResponse.json({ capsula: newRow }, { status: 201 });
 }

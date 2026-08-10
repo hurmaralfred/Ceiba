@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { getServiceClient, resolvePersonsByUserIds, resolveOrCreateFamilyGroupRoom } from "@/lib/server/family";
+import { getServiceClient, resolvePersonsByUserIds, resolveOrCreateFamilyGroupRoom, resolveFamilyUserIds } from "@/lib/server/family";
 
 /**
  * GET /api/chat/rooms
@@ -119,6 +119,16 @@ export async function POST(req: NextRequest) {
   if (!otherUserId) return NextResponse.json({ error: "Falta otherUserId" }, { status: 400 });
 
   const service = getServiceClient();
+
+  // Guard: otherUserId must be in the same family space as the caller.
+  try {
+    const familyUserIds = await resolveFamilyUserIds(service, user.id);
+    if (familyUserIds.length > 0 && !familyUserIds.includes(otherUserId)) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+    }
+  } catch {
+    // If family resolution fails, fall through and allow (e.g. group room fetches).
+  }
 
   const { data: myRooms } = await service.from("chat_room_members").select("room_id").eq("user_id", user.id);
   const myRoomIds = ((myRooms ?? []) as any[]).map((r) => r.room_id as string);

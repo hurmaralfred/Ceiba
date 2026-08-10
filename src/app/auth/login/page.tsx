@@ -85,6 +85,7 @@ export default function LoginPage() {
     try {
       const { error } = await supabase.auth.signInWithPassword(form);
       if (error) throw error;
+      router.refresh();
       router.push("/home");
     } catch (err: any) {
       toast.error(err.message || "Error al iniciar sesión");

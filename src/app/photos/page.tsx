@@ -180,12 +180,21 @@ export default function PhotosPage() {
       const body = await res.json();
       if (!res.ok) throw new Error(body.error);
       const photoId = body.photo.id;
+      const tagErrors: string[] = [];
       for (const m of pendingTags) {
-        await fetch("/api/photos/tags", { method: "POST",
+        const tagRes = await fetch("/api/photos/tags", { method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ photoId, personId: m.person_id }) });
+        if (!tagRes.ok) {
+          const tagBody = await tagRes.json().catch(() => ({}));
+          tagErrors.push(tagBody.error ?? `${m.first_name} ${m.last_name}`);
+        }
       }
-      toast.success("¡Foto publicada!");
+      if (tagErrors.length > 0) {
+        toast.error(`Foto publicada, pero algunas etiquetas no se guardaron: ${tagErrors.join(", ")}`);
+      } else {
+        toast.success("¡Foto publicada!");
+      }
       setPendingFile(null); setPendingPreview(null);
       setCaption(""); setPendingTags([]); setShowTagPicker(false);
       await loadPhotos();

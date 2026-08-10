@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { CheckCircle, XCircle, Sparkles, ArrowLeft } from "lucide-react";
+import toast from "react-hot-toast";
 import { createClient } from "@/lib/supabase/client";
 import { C, s3dCard, GoldDivider } from "@/components/ui/cosmic";
 
@@ -72,7 +73,13 @@ export default function SugerenciaPage() {
 
   const act = async (action: "confirm" | "dismiss") => {
     setActing(action);
-    await fetch(`/api/suggestions/${id}/${action}`, { method: "POST" });
+    const res = await fetch(`/api/suggestions/${id}/${action}`, { method: "POST" });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      toast.error(d.error || "Error al procesar");
+      setActing(null);
+      return;
+    }
     setDone(action === "confirm" ? "confirmed" : "dismissed");
     setActing(null);
   };

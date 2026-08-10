@@ -77,14 +77,19 @@ export default function ChatRoomPage() {
 
   const loadMessages = useCallback(async (scroll = false) => {
     const res = await fetch(`/api/chat/rooms/${roomId}/messages`);
-    if (!res.ok) return;
+    if (!res.ok) {
+      if (res.status === 403 || res.status === 404) {
+        router.replace("/chat");
+      }
+      return;
+    }
     const data = await res.json();
     const list: Message[] = (data.messages || []).map((m: any) => ({ ...m, reactions: m.reactions ?? [] }));
     setMessages(list);
     if (data.partnerLastReadAt) setPartnerLastReadAt(data.partnerLastReadAt);
     if (scroll || list.length !== lastCountRef.current) scrollToBottom();
     lastCountRef.current = list.length;
-  }, [roomId, scrollToBottom]);
+  }, [roomId, scrollToBottom, router]);
 
   useEffect(() => {
     let unmounted = false;

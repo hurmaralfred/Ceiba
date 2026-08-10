@@ -119,17 +119,17 @@ export async function GET(_req: NextRequest) {
     }
   });
 
-  const { data: publicUrlData } = service.storage.from("family-photos").getPublicUrl("");
-  const baseUrl = publicUrlData.publicUrl.replace(/\/$/, "");
-
   return NextResponse.json({
     birthdays,
     anniversaries,
-    photos: ((photos ?? []) as any[]).map((p) => ({
-      ...p,
-      url: `${baseUrl}/${p.storage_path}`,
-      uploader: personDisplayByUser.get(p.uploader_user_id) ?? null,
-    })),
+    photos: ((photos ?? []) as any[]).map((p) => {
+      const { data: urlData } = service.storage.from("family-photos").getPublicUrl(p.storage_path as string);
+      return {
+        ...p,
+        url: urlData.publicUrl,
+        uploader: personDisplayByUser.get(p.uploader_user_id) ?? null,
+      };
+    }),
     broadcasts: ((broadcasts ?? []) as any[]).map((b) => ({
       ...b,
       sender: personDisplayByUser.get(b.sender_user_id) ?? null,

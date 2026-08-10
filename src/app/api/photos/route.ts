@@ -67,15 +67,15 @@ export async function GET(_req: NextRequest) {
     }
   }
 
-  const { data: publicUrlData } = service.storage.from("family-photos").getPublicUrl("");
-  const baseUrl = publicUrlData.publicUrl.replace(/\/$/, "");
-
-  const enriched = (photos ?? []).map((p) => ({
-    ...p,
-    url: `${baseUrl}/${p.storage_path}`,
-    uploader: uploaderMap.get(p.uploader_user_id) ?? null,
-    tags: tagsByPhoto[p.id] ?? [],
-  }));
+  const enriched = (photos ?? []).map((p) => {
+    const { data: urlData } = service.storage.from("family-photos").getPublicUrl(p.storage_path as string);
+    return {
+      ...p,
+      url: urlData.publicUrl,
+      uploader: uploaderMap.get(p.uploader_user_id) ?? null,
+      tags: tagsByPhoto[p.id] ?? [],
+    };
+  });
 
   return NextResponse.json({ photos: enriched });
 }
@@ -85,6 +85,11 @@ export async function POST(req: NextRequest) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+
+  const contentLength = Number(req.headers.get("content-length") ?? 0);
+  if (contentLength > 10 * 1024 * 1024) {
+    return NextResponse.json({ error: "Solicitud demasiado grande (máx 10MB)" }, { status: 413 });
+  }
 
   const { storagePath, caption } = await req.json();
   if (!storagePath) return NextResponse.json({ error: "Falta storagePath" }, { status: 400 });

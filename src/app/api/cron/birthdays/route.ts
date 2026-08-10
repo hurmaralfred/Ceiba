@@ -3,14 +3,6 @@ import webpush from "web-push";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { sendBirthdayEmail } from "@/lib/email";
 
-function configureWebPush() {
-  const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-  const privateKey = process.env.VAPID_PRIVATE_KEY;
-  if (!publicKey) throw new Error("Missing NEXT_PUBLIC_VAPID_PUBLIC_KEY");
-  if (!privateKey) throw new Error("Missing VAPID_PRIVATE_KEY");
-  webpush.setVapidDetails("mailto:ceiba-app@noreply.com", publicKey, privateKey);
-}
-
 function getServiceClient() {
   return createServiceClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -19,7 +11,6 @@ function getServiceClient() {
 }
 
 export async function GET(req: NextRequest) {
-  configureWebPush();
   const authHeader = req.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET || process.env.INTERNAL_SECRET;
   if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
@@ -106,7 +97,17 @@ export async function GET(req: NextRequest) {
   }
 
   // 6. Send push notification + email to each user
+  const vapidPublicKey  = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
+  const vapidConfigured = !!(vapidPublicKey && vapidPrivateKey);
+  if (!vapidConfigured) {
+    console.warn("[birthday-cron] VAPID keys not configured — push notifications will be skipped");
+  } else {
+    webpush.setVapidDetails("mailto:ceiba-app@noreply.com", vapidPublicKey!, vapidPrivateKey!);
+  }
+
   let pushSent = 0, emailSent = 0;
+  const deadEndpoints: string[] = [];
 
   for (const [userId, persons] of notifyMap) {
     const bpList = persons as any[];
@@ -117,27 +118,41 @@ export async function GET(req: NextRequest) {
         : `¡Hoy cumplen años ${names}! 🎂`;
 
     // Push
-    const { data: subs } = await supabase
-      .from("push_subscriptions")
-      .select("endpoint, p256dh, auth")
-      .eq("user_id", userId);
+    if (vapidConfigured) {
+      const { data: subs } = await supabase
+        .from("push_subscriptions")
+        .select("endpoint, p256dh, auth")
+        .eq("user_id", userId);
 
-    if (subs && subs.length > 0) {
-      const payload = JSON.stringify({
-        title: "🎂 Cumpleaños familiar",
-        body: pushBody,
-        icon: "/icons/icon-192.png",
-        url: "/feed",
-      });
-      const results = await Promise.allSettled(
-        (subs as any[]).map((sub) =>
-          webpush.sendNotification(
-            { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-            payload
+      if (subs && subs.length > 0) {
+        const payload = JSON.stringify({
+          title: "🎂 Cumpleaños familiar",
+          body: pushBody,
+          icon: "/icons/icon-192.png",
+          url: "/feed",
+        });
+        const results = await Promise.allSettled(
+          (subs as any[]).map((sub) =>
+            webpush.sendNotification(
+              { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+              payload
+            )
+              .then(() => ({ ok: true, endpoint: sub.endpoint as string }))
+              .catch((err: any) => ({ ok: false, endpoint: sub.endpoint as string, status: err?.statusCode as number | undefined }))
           )
-        )
-      );
-      pushSent += results.filter((r) => r.status === "fulfilled").length;
+        );
+        pushSent += results.filter(
+          (r): r is PromiseFulfilledResult<{ ok: boolean; endpoint: string }> =>
+            r.status === "fulfilled" && r.value.ok
+        ).length;
+        // Collect dead subscriptions (410 Gone or 404 Not Found) for cleanup
+        deadEndpoints.push(
+          ...results
+            .filter((r): r is PromiseFulfilledResult<{ ok: boolean; endpoint: string; status?: number }> => r.status === "fulfilled")
+            .filter((r) => !r.value.ok && (r.value.status === 410 || r.value.status === 404))
+            .map((r) => r.value.endpoint)
+        );
+      }
     }
 
     // Email (via auth.admin to get verified email)
@@ -163,6 +178,12 @@ export async function GET(req: NextRequest) {
     } catch (e) {
       console.error("Birthday email failed for", userId, e);
     }
+  }
+
+  // Clean up expired/invalid push subscriptions (410 Gone or 404 Not Found)
+  if (deadEndpoints.length > 0) {
+    await supabase.from("push_subscriptions").delete().in("endpoint", deadEndpoints);
+    console.log(`[birthday-cron] Removed ${deadEndpoints.length} dead push subscription(s)`);
   }
 
   return NextResponse.json({ ok: true, pushSent, emailSent, birthdayCount: birthdayPersons.length });
