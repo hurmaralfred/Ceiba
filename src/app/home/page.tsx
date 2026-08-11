@@ -220,15 +220,6 @@ function UniverseBackground() {
 
   return (
     <>
-      <style>{`
-        @keyframes nebula-drift {
-          0%   { transform: scale(1)    translate(0px,   0px); }
-          25%  { transform: scale(1.08) translate(12px, -16px); }
-          50%  { transform: scale(0.94) translate(-8px,  10px); }
-          75%  { transform: scale(1.05) translate(6px,  -6px); }
-          100% { transform: scale(1)    translate(0px,   0px); }
-        }
-      `}</style>
       <canvas ref={canvasRef} style={{ position:"fixed", inset:0, width:"100%", height:"100%", pointerEvents:"none", zIndex:-1 }} />
       {/* Nebulae — GPU-accelerated CSS blur, cover the whole viewport */}
       <div style={{ position:"fixed", top:"-5%",  left:"-8%",   width:300, height:300, borderRadius:"50%", background:"radial-gradient(circle,rgba(100,30,220,0.16) 0%,transparent 70%)", filter:"blur(45px)", pointerEvents:"none", zIndex:-1, animation:"nebula-drift 52s ease-in-out infinite" }} />
@@ -369,26 +360,6 @@ function GalaxyHero({ children, avatarInitial, avatarUrl, firstName, visibleCoun
   return (
     <div style={{ position: "relative", overflow: "hidden", paddingBottom: 36, textAlign: "center",
       background: "radial-gradient(ellipse 120% 80% at 50% 0%, #12082a 0%, #060318 45%, #030208 100%)" }}>
-
-      <style>{`
-        @keyframes twinkle-a { 0%,100%{opacity:.9;transform:scale(1)} 50%{opacity:.25;transform:scale(.7)} }
-        @keyframes twinkle-b { 0%,100%{opacity:.6;transform:scale(1)} 40%{opacity:.1;transform:scale(.6)} }
-        @keyframes twinkle-c { 0%,100%{opacity:.75;transform:scale(1)} 60%{opacity:.3;transform:scale(.8)} }
-        @keyframes core-pulse { 0%,100%{opacity:.55;transform:scale(1)} 50%{opacity:.85;transform:scale(1.08)} }
-        @keyframes slow-drift { 0%{transform:translateY(0) translateX(0) scale(1)} 33%{transform:translateY(-14px) translateX(8px) scale(1.15)} 66%{transform:translateY(-6px) translateX(-5px) scale(0.9)} 100%{transform:translateY(0) translateX(0) scale(1)} }
-        @keyframes shoot { 0%{opacity:0;transform:translateX(0) translateY(0)} 5%{opacity:1} 100%{opacity:0;transform:translateX(-160px) translateY(60px)} }
-        @keyframes name-glow { 0%,100%{text-shadow:0 0 20px rgba(212,175,55,0.0)} 50%{text-shadow:0 0 28px rgba(212,175,55,0.45)} }
-        @keyframes bday-glow { 0%,100%{box-shadow:0 8px 0 #040300,0 16px 32px rgba(0,0,0,0.92),0 0 28px rgba(212,175,55,0.22)} 50%{box-shadow:0 8px 0 #040300,0 16px 32px rgba(0,0,0,0.92),0 0 55px rgba(212,175,55,0.5),0 0 90px rgba(212,175,55,0.15)} }
-        @keyframes section-glow { 0%,100%{opacity:.5} 50%{opacity:.85} }
-        @keyframes orbit-ring-cw  { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
-        @keyframes orbit-ring-ccw { from{transform:rotate(0deg)} to{transform:rotate(-360deg)} }
-        @keyframes corona-pulse   { 0%,100%{opacity:0.35;transform:scale(1)} 50%{opacity:1;transform:scale(1.05)} }
-        @keyframes home-ring-spin    { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
-        @keyframes home-ring-breathe { 0%,100%{opacity:0.72;transform:scale(1)} 50%{opacity:1;transform:scale(1.055)} }
-        @keyframes btn-float { 0%,100%{transform:translateY(0px)} 50%{transform:translateY(-6px)} }
-        a:active > div { transform: scale(0.97) translateY(1px) !important; }
-        button:active { transform: scale(0.97) !important; }
-      `}</style>
 
       {/* Deep nebula layers */}
       <div style={{ position:"absolute", top:-60, left:-60, width:280, height:280, borderRadius:"50%", pointerEvents:"none",

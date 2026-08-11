@@ -151,3 +151,27 @@
   width: 100%;
   border-radius: 1rem;
 }
+
+/* Home page animations (moved from inline <style> to prevent SSR hydration mismatch) */
+@keyframes nebula-drift {
+  0%   { transform: scale(1)    translate(0px,   0px); }
+  25%  { transform: scale(1.08) translate(12px, -16px); }
+  50%  { transform: scale(0.94) translate(-8px,  10px); }
+  75%  { transform: scale(1.05) translate(6px,  -6px); }
+  100% { transform: scale(1)    translate(0px,   0px); }
+}
+@keyframes twinkle-a { 0%,100%{opacity:.9;transform:scale(1)} 50%{opacity:.25;transform:scale(.7)} }
+@keyframes twinkle-b { 0%,100%{opacity:.6;transform:scale(1)} 40%{opacity:.1;transform:scale(.6)} }
+@keyframes twinkle-c { 0%,100%{opacity:.75;transform:scale(1)} 60%{opacity:.3;transform:scale(.8)} }
+@keyframes core-pulse { 0%,100%{opacity:.55;transform:scale(1)} 50%{opacity:.85;transform:scale(1.08)} }
+@keyframes slow-drift { 0%{transform:translateY(0) translateX(0) scale(1)} 33%{transform:translateY(-14px) translateX(8px) scale(1.15)} 66%{transform:translateY(-6px) translateX(-5px) scale(0.9)} 100%{transform:translateY(0) translateX(0) scale(1)} }
+@keyframes shoot { 0%{opacity:0;transform:translateX(0) translateY(0)} 5%{opacity:1} 100%{opacity:0;transform:translateX(-160px) translateY(60px)} }
+@keyframes name-glow { 0%,100%{text-shadow:0 0 20px rgba(212,175,55,0.0)} 50%{text-shadow:0 0 28px rgba(212,175,55,0.45)} }
+@keyframes bday-glow { 0%,100%{box-shadow:0 8px 0 #040300,0 16px 32px rgba(0,0,0,0.92),0 0 28px rgba(212,175,55,0.22)} 50%{box-shadow:0 8px 0 #040300,0 16px 32px rgba(0,0,0,0.92),0 0 55px rgba(212,175,55,0.5),0 0 90px rgba(212,175,55,0.15)} }
+@keyframes section-glow { 0%,100%{opacity:.5} 50%{opacity:.85} }
+@keyframes orbit-ring-cw  { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+@keyframes orbit-ring-ccw { from{transform:rotate(0deg)} to{transform:rotate(-360deg)} }
+@keyframes corona-pulse   { 0%,100%{opacity:0.35;transform:scale(1)} 50%{opacity:1;transform:scale(1.05)} }
+@keyframes home-ring-spin    { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+@keyframes home-ring-breathe { 0%,100%{opacity:0.72;transform:scale(1)} 50%{opacity:1;transform:scale(1.055)} }
+@keyframes btn-float { 0%,100%{transform:translateY(0px)} 50%{transform:translateY(-6px)} }
