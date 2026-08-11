@@ -25,8 +25,9 @@ export default function InstallPrompt() {
   const [prompt, setPrompt] = useState<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
-    // Already installed as PWA
+    // Already installed as PWA or running inside Capacitor native shell
     if (window.matchMedia("(display-mode: standalone)").matches) return;
+    if (typeof (window as any).Capacitor !== "undefined") return;
 
     // Dismissed recently
     const dismissed = localStorage.getItem(DISMISS_KEY);

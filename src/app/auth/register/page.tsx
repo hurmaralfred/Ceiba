@@ -267,11 +267,26 @@ function RegisterFormInner() {
               <button
                 type="button"
                 onClick={async () => {
-                  const { error } = await supabase.auth.signInWithOAuth({
-                    provider: "google",
-                    options: { redirectTo: `${window.location.origin}/auth/callback` },
-                  });
-                  if (error) toast.error("Error con Google");
+                  try {
+                    const { isCapacitor, signInWithGoogleCapacitor, CAPACITOR_OAUTH_REDIRECT } = await import("@/lib/capacitor-oauth");
+                    if (isCapacitor()) {
+                      const { data, error } = await supabase.auth.signInWithOAuth({
+                        provider: "google",
+                        options: { redirectTo: CAPACITOR_OAUTH_REDIRECT, skipBrowserRedirect: true },
+                      });
+                      if (error || !data.url) throw error ?? new Error("No OAuth URL");
+                      const code = await signInWithGoogleCapacitor(data.url);
+                      const { error: sessionError } = await supabase.auth.exchangeCodeForSession(code);
+                      if (sessionError) throw sessionError;
+                      router.push("/home");
+                      return;
+                    }
+                    const { error } = await supabase.auth.signInWithOAuth({
+                      provider: "google",
+                      options: { redirectTo: `${window.location.origin}/auth/callback` },
+                    });
+                    if (error) throw error;
+                  } catch { toast.error("Error con Google"); }
                 }}
                 className="w-full flex items-center justify-center gap-3 rounded-2xl py-3.5 px-4 text-sm font-semibold text-white transition-all active:scale-[0.98] mb-4"
                 style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)" }}
