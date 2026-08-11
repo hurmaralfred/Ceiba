@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, Plus, Clock, Trash2, X, CalendarDays, Camera } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
+import { CosmicNav } from "@/components/ui/cosmic";
 
 interface Memory {
   id: string;
@@ -409,7 +410,7 @@ export default function HoyPage() {
         </div>
       )}
 
-      <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}`}</style>
+      <CosmicNav />
     </div>
   );
 }

@@ -719,7 +719,7 @@ export default function LandingPage() {
                 ["#",          "Inicio"],
                 ["#features",  "Características"],
                 ["#memories",  "Historias"],
-                ["/instalar",  "Blog"],
+                ["/instalar",  "Instalar"],
                 ["#sobre",     "Contacto"],
               ].map(([href,l])=>(
                 <Link key={href} href={href} style={{ fontSize:12,
@@ -739,7 +739,7 @@ export default function LandingPage() {
             alignItems:"center", gap:10,
             borderTop:"1px solid rgba(255,255,255,0.05)", paddingTop:18 }}>
             <span style={{ fontSize:11, color:"rgba(212,175,55,0.18)" }}>
-              © 2024 CEIBA – Nuestras Raíces. Todos los derechos reservados.
+              © 2026 CEIBA – Nuestras Raíces. Todos los derechos reservados.
             </span>
             <div style={{ display:"flex", gap:18 }}>
               {["Términos de servicio","Política de privacidad"].map(t=>(

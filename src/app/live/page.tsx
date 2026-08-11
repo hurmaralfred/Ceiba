@@ -131,8 +131,13 @@ export default function LivePage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
+    if (channelRef.current) {
+      await supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
+    }
+
     const channel = supabase
-      .channel("family-presence")
+      .channel(`family-presence-${Date.now()}`)
       .on(
         "postgres_changes",
         {

@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { CosmicNav } from "@/components/ui/cosmic";
 import Link from "next/link";
 import { getDiceBearUrl } from "@/lib/dicebear";
 import {
@@ -358,7 +359,7 @@ function GalaxyHero({ children, avatarInitial, avatarUrl, firstName, visibleCoun
   historyCount: number;
 }) {
   return (
-    <div style={{ position: "relative", overflow: "hidden", paddingBottom: 36, textAlign: "center",
+    <div style={{ position: "relative", overflow: "hidden", paddingBottom: 8, textAlign: "center",
       background: "radial-gradient(ellipse 120% 80% at 50% 0%, #12082a 0%, #060318 45%, #030208 100%)" }}>
 
       {/* Deep nebula layers */}
@@ -725,71 +726,9 @@ function CardShine({ ar }: { ar: string }) {
   );
 }
 
-// ── Navegación cósmica ────────────────────────────────────────────────────────
-function CosmicNav({ pathname, suggCount = 0 }: { pathname: string; suggCount?: number }) {
-  const items = [
-    { href: "/home",      Icon: Home,     label: "Inicio"   },
-    { href: "/tree",      Icon: Sparkles, label: "Galaxia"    },
-    { href: "/hoy", Icon: CalendarDays, label: "Un día como hoy", center: true },
-    { href: "/events",    Icon: BookOpen, label: "Recuerdos" },
-    { href: "/profile",   Icon: User,     label: "Perfil"   },
-  ];
-  return (
-    <nav style={{
-      position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 50,
-      background: "rgba(3,2,8,0.97)", borderTop: "0.5px solid rgba(212,175,55,0.18)",
-      padding: "10px 14px 20px", display: "flex", alignItems: "flex-end",
-      justifyContent: "space-around", backdropFilter: "blur(12px)",
-    }}>
-      {items.map(({ href, Icon, label, center }) => {
-        if (center) return (
-          <Link key={href} href={href}>
-            <div style={{
-              width: 54, height: 54, borderRadius: "50%", background: "#c9a820", flexShrink: 0,
-              borderTop: "2px solid #f5e060", borderLeft: "1.5px solid rgba(255,240,100,0.5)",
-              borderBottom: "4px solid #6a5600", borderRight: "1.5px solid rgba(0,0,0,0.4)",
-              boxShadow: "0 8px 0 #4a3c00, 0 14px 24px rgba(0,0,0,0.8), 0 0 24px rgba(212,175,55,0.3)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              marginTop: -20, position: "relative",
-            }}>
-              <div style={{ position: "absolute", inset: 0, borderRadius: "50%",
-                background: "radial-gradient(circle at 35% 22%,rgba(255,255,255,0.32) 0%,transparent 55%)" }} />
-              <Icon size={22} style={{ color: "#030208", position: "relative" }} />
-            </div>
-          </Link>
-        );
-        const active = pathname === href;
-        const color = active ? "#d4af37" : "rgba(212,175,55,0.28)";
-        const showBadge = href === "/home" && suggCount > 0;
-        return (
-          <Link key={href} href={href}
-            style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, textDecoration: "none" }}>
-            <div style={{ position: "relative" }}>
-              <Icon size={22} style={{ color }} />
-              {showBadge && (
-                <div style={{
-                  position: "absolute", top: -5, right: -7,
-                  minWidth: 16, height: 16, borderRadius: 8,
-                  background: "#d4af37", border: "1.5px solid #030208",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 9, fontWeight: 800, color: "#030208", padding: "0 3px", lineHeight: 1,
-                }}>
-                  {suggCount > 9 ? "9+" : suggCount}
-                </div>
-              )}
-            </div>
-            <span style={{ fontSize: 9, fontWeight: active ? 700 : 500, color }}>{label}</span>
-          </Link>
-        );
-      })}
-    </nav>
-  );
-}
-
 // ── Página principal ──────────────────────────────────────────────────────────
 export default function HomePage() {
   const router   = useRouter();
-  const pathname = usePathname();
   const supabase = createClient();
 
   const [profile,      setProfile]      = useState<Profile | null>(null);
@@ -1152,6 +1091,7 @@ export default function HomePage() {
         background: "linear-gradient(90deg, transparent, rgba(212,175,55,0.18), transparent)" }} />
 
       {/* ══ MOMENTO DEL DÍA ══════════════════════════════════════════════ */}
+      {(todayBirthday || (!todayBirthday && upcomingBirthday && upcomingBirthday.days <= 7)) && (
       <div style={{ padding: "14px 14px 0" }}>
 
         {/* — Caso A: Cumpleaños HOY — card dominante */}
@@ -1238,6 +1178,7 @@ export default function HomePage() {
         )}
 
       </div>
+      )}
 
       {/* ══ ACCESOS RÁPIDOS ══════════════════════════════════════════════ */}
       <div style={{ padding: "20px 16px 8px" }}>
@@ -1422,7 +1363,7 @@ export default function HomePage() {
       </div>
 
       {/* Navegación inferior cósmica */}
-      <CosmicNav pathname={pathname ?? "/home"} suggCount={suggestions.filter(s => !dismissedIds.has(s.id)).length} />
+      <CosmicNav />
 
       {/* ── Lightbox de foto ─────────────────────────────────────────────── */}
       {lightboxPhoto && (

@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { ArrowLeft, MapPin, Users, X } from "lucide-react";
+import { CosmicNav } from "@/components/ui/cosmic";
 
 interface Person {
   name: string;
@@ -207,6 +208,7 @@ export default function MapaPage() {
           </div>
         )}
       </div>
+      <CosmicNav />
     </div>
   );
 }

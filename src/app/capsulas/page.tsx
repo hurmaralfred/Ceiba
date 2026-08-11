@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Lock, Unlock, Send, X, ChevronDown, Paperclip, Play } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { CosmicNav } from "@/components/ui/cosmic";
 
 interface Capsula {
   id: string;
@@ -180,17 +181,6 @@ function CapsulaPageInner() {
 
   return (
     <div style={{ minHeight: "100dvh", background: "#030208", color: "#fff", paddingBottom: 80 }}>
-      <style>{`
-        @keyframes capsule-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
-        @keyframes star-twinkle { 0%,100%{opacity:.9} 50%{opacity:.2} }
-        @keyframes seal-glow { 0%,100%{box-shadow:0 0 0 2px rgba(150,90,255,0.22),0 8px 32px rgba(0,0,0,0.8)} 50%{box-shadow:0 0 0 2px rgba(150,90,255,0.60),0 8px 32px rgba(0,0,0,0.8),0 0 28px rgba(150,90,255,0.28)} }
-        @keyframes unlock-pulse { 0%,100%{box-shadow:0 0 0 2px rgba(212,175,55,0.30),0 8px 32px rgba(0,0,0,0.8)} 50%{box-shadow:0 0 0 2px rgba(212,175,55,0.80),0 8px 32px rgba(0,0,0,0.8),0 0 36px rgba(212,175,55,0.36)} }
-        input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1) opacity(0.4); }
-        textarea { resize: none; }
-        textarea:focus { outline: none; }
-        input[type="date"]:focus { outline: none; }
-      `}</style>
-
       {/* Header */}
       <div style={{ position: "sticky", top: 0, zIndex: 50, background: "rgba(3,2,8,0.92)",
         backdropFilter: "blur(16px)", borderBottom: "1px solid rgba(150,90,255,0.12)",
@@ -535,6 +525,7 @@ function CapsulaPageInner() {
           </div>
         </div>
       )}
+      <CosmicNav />
     </div>
   );
 }
