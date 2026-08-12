@@ -45,8 +45,11 @@ export default function InstallPrompt() {
     };
     window.addEventListener("beforeinstallprompt", handler);
 
-    // Show after 3s — non-intrusive
-    const t = setTimeout(() => setShow(true), 3000);
+    // Show after 3s — also recheck Capacitor in case bridge wasn't ready at mount
+    const t = setTimeout(() => {
+      if (typeof (window as any).Capacitor !== "undefined") return;
+      setShow(true);
+    }, 3000);
     return () => { clearTimeout(t); window.removeEventListener("beforeinstallprompt", handler); };
   }, []);
 
