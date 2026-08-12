@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import BirthdayCardFeed from "@/components/BirthdayCardFeed";
 import PulseDiario from "@/components/PulseDiario";
+import ActividadFamiliar from "@/components/ActividadFamiliar";
 import { useFamilyPresence } from "@/hooks/useFamilyPresence";
 import { useFamilyNotifications } from "@/hooks/useFamilyNotifications";
 import { createClient } from "@/lib/supabase/client";
@@ -1184,6 +1185,11 @@ export default function HomePage() {
       {/* ══ PULSO DIARIO — recuerdos del mismo día en años anteriores ═══ */}
       <div style={{ marginTop: 20 }}>
         <PulseDiario />
+      </div>
+
+      {/* ══ ACTIVIDAD FAMILIAR — últimas 24h ════════════════════════════ */}
+      <div style={{ marginTop: 20 }}>
+        <ActividadFamiliar />
       </div>
 
       {/* ══ ACCESOS RÁPIDOS ══════════════════════════════════════════════ */}
