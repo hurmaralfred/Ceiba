@@ -24,8 +24,8 @@ function configureWebPush() {
  */
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get("authorization");
-  const cronSecret = process.env.CRON_SECRET || process.env.INTERNAL_SECRET;
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -33,8 +33,8 @@ export async function GET(req: NextRequest) {
   const supabase = getServiceClient();
 
   const today = new Date();
-  const month = today.getMonth() + 1;
-  const day = today.getDate();
+  const month = today.getUTCMonth() + 1;
+  const day = today.getUTCDate();
 
   // 1. Get all memories (any year, same month+day) that have a family_space_id
   const { data: allMemories, error } = await supabase

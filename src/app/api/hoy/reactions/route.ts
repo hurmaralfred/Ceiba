@@ -64,16 +64,19 @@ export async function POST(req: NextRequest) {
   if (existing) {
     if ((existing as any).emoji === emoji) {
       // Same emoji → remove (toggle off)
-      await service.from("memory_reactions").delete().eq("id", (existing as any).id);
+      const { error: delErr } = await service.from("memory_reactions").delete().eq("id", (existing as any).id);
+      if (delErr) return NextResponse.json({ error: "DB error" }, { status: 500 });
       action = "removed";
     } else {
       // Different emoji → update
-      await service.from("memory_reactions").update({ emoji }).eq("id", (existing as any).id);
+      const { error: updErr } = await service.from("memory_reactions").update({ emoji }).eq("id", (existing as any).id);
+      if (updErr) return NextResponse.json({ error: "DB error" }, { status: 500 });
       action = "changed";
     }
   } else {
     // New reaction
-    await service.from("memory_reactions").insert({ memory_id: memoryId, user_id: user.id, emoji });
+    const { error: insErr } = await service.from("memory_reactions").insert({ memory_id: memoryId, user_id: user.id, emoji });
+    if (insErr) return NextResponse.json({ error: "DB error" }, { status: 500 });
     action = "added";
   }
 

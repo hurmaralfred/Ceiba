@@ -73,10 +73,10 @@ function s3dChip(): React.CSSProperties {
 function daysUntil(birth_date: string): number {
   const today = new Date();
   const bd = new Date(birth_date);
+  if (bd.getMonth() === today.getMonth() && bd.getDate() === today.getDate()) return 0;
   const next = new Date(today.getFullYear(), bd.getMonth(), bd.getDate());
-  if (next < today) next.setFullYear(today.getFullYear() + 1);
-  const diff = Math.ceil((next.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-  return diff === 365 ? 0 : diff;
+  if (next <= today) next.setFullYear(today.getFullYear() + 1);
+  return Math.ceil((next.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 }
 
 // ── Full-screen universe background ──────────────────────────────────────────

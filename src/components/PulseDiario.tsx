@@ -124,7 +124,7 @@ export default function PulseDiario() {
             </div>
 
             {/* Reactions — stop link propagation so tapping emoji doesn't navigate */}
-            <div onClick={(e) => e.preventDefault()}>
+            <div onClick={(e) => e.stopPropagation()}>
               <MemoryReactions memoryId={memory.id} />
             </div>
           </div>
