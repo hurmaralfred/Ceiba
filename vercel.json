@@ -15,6 +15,10 @@
     {
       "path": "/api/cron/expire-historias",
       "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/daily-pulse",
+      "schedule": "0 9 * * *"
     }
   ]
 }

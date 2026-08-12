@@ -10,6 +10,7 @@ import {
   Trophy, ChevronRight, CalendarDays, X, MessageCircle, Map, Share2, Lock,
 } from "lucide-react";
 import BirthdayCardFeed from "@/components/BirthdayCardFeed";
+import PulseDiario from "@/components/PulseDiario";
 import { useFamilyPresence } from "@/hooks/useFamilyPresence";
 import { useFamilyNotifications } from "@/hooks/useFamilyNotifications";
 import { createClient } from "@/lib/supabase/client";
@@ -1179,6 +1180,11 @@ export default function HomePage() {
 
       </div>
       )}
+
+      {/* ══ PULSO DIARIO — recuerdos del mismo día en años anteriores ═══ */}
+      <div style={{ marginTop: 20 }}>
+        <PulseDiario />
+      </div>
 
       {/* ══ ACCESOS RÁPIDOS ══════════════════════════════════════════════ */}
       <div style={{ padding: "20px 16px 8px" }}>
