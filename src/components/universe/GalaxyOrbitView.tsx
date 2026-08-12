@@ -263,6 +263,16 @@ export function GalaxyOrbitView({
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const activeSetRef = useRef<Set<string>>(new Set());
 
+  // Zoom / pan state (CSS transform on innerDivRef — no re-render needed)
+  const innerDivRef    = useRef<HTMLDivElement>(null);
+  const scaleRef       = useRef(1);
+  const panRef         = useRef({ x: 0, y: 0 });
+  const pinchDistRef   = useRef<number | null>(null);
+  const panTouchRef    = useRef<{ x: number; y: number } | null>(null);
+  const touchStartRef  = useRef<{ x: number; y: number } | null>(null);
+  const didDragRef     = useRef(false);
+  const lastTapRef     = useRef(0);
+
   useEffect(() => { if (profile.avatar_url) loadImg(profile.avatar_url); }, [profile.avatar_url]);
 
   // Recompute which nodes are "active" (foreground) vs "dormant" (ghost)
@@ -982,29 +992,41 @@ export function GalaxyOrbitView({
   }, [profile]);
 
   // ── Interaction ───────────────────────────────────────────────────────────
-  const getNodeAt = useCallback((mx: number, my: number): OrbitNode | null => {
+
+  // Apply zoom/pan CSS transform directly to inner div (no React re-render)
+  const applyTransform = useCallback(() => {
+    if (!innerDivRef.current) return;
+    const { x, y } = panRef.current;
+    const s = scaleRef.current;
+    innerDivRef.current.style.transform = `translate(${x}px,${y}px) scale(${s})`;
+  }, []);
+
+  // Accept raw client coords and unscale them to canvas logical space
+  const getNodeAt = useCallback((clientX: number, clientY: number): OrbitNode | null => {
     const c = canvasRef.current;
     if (!c) return null;
+    const rect = c.getBoundingClientRect();
+    if (rect.width === 0) return null;
+    const cssScale = rect.width / c.offsetWidth;
+    const mx = (clientX - rect.left) / cssScale;
+    const my = (clientY - rect.top) / cssScale;
     const w = c.offsetWidth, h = c.offsetHeight;
     const cx = w / 2, cy = h / 2;
     const t = tRef.current;
     return nodesRef.current.find(n => {
       const { nx, ny } = nodePos(n, cx, cy, w, t);
-      return Math.hypot(mx - nx, my - ny) < scaledNR(n.orbit, depthOf(n.angle)) + 18;
+      return Math.hypot(mx - (nx + n.repX), my - (ny + n.repY)) < scaledNR(n.orbit, depthOf(n.angle)) + 18;
     }) ?? null;
   }, []);
 
-  const handlePointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
-    e.preventDefault();
-    const rect = canvasRef.current!.getBoundingClientRect();
-    const hit  = getNodeAt(e.clientX - rect.left, e.clientY - rect.top);
+  // Shared selection logic used by both pointer (desktop) and touch (mobile)
+  const selectAt = useCallback((clientX: number, clientY: number) => {
+    const hit = getNodeAt(clientX, clientY);
     if (hit) {
-      // Unfreeze previous selection + its connections
       const prevFrozen = frozenIdsRef.current;
       nodesRef.current.forEach(n => {
         if (prevFrozen.has(n.id) || n.id === selectedRef.current) n.speed = n.baseSpeed;
       });
-      // Compute new frozen set: selected node + all directly connected members
       const newFrozen = new Set<string>([hit.id]);
       memberLinksRef.current.forEach(lk => {
         if (lk.fromMemberId === hit.id) newFrozen.add(lk.toMemberId);
@@ -1013,27 +1035,118 @@ export function GalaxyOrbitView({
       nodesRef.current.forEach(n => { if (newFrozen.has(n.id)) n.speed = 0; });
       frozenIdsRef.current = newFrozen;
       selectedRef.current  = hit.id;
-      // Bring frozen nodes into activeSet so they render fully (not as ghost)
       activeSetRef.current = new Set([...activeSetRef.current, ...newFrozen]);
       setSelectedNode({ ...hit, speed: 0 });
     } else {
-      // Tap on empty space — unfreeze everything
       nodesRef.current.forEach(n => {
-        if (frozenIdsRef.current.has(n.id) || n.id === selectedRef.current)
-          n.speed = n.baseSpeed;
+        if (frozenIdsRef.current.has(n.id) || n.id === selectedRef.current) n.speed = n.baseSpeed;
       });
       frozenIdsRef.current = new Set();
       selectedRef.current  = null;
-      // Restore activeSet to default (orbit-1 only)
       activeSetRef.current = new Set(nodesRef.current.filter(n => n.orbit === 1).map(n => n.id));
       setSelectedNode(null);
     }
   }, [getNodeAt]);
 
+  // Desktop pointer events (mouse only — touch handled separately)
+  const handlePointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (e.pointerType === 'touch') return;
+    e.preventDefault();
+    selectAt(e.clientX, e.clientY);
+  }, [selectAt]);
+
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
-    const rect = canvasRef.current!.getBoundingClientRect();
-    mouseRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    if (e.pointerType === 'touch') return;
+    const c = canvasRef.current;
+    if (!c) return;
+    const rect = c.getBoundingClientRect();
+    if (rect.width === 0) return;
+    const cssScale = rect.width / c.offsetWidth;
+    mouseRef.current = { x: (e.clientX - rect.left) / cssScale, y: (e.clientY - rect.top) / cssScale };
   }, []);
+
+  // Mobile touch events — pinch-to-zoom + pan + tap
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    e.preventDefault();
+    if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      pinchDistRef.current = Math.hypot(dx, dy);
+      didDragRef.current = true;
+      panTouchRef.current = null;
+    } else if (e.touches.length === 1) {
+      panTouchRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      pinchDistRef.current = null;
+      didDragRef.current = false;
+    }
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    e.preventDefault();
+    if (e.touches.length === 2 && pinchDistRef.current !== null) {
+      const t0 = e.touches[0], t1 = e.touches[1];
+      const dist = Math.hypot(t0.clientX - t1.clientX, t0.clientY - t1.clientY);
+      const factor = dist / pinchDistRef.current;
+      pinchDistRef.current = dist;
+      const newScale = Math.max(0.35, Math.min(4, scaleRef.current * factor));
+      const f = newScale / scaleRef.current;
+      // Zoom around midpoint of the two fingers
+      const midCX = (t0.clientX + t1.clientX) / 2;
+      const midCY = (t0.clientY + t1.clientY) / 2;
+      const outerEl = innerDivRef.current?.parentElement;
+      if (outerEl) {
+        const r = outerEl.getBoundingClientRect();
+        const fpx = midCX - r.left;
+        const fpy = midCY - r.top;
+        panRef.current = {
+          x: fpx * (1 - f) + panRef.current.x * f,
+          y: fpy * (1 - f) + panRef.current.y * f,
+        };
+      }
+      scaleRef.current = newScale;
+      applyTransform();
+    } else if (e.touches.length === 1 && panTouchRef.current) {
+      const touch = e.touches[0];
+      const dx = touch.clientX - panTouchRef.current.x;
+      const dy = touch.clientY - panTouchRef.current.y;
+      panTouchRef.current = { x: touch.clientX, y: touch.clientY };
+      if (touchStartRef.current) {
+        const totalDist = Math.hypot(
+          touch.clientX - touchStartRef.current.x,
+          touch.clientY - touchStartRef.current.y,
+        );
+        if (totalDist > 8) didDragRef.current = true;
+      }
+      if (didDragRef.current) {
+        panRef.current = { x: panRef.current.x + dx, y: panRef.current.y + dy };
+        applyTransform();
+      }
+    }
+  }, [applyTransform]);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length < 2) pinchDistRef.current = null;
+    if (e.touches.length === 0) {
+      if (!didDragRef.current && e.changedTouches.length === 1) {
+        const touch = e.changedTouches[0];
+        const now = Date.now();
+        if (now - lastTapRef.current < 300) {
+          // Double-tap → reset zoom and pan
+          scaleRef.current = 1;
+          panRef.current = { x: 0, y: 0 };
+          applyTransform();
+          lastTapRef.current = 0;
+        } else {
+          lastTapRef.current = now;
+          selectAt(touch.clientX, touch.clientY);
+        }
+      }
+      panTouchRef.current = null;
+      touchStartRef.current = null;
+      didDragRef.current = false;
+    }
+  }, [selectAt, applyTransform]);
 
   const shift = useCallback((nodeId: string, dir: "in" | "out") => {
     const node = nodesRef.current.find(n => n.id === nodeId);
@@ -1060,6 +1173,9 @@ export function GalaxyOrbitView({
       style={{ position:"relative", width:"100%", height:"100%", overflow:"hidden" }}
       onPointerMove={handlePointerMove}
       onPointerLeave={() => { mouseRef.current = { x:-9999, y:-9999 }; }}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
     >
       <style>{`
         @keyframes gov-up {
@@ -1067,6 +1183,12 @@ export function GalaxyOrbitView({
           to   { opacity:1; transform:translateX(-50%) translateY(0);    }
         }
       `}</style>
+
+      {/* Inner div receives the CSS zoom+pan transform */}
+      <div
+        ref={innerDivRef}
+        style={{ position:"absolute", inset:0, transformOrigin:"0 0" }}
+      >
 
       <canvas
         ref={canvasRef}
@@ -1212,6 +1334,8 @@ export function GalaxyOrbitView({
       }}>
         +
       </button>
+
+      </div>{/* end innerDivRef */}
     </div>
   );
 }
