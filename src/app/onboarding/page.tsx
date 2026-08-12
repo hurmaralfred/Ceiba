@@ -1212,6 +1212,7 @@ export default function OnboardingPage() {
             <div className="w-full flex flex-col gap-2 text-left">
               {[
                 { icon: "🎂", text: "Cumpleaños de tu familia" },
+                { icon: "✨", text: "Recuerdos del día — un día como hoy" },
                 { icon: "🚨", text: "Alertas SOS" },
                 { icon: "📢", text: "Mensajes familiares importantes" },
               ].map(({ icon, text }) => (

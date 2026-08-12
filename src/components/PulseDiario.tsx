@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Clock, ChevronRight } from "lucide-react";
+import MemoryReactions from "@/components/MemoryReactions";
 
 interface Memory {
   id: string;
@@ -99,7 +100,7 @@ export default function PulseDiario() {
             </p>
 
             {/* Author + CTA */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
                 <div style={{
                   width: 24, height: 24, borderRadius: "50%", flexShrink: 0,
@@ -116,13 +117,15 @@ export default function PulseDiario() {
                   {memory.author.name}
                 </span>
               </div>
-
-              <div style={{
-                display: "flex", alignItems: "center", gap: 4,
-                fontSize: 11, fontWeight: 700, color: "rgba(212,175,55,0.7)",
-              }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 4,
+                fontSize: 11, fontWeight: 700, color: "rgba(212,175,55,0.7)" }}>
                 Ver más <ChevronRight size={13} />
               </div>
+            </div>
+
+            {/* Reactions — stop link propagation so tapping emoji doesn't navigate */}
+            <div onClick={(e) => e.preventDefault()}>
+              <MemoryReactions memoryId={memory.id} />
             </div>
           </div>
         </div>

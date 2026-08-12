@@ -6,6 +6,7 @@ import { ArrowLeft, Plus, Clock, Trash2, X, CalendarDays, Camera } from "lucide-
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 import { CosmicNav } from "@/components/ui/cosmic";
+import MemoryReactions from "@/components/MemoryReactions";
 
 interface Memory {
   id: string;
@@ -263,6 +264,9 @@ export default function HoyPage() {
                   wordBreak: "break-word", margin: 0 }}>
                   {m.body}
                 </p>
+
+                {/* Reactions */}
+                <MemoryReactions memoryId={m.id} />
 
                 {/* Delete with confirm */}
                 {m.is_mine && (
