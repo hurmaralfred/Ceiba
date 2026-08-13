@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 1024px; height: 500px; overflow: hidden;
+    background: #060318;
+    display: flex; align-items: center; justify-content: center;
+    font-family: -apple-system, 'SF Pro Display', sans-serif;
+  }
+  .container {
+    display: flex; align-items: center; gap: 60px;
+  }
+  img.icon {
+    width: 180px; height: 180px; border-radius: 40px;
+    box-shadow: 0 0 60px rgba(212,175,55,0.4);
+  }
+  .text { color: white; }
+  h1 {
+    font-size: 72px; font-weight: 700; letter-spacing: -2px;
+    background: linear-gradient(135deg, #f5d87a, #d4af37, #a67c00);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    line-height: 1;
+  }
+  p {
+    font-size: 22px; color: rgba(255,255,255,0.55);
+    margin-top: 12px; font-weight: 400; letter-spacing: 0.02em;
+  }
+  /* Estrellas */
+  .stars { position: absolute; inset: 0; pointer-events: none; }
+  .star {
+    position: absolute; border-radius: 50%;
+    background: rgba(212,175,55,0.6);
+    animation: twinkle 3s infinite alternate;
+  }
+  @keyframes twinkle { from { opacity: 0.2; } to { opacity: 0.8; } }
+</style>
+</head>
+<body>
+<div class="stars" id="stars"></div>
+<div class="container">
+  <img class="icon" src="../ceiba-icon-master.png" alt="Ceiba">
+  <div class="text">
+    <h1>Ceiba</h1>
+    <p>Tu historia familiar, viva</p>
+  </div>
+</div>
+<script>
+  const s = document.getElementById('stars');
+  for (let i = 0; i < 40; i++) {
+    const d = document.createElement('div');
+    d.className = 'star';
+    const size = Math.random() * 3 + 1;
+    d.style.cssText = `width:${size}px;height:${size}px;top:${Math.random()*100}%;left:${Math.random()*100}%;animation-delay:${Math.random()*3}s;animation-duration:${2+Math.random()*3}s`;
+    s.appendChild(d);
+  }
+</script>
+</body>
+</html>
