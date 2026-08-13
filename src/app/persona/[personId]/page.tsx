@@ -411,11 +411,15 @@ function PersonaPageInner() {
             <MoreHorizontal size={18} style={{ color: "rgba(212,175,55,0.8)" }} />
           </button>
           {moreOpen && (
+            <>
+              {/* Invisible overlay to close menu on outside click */}
+              <div onClick={() => setMoreOpen(false)}
+                style={{ position: "fixed", inset: 0, zIndex: 49 }} />
             <div style={{
               position: "absolute", top: 44, right: 0, zIndex: 50,
               background: "#0c0a18", border: "1px solid rgba(212,175,55,0.2)",
               borderRadius: 12, overflow: "hidden", boxShadow: "0 8px 24px rgba(0,0,0,0.8)",
-              minWidth: 160,
+              minWidth: 160, pointerEvents: "auto",
             }}>
               <Link href="/tree" style={{ textDecoration: "none" }}>
                 <div style={{ padding: "12px 16px", fontSize: 13, color: "#fff",
@@ -444,6 +448,7 @@ function PersonaPageInner() {
                 </Link>
               )}
             </div>
+            </>
           )}
         </div>
       </div>

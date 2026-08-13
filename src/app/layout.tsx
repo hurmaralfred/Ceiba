@@ -7,6 +7,7 @@ import PushRegistrar from "@/components/PushRegistrar";
 import NotificationBanner from "@/components/NotificationBanner";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import LuminousFrame from "@/components/LuminousFrame";
+import { FamilyPresenceProvider } from "@/contexts/FamilyPresenceContext";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -43,7 +44,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={`${inter.variable} ${playfair.variable} font-sans bg-cream-100 text-ceiba-900 min-h-screen`}>
         <Toaster position="top-center" />
         <LuminousFrame />
-        <ErrorBoundary>{children}</ErrorBoundary>
+        <FamilyPresenceProvider>
+          <ErrorBoundary>{children}</ErrorBoundary>
+        </FamilyPresenceProvider>
         <InstallPrompt />
         <PushRegistrar />
         <NotificationBanner />

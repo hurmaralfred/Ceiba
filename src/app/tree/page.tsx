@@ -27,6 +27,7 @@ import {
 import { createInviteLink } from "@/lib/viral/inviteFlow";
 import { CosmicNav } from "@/components/ui/cosmic";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { useFamilyPresenceContext } from "@/contexts/FamilyPresenceContext";
 import toast from "react-hot-toast";
 
 const FamilyTreeGraph = lazyLoad(
@@ -89,6 +90,7 @@ function TreePageContent() {
   const searchParams = useSearchParams();
   const supabase = createClient();
   usePushNotifications(); // Registra FCM token si el usuario da permiso
+  const { broadcastAlert } = useFamilyPresenceContext();
   const [showWelcome, setShowWelcome] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [members, setMembers] = useState<FamilyMember[]>([]);
@@ -837,6 +839,8 @@ function TreePageContent() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Error");
       toast.success(`📢 Mensaje enviado a ${data.recipients} familiar${data.recipients !== 1 ? "es" : ""}`);
+      // In-app real-time broadcast
+      await broadcastAlert({ message: broadcastMsg.trim(), type: "announcement" });
       setBroadcastMsg("");
       setShowBroadcast(false);
     } catch (err: any) {
@@ -870,6 +874,8 @@ function TreePageContent() {
       }
       setSosActive(true);
       toast.success("🚨 SOS enviado a tu red familiar.", { duration: 6000 });
+      // In-app real-time alert (complementa el push nativo)
+      await broadcastAlert({ message: "SOS activado", type: "sos" });
       // Auto-reset visual after 5 min
       setTimeout(() => setSosActive(false), 5 * 60 * 1000);
     } catch (e) {
