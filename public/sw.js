@@ -23,7 +23,6 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(event.request.url);
 
-  // Never intercept: Supabase, external origins, or API routes
   if (url.hostname !== self.location.hostname) return;
   if (url.pathname.startsWith('/api/')) return;
   if (url.pathname.startsWith('/_next/')) return;
@@ -31,7 +30,6 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        // Only cache successful HTML/static responses
         if (response.ok) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
@@ -39,43 +37,62 @@ self.addEventListener('fetch', (event) => {
         return response;
       })
       .catch(async () => {
-        // Offline fallback: serve from cache if available, otherwise let it fail naturally
         const cached = await caches.match(event.request);
         if (cached) return cached;
-        // Return a minimal offline response instead of undefined (which causes "Failed to fetch")
         return new Response('Offline', { status: 503, statusText: 'Service Unavailable' });
       })
   );
 });
 
-// Push notifications
+// ── Push notifications ────────────────────────────────────────────────────────
 self.addEventListener('push', (event) => {
   if (!event.data) return;
   const data = event.data.json();
 
-  const notifPromise = self.registration.showNotification(data.title, {
-    body: data.body,
-    icon: data.icon || '/icons/icon-192.png',
-    badge: '/icons/icon-72.png',
-    data: { url: data.url || '/chat' },
-    vibrate: [200, 100, 200],
-    tag: 'ceiba-chat',
-    renotify: true,
-  });
+  const isSOS  = data.type === 'sos';
+  const isChat = data.type === 'chat';
 
-  // Set app icon badge (iOS 17+ / Android Chrome)
+  // 1. Forward payload to every open client so the app can show an in-app toast.
+  //    We never suppress the system notification because iOS requires showNotification
+  //    to be called on every push event or it invalidates the subscription.
+  const forwardPromise = self.clients
+    .matchAll({ type: 'window', includeUncontrolled: true })
+    .then((clientList) => {
+      clientList.forEach((client) => {
+        client.postMessage({ type: 'ceiba-push', payload: data });
+      });
+    });
+
+  // 2. System notification — different tags so SOS never replaces chat.
+  const tag      = isSOS ? 'ceiba-sos' : isChat ? `ceiba-chat-${data.roomId || 'group'}` : 'ceiba-announce';
+  const vibrate  = isSOS ? [300, 100, 300, 100, 300] : [200, 100, 200];
+
+  const notifOptions = {
+    body:             data.body,
+    icon:             data.icon || '/icons/icon-192.png',
+    badge:            '/icons/icon-72.png',
+    data:             { url: data.url || '/home' },
+    vibrate,
+    tag,
+    renotify:         true,
+    requireInteraction: isSOS,   // SOS stays visible until the user taps it
+    silent:           false,
+  };
+
+  // Set/increment app icon badge
   const badgePromise = self.navigator?.setAppBadge
     ? self.navigator.setAppBadge(data.badge ?? 1).catch(() => {})
     : Promise.resolve();
 
-  event.waitUntil(Promise.all([notifPromise, badgePromise]));
+  const notifPromise = self.registration.showNotification(data.title, notifOptions);
+
+  event.waitUntil(Promise.all([forwardPromise, notifPromise, badgePromise]));
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const url = event.notification.data?.url || '/chat';
+  const url = event.notification.data?.url || '/home';
 
-  // Clear badge when user taps the notification
   if (self.navigator?.clearAppBadge) self.navigator.clearAppBadge().catch(() => {});
 
   event.waitUntil(

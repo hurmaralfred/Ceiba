@@ -90,7 +90,7 @@ function TreePageContent() {
   const searchParams = useSearchParams();
   const supabase = createClient();
   usePushNotifications(); // Registra FCM token si el usuario da permiso
-  const { broadcastAlert } = useFamilyPresenceContext();
+  const { broadcastAlert, onlineIds } = useFamilyPresenceContext();
   const [showWelcome, setShowWelcome] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [members, setMembers] = useState<FamilyMember[]>([]);
@@ -874,8 +874,14 @@ function TreePageContent() {
       }
       setSosActive(true);
       toast.success("🚨 SOS enviado a tu red familiar.", { duration: 6000 });
-      // In-app real-time alert (complementa el push nativo)
+      // In-app Realtime alert (instantáneo, sin necesidad de push)
       await broadcastAlert({ message: "SOS activado", type: "sos" });
+      // VAPID push fallback — llega aunque el teléfono esté bloqueado
+      fetch("/api/broadcast", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: "SOS activado — toca para ver detalles", type: "emergency" }),
+      }).catch(() => {});
       // Auto-reset visual after 5 min
       setTimeout(() => setSosActive(false), 5 * 60 * 1000);
     } catch (e) {
@@ -1303,6 +1309,11 @@ function TreePageContent() {
                           if (member) sendInvite(member);
                         }}
                         onAddMember={() => setShowModal(true)}
+                        onlinePersonIds={new Set(
+                          members
+                            .filter(m => m.profile_id && onlineIds.has(m.profile_id))
+                            .map(m => m.id)
+                        )}
                       />
                       {/* Stats pill */}
                       <div style={{

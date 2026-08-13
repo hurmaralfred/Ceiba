@@ -67,6 +67,8 @@ export interface GalaxyOrbitViewProps {
   onEditMember: (id: string) => void;
   onInviteMember: (id: string) => void;
   onAddMember: () => void;
+  /** person_ids of family members currently online */
+  onlinePersonIds?: Set<string>;
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -244,6 +246,7 @@ function OrbitAvatar({ node }: { node: OrbitNode }) {
 export function GalaxyOrbitView({
   profile, members, extendedMembers, memberLinks,
   onViewMember, onEditMember, onInviteMember, onAddMember,
+  onlinePersonIds,
 }: GalaxyOrbitViewProps) {
   const canvasRef   = useRef<HTMLCanvasElement>(null);
   const animRef     = useRef<number>(0);
@@ -254,8 +257,10 @@ export function GalaxyOrbitView({
   const frozenIdsRef   = useRef<Set<string>>(new Set());
   const memberLinksRef = useRef(memberLinks);
   const avatarElemRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
+  const onlinePersonIdsRef = useRef<Set<string>>(onlinePersonIds ?? new Set());
   const [overlayNodes, setOverlayNodes] = useState<OrbitNode[]>([]);
   useEffect(() => { memberLinksRef.current = memberLinks; }, [memberLinks]);
+  useEffect(() => { onlinePersonIdsRef.current = onlinePersonIds ?? new Set(); }, [onlinePersonIds]);
 
   const [selectedNode, setSelectedNode] = useState<OrbitNode | null>(null);
   const [overrides, setOverrides] = useState<Record<string, 1 | 2 | 3>>({});
@@ -755,12 +760,35 @@ export function GalaxyOrbitView({
           ctx.save(); ctx.globalAlpha = dAlpha * (hov || sel ? .82 : hovFrz ? .65 : .40);
           drawGlow(ctx, nx, ny, nr * 2.0, rgb, .78); ctx.restore();
 
-          // Pulse ring
+          // Pulse ring (selected)
           if (sel) {
             const pf = (Math.sin(t * .10) + 1) / 2;
             ctx.save(); ctx.globalAlpha = .55 + pf * .28;
             ctx.strokeStyle = GOLD; ctx.lineWidth = 2.2;
             ctx.beginPath(); ctx.arc(nx, ny, nr + 8 + pf * 5, 0, Math.PI*2); ctx.stroke();
+            ctx.restore();
+          }
+
+          // Online presence ring — pulsing green heartbeat
+          if (onlinePersonIdsRef.current.has(n.id)) {
+            const pf = (Math.sin(t * 0.07 + n.wobPhase) + 1) / 2;
+            // Outer expanding ring
+            ctx.save();
+            ctx.globalAlpha = dAlpha * (0.25 + pf * 0.30);
+            ctx.strokeStyle = "rgba(74,222,128,0.6)";
+            ctx.lineWidth = 1.5;
+            ctx.shadowColor = "rgba(74,222,128,0.9)";
+            ctx.shadowBlur = 14 + pf * 10;
+            ctx.beginPath(); ctx.arc(nx, ny, nr + 10 + pf * 6, 0, Math.PI * 2); ctx.stroke();
+            ctx.restore();
+            // Inner tight ring
+            ctx.save();
+            ctx.globalAlpha = dAlpha * (0.65 + pf * 0.30);
+            ctx.strokeStyle = "rgba(74,222,128,0.95)";
+            ctx.lineWidth = 2;
+            ctx.shadowColor = "rgba(74,222,128,1)";
+            ctx.shadowBlur = 8 + pf * 6;
+            ctx.beginPath(); ctx.arc(nx, ny, nr + 3, 0, Math.PI * 2); ctx.stroke();
             ctx.restore();
           }
 

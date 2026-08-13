@@ -103,7 +103,8 @@ export async function POST(req: NextRequest) {
       : message.trim(),
     icon: "/icons/icon-192.png",
     url: "/feed",
-    requireInteraction: isEmergency, // keeps emergency notifications visible until dismissed
+    requireInteraction: isEmergency,
+    type: isEmergency ? "sos" : "announcement",
   });
 
   const results = await Promise.allSettled(

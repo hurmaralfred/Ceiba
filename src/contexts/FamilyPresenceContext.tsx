@@ -92,6 +92,48 @@ export function FamilyPresenceProvider({ children }: { children: ReactNode }) {
     };
   }, [myUserId]);
 
+  // ── In-app toast from service worker push events ──────────────────────────
+  // The SW always shows the system notification AND forwards the payload here.
+  // We show a toast so the user sees it even while using the app.
+  useEffect(() => {
+    if (!myUserId || typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
+
+    const handler = (event: MessageEvent) => {
+      if (event.data?.type !== "ceiba-push") return;
+      const d = event.data.payload as {
+        title: string; body: string; url?: string;
+        type?: string; roomId?: string;
+      };
+
+      const isSOS  = d.type === "sos";
+      const isChat = d.type === "chat";
+
+      // Don't re-toast Realtime SOS alerts we already showed via broadcastAlert
+      if (isSOS) return;
+
+      toast(
+        () => (
+          <div
+            onClick={() => { if (d.url) window.location.href = d.url; }}
+            style={{ cursor: d.url ? "pointer" : "default" }}
+          >
+            <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 3 }}>{d.title}</div>
+            <div style={{ fontSize: 12, opacity: 0.85 }}>{d.body}</div>
+          </div>
+        ),
+        {
+          duration: isChat ? 8000 : 6000,
+          style: isChat
+            ? { background: "#12082a", color: "#fff", padding: "10px 14px" }
+            : { background: "#1a1040", color: "#fff", padding: "10px 14px" },
+        },
+      );
+    };
+
+    navigator.serviceWorker.addEventListener("message", handler);
+    return () => navigator.serviceWorker.removeEventListener("message", handler);
+  }, [myUserId]);
+
   const broadcastAlert = useCallback(
     async ({ message, type = "announcement" }: { message: string; type?: "sos" | "announcement" }) => {
       if (!channelRef.current || !myUserId) return;
