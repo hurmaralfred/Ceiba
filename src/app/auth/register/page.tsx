@@ -175,7 +175,7 @@ function RegisterFormInner() {
       // `persons` no tiene una columna `linked_user_id` — el vinculo
       // usuario<->persona vive en `person_claims`.
 
-      toast.success("¡Bienvenido a Ceiba! 🌳");
+      toast.success("¡Bienvenido a Ceiba! ✨");
 
       // Si llegamos aqui desde /invite/[token] (invitacion personalizada),
       // volvemos ahi ya autenticados para completar accept_invitation.
@@ -221,13 +221,22 @@ function RegisterFormInner() {
 
         {/* Logo */}
         <Link href="/" className="flex flex-col items-center gap-1 mb-8 group">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-earth-500 to-ceiba-700 flex items-center justify-center shadow-[0_0_32px_rgba(193,96,58,0.3)]">
-            <svg width="30" height="30" viewBox="0 0 36 36" fill="none">
-              <rect x="16.5" y="20" width="3" height="12" rx="1.5" fill="white" opacity="0.9"/>
-              <ellipse cx="18" cy="14" rx="10" ry="8" fill="white" opacity="0.9"/>
-              <ellipse cx="10" cy="18" rx="6" ry="4.5" fill="white" opacity="0.7"/>
-              <ellipse cx="26" cy="18" rx="6" ry="4.5" fill="white" opacity="0.7"/>
-              <ellipse cx="18" cy="8" rx="7" ry="5.5" fill="white" opacity="0.95"/>
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center"
+            style={{ background:"linear-gradient(135deg,#12082a 0%,#0a0520 100%)", boxShadow:"0 0 32px rgba(212,175,55,0.30), inset 0 1px 0 rgba(212,175,55,0.25)" }}>
+            <svg width="30" height="30" viewBox="0 0 38 38" fill="none">
+              <ellipse cx="19" cy="19" rx="15" ry="5.5" stroke="rgba(212,175,55,0.45)" strokeWidth="0.8" fill="none" transform="rotate(-25 19 19)"/>
+              <path d="M19 19 Q24 13 28 10" stroke="rgba(212,175,55,0.65)" strokeWidth="1.2" strokeLinecap="round" fill="none"/>
+              <path d="M19 19 Q14 25 10 28" stroke="rgba(212,175,55,0.55)" strokeWidth="1" strokeLinecap="round" fill="none"/>
+              <path d="M19 19 Q13 14 10 10" stroke="rgba(212,175,55,0.5)" strokeWidth="0.9" strokeLinecap="round" fill="none"/>
+              <path d="M19 19 Q25 24 28 28" stroke="rgba(212,175,55,0.45)" strokeWidth="0.8" strokeLinecap="round" fill="none"/>
+              <circle cx="25" cy="12" r="1.2" fill="rgba(255,240,180,0.9)"/>
+              <circle cx="12" cy="26" r="1.1" fill="rgba(255,240,180,0.8)"/>
+              <circle cx="12" cy="13" r="0.9" fill="rgba(212,175,55,0.7)"/>
+              <circle cx="26" cy="25" r="0.8" fill="rgba(212,175,55,0.65)"/>
+              <path d="M19 13.5 L19.6 17.4 L19 21 L18.4 17.4 Z" fill="rgba(255,245,200,0.92)"/>
+              <path d="M13.5 19 L17.4 19.6 L21 19 L17.4 18.4 Z" fill="rgba(255,245,200,0.92)"/>
+              <circle cx="19" cy="19" r="2.2" fill="rgba(255,245,200,0.95)"/>
+              <circle cx="19" cy="19" r="1" fill="white"/>
             </svg>
           </div>
           <span className="font-display text-xl font-bold text-white mt-1">Ceiba</span>
@@ -465,7 +474,7 @@ export default function RegisterPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-ceiba-950 flex items-center justify-center">
-        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-earth-500 to-ceiba-700 animate-pulse" />
+        <div className="w-12 h-12 rounded-2xl animate-pulse" style={{ background:"linear-gradient(135deg,#12082a,#0a0520)" }} />
       </div>
     }>
       <RegisterFormInner />
