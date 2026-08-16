@@ -1,10 +1,11 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { ArrowLeft, MapPin, X } from "lucide-react";
 import { CosmicNav } from "@/components/ui/cosmic";
+import type { SOSPin } from "./FamilyMapInner";
 
 interface Person {
   name: string;
@@ -18,8 +19,6 @@ interface Pin {
   people: Person[];
 }
 
-export interface SOSPin { lat: number; lng: number; name: string; }
-
 // ── Leaflet map loaded client-side only ───────────────────────────────────────
 const FamilyMap = dynamic(() => import("./FamilyMapInner"), {
   ssr: false,
@@ -32,7 +31,8 @@ const FamilyMap = dynamic(() => import("./FamilyMapInner"), {
   ),
 });
 
-export default function MapaPage() {
+// ── Inner component that reads search params (requires Suspense) ──────────────
+function MapaInner() {
   const searchParams = useSearchParams();
   const [pins, setPins] = useState<Pin[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,7 +81,16 @@ export default function MapaPage() {
           </div>
         </Link>
         <div style={{ flex: 1 }}>
-          {!loading && pins.length > 0 ? (
+          {sosPin ? (
+            <>
+              <div style={{ fontSize: 15, fontWeight: 700, color: "#ef4444", letterSpacing: "-0.01em" }}>
+                🚨 SOS — {sosPin.name}
+              </div>
+              <div style={{ fontSize: 10, color: "rgba(239,68,68,0.6)", marginTop: 2, letterSpacing: "0.04em" }}>
+                Ubicación en tiempo real
+              </div>
+            </>
+          ) : !loading && pins.length > 0 ? (
             <>
               <div style={{ fontSize: 15, fontWeight: 700, color: "#fff", letterSpacing: "-0.01em" }}>
                 Tu historia se extiende por {pins.length} {pins.length === 1 ? "lugar" : "lugares"}
@@ -98,7 +107,7 @@ export default function MapaPage() {
           borderTop: "1px solid rgba(212,175,55,0.28)", borderBottom: "2px solid #000",
           borderLeft: "1px solid rgba(212,175,55,0.12)", borderRight: "1px solid rgba(0,0,0,0.6)",
           boxShadow: "0 5px 0 #02010a", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <MapPin size={16} style={{ color: "#d4af37" }} />
+          <MapPin size={16} style={{ color: sosPin ? "#ef4444" : "#d4af37" }} />
         </div>
       </div>
 
@@ -112,7 +121,7 @@ export default function MapaPage() {
         }}>
           <style>{`@keyframes sos-banner-pulse{0%,100%{background:#b91c1c}50%{background:#ef4444}}`}</style>
           <span style={{ fontSize: 18 }}>🚨</span>
-          <span>{sosPin.name} activó una alerta SOS — ubicación en tiempo real</span>
+          <span>{sosPin.name} activó una alerta SOS — su ubicación exacta está marcada abajo</span>
         </div>
       )}
 
@@ -127,13 +136,13 @@ export default function MapaPage() {
             </div>
             <span style={{ fontSize: 13, color: "rgba(255,255,255,0.35)" }}>Geocodificando ubicaciones…</span>
           </div>
-        ) : pins.length === 0 ? (
+        ) : pins.length === 0 && !sosPin ? (
           <EmptyMap />
         ) : (
           <FamilyMap pins={pins} onSelect={setSelected} sosPin={sosPin} />
         )}
 
-        {/* Selected pin panel — premium cosmic glass */}
+        {/* Selected pin panel */}
         {selected && (
           <div style={{
             position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 1000,
@@ -146,17 +155,14 @@ export default function MapaPage() {
             maxHeight: "60vh", overflow: "hidden",
             display: "flex", flexDirection: "column",
           }}>
-            {/* Nebula accent inside panel */}
             <div style={{ position: "absolute", top: -10, left: "25%", width: 200, height: 80,
               borderRadius: "50%", background: "radial-gradient(ellipse, rgba(212,175,55,0.07) 0%, transparent 65%)",
               filter: "blur(14px)", pointerEvents: "none" }} />
 
-            {/* Drag handle */}
             <div style={{ display: "flex", justifyContent: "center", padding: "10px 0 6px" }}>
               <div style={{ width: 32, height: 3, borderRadius: 2, background: "rgba(242,180,60,0.30)" }} />
             </div>
 
-            {/* Title row */}
             <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "6px 20px 14px" }}>
               <div style={{ position: "relative", width: 44, height: 44, flexShrink: 0 }}>
                 <div style={{ position: "absolute", inset: -8, borderRadius: "50%",
@@ -185,12 +191,10 @@ export default function MapaPage() {
               </button>
             </div>
 
-            {/* Divider */}
             <div style={{ height: 0.5,
               background: "linear-gradient(90deg, transparent, rgba(242,180,60,0.18), transparent)",
               margin: "0 20px 14px" }} />
 
-            {/* People count eyebrow */}
             <div style={{ padding: "0 20px 10px", display: "flex", alignItems: "center", gap: 6 }}>
               <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.14em",
                 textTransform: "uppercase", color: "rgba(242,180,60,0.45)" }}>
@@ -199,14 +203,12 @@ export default function MapaPage() {
               <div style={{ flex: 1, height: 0.5, background: "rgba(242,180,60,0.08)" }} />
             </div>
 
-            {/* People list */}
             <div style={{ overflowY: "auto", overflowX: "hidden", minHeight: 0, padding: "0 20px", flex: 1 }}>
               {selected.people.map((p, i) => (
                 <div key={i} style={{ display: "flex", alignItems: "center", gap: 12,
                   padding: "10px 0",
                   borderBottom: i < selected.people.length - 1
                     ? "0.5px solid rgba(242,180,60,0.06)" : "none" }}>
-                  {/* Luminous sphere avatar */}
                   <div style={{ position: "relative", width: 40, height: 40, flexShrink: 0 }}>
                     <div style={{ position: "absolute", inset: -6, borderRadius: "50%",
                       background: "radial-gradient(circle, rgba(242,180,60,0.18) 0%, transparent 68%)",
@@ -236,6 +238,19 @@ export default function MapaPage() {
       </div>
       <CosmicNav />
     </div>
+  );
+}
+
+export default function MapaPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ height: "100dvh", background: "#030208", display: "flex",
+        alignItems: "center", justifyContent: "center" }}>
+        <MapPin size={32} style={{ color: "rgba(212,175,55,0.4)" }} />
+      </div>
+    }>
+      <MapaInner />
+    </Suspense>
   );
 }
 

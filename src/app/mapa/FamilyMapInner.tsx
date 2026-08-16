@@ -3,10 +3,10 @@ import { useEffect } from "react";
 import { MapContainer, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import type { SOSPin } from "./page";
 
 interface Person { name: string; birth_year: string | null; }
 interface Pin { lat: number; lng: number; city: string; country: string; people: Person[]; }
+export interface SOSPin { lat: number; lng: number; name: string; }
 
 // ── Luminous orb pin — same planet visual language as the tree universe ───────
 function makePin(count: number): L.DivIcon {
