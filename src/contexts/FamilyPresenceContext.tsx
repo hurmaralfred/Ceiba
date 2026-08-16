@@ -172,9 +172,53 @@ export function FamilyPresenceProvider({ children }: { children: ReactNode }) {
     return () => { supabase.removeChannel(channel); channelRef.current = null; };
   }, [myUserId, showSOS, showChatNotif]);
 
-  // ── Personal channel — server-side SOS + chat delivery ────────────────────
-  // Server broadcasts to ceiba-user-{myUserId} via the Supabase REST API.
-  // This works independently of whether the shared presence channel is active.
+  // ── postgres_changes — primary real-time chat delivery ───────────────────
+  // Fires immediately on INSERT into chat_messages (no broadcast API needed).
+  // Requires RLS SELECT policy on chat_messages (see migration 20260816000000).
+  // Supabase RLS filters the stream so each user only receives messages in
+  // rooms they're a member of.
+  useEffect(() => {
+    if (!myUserId) return;
+    const supabase = supabaseRef.current;
+
+    const ch = supabase
+      .channel("chat-messages-realtime")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "chat_messages" },
+        async (payload) => {
+          const msg = payload.new as {
+            id: string; room_id: string; sender_user_id: string; body: string;
+          };
+          // Ignore my own messages
+          if (msg.sender_user_id === myUserId) return;
+          // Ignore the room currently open
+          if (activeChatRoomRef.current === msg.room_id) return;
+
+          // Resolve sender name and photo via the existing API
+          // (one cheap request, cached by the browser for 60 s in prod)
+          try {
+            const res = await fetch(`/api/chat/sender?userId=${msg.sender_user_id}`);
+            const sender = res.ok ? await res.json() : { name: "Familiar", photo: null };
+            showChatNotif({
+              senderName:  sender.name  ?? "Familiar",
+              senderPhoto: sender.photo ?? null,
+              message:     msg.body,
+              roomId:      msg.room_id,
+            });
+          } catch {
+            showChatNotif({ senderName: "Familiar", senderPhoto: null, message: msg.body, roomId: msg.room_id });
+          }
+        },
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(ch); };
+  }, [myUserId, showChatNotif]);
+
+  // ── Personal channel — SOS + broadcast-API chat delivery (secondary) ─────
+  // Server broadcasts to ceiba-user-{myUserId} via Supabase REST API.
+  // SOS always goes through this path; chat here is a secondary fallback.
   useEffect(() => {
     if (!myUserId) return;
     const supabase = supabaseRef.current;
