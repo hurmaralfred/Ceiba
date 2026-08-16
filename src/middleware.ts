@@ -37,7 +37,7 @@ export async function middleware(request: NextRequest) {
     '/home', '/tree', '/map', '/profile', '/onboarding', '/confirmar-datos',
     '/chat', '/capsulas', '/feed', '/hoy', '/photos', '/avatar', '/events',
     '/settings', '/mapa', '/live', '/member', '/persona', '/invitar',
-    '/sugerencias', '/collab',
+    '/sugerencias', '/collab', '/admin',
   ]
   const devPreviews = ['/home/preview', '/dev/']
   const isProtected =

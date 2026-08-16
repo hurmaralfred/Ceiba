@@ -42,11 +42,16 @@ export async function GET(_req: NextRequest) {
     );
   }
 
-  // Auth check
+  // Auth + admin check
   const supabase = createSSRClient();
   const { data: { user }, error: authErr } = await supabase.auth.getUser();
   if (authErr || !user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const adminIds = (process.env.ADMIN_USER_IDS ?? "").split(",").map(s => s.trim()).filter(Boolean);
+  if (adminIds.length > 0 && !adminIds.includes(user.id)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const [
