@@ -85,6 +85,7 @@ interface Props {
   onSwitchToList?: () => void;
   onSwitchToMap?: () => void;
   familyCount?: number;
+  onlinePersonIds?: Set<string>;
 }
 
 // ── Static star field (deterministic, no Math.random at render) ───────────────
@@ -240,6 +241,7 @@ function FamilyNode({
   isHovered,
   isDimmed,
   revealAnim,
+  isOnline,
   onClick,
   onHover,
   onUnhover,
@@ -249,6 +251,7 @@ function FamilyNode({
   isHovered: boolean;
   isDimmed: boolean;
   revealAnim: boolean;
+  isOnline: boolean;
   onClick: () => void;
   onHover: () => void;
   onUnhover: () => void;
@@ -401,6 +404,23 @@ function FamilyNode({
         <circle cx={cx} cy={cy} r={vr - 1} fill="rgba(0,0,0,0.34)" clipPath={`url(#${clipId})`} />
       )}
 
+      {/* Online presence dot — bottom-right of avatar */}
+      {isOnline && (
+        <>
+          <circle
+            cx={cx + vr * 0.707} cy={cy + vr * 0.707} r={5.5}
+            fill="#030208"
+            style={{ pointerEvents: "none" }}
+          />
+          <circle
+            cx={cx + vr * 0.707} cy={cy + vr * 0.707} r={4}
+            fill="#4ade80"
+            className="online-dot"
+            style={{ pointerEvents: "none" }}
+          />
+        </>
+      )}
+
       {/* Name line 1 */}
       <text
         x={cx} y={cy + vr + LBL_GAP}
@@ -534,6 +554,7 @@ export default function PremiumFamilyTree({
   onSwitchToList,
   onSwitchToMap,
   familyCount,
+  onlinePersonIds,
 }: Props) {
   const svgRef       = useRef<SVGSVGElement>(null);
   const gRef         = useRef<SVGGElement>(null);
@@ -828,9 +849,21 @@ export default function PremiumFamilyTree({
               animation: star-twinkle ease-in-out infinite;
             }
 
+            /* Online presence dot pulse */
+            @keyframes online-dot-pulse {
+              0%, 100% { opacity: 1;    transform: scale(1); }
+              50%       { opacity: 0.6; transform: scale(1.35); }
+            }
+            .online-dot {
+              animation: online-dot-pulse 1.6s ease-in-out infinite;
+              transform-box: fill-box;
+              transform-origin: center;
+            }
+
             @media (prefers-reduced-motion: reduce) {
               .node-reveal, .edge-shimmer, .node-pulse,
-              .root-breathe, .particle-drift, .star-twinkle {
+              .root-breathe, .particle-drift, .star-twinkle,
+              .online-dot {
                 animation: none;
               }
             }
@@ -931,6 +964,7 @@ export default function PremiumFamilyTree({
                 isHovered={hoveredId === node.id}
                 isDimmed={dimBySelection || dimBySearch}
                 revealAnim={revealAnim}
+                isOnline={!!(onlinePersonIds && node.memberId && onlinePersonIds.has(node.memberId))}
                 onClick={() => handleNodeClick(node.id, node.memberId)}
                 onHover={() => setHoveredId(node.id)}
                 onUnhover={() => setHoveredId(null)}

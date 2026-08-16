@@ -1427,6 +1427,11 @@ function TreePageContent() {
                         onSwitchToList={() => setView("list")}
                         onSwitchToMap={activateMap}
                         familyCount={visibleMembers.length}
+                        onlinePersonIds={new Set(
+                          members
+                            .filter(m => m.profile_id && onlineIds.has(m.profile_id))
+                            .map(m => m.id)
+                        )}
                       />
                     </div>
                   ) : (
