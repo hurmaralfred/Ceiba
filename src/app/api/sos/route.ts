@@ -52,22 +52,20 @@ export async function POST(req: NextRequest) {
   if (senderClaim?.person_id) {
     const { data: p } = await service
       .from("persons")
-      .select("first_name, last_name")
+      .select("first_name, first_surname")
       .eq("id", senderClaim.person_id)
       .maybeSingle();
     if (p?.first_name) {
-      senderName = [p.first_name, p.last_name].filter(Boolean).join(" ").trim();
+      senderName = [p.first_name, p.first_surname].filter(Boolean).join(" ").trim();
     }
   }
-  if (!senderName || senderName === "Tu familiar") {
+  if (senderName === "Tu familiar") {
     const { data: prof } = await service
       .from("profiles")
-      .select("first_name, last_name")
+      .select("display_name")
       .eq("id", user.id)
       .maybeSingle();
-    if (prof?.first_name) {
-      senderName = [prof.first_name, prof.last_name].filter(Boolean).join(" ").trim();
-    }
+    if (prof?.display_name) senderName = prof.display_name;
   }
 
   // ── 3. Resolve all family member user IDs (excluding sender) + group room ───
