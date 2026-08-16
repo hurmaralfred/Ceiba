@@ -48,7 +48,11 @@ function makePin(count: number): L.DivIcon {
 }
 
 // ── Markers layer (uses map context) ─────────────────────────────────────────
-function Markers({ pins, onSelect }: { pins: Pin[]; onSelect: (p: Pin) => void }) {
+function Markers({ pins, onSelect, skipFitBounds }: {
+  pins: Pin[];
+  onSelect: (p: Pin) => void;
+  skipFitBounds?: boolean;
+}) {
   const map = useMap();
 
   useEffect(() => {
@@ -60,14 +64,13 @@ function Markers({ pins, onSelect }: { pins: Pin[]; onSelect: (p: Pin) => void }
       markers.push(m);
     }
 
-    // Fit bounds if we have pins
-    if (pins.length > 0) {
+    if (!skipFitBounds && pins.length > 0) {
       const bounds = L.latLngBounds(pins.map(p => [p.lat, p.lng]));
       map.fitBounds(bounds, { padding: [48, 48], maxZoom: 8 });
     }
 
     return () => { markers.forEach(m => m.remove()); };
-  }, [map, pins, onSelect]);
+  }, [map, pins, onSelect, skipFitBounds]);
 
   return null;
 }
@@ -151,7 +154,7 @@ export default function FamilyMapInner({
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
         />
-        <Markers pins={pins} onSelect={onSelect} />
+        <Markers pins={pins} onSelect={onSelect} skipFitBounds={!!sosPin} />
         {sosPin && <SOSMarker pin={sosPin} />}
       </MapContainer>
     </>
