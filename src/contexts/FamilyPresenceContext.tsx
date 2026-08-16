@@ -87,15 +87,25 @@ export function FamilyPresenceProvider({ children }: { children: ReactNode }) {
     supabase.auth.getUser().then(({ data }) => {
       if (!data.user) return;
       setMyUserId(data.user.id);
-      supabase.from("profiles").select("first_name").eq("id", data.user.id).single()
-        .then(({ data: p }) => { if (p?.first_name) setMyName(p.first_name); });
+      supabase.from("profiles").select("display_name").eq("id", data.user.id).single()
+        .then(({ data: p }) => { if (p?.display_name) setMyName(p.display_name); });
     });
   }, []);
 
   // ── SOS helpers ────────────────────────────────────────────────────────────
   const showSOS = useCallback((sos: ActiveSOS) => {
-    setActiveSOS(sos);
-    try { localStorage.setItem(SOS_STORAGE_KEY, JSON.stringify(sos)); } catch {}
+    // Never overwrite a real name with the generic fallback.
+    setActiveSOS(prev => {
+      const isRealName = (n?: string) => !!n && n !== "Tu familiar";
+      const merged: ActiveSOS = {
+        ...sos,
+        senderName: isRealName(sos.senderName)
+          ? sos.senderName
+          : isRealName(prev?.senderName) ? prev!.senderName : sos.senderName,
+      };
+      try { localStorage.setItem(SOS_STORAGE_KEY, JSON.stringify(merged)); } catch {}
+      return merged;
+    });
   }, []);
 
   const dismissSOS = useCallback(() => {

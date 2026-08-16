@@ -7,6 +7,9 @@ import { useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 const VAPID_PUB_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!;
+// Tracks which VAPID key the current subscription was created with.
+// When the key rotates, we unsubscribe and resubscribe automatically.
+const VAPID_KEY_STORAGE = "ceiba-vapid-pub-key";
 
 export function usePushNotifications() {
   const supabase = createClient();
@@ -22,31 +25,33 @@ export function usePushNotifications() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        // Usar explícitamente nuestro sw.js — no navigator.serviceWorker.ready
-        // (que podría devolver el firebase SW si fue registrado antes)
         const reg = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
-        await reg.update(); // Asegura que cargue la versión más reciente
+        await reg.update();
 
         if (cancelled) return;
 
-        // Never auto-request permission — requires a user gesture on iOS PWA.
-        // The NotificationBanner component handles the user-gesture flow.
         if (Notification.permission !== "granted") return;
 
-        const existing = await reg.pushManager.getSubscription();
+        let existing = await reg.pushManager.getSubscription();
+
+        // If the VAPID key changed since the subscription was created, the old
+        // subscription will be rejected by the push service. Detect key rotation
+        // via localStorage and force a fresh subscription.
+        const storedKey = localStorage.getItem(VAPID_KEY_STORAGE);
+        if (existing && storedKey !== VAPID_PUB_KEY) {
+          await existing.unsubscribe();
+          existing = null;
+        }
+
         let sub = existing;
 
         if (!sub) {
-          // Permission was granted earlier but subscription was lost (e.g. reinstall, SW change).
-          // Try to re-subscribe — may succeed on desktop/Android; on iOS it may require a gesture,
-          // but since permission is already granted iOS does allow it here.
           try {
             sub = await reg.pushManager.subscribe({
               userVisibleOnly: true,
               applicationServerKey: urlBase64ToUint8Array(VAPID_PUB_KEY),
             });
           } catch {
-            // iOS may still block without gesture; the NotificationBanner will handle it.
             return;
           }
         }
@@ -59,7 +64,10 @@ export function usePushNotifications() {
           body: JSON.stringify(sub.toJSON()),
         });
 
-        if (res.ok) console.log("✅ Push VAPID registrado");
+        if (res.ok) {
+          localStorage.setItem(VAPID_KEY_STORAGE, VAPID_PUB_KEY);
+          console.log("✅ Push VAPID registrado");
+        }
       } catch (err) {
         console.debug("Push registration skipped:", err);
       }
