@@ -4,7 +4,7 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Send, Users, CheckCheck, Check } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { useFamilyPresence } from "@/hooks/useFamilyPresence";
+import { useFamilyPresenceContext } from "@/contexts/FamilyPresenceContext";
 import toast from "react-hot-toast";
 
 interface Sender {
@@ -63,7 +63,7 @@ export default function ChatRoomPage() {
   const lastCountRef = useRef(0);
   const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const onlineIds = useFamilyPresence(myUserId, otherUserId ? [otherUserId] : []);
+  const { onlineIds, setActiveChatRoom } = useFamilyPresenceContext();
   const otherIsOnline = otherUserId ? onlineIds.has(otherUserId) : false;
 
   const scrollToBottom = useCallback(() => {
@@ -90,6 +90,12 @@ export default function ChatRoomPage() {
     if (scroll || list.length !== lastCountRef.current) scrollToBottom();
     lastCountRef.current = list.length;
   }, [roomId, scrollToBottom, router]);
+
+  // Register this room as active so the global context suppresses notifications for it
+  useEffect(() => {
+    setActiveChatRoom(roomId);
+    return () => setActiveChatRoom(null);
+  }, [roomId, setActiveChatRoom]);
 
   useEffect(() => {
     let unmounted = false;

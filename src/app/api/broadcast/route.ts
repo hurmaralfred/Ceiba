@@ -105,6 +105,7 @@ export async function POST(req: NextRequest) {
     url: "/feed",
     requireInteraction: isEmergency,
     type: isEmergency ? "sos" : "announcement",
+    senderName,
   });
 
   const results = await Promise.allSettled(

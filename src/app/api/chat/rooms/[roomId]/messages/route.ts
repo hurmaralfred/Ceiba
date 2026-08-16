@@ -117,80 +117,108 @@ export async function POST(req: NextRequest, { params }: { params: { roomId: str
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Broadcast to realtime channel (fire-and-forget) so the recipient's client refreshes instantly
-  broadcastNewMessage(params.roomId).catch(() => {});
+  // Resolve sender info once — used for both Realtime broadcast and push notification
+  const { senderName, senderPhoto, otherIds } =
+    await resolveSenderAndRecipients(service, params.roomId, user.id);
 
-  // Push notifications — fire-and-forget, never blocks the response
-  pushChatNotification(service, params.roomId, user.id, body.trim()).catch(() => {});
+  // 1. Realtime broadcast — instant in-app delivery (fire-and-forget)
+  broadcastNewMessage(params.roomId, otherIds, senderName, senderPhoto, body.trim()).catch(() => {});
+
+  // 2. VAPID push — for locked-screen / background delivery (fire-and-forget)
+  pushChatNotification(service, params.roomId, user.id, body.trim(), senderName, otherIds).catch(() => {});
 
   return NextResponse.json({ message });
 }
 
-// Broadcast via Supabase Realtime REST so the recipient's browser refreshes instantly.
-async function broadcastNewMessage(roomId: string) {
+/**
+ * Broadcasts to:
+ * 1. chat:{roomId}              — wakes the active chat-room page (payload empty, just a signal)
+ * 2. ceiba-user-{recipientId}  — personal channel for each recipient; carries full message so
+ *    FamilyPresenceContext can show the in-app shooting-star notification without extra fetches.
+ */
+async function broadcastNewMessage(
+  roomId: string,
+  recipientIds: string[],
+  senderName: string,
+  senderPhoto: string | null,
+  body: string,
+) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey  = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const anonKey     = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!supabaseUrl || !serviceKey || !anonKey) return;
 
+  const messages: { topic: string; event: string; payload: object }[] = [
+    // Room channel — keeps the active chat page in sync
+    { topic: `chat:${roomId}`, event: "new_message", payload: {} },
+    // Personal channels — one per recipient for the global notification
+    ...recipientIds.map(uid => ({
+      topic:   `ceiba-user-${uid}`,
+      event:   "chat_message",
+      payload: { senderName, senderPhoto, body, roomId },
+    })),
+  ];
+
   await fetch(`${supabaseUrl}/realtime/v1/api/broadcast`, {
     method: "POST",
     headers: {
-      "Content-Type": "application/json",
+      "Content-Type":  "application/json",
       "Authorization": `Bearer ${serviceKey}`,
-      "apikey": anonKey,
+      "apikey":        anonKey,
     },
-    body: JSON.stringify({
-      messages: [{ topic: `chat:${roomId}`, event: "new_message", payload: {} }],
-    }),
+    body: JSON.stringify({ messages }),
   });
 }
+
+// ── Shared resolver — called once per POST, results passed to both helpers ──────
+
+async function resolveSenderAndRecipients(
+  service: ReturnType<typeof getServiceClient>,
+  roomId: string,
+  senderUserId: string,
+): Promise<{ senderName: string; senderPhoto: string | null; otherIds: string[] }> {
+  const [memberships, senderClaim] = await Promise.all([
+    service.from("chat_room_members").select("user_id").eq("room_id", roomId).neq("user_id", senderUserId),
+    service.from("person_claims").select("person_id")
+      .eq("user_id", senderUserId).eq("claim_status", "approved")
+      .is("revoked_at", null).maybeSingle(),
+  ]);
+
+  const otherIds = ((memberships.data ?? []) as any[]).map(m => m.user_id as string);
+
+  let senderName  = "Familiar";
+  let senderPhoto: string | null = null;
+
+  if (senderClaim.data?.person_id) {
+    const { data: p } = await service
+      .from("persons")
+      .select("first_name, photo_path")
+      .eq("id", senderClaim.data.person_id)
+      .maybeSingle();
+    if (p?.first_name) senderName  = p.first_name;
+    if (p?.photo_path) senderPhoto = p.photo_path;
+  }
+
+  return { senderName, senderPhoto, otherIds };
+}
+
+// ── VAPID push — for locked screen / background tabs ─────────────────────────
 
 async function pushChatNotification(
   service: ReturnType<typeof getServiceClient>,
   roomId: string,
   senderUserId: string,
   messageBody: string,
+  senderName: string,
+  otherIds: string[],
 ) {
+  if (otherIds.length === 0) return;
+
   const publicKey  = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
   const privateKey = process.env.VAPID_PRIVATE_KEY;
   if (!publicKey || !privateKey) return;
 
-  // Other room members
-  const { data: memberships } = await service
-    .from("chat_room_members")
-    .select("user_id")
-    .eq("room_id", roomId)
-    .neq("user_id", senderUserId);
-
-  const otherIds = ((memberships ?? []) as any[]).map((m) => m.user_id as string);
-  if (otherIds.length === 0) return;
-
-  // Sender's display name
-  const { data: senderClaim } = await service
-    .from("person_claims")
-    .select("person_id")
-    .eq("user_id", senderUserId)
-    .eq("claim_status", "approved")
-    .is("revoked_at", null)
-    .maybeSingle();
-
-  let senderName = "Familiar";
-  if (senderClaim?.person_id) {
-    const { data: p } = await service
-      .from("persons")
-      .select("first_name")
-      .eq("id", senderClaim.person_id)
-      .maybeSingle();
-    if (p?.first_name) senderName = p.first_name;
-  }
-
-  // Room type (group vs direct)
-  const { data: room } = await service
-    .from("chat_rooms")
-    .select("type")
-    .eq("id", roomId)
-    .maybeSingle();
+  const { data: room } = await service.from("chat_rooms").select("type").eq("id", roomId).maybeSingle();
   const isGroup = (room as any)?.type === "group";
 
   const title   = isGroup ? `💬 ${senderName} (familia)` : `💬 ${senderName}`;
@@ -204,7 +232,7 @@ async function pushChatNotification(
     roomId,
   });
 
-  // ── VAPID (iOS PWA + Android Chrome + desktop) ────────────────────────────
+  // VAPID — iOS PWA + Android Chrome + desktop
   const { data: subs } = await service
     .from("push_subscriptions")
     .select("endpoint, p256dh, auth, user_id")
@@ -213,15 +241,14 @@ async function pushChatNotification(
   if (subs && subs.length > 0) {
     webpush.setVapidDetails("mailto:ceiba-app@noreply.com", publicKey, privateKey);
     const results = await Promise.allSettled(
-      (subs as any[]).map((sub) =>
+      (subs as any[]).map(sub =>
         webpush.sendNotification(
           { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
           payload,
-        ).then(() => ({ ok: true, endpoint: sub.endpoint }))
+        ).then(() => ({ ok: true,  endpoint: sub.endpoint }))
          .catch((err: any) => ({ ok: false, endpoint: sub.endpoint, status: err?.statusCode }))
       )
     );
-    // Clean up expired/invalid subscriptions (410 Gone or 404 Not Found)
     const deadEndpoints = results
       .filter((r): r is PromiseFulfilledResult<{ ok: boolean; endpoint: string; status?: number }> => r.status === "fulfilled")
       .filter(r => !r.value.ok && (r.value.status === 410 || r.value.status === 404))
@@ -231,29 +258,20 @@ async function pushChatNotification(
     }
   }
 
-  // ── FCM tokens (Android Chrome before PWA install / fallback) ────────────
-  // Sends via Firebase HTTP v1 when FIREBASE_SERVICE_ACCOUNT_JSON is set.
+  // FCM — optional fallback when FIREBASE_SERVICE_ACCOUNT_JSON is configured
   const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
   if (serviceAccountJson) {
     try {
-      const { data: tokenRows } = await service
-        .from("push_tokens")
-        .select("token")
-        .in("user_id", otherIds);
-
+      const { data: tokenRows } = await service.from("push_tokens").select("token").in("user_id", otherIds);
       if (tokenRows && tokenRows.length > 0) {
         const sa = JSON.parse(serviceAccountJson);
-        const projectId = sa.project_id;
-
-        // Get an OAuth2 access token via service account JWT
         const now = Math.floor(Date.now() / 1000);
-        const header  = Buffer.from(JSON.stringify({ alg: "RS256", typ: "JWT" })).toString("base64url");
+        const header   = Buffer.from(JSON.stringify({ alg: "RS256", typ: "JWT" })).toString("base64url");
         const claimset = Buffer.from(JSON.stringify({
           iss: sa.client_email,
           scope: "https://www.googleapis.com/auth/firebase.messaging",
           aud: "https://oauth2.googleapis.com/token",
-          exp: now + 3600,
-          iat: now,
+          exp: now + 3600, iat: now,
         })).toString("base64url");
 
         const { createSign } = await import("crypto");
@@ -270,13 +288,10 @@ async function pushChatNotification(
         const { access_token } = await tokenRes.json();
 
         await Promise.allSettled(
-          (tokenRows as any[]).map((row) =>
-            fetch(`https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`, {
+          (tokenRows as any[]).map(row =>
+            fetch(`https://fcm.googleapis.com/v1/projects/${sa.project_id}/messages:send`, {
               method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${access_token}`,
-              },
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${access_token}` },
               body: JSON.stringify({
                 message: {
                   token: row.token,
@@ -288,8 +303,6 @@ async function pushChatNotification(
           )
         );
       }
-    } catch {
-      // FCM is optional — never block message delivery
-    }
+    } catch { /* FCM is optional */ }
   }
 }

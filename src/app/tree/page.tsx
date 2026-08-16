@@ -854,37 +854,33 @@ function TreePageContent() {
     if (sosSending || sosActive) return;
     setSosSending(true);
     try {
+      // Get location (best-effort, 5 s timeout)
       const pos = await new Promise<GeolocationPosition | null>((resolve) => {
         if (!navigator.geolocation) { resolve(null); return; }
         navigator.geolocation.getCurrentPosition(resolve, () => resolve(null), { timeout: 5000 });
       });
-      const { data, error } = await supabase.rpc("trigger_sos", {
-        p_lat: pos?.coords.latitude ?? null,
-        p_lon: pos?.coords.longitude ?? null,
-        p_message: null,
-        p_scope: 2,
-      });
-      if (error) {
-        if (error.message?.includes("cooldown")) {
-          toast.error("SOS en cooldown — ya hay una alerta activa.");
-        } else {
-          toast.error("Error al enviar SOS: " + error.message);
-        }
-        return;
-      }
-      setSosActive(true);
-      toast.success("🚨 SOS enviado a tu red familiar.", { duration: 6000 });
-      // In-app Realtime alert (instantáneo, sin necesidad de push)
-      await broadcastAlert({ message: "SOS activado", type: "sos" });
-      // VAPID push fallback — llega aunque el teléfono esté bloqueado
-      fetch("/api/broadcast", {
+
+      // Single server call — handles DB insert, Realtime broadcast, and VAPID push
+      const res = await fetch("/api/sos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: "SOS activado — toca para ver detalles", type: "emergency" }),
-      }).catch(() => {});
+        body: JSON.stringify({
+          lat: pos?.coords.latitude  ?? null,
+          lon: pos?.coords.longitude ?? null,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        toast.error(err.error || "No se pudo enviar el SOS.");
+        return;
+      }
+
+      setSosActive(true);
+      toast.success("🚨 SOS enviado a tu familia.", { duration: 8000 });
       // Auto-reset visual after 5 min
       setTimeout(() => setSosActive(false), 5 * 60 * 1000);
-    } catch (e) {
+    } catch {
       toast.error("No se pudo enviar el SOS.");
     } finally {
       setSosSending(false);

@@ -769,27 +769,46 @@ export function GalaxyOrbitView({
             ctx.restore();
           }
 
-          // Online presence ring — pulsing green heartbeat
+          // ── Online presence — bright unmistakable green halo ────────────
           if (onlinePersonIdsRef.current.has(n.id)) {
-            const pf = (Math.sin(t * 0.07 + n.wobPhase) + 1) / 2;
-            // Outer expanding ring
+            const pf = (Math.sin(t * 0.055 + n.wobPhase) + 1) / 2; // 0..1 slow pulse
+            // We intentionally ignore dAlpha here so the glow is always vivid,
+            // even for nodes in outer orbits that are otherwise dimmed.
+
+            // 1. Wide soft halo — radial fill so it bleeds outward like a real glow
+            const haloR = nr * 2.4 + pf * nr * 0.7;
+            const haloG = ctx.createRadialGradient(nx, ny, nr * 0.6, nx, ny, haloR);
+            haloG.addColorStop(0, `rgba(74,222,128,${0.28 + pf * 0.14})`);
+            haloG.addColorStop(0.5, `rgba(74,222,128,${0.10 + pf * 0.06})`);
+            haloG.addColorStop(1,  "rgba(74,222,128,0)");
             ctx.save();
-            ctx.globalAlpha = dAlpha * (0.25 + pf * 0.30);
-            ctx.strokeStyle = "rgba(74,222,128,0.6)";
-            ctx.lineWidth = 1.5;
-            ctx.shadowColor = "rgba(74,222,128,0.9)";
-            ctx.shadowBlur = 14 + pf * 10;
-            ctx.beginPath(); ctx.arc(nx, ny, nr + 10 + pf * 6, 0, Math.PI * 2); ctx.stroke();
+            ctx.fillStyle = haloG;
+            ctx.beginPath(); ctx.arc(nx, ny, haloR, 0, Math.PI * 2); ctx.fill();
             ctx.restore();
-            // Inner tight ring
+
+            // 2. Tight bright ring — always fully opaque
             ctx.save();
-            ctx.globalAlpha = dAlpha * (0.65 + pf * 0.30);
-            ctx.strokeStyle = "rgba(74,222,128,0.95)";
-            ctx.lineWidth = 2;
+            ctx.globalAlpha = 0.90 + pf * 0.10;
+            ctx.strokeStyle = `rgba(74,222,128,1)`;
+            ctx.lineWidth = 2.5;
             ctx.shadowColor = "rgba(74,222,128,1)";
-            ctx.shadowBlur = 8 + pf * 6;
-            ctx.beginPath(); ctx.arc(nx, ny, nr + 3, 0, Math.PI * 2); ctx.stroke();
+            ctx.shadowBlur = 12 + pf * 10;
+            ctx.beginPath(); ctx.arc(nx, ny, nr + 3.5, 0, Math.PI * 2); ctx.stroke();
             ctx.restore();
+
+            // 3. Expanding pulse ring — fades out as it expands
+            const pulseR = nr + 6 + pf * nr * 0.8;
+            const pulseA = (1 - pf) * 0.65;
+            if (pulseA > 0.02) {
+              ctx.save();
+              ctx.globalAlpha = pulseA;
+              ctx.strokeStyle = "rgba(74,222,128,1)";
+              ctx.lineWidth = 1.5;
+              ctx.shadowColor = "rgba(74,222,128,0.8)";
+              ctx.shadowBlur = 8;
+              ctx.beginPath(); ctx.arc(nx, ny, pulseR, 0, Math.PI * 2); ctx.stroke();
+              ctx.restore();
+            }
           }
 
           // Inner tight glow
