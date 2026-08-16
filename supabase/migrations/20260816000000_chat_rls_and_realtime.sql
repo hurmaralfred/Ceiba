@@ -23,5 +23,5 @@ CREATE POLICY "Members can send messages"
     )
   );
 
--- Enable Realtime on chat_messages so postgres_changes events fire.
-ALTER PUBLICATION supabase_realtime ADD TABLE public.chat_messages;
+-- NOTE: supabase_realtime publication already includes chat_messages,
+-- so no ALTER PUBLICATION needed.
