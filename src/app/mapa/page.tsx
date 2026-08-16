@@ -1,8 +1,9 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { ArrowLeft, MapPin, Users, X } from "lucide-react";
+import { ArrowLeft, MapPin, X } from "lucide-react";
 import { CosmicNav } from "@/components/ui/cosmic";
 
 interface Person {
@@ -17,6 +18,8 @@ interface Pin {
   people: Person[];
 }
 
+export interface SOSPin { lat: number; lng: number; name: string; }
+
 // ── Leaflet map loaded client-side only ───────────────────────────────────────
 const FamilyMap = dynamic(() => import("./FamilyMapInner"), {
   ssr: false,
@@ -30,9 +33,18 @@ const FamilyMap = dynamic(() => import("./FamilyMapInner"), {
 });
 
 export default function MapaPage() {
+  const searchParams = useSearchParams();
   const [pins, setPins] = useState<Pin[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Pin | null>(null);
+
+  // SOS mode: center map on the person who triggered the alert
+  const sosLat  = searchParams.get("lat");
+  const sosLon  = searchParams.get("lon");
+  const sosName = searchParams.get("name") ?? "Tu familiar";
+  const sosPin: SOSPin | null = sosLat && sosLon
+    ? { lat: parseFloat(sosLat), lng: parseFloat(sosLon), name: sosName }
+    : null;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -90,6 +102,20 @@ export default function MapaPage() {
         </div>
       </div>
 
+      {/* SOS banner */}
+      {sosPin && (
+        <div style={{
+          background: "#b91c1c", color: "#fff",
+          padding: "10px 18px", display: "flex", alignItems: "center", gap: 10,
+          fontSize: 13, fontWeight: 700, flexShrink: 0,
+          animation: "sos-banner-pulse 1.2s ease-in-out infinite",
+        }}>
+          <style>{`@keyframes sos-banner-pulse{0%,100%{background:#b91c1c}50%{background:#ef4444}}`}</style>
+          <span style={{ fontSize: 18 }}>🚨</span>
+          <span>{sosPin.name} activó una alerta SOS — ubicación en tiempo real</span>
+        </div>
+      )}
+
       {/* Map fills remaining height */}
       <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
         {loading ? (
@@ -104,7 +130,7 @@ export default function MapaPage() {
         ) : pins.length === 0 ? (
           <EmptyMap />
         ) : (
-          <FamilyMap pins={pins} onSelect={setSelected} />
+          <FamilyMap pins={pins} onSelect={setSelected} sosPin={sosPin} />
         )}
 
         {/* Selected pin panel — premium cosmic glass */}

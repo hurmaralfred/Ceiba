@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { MapContainer, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import type { SOSPin } from "./page";
 
 interface Person { name: string; birth_year: string | null; }
 interface Pin { lat: number; lng: number; city: string; country: string; people: Person[]; }
@@ -71,6 +72,49 @@ function Markers({ pins, onSelect }: { pins: Pin[]; onSelect: (p: Pin) => void }
   return null;
 }
 
+// ── SOS red pulsing pin ───────────────────────────────────────────────────────
+function makeSOSPin(name: string): L.DivIcon {
+  const sz = 44;
+  return L.divIcon({
+    className: "",
+    html: `
+      <div style="position:relative;width:${sz}px;height:${sz}px;">
+        <div style="position:absolute;inset:-20px;border-radius:50%;
+          background:radial-gradient(circle,rgba(239,68,68,0.55) 0%,transparent 65%);
+          animation:sos-pin-ring 1.1s ease-out infinite;pointer-events:none;"></div>
+        <div style="width:${sz}px;height:${sz}px;border-radius:50%;
+          background:radial-gradient(circle at 33% 27%,#f87171 0%,#b91c1c 60%,#7f1d1d 100%);
+          border:2.5px solid rgba(255,150,150,0.80);
+          box-shadow:0 0 28px rgba(239,68,68,0.85),0 4px 14px rgba(0,0,0,0.70);
+          display:flex;align-items:center;justify-content:center;
+          font-size:20px;position:relative;">
+          🚨
+        </div>
+        <div style="position:absolute;top:${sz+6}px;left:50%;transform:translateX(-50%);
+          white-space:nowrap;background:rgba(185,28,28,0.95);color:#fff;
+          font-size:11px;font-weight:800;padding:3px 8px;border-radius:6px;
+          box-shadow:0 2px 8px rgba(0,0,0,0.6);letter-spacing:0.02em;">
+          ${name}
+        </div>
+      </div>`,
+    iconSize: [sz, sz],
+    iconAnchor: [sz / 2, sz / 2],
+    popupAnchor: [0, -(sz / 2 + 20)],
+  });
+}
+
+// ── SOS marker — centers map there ───────────────────────────────────────────
+function SOSMarker({ pin }: { pin: SOSPin }) {
+  const map = useMap();
+  useEffect(() => {
+    const m = L.marker([pin.lat, pin.lng], { icon: makeSOSPin(pin.name), zIndexOffset: 1000 });
+    m.addTo(map);
+    map.setView([pin.lat, pin.lng], 14, { animate: true });
+    return () => { m.remove(); };
+  }, [map, pin]);
+  return null;
+}
+
 // ── Dark tile styling override ────────────────────────────────────────────────
 const DARK_CSS = `
   .leaflet-tile-pane { filter: invert(1) hue-rotate(190deg) saturate(0.6) brightness(0.85); }
@@ -80,19 +124,26 @@ const DARK_CSS = `
   .leaflet-control-zoom a { background: #0c0a18 !important; color: #d4af37 !important; border-color: rgba(212,175,55,0.2) !important; }
   .leaflet-control-zoom a:hover { background: #18102a !important; }
   @keyframes pin-orb-pulse { 0%,100%{opacity:0.55;transform:scale(1)} 50%{opacity:1;transform:scale(1.12)} }
+  @keyframes sos-pin-ring  { 0%{transform:scale(0.8);opacity:0.9} 70%{transform:scale(2.2);opacity:0} 100%{transform:scale(2.2);opacity:0} }
 `;
 
 // ── Main exported component ───────────────────────────────────────────────────
-export default function FamilyMapInner({ pins, onSelect }: { pins: Pin[]; onSelect: (p: Pin) => void }) {
-  // World center, zoom 2 as initial fallback; fitBounds corrects it once markers load
-  const center: [number, number] = [20, 10];
+export default function FamilyMapInner({
+  pins, onSelect, sosPin,
+}: {
+  pins: Pin[];
+  onSelect: (p: Pin) => void;
+  sosPin?: SOSPin | null;
+}) {
+  const center: [number, number] = sosPin ? [sosPin.lat, sosPin.lng] : [20, 10];
+  const zoom = sosPin ? 14 : 2;
 
   return (
     <>
       <style>{DARK_CSS}</style>
       <MapContainer
         center={center}
-        zoom={2}
+        zoom={zoom}
         style={{ height: "100%", width: "100%", background: "#030208" }}
         zoomControl
       >
@@ -101,6 +152,7 @@ export default function FamilyMapInner({ pins, onSelect }: { pins: Pin[]; onSele
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
         />
         <Markers pins={pins} onSelect={onSelect} />
+        {sosPin && <SOSMarker pin={sosPin} />}
       </MapContainer>
     </>
   );

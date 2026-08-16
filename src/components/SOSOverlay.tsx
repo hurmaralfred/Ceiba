@@ -122,7 +122,7 @@ export function SOSOverlay({ senderName, timestamp, lat, lon, roomId, onDismiss 
           onClick={() => {
             onDismiss();
             const mapUrl = lat != null && lon != null
-              ? `/mapa?sos=1&lat=${lat}&lon=${lon}`
+              ? `/mapa?sos=1&lat=${lat}&lon=${lon}&name=${encodeURIComponent(senderName)}`
               : "/mapa";
             router.push(mapUrl);
           }}
