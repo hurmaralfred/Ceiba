@@ -21,6 +21,9 @@ interface AlertPayload {
 interface ActiveSOS {
   senderName: string;
   timestamp: number;
+  lat?: number | null;
+  lon?: number | null;
+  roomId?: string | null;
 }
 
 interface ChatNotification {
@@ -226,9 +229,9 @@ export function FamilyPresenceProvider({ children }: { children: ReactNode }) {
     const ch = supabase
       .channel(`ceiba-user-${myUserId}`)
       .on("broadcast", { event: "sos_alert" }, ({ payload }: {
-        payload: { senderName: string; timestamp: number };
+        payload: { senderName: string; timestamp: number; lat?: number | null; lon?: number | null; roomId?: string | null };
       }) => {
-        showSOS({ senderName: payload.senderName, timestamp: payload.timestamp });
+        showSOS({ senderName: payload.senderName, timestamp: payload.timestamp, lat: payload.lat, lon: payload.lon, roomId: payload.roomId });
       })
       .on("broadcast", { event: "chat_message" }, ({ payload }: {
         payload: { senderName: string; senderPhoto: string | null; body: string; roomId: string; };
@@ -261,8 +264,8 @@ export function FamilyPresenceProvider({ children }: { children: ReactNode }) {
       };
 
       if (d.type === "sos") {
-        const name = d.senderName ?? d.title?.split("—")?.[1]?.trim() ?? "Tu familiar";
-        showSOS({ senderName: name, timestamp: Date.now() });
+        const name = d.senderName ?? d.title?.split("—")?.[0]?.replace("🚨", "").trim() ?? "Tu familiar";
+        showSOS({ senderName: name, timestamp: Date.now(), roomId: d.roomId });
         return;
       }
 
@@ -326,6 +329,9 @@ export function FamilyPresenceProvider({ children }: { children: ReactNode }) {
         <SOSOverlay
           senderName={activeSOS.senderName}
           timestamp={activeSOS.timestamp}
+          lat={activeSOS.lat}
+          lon={activeSOS.lon}
+          roomId={activeSOS.roomId}
           onDismiss={dismissSOS}
         />
       )}

@@ -5,10 +5,13 @@ import { useRouter } from "next/navigation";
 interface Props {
   senderName: string;
   timestamp: number;
+  lat?: number | null;
+  lon?: number | null;
+  roomId?: string | null;
   onDismiss: () => void;
 }
 
-export function SOSOverlay({ senderName, timestamp, onDismiss }: Props) {
+export function SOSOverlay({ senderName, timestamp, lat, lon, roomId, onDismiss }: Props) {
   const router = useRouter();
 
   useEffect(() => {
@@ -114,31 +117,56 @@ export function SOSOverlay({ senderName, timestamp, onDismiss }: Props) {
           {timeLabel}
         </div>
 
-        {/* Primary CTA */}
+        {/* Primary CTA — map */}
         <button
-          onClick={() => { onDismiss(); router.push("/home"); }}
+          onClick={() => {
+            onDismiss();
+            const mapUrl = lat != null && lon != null
+              ? `/mapa?sos=1&lat=${lat}&lon=${lon}`
+              : "/mapa";
+            router.push(mapUrl);
+          }}
           style={{
             background: "#fff", color: "#b91c1c",
             fontWeight: 900, fontSize: 18,
-            padding: "20px 56px", borderRadius: 100,
+            padding: "18px 48px", borderRadius: 100,
             border: "none", cursor: "pointer",
             boxShadow: "0 8px 40px rgba(0,0,0,0.45)",
-            marginBottom: 20,
+            marginBottom: 14,
             width: "100%", maxWidth: 300,
           }}
         >
-          Ver ahora →
+          📍 Ver en el mapa
         </button>
+
+        {/* Secondary CTA — group chat */}
+        {roomId && (
+          <button
+            onClick={() => { onDismiss(); router.push(`/chat/${roomId}`); }}
+            style={{
+              background: "rgba(255,255,255,0.18)",
+              color: "#fff",
+              fontWeight: 800, fontSize: 16,
+              padding: "16px 48px", borderRadius: 100,
+              border: "2px solid rgba(255,255,255,0.5)",
+              cursor: "pointer",
+              marginBottom: 14,
+              width: "100%", maxWidth: 300,
+            }}
+          >
+            💬 Abrir chat familiar
+          </button>
+        )}
 
         {/* Dismiss */}
         <button
           onClick={onDismiss}
           style={{
-            background: "rgba(255,255,255,0.12)",
-            color: "rgba(255,255,255,0.75)",
-            fontWeight: 600, fontSize: 14,
-            padding: "14px 32px", borderRadius: 100,
-            border: "1.5px solid rgba(255,255,255,0.3)",
+            background: "transparent",
+            color: "rgba(255,255,255,0.6)",
+            fontWeight: 600, fontSize: 13,
+            padding: "12px 32px", borderRadius: 100,
+            border: "1px solid rgba(255,255,255,0.25)",
             cursor: "pointer",
             width: "100%", maxWidth: 300,
           }}

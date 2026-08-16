@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { getServiceClient, resolveFamilyUserIds } from "@/lib/server/family";
+import { getServiceClient, resolveFamilyUserIds, resolveOrCreateFamilyGroupRoom } from "@/lib/server/family";
 import webpush from "web-push";
 
 /**
@@ -70,8 +70,11 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // ── 3. Resolve all family member user IDs (excluding sender) ───────────────
-  const allFamilyIds = await resolveFamilyUserIds(service, user.id);
+  // ── 3. Resolve all family member user IDs (excluding sender) + group room ───
+  const [allFamilyIds, groupRoomId] = await Promise.all([
+    resolveFamilyUserIds(service, user.id),
+    resolveOrCreateFamilyGroupRoom(service, user.id),
+  ]);
   const recipientIds = allFamilyIds.filter(id => id !== user.id);
 
   if (recipientIds.length === 0) {
@@ -81,13 +84,10 @@ export async function POST(req: NextRequest) {
   const timestamp = Date.now();
 
   // ── 4. Server-side Realtime broadcast to each personal channel ──────────────
-  //    This is the PRIMARY in-app delivery path. It bypasses the shared
-  //    ceiba-family-presence channel entirely, which requires both sides
-  //    to have an active WebSocket at the same moment.
-  await broadcastSOS(recipientIds, senderName, timestamp, lat, lon);
+  await broadcastSOS(recipientIds, senderName, user.id, timestamp, lat, lon, groupRoomId);
 
   // ── 5. VAPID push — for locked screens and background tabs ─────────────────
-  const vapidSent = await pushSOS(service, recipientIds, senderName);
+  const vapidSent = await pushSOS(service, recipientIds, senderName, groupRoomId);
 
   return NextResponse.json({ ok: true, sent: vapidSent, recipients: recipientIds.length });
 }
@@ -97,9 +97,11 @@ export async function POST(req: NextRequest) {
 async function broadcastSOS(
   recipientIds: string[],
   senderName: string,
+  senderUserId: string,
   timestamp: number,
   lat: number | null,
   lon: number | null,
+  roomId: string | null,
 ) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey  = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -109,7 +111,7 @@ async function broadcastSOS(
   const messages = recipientIds.map(uid => ({
     topic:   `ceiba-user-${uid}`,
     event:   "sos_alert",
-    payload: { senderName, timestamp, lat, lon },
+    payload: { senderName, senderUserId, timestamp, lat, lon, roomId },
   }));
 
   await fetch(`${supabaseUrl}/realtime/v1/api/broadcast`, {
@@ -129,6 +131,7 @@ async function pushSOS(
   service: ReturnType<typeof getServiceClient>,
   recipientIds: string[],
   senderName: string,
+  roomId: string | null,
 ): Promise<number> {
   const publicKey  = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
   const privateKey = process.env.VAPID_PRIVATE_KEY;
@@ -145,12 +148,13 @@ async function pushSOS(
 
   const payload = JSON.stringify({
     title: `🚨 ${senderName} — EMERGENCIA`,
-    body:  "Activó una alerta SOS. Toca para responder.",
+    body:  "Activó una alerta SOS. Toca para ver en el mapa.",
     icon:  "/icons/icon-192.png",
-    badge: "/icons/icon-72.png",
-    url:   "/home",
+    badge: "/icons/icon-192.png",
+    url:   "/mapa",
     type:  "sos",
     senderName,
+    roomId,
     requireInteraction: true,
     vibrate: [500, 100, 500, 100, 500],
   });
