@@ -132,9 +132,13 @@ export async function POST(req: NextRequest, { params }: { params: { roomId: str
 
 /**
  * Broadcasts to:
- * 1. chat:{roomId}              — wakes the active chat-room page (payload empty, just a signal)
- * 2. ceiba-user-{recipientId}  — personal channel for each recipient; carries full message so
- *    FamilyPresenceContext can show the in-app shooting-star notification without extra fetches.
+ * 1. chat:{roomId}             — wakes the active chat-room page (empty signal)
+ * 2. ceiba-family-presence     — shared channel ALL family members subscribe to for
+ *                                presence; piggyback a chat_notification event so
+ *                                recipients get it even if personal channels fail.
+ *                                Payload includes recipientIds so clients self-filter.
+ * 3. ceiba-user-{uid}          — personal channel per recipient (best-effort; may not
+ *                                deliver if the subscriber isn't connected to that exact topic)
  */
 async function broadcastNewMessage(
   roomId: string,
@@ -148,18 +152,22 @@ async function broadcastNewMessage(
   const anonKey     = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!supabaseUrl || !serviceKey || !anonKey) return;
 
+  const chatPayload = { senderName, senderPhoto, body, roomId, recipientIds };
+
   const messages: { topic: string; event: string; payload: object }[] = [
-    // Room channel — keeps the active chat page in sync
+    // 1. Room-level signal — wakes the chat page if open
     { topic: `chat:${roomId}`, event: "new_message", payload: {} },
-    // Personal channels — one per recipient for the global notification
+    // 2. Shared presence channel — reliable because presence already works
+    { topic: "ceiba-family-presence", event: "chat_notification", payload: chatPayload },
+    // 3. Personal channels — direct delivery, best-effort
     ...recipientIds.map(uid => ({
       topic:   `ceiba-user-${uid}`,
       event:   "chat_message",
-      payload: { senderName, senderPhoto, body, roomId },
+      payload: chatPayload,
     })),
   ];
 
-  await fetch(`${supabaseUrl}/realtime/v1/api/broadcast`, {
+  const res = await fetch(`${supabaseUrl}/realtime/v1/api/broadcast`, {
     method: "POST",
     headers: {
       "Content-Type":  "application/json",
@@ -168,6 +176,11 @@ async function broadcastNewMessage(
     },
     body: JSON.stringify({ messages }),
   });
+
+  if (!res.ok) {
+    const txt = await res.text().catch(() => "(no body)");
+    console.error(`[chat-broadcast] REST broadcast failed ${res.status}: ${txt}`);
+  }
 }
 
 // ── Shared resolver — called once per POST, results passed to both helpers ──────

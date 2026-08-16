@@ -152,13 +152,25 @@ export function FamilyPresenceProvider({ children }: { children: ReactNode }) {
           });
         }
       })
+      .on("broadcast", { event: "chat_notification" }, ({ payload }: {
+        payload: { senderName: string; senderPhoto: string | null; body: string; roomId: string; recipientIds: string[] };
+      }) => {
+        // The shared presence channel reaches everyone — filter to only my notifications
+        if (!myUserId || !payload.recipientIds?.includes(myUserId)) return;
+        showChatNotif({
+          senderName:  payload.senderName,
+          senderPhoto: payload.senderPhoto,
+          message:     payload.body,
+          roomId:      payload.roomId,
+        });
+      })
       .subscribe(async (status) => {
         if (status === "SUBSCRIBED") await channel.track({ user_id: myUserId });
       });
 
     channelRef.current = channel;
     return () => { supabase.removeChannel(channel); channelRef.current = null; };
-  }, [myUserId, showSOS]);
+  }, [myUserId, showSOS, showChatNotif]);
 
   // ── Personal channel — server-side SOS + chat delivery ────────────────────
   // Server broadcasts to ceiba-user-{myUserId} via the Supabase REST API.
