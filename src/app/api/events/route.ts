@@ -9,7 +9,26 @@ import {
 
 const VALID_TYPES = ["birth", "marriage", "death", "graduation", "reunion", "anniversary", "other"];
 
-/** GET /api/events — eventos de mi familia (family_space) con creador resuelto. */
+async function getSpaceId(service: ReturnType<typeof getServiceClient>, userId: string): Promise<string | null> {
+  const { data: claim } = await service
+    .from("person_claims").select("person_id")
+    .eq("user_id", userId).eq("claim_status", "approved")
+    .is("revoked_at", null).maybeSingle();
+
+  if (claim?.person_id) {
+    const { data: mem } = await service
+      .from("space_memberships").select("space_id")
+      .eq("person_id", claim.person_id).maybeSingle();
+    if ((mem as any)?.space_id) return (mem as any).space_id;
+  }
+
+  const { data: space } = await service
+    .from("family_spaces").select("id")
+    .eq("created_by", userId).maybeSingle();
+  return (space as any)?.id ?? null;
+}
+
+/** GET /api/events — eventos y recuerdos de texto de mi familia. */
 export async function GET(_req: NextRequest) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -32,18 +51,53 @@ export async function GET(_req: NextRequest) {
     }
   }
 
-  const { data: events, error } = await service
-    .from("family_events")
-    .select("id, created_by, title, event_type, event_date, description, location, created_at")
-    .in("created_by", creatorUserIds)
-    .order("event_date", { ascending: false });
+  const [eventsResult, spaceId] = await Promise.all([
+    service
+      .from("family_events")
+      .select("id, created_by, title, event_type, event_date, description, location, created_at")
+      .in("created_by", creatorUserIds)
+      .order("event_date", { ascending: false }),
+    getSpaceId(service, user.id),
+  ]);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (eventsResult.error) return NextResponse.json({ error: eventsResult.error.message }, { status: 500 });
 
   const creatorMap = await resolvePersonsByUserIds(service, creatorUserIds);
-  const enriched = (events ?? []).map((e) => ({ ...e, creator: creatorMap.get(e.created_by) ?? null }));
+  const enriched = (eventsResult.data ?? []).map((e) => ({ ...e, creator: creatorMap.get(e.created_by) ?? null }));
 
-  return NextResponse.json({ events: enriched });
+  // Fetch text memories (no photo) from the family space
+  let memories: any[] = [];
+  if (spaceId) {
+    const { data: memData } = await service
+      .from("family_memories")
+      .select("id, author_user_id, body, memory_date, photo_path, person_id, created_at")
+      .eq("family_space_id", spaceId)
+      .is("photo_path", null)
+      .order("created_at", { ascending: false });
+
+    if (memData && memData.length > 0) {
+      const personIds = [...new Set(
+        (memData as any[]).filter(m => m.person_id).map(m => m.person_id as string)
+      )];
+      let personNameMap = new Map<string, string>();
+      if (personIds.length > 0) {
+        const { data: persons } = await service
+          .from("persons")
+          .select("id, first_name, first_surname")
+          .in("id", personIds);
+        personNameMap = new Map(
+          (persons ?? []).map((p: any) => [p.id, `${p.first_name} ${p.first_surname ?? ""}`.trim()])
+        );
+      }
+
+      memories = (memData as any[]).map(m => ({
+        ...m,
+        person_name: m.person_id ? (personNameMap.get(m.person_id) ?? null) : null,
+      }));
+    }
+  }
+
+  return NextResponse.json({ events: enriched, memories });
 }
 
 /** POST /api/events — crea un evento. */

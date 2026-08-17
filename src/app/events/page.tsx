@@ -23,6 +23,11 @@ interface FamilyPhoto {
   id: string; url: string; caption: string | null; created_at: string; uploader_user_id: string;
 }
 
+interface FamilyMemory {
+  id: string; author_user_id: string; body: string; memory_date: string | null;
+  photo_path: string | null; person_id: string | null; person_name: string | null; created_at: string;
+}
+
 // ── Event type catalogue ───────────────────────────────────────────────────────
 
 const EVENT_TYPES = [
@@ -95,6 +100,7 @@ export default function EventsPage() {
   const router  = useRouter();
   const supabase = createClient();
   const [events,    setEvents]    = useState<FamilyEvent[]>([]);
+  const [memories,  setMemories]  = useState<FamilyMemory[]>([]);
   const [loading,   setLoading]   = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -119,7 +125,12 @@ export default function EventsPage() {
 
   const loadEvents = async () => {
     const res = await fetch("/api/events");
-    if (res.ok) { setLoadError(false); const { events } = await res.json(); setEvents(events || []); }
+    if (res.ok) {
+      setLoadError(false);
+      const { events, memories: mems } = await res.json();
+      setEvents(events || []);
+      setMemories(mems || []);
+    }
     else setLoadError(true);
     // Cargar fotos para mostrarlas en cada card
     fetch("/api/photos").then(r => r.ok ? r.json() : { photos: [] }).then(({ photos }) => {
@@ -190,12 +201,21 @@ export default function EventsPage() {
 
   const getTypeInfo = (type: string) => EVENT_TYPES.find(t => t.value === type) || EVENT_TYPES[6];
 
-  const byYear = events.reduce((acc, e) => {
-    const y = new Date(e.event_date).getFullYear();
+  type FeedItem =
+    | { _type: "event";  _date: string; data: FamilyEvent }
+    | { _type: "memory"; _date: string; data: FamilyMemory };
+
+  const allItems: FeedItem[] = [
+    ...events.map(e  => ({ _type: "event"  as const, _date: e.event_date,               data: e })),
+    ...memories.map(m => ({ _type: "memory" as const, _date: m.memory_date ?? m.created_at, data: m })),
+  ].sort((a, b) => b._date.localeCompare(a._date));
+
+  const byYear = allItems.reduce((acc, item) => {
+    const y = new Date(item._date).getFullYear();
     if (!acc[y]) acc[y] = [];
-    acc[y].push(e);
+    acc[y].push(item);
     return acc;
-  }, {} as Record<number, FamilyEvent[]>);
+  }, {} as Record<number, FeedItem[]>);
   const years = Object.keys(byYear).map(Number).sort((a, b) => b - a);
 
   const labelStyle: React.CSSProperties = {
@@ -279,7 +299,7 @@ export default function EventsPage() {
           )}
 
           {/* Empty state */}
-          {!loadError && events.length === 0 && (
+          {!loadError && allItems.length === 0 && (
             <div style={{ textAlign:"center", padding:"70px 24px" }}>
               <div style={{ fontSize:42, marginBottom:20, opacity:0.35,
                 animation:"mem-star-twinkle 4s ease-in-out infinite" }}>✦</div>
@@ -325,7 +345,72 @@ export default function EventsPage() {
                   background:"linear-gradient(90deg, rgba(242,180,60,0.18), transparent)" }} />
               </div>
 
-              {byYear[year].map((event, ei) => {
+              {byYear[year].map((item, ei) => {
+
+                // ── Memory card ──────────────────────────────────────────────
+                if (item._type === "memory") {
+                  const mem = item.data;
+                  return (
+                    <div key={mem.id} style={{
+                      background:"rgba(9,6,22,0.92)",
+                      borderRadius:20,
+                      marginBottom:14,
+                      overflow:"hidden",
+                      boxShadow:"0 4px 24px rgba(0,0,0,0.55), 0 0 0 0.5px rgba(120,80,200,0.20)",
+                      animation:`mem-card-in 0.45s ease ${(yi * 3 + ei) * 70}ms both`,
+                    }}>
+                      <div style={{ display:"flex", alignItems:"center",
+                        padding:"13px 14px 12px", gap:10 }}>
+                        {/* Dove icon */}
+                        <div style={{
+                          width:42, height:42, borderRadius:"50%", flexShrink:0,
+                          background:"radial-gradient(circle at 35% 28%, rgba(120,80,200,0.25) 0%, rgba(8,5,18,0.95) 70%)",
+                          border:"1.5px solid rgba(120,80,200,0.40)",
+                          display:"flex", alignItems:"center", justifyContent:"center",
+                          fontSize:20,
+                        }}>
+                          🕊️
+                        </div>
+                        <div style={{ flex:1, minWidth:0 }}>
+                          {mem.person_name && (
+                            <div style={{ fontSize:13, fontWeight:700, color:"#F5EDD8",
+                              letterSpacing:"-0.01em", lineHeight:1.2 }}>
+                              {mem.person_name}
+                            </div>
+                          )}
+                          <div style={{ display:"flex", alignItems:"center", gap:5, marginTop: mem.person_name ? 3 : 0, flexWrap:"wrap" as const }}>
+                            <div style={{ display:"flex", alignItems:"center", gap:3,
+                              background:"rgba(120,80,200,0.10)",
+                              border:"0.5px solid rgba(120,80,200,0.28)",
+                              borderRadius:100, padding:"2px 7px" }}>
+                              <span style={{ fontSize:8.5, color:"rgba(160,120,240,0.90)", fontWeight:700,
+                                letterSpacing:"0.07em", textTransform:"uppercase" as const }}>
+                                Recuerdo compartido
+                              </span>
+                            </div>
+                            {mem.memory_date && (
+                              <>
+                                <span style={{ fontSize:9, color:"rgba(255,255,255,0.22)" }}>·</span>
+                                <span style={{ fontSize:9, color:"rgba(255,255,255,0.30)" }}>
+                                  {longDate(mem.memory_date)}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ padding:"4px 16px 16px" }}>
+                        <p style={{ fontSize:14, color:"rgba(255,255,255,0.70)",
+                          lineHeight:1.75, margin:0, whiteSpace:"pre-wrap" as const }}>
+                          {mem.body}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                }
+
+                // ── Event card ───────────────────────────────────────────────
+                const event = item.data;
                 const t = getTypeInfo(event.event_type);
                 const phrase = contextPhrase(event);
                 const eventTs = new Date(event.created_at).getTime();
