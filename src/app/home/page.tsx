@@ -781,7 +781,7 @@ export default function HomePage() {
 
     const [graphRes, feedRes, sugRes, rosterRes, eventsRes, chatRes, capsulasRes, questionRes] = await Promise.allSettled([
       supabase.rpc("get_my_family_graph", { p_depth: 4 }),
-      fetch("/api/feed"),
+      fetch("/api/feed?birthdayDays=90"),
       fetch("/api/suggestions"),
       fetch("/api/family/roster"),
       fetch("/api/events"),
@@ -1240,46 +1240,31 @@ export default function HomePage() {
 
         {/* — Caso D: sin cumpleaños registrados — invita a completar perfiles */}
         {!todayBirthday && !upcomingBirthday && (
-          <Link href="/tree" style={{ textDecoration:"none" }}>
-            <div style={{
-              borderRadius:22,
-              background:"linear-gradient(145deg,#0a0c14 0%,#080a12 100%)",
-              position:"relative", overflow:"hidden",
-              borderTop:"1.5px solid rgba(130,100,255,0.35)",
-              borderLeft:"1px solid rgba(100,70,220,0.15)",
-              borderBottom:"4px solid #030208",
-              borderRight:"1px solid rgba(0,0,0,0.65)",
-              boxShadow:"0 6px 0 #030208, 0 12px 28px rgba(0,0,0,0.8), 0 0 28px rgba(120,80,255,0.08)",
-              padding:"20px 20px 18px",
-            }}>
-              <div style={{ position:"absolute", inset:0, pointerEvents:"none",
-                background:"radial-gradient(ellipse at 10% 50%, rgba(120,80,255,0.09) 0%, transparent 55%)" }} />
-              <div style={{ fontSize:36, lineHeight:1, marginBottom:10 }}>🎂</div>
-              <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em",
-                textTransform:"uppercase", color:"rgba(120,80,255,0.7)", marginBottom:6 }}>
-                Celebra a tu familia
-              </div>
-              <div style={{ fontSize:15, fontWeight:800, color:"#fff", lineHeight:1.3, marginBottom:8 }}>
-                Agrega las fechas de nacimiento
-              </div>
-              <div style={{ fontSize:12, color:"rgba(255,255,255,0.45)", marginBottom:16, lineHeight:1.5 }}>
-                Con {visibleCount} familiares en tu galaxia, habrá cumpleaños que celebrar cada semana.
-              </div>
-              <div style={{
-                display:"inline-flex", alignItems:"center", gap:8,
-                background:"#0e0c1e", borderTop:"1.5px solid rgba(180,140,255,0.40)",
-                color:"rgba(200,170,255,0.85)", borderRadius:50,
-                padding:"10px 22px", fontSize:12, fontWeight:700,
-                animation:"ghost-aura 2.8s ease-in-out infinite",
-                position:"relative", overflow:"hidden",
-              }}>
-                <div style={{ position:"absolute", top:0, width:"40%", height:"100%",
-                  background:"linear-gradient(90deg, transparent, rgba(180,140,255,0.22), transparent)",
-                  animation:"shimmer-sweep 3.4s ease-in-out infinite 1s", pointerEvents:"none" }} />
-                Ver árbol familiar →
-              </div>
+          <div style={{
+            borderRadius:22,
+            background:"linear-gradient(145deg,#0a0c14 0%,#080a12 100%)",
+            position:"relative", overflow:"hidden",
+            borderTop:"1.5px solid rgba(130,100,255,0.35)",
+            borderLeft:"1px solid rgba(100,70,220,0.15)",
+            borderBottom:"4px solid #030208",
+            borderRight:"1px solid rgba(0,0,0,0.65)",
+            boxShadow:"0 6px 0 #030208, 0 12px 28px rgba(0,0,0,0.8), 0 0 28px rgba(120,80,255,0.08)",
+            padding:"20px 20px 18px",
+          }}>
+            <div style={{ position:"absolute", inset:0, pointerEvents:"none",
+              background:"radial-gradient(ellipse at 10% 50%, rgba(120,80,255,0.09) 0%, transparent 55%)" }} />
+            <div style={{ fontSize:36, lineHeight:1, marginBottom:10 }}>🎂</div>
+            <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em",
+              textTransform:"uppercase", color:"rgba(120,80,255,0.7)", marginBottom:6 }}>
+              Celebra a tu familia
             </div>
-          </Link>
+            <div style={{ fontSize:15, fontWeight:800, color:"#fff", lineHeight:1.3, marginBottom:8 }}>
+              Agrega las fechas de nacimiento
+            </div>
+            <div style={{ fontSize:12, color:"rgba(255,255,255,0.45)", lineHeight:1.5 }}>
+              Con {visibleCount} familiares en tu galaxia, habrá cumpleaños que celebrar cada semana.
+            </div>
+          </div>
         )}
 
       </div>
@@ -1496,22 +1481,40 @@ export default function HomePage() {
             margin:"0 0 14px", lineHeight:1.6, fontFamily:"var(--font-playfair), Georgia, serif" }}>
             {dailyQuestion ?? "..."}
           </p>
-          <Link href="/events" style={{ textDecoration:"none" }}>
-            <div style={{
-              display:"flex", alignItems:"center", justifyContent:"center",
-              padding:"11px", borderRadius:50,
-              background:"#0e0c1e",
-              borderTop:"1.5px solid rgba(180,140,255,0.40)",
-              color:"rgba(200,170,255,0.85)", fontSize:12, fontWeight:700,
-              animation:"ghost-aura 2.8s ease-in-out infinite",
-              position:"relative", overflow:"hidden",
-            }}>
-              <div style={{ position:"absolute", top:0, width:"40%", height:"100%",
-                background:"linear-gradient(90deg, transparent, rgba(180,140,255,0.22), transparent)",
-                animation:"shimmer-sweep 3.4s ease-in-out infinite 1.2s", pointerEvents:"none" }} />
-              Responder con una historia
-            </div>
-          </Link>
+          <div style={{ display:"flex", gap:8 }}>
+            <Link href="/events" style={{ textDecoration:"none", flex:1 }}>
+              <div style={{
+                display:"flex", alignItems:"center", justifyContent:"center", gap:6,
+                padding:"11px", borderRadius:50,
+                background:"#0e0c1e",
+                borderTop:"1.5px solid rgba(180,140,255,0.40)",
+                color:"rgba(200,170,255,0.85)", fontSize:12, fontWeight:700,
+                animation:"ghost-aura 2.8s ease-in-out infinite",
+                position:"relative", overflow:"hidden",
+              }}>
+                <div style={{ position:"absolute", top:0, width:"40%", height:"100%",
+                  background:"linear-gradient(90deg, transparent, rgba(180,140,255,0.22), transparent)",
+                  animation:"shimmer-sweep 3.4s ease-in-out infinite 1.2s", pointerEvents:"none" }} />
+                ✍️ Escribe tu respuesta
+              </div>
+            </Link>
+            <Link href="/capsulas" style={{ textDecoration:"none", flex:1 }}>
+              <div style={{
+                display:"flex", alignItems:"center", justifyContent:"center", gap:6,
+                padding:"11px", borderRadius:50,
+                background:"#0e0c1e",
+                borderTop:"1.5px solid rgba(212,175,55,0.40)",
+                color:"rgba(240,210,100,0.85)", fontSize:12, fontWeight:700,
+                position:"relative", overflow:"hidden",
+                animation:"aura-pulse 2.8s ease-in-out infinite 0.6s",
+              }}>
+                <div style={{ position:"absolute", top:0, width:"40%", height:"100%",
+                  background:"linear-gradient(90deg, transparent, rgba(212,175,55,0.18), transparent)",
+                  animation:"shimmer-sweep 3.4s ease-in-out infinite 0.8s", pointerEvents:"none" }} />
+                🎥 Graba en video
+              </div>
+            </Link>
+          </div>
         </div>
       </div>
 
