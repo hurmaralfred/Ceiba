@@ -28,11 +28,12 @@ export async function GET(_req: NextRequest) {
 
   // Use the same relationship graph as the galaxy view (traverses relationships table at depth 4)
   // This includes ALL family members, not only those in space_memberships.
-  const { data: graphData } = await supabase.rpc("get_my_family_graph", { p_depth: 4 });
+  const { data: graphData, error: graphError } = await supabase.rpc("get_my_family_graph", { p_depth: 4 });
   const graphPersonIds: string[] = graphData
     ? ((graphData as any).nodes ?? []).map((n: any) => n.id as string)
     : [];
   const allPersonIds = [...new Set([myPersonId, ...graphPersonIds])];
+  console.log("[feed] graph nodes:", graphPersonIds.length, "graphError:", graphError?.message ?? null);
 
   const { data: familyClaims } = await service
     .from("person_claims")
@@ -89,6 +90,9 @@ export async function GET(_req: NextRequest) {
     if (next < now) next.setFullYear(now.getFullYear() + 1);
     return (next.getTime() - now.getTime()) / (1000 * 60 * 60 * 24) <= days;
   };
+
+  console.log("[feed] persons with birth_date:", (persons ?? []).length, "allPersonIds:", allPersonIds.length);
+  console.log("[feed] persons list:", ((persons ?? []) as any[]).map((p: any) => `${p.first_name} ${p.first_surname} ${p.birth_date} deceased=${p.is_deceased}`).join(" | "));
 
   const currentYear = now.getFullYear();
   const birthdays = ((persons ?? []) as any[])
