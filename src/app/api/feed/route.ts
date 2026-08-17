@@ -28,7 +28,7 @@ export async function GET(_req: NextRequest) {
 
   // Use the same relationship graph as the galaxy view (traverses relationships table at depth 4)
   // This includes ALL family members, not only those in space_memberships.
-  const { data: graphData } = await supabase.rpc("get_my_family_graph", { depth: 4 });
+  const { data: graphData } = await supabase.rpc("get_my_family_graph", { p_depth: 4 });
   const graphPersonIds: string[] = graphData
     ? ((graphData as any).nodes ?? []).map((n: any) => n.id as string)
     : [];
