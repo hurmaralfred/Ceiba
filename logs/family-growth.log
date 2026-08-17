@@ -1,0 +1,24 @@
+[2026-08-17T00:01:06.940Z] === Día 1: agregando 4 familiares ===
+[2026-08-17T00:01:08.010Z] ✓ Persona creada: Hernando Vargas (9ad15d16)
+[2026-08-17T00:01:08.225Z]   ✗ Relación Hernando → 9e9d369c-8235-4940-948e-5e92a228a063: invalid input value for enum relationship_type: "sibling"
+[2026-08-17T00:01:08.568Z] ✓ Persona creada: Amparo Quintero (cabb109d)
+[2026-08-17T00:01:08.747Z]   ✓ Relación partner con Hernando
+[2026-08-17T00:01:09.031Z] ✓ Persona creada: Andrés Vargas (3647359a)
+[2026-08-17T00:01:09.180Z]   ✓ Relación parent con Hernando
+[2026-08-17T00:01:10.002Z]   ✗ Claim Andrés: Could not find the 'verified_at' column of 'person_claims' in the schema cache
+[2026-08-17T00:01:10.144Z]   ✓ Agregado al chat grupal
+[2026-08-17T00:01:10.457Z] ✓ Persona creada: Camila Vargas (2dfa606f)
+[2026-08-17T00:01:10.596Z]   ✓ Relación parent con Hernando
+[2026-08-17T00:01:10.720Z] === Listo. Próxima ejecución agregará el grupo 2/7 ===
+[2026-08-17T00:03:21.725Z] === Día 1: agregando 4 familiares ===
+[2026-08-17T00:03:22.022Z] ✓ Persona creada: Hernando Vargas (6825a358)
+[2026-08-17T00:03:22.022Z]   · Hernando es hermano/a de 9e9d369c-8235-4940-948e-5e92a228a063 (en el mismo family space)
+[2026-08-17T00:03:22.317Z] ✓ Persona creada: Amparo Quintero (fffe08f3)
+[2026-08-17T00:03:22.453Z]   ✓ Relación partner con Hernando
+[2026-08-17T00:03:22.738Z] ✓ Persona creada: Andrés Vargas (1ad043fc)
+[2026-08-17T00:03:22.885Z]   ✓ Relación parent con Hernando
+[2026-08-17T00:03:23.593Z]   ✓ Auth + claim: andres.vargas.demo@ceibapp.test
+[2026-08-17T00:03:23.729Z]   ✓ Agregado al chat grupal
+[2026-08-17T00:03:24.011Z] ✓ Persona creada: Camila Vargas (a323ea7a)
+[2026-08-17T00:03:24.149Z]   ✓ Relación parent con Hernando
+[2026-08-17T00:03:24.286Z] === Listo. Próxima ejecución agregará el grupo 2/7 ===

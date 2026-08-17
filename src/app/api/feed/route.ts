@@ -84,15 +84,18 @@ export async function GET(_req: NextRequest) {
   const now = new Date();
   const todayMMDD = `${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
-  const isBirthdaySoon = (dateStr: string, days = 7) => {
+  // dates stored as "0001-01-01" are empty/null placeholders — skip them
+  const isValidBirthDate = (dateStr: string) => parseInt(dateStr.slice(0, 4)) >= 1900;
+
+  const daysUntilBirthday = (dateStr: string) => {
     const bd = new Date(dateStr);
     const next = new Date(now.getFullYear(), bd.getMonth(), bd.getDate());
     if (next < now) next.setFullYear(now.getFullYear() + 1);
-    return (next.getTime() - now.getTime()) / (1000 * 60 * 60 * 24) <= days;
+    return (next.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
   };
 
-  console.log("[feed] persons with birth_date:", (persons ?? []).length, "allPersonIds:", allPersonIds.length);
-  console.log("[feed] persons list:", ((persons ?? []) as any[]).map((p: any) => `${p.first_name} ${p.first_surname} ${p.birth_date} deceased=${p.is_deceased}`).join(" | "));
+  const isBirthdaySoon = (dateStr: string, days = 7) =>
+    isValidBirthDate(dateStr) && daysUntilBirthday(dateStr) <= days;
 
   const currentYear = now.getFullYear();
   const birthdays = ((persons ?? []) as any[])
@@ -104,7 +107,10 @@ export async function GET(_req: NextRequest) {
       birth_date: p.birth_date,
       is_deceased: !!(p.is_deceased) || !!p.death_date,
       age_would_be: currentYear - parseInt(p.birth_date.slice(0, 4)),
-    }));
+      days_until: Math.ceil(daysUntilBirthday(p.birth_date)),
+    }))
+    // sort ascending so the home page slice(0,10) always gets the soonest birthdays first
+    .sort((a, b) => a.days_until - b.days_until);
 
   // "Hoy en la historia familiar" — birth & death anniversaries matching today's month-day
   const anniversaries: Array<{
@@ -113,6 +119,7 @@ export async function GET(_req: NextRequest) {
   }> = [];
 
   ((persons ?? []) as any[]).forEach((p) => {
+    if (!isValidBirthDate(p.birth_date)) return;
     const mmdd = p.birth_date.slice(5, 10); // "MM-DD"
     const birthYear = parseInt(p.birth_date.slice(0, 4));
     // Show birth anniversary only if NOT already showing as upcoming birthday, and year is in the past

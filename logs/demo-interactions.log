@@ -1,0 +1,249 @@
+[2026-08-16T19:07:58.611Z] === Iniciando interacciones demo ===
+[2026-08-16T19:08:43.160Z] === Iniciando interacciones demo ===
+[2026-08-16T19:08:43.943Z] ✓ Login: Carlos (aef9bbfb)
+[2026-08-16T19:08:44.447Z]   ✓ Chat: "¿Cómo amanecieron?"
+[2026-08-16T19:08:44.635Z]   ✓ Leyó 5 mensajes recientes
+[2026-08-16T19:08:44.805Z]   ✓ Feed: 6 fotos cargadas
+[2026-08-16T19:08:45.166Z]   ✓ person_claim: 9e9d369c
+[2026-08-16T19:08:45.386Z] ✓ Login: Sofía (0257e9ec)
+[2026-08-16T19:08:45.526Z]   ✓ Chat: "Les mando fotos de la cena de hoy"
+[2026-08-16T19:08:45.663Z]   ✓ Leyó 5 mensajes recientes
+[2026-08-16T19:08:45.811Z]   ✓ Memoria creada
+[2026-08-16T19:08:45.946Z]   ✓ Feed: 6 fotos cargadas
+[2026-08-16T19:08:46.225Z]   ✓ person_claim: 50ceeff0
+[2026-08-16T19:08:46.451Z] ✓ Login: Luis (67874cce)
+[2026-08-16T19:08:46.595Z]   ✓ Chat: "Los extraño mucho a todos"
+[2026-08-16T19:08:46.747Z]   ✓ Leyó 5 mensajes recientes
+[2026-08-16T19:08:46.903Z]   ✓ Feed: 6 fotos cargadas
+[2026-08-16T19:08:47.182Z]   ✓ person_claim: 09aed339
+[2026-08-16T19:08:47.423Z] ✓ Login: Valentina (41c6e3bf)
+[2026-08-16T19:08:47.550Z]   ✓ Chat: "Hice las arepas que le gustan al abuelo "
+[2026-08-16T19:08:47.695Z]   ✓ Leyó 5 mensajes recientes
+[2026-08-16T19:08:47.865Z]   ✓ Feed: 6 fotos cargadas
+[2026-08-16T19:08:48.174Z]   ✓ person_claim: 4663a364
+[2026-08-16T19:08:48.174Z] === Todas las interacciones exitosas ✅ ===
+[2026-08-16T23:45:08.617Z] === Iniciando interacciones demo ===
+[2026-08-16T23:45:10.322Z] ✓ Login: Carlos (aef9bbfb)
+[2026-08-16T23:45:10.875Z]   ✓ Chat: "Buenos días familia! 🌅"
+[2026-08-16T23:45:11.258Z]   ✓ Leyó 5 mensajes recientes
+[2026-08-16T23:45:11.420Z]   ✓ Feed: 6 fotos cargadas
+[2026-08-16T23:45:11.771Z]   ✓ person_claim: 9e9d369c
+[2026-08-16T23:45:12.032Z] ✓ Login: Sofía (0257e9ec)
+[2026-08-16T23:45:12.172Z]   ✓ Chat: "¿Alguien sabe a qué hora es la reunión?"
+[2026-08-16T23:45:12.314Z]   ✓ Leyó 5 mensajes recientes
+[2026-08-16T23:45:12.455Z]   ✓ Feed: 6 fotos cargadas
+[2026-08-16T23:45:12.735Z]   ✓ person_claim: 50ceeff0
+[2026-08-16T23:45:12.970Z] ✓ Login: Luis (67874cce)
+[2026-08-16T23:45:13.118Z]   ✓ Chat: "Llegué bien al trabajo"
+[2026-08-16T23:45:13.267Z]   ✓ Leyó 5 mensajes recientes
+[2026-08-16T23:45:13.466Z]   ✓ Memoria creada
+[2026-08-16T23:45:13.603Z]   ✓ Feed: 6 fotos cargadas
+[2026-08-16T23:45:13.885Z]   ✓ person_claim: 09aed339
+[2026-08-16T23:45:14.110Z] ✓ Login: Valentina (41c6e3bf)
+[2026-08-16T23:45:14.288Z]   ✓ Chat: "Buenas noches familia 🌙"
+[2026-08-16T23:45:14.487Z]   ✓ Leyó 5 mensajes recientes
+[2026-08-16T23:45:14.622Z]   ✓ Feed: 6 fotos cargadas
+[2026-08-16T23:45:15.105Z]   ✓ person_claim: 4663a364
+[2026-08-16T23:45:15.105Z] === Todas las interacciones exitosas ✅ ===
+[2026-08-16T23:56:45.655Z] === Iniciando ciclo de interacciones demo ===
+[2026-08-16T23:56:46.820Z] ✓ Login: Sofía
+[2026-08-16T23:56:46.821Z] ✓ Login: Luis
+[2026-08-16T23:56:46.821Z] ✓ Login: Carlos
+[2026-08-16T23:56:46.821Z] ✓ Login: Valentina
+[2026-08-16T23:56:46.821Z] --- Health checks de API routes ---
+[2026-08-16T23:56:50.345Z]   ✓ [Carlos] GET /api/hoy → 200
+[2026-08-16T23:56:51.416Z]   ✓ [Carlos] GET /api/activity → 200
+[2026-08-16T23:56:52.102Z]   ✓ [Carlos] GET /api/photos → 200
+[2026-08-16T23:56:54.424Z]   ✓ [Carlos] GET /api/family/map → 200
+[2026-08-16T23:56:55.334Z]   ✓ [Carlos] GET /api/family/roster → 200
+[2026-08-16T23:56:56.680Z]   ✓ [Carlos] GET /api/suggestions → 200
+[2026-08-16T23:56:57.331Z]   ✓ [Carlos] GET /api/events → 200
+[2026-08-16T23:56:58.288Z]   ✓ [Carlos] GET /api/gamification → 200
+[2026-08-16T23:56:58.288Z] --- Interacciones por usuario ---
+[2026-08-16T23:56:58.546Z]   ✓ [Carlos] Chat grupal
+[2026-08-16T23:56:58.689Z]   ✓ [Carlos] Leyó 10 mensajes grupales
+[2026-08-16T23:56:59.506Z]   ✓ [Carlos] DM → Luis
+[2026-08-16T23:56:59.645Z]   ✓ [Carlos] Memoria creada
+[2026-08-16T23:57:00.074Z]   ✓ [Sofía] Chat grupal
+[2026-08-16T23:57:00.206Z]   ✓ [Sofía] Leyó 10 mensajes grupales
+[2026-08-16T23:57:01.005Z]   ✓ [Sofía] DM → Valentina
+[2026-08-16T23:57:01.145Z]   ✓ [Sofía] Memoria creada
+[2026-08-16T23:57:01.529Z]   ✓ [Luis] Chat grupal
+[2026-08-16T23:57:01.667Z]   ✓ [Luis] Leyó 10 mensajes grupales
+[2026-08-16T23:57:01.802Z]   ✓ [Luis] DM → Carlos
+[2026-08-16T23:57:01.937Z]   ✓ [Luis] Memoria creada
+[2026-08-16T23:57:02.349Z]   ✓ [Valentina] Chat grupal
+[2026-08-16T23:57:02.483Z]   ✓ [Valentina] Leyó 10 mensajes grupales
+[2026-08-16T23:57:02.613Z]   ✓ [Valentina] DM → Sofía
+[2026-08-17T00:03:33.692Z] === Iniciando ciclo de interacciones demo ===
+[2026-08-17T00:03:34.092Z] ✓ Login: Sofía
+[2026-08-17T00:03:34.096Z] ✓ Login: Luis
+[2026-08-17T00:03:34.254Z] ✓ Login: Valentina
+[2026-08-17T00:03:34.355Z] ✓ Login: Carlos
+[2026-08-17T00:03:34.356Z] --- Health checks de API routes ---
+[2026-08-17T00:03:35.487Z]   ✓ [Carlos] GET /api/feed → 200
+[2026-08-17T00:03:36.149Z]   ✓ [Carlos] GET /api/hoy → 200
+[2026-08-17T00:03:36.829Z]   ✓ [Carlos] GET /api/activity → 200
+[2026-08-17T00:03:37.824Z]   ✓ [Carlos] GET /api/photos → 200
+[2026-08-17T00:03:38.460Z]   ✓ [Carlos] GET /api/family/map → 200
+[2026-08-17T00:03:39.485Z]   ✓ [Carlos] GET /api/family/roster → 200
+[2026-08-17T00:03:40.613Z]   ✓ [Carlos] GET /api/chat/rooms → 200
+[2026-08-17T00:03:41.176Z]   ✓ [Carlos] GET /api/suggestions → 200
+[2026-08-17T00:03:42.042Z]   ✓ [Carlos] GET /api/events → 200
+[2026-08-17T00:03:42.867Z]   ✓ [Carlos] GET /api/gamification → 200
+[2026-08-17T00:03:42.868Z] --- Interacciones por usuario ---
+[2026-08-17T00:03:43.110Z]   ✓ [Carlos] Chat grupal
+[2026-08-17T00:03:43.245Z]   ✓ [Carlos] Leyó 10 mensajes grupales
+[2026-08-17T00:03:44.115Z]   ✓ [Carlos] DM → Luis
+[2026-08-17T00:03:44.429Z]   ✓ [Carlos] Árbol: 2 relaciones activas
+[2026-08-17T00:03:44.562Z]   ✓ [Sofía] Chat grupal
+[2026-08-17T00:03:44.710Z]   ✓ [Sofía] Leyó 10 mensajes grupales
+[2026-08-17T00:03:45.689Z]   ✓ [Sofía] DM → Valentina
+[2026-08-17T00:03:45.988Z]   ✓ [Sofía] Árbol: 2 relaciones activas
+[2026-08-17T00:03:46.129Z]   ✓ [Luis] Chat grupal
+[2026-08-17T00:03:46.260Z]   ✓ [Luis] Leyó 10 mensajes grupales
+[2026-08-17T00:03:46.442Z]   ✓ [Luis] DM → Carlos
+[2026-08-17T00:03:46.593Z]   ✓ [Luis] Memoria creada
+[2026-08-17T00:03:46.892Z]   ✓ [Luis] Árbol: 4 relaciones activas
+[2026-08-17T00:03:47.032Z]   ✓ [Valentina] Chat grupal
+[2026-08-17T00:03:47.184Z]   ✓ [Valentina] Leyó 10 mensajes grupales
+[2026-08-17T00:03:47.340Z]   ✓ [Valentina] DM → Sofía
+[2026-08-17T00:03:47.495Z]   ✓ [Valentina] Memoria creada
+[2026-08-17T00:03:47.769Z]   ✓ [Valentina] Árbol: 2 relaciones activas
+[2026-08-17T00:03:47.769Z] === Todas las verificaciones exitosas ✅ ===
+[2026-08-17T00:20:19.423Z] === Iniciando ciclo de interacciones demo ===
+[2026-08-17T00:20:21.721Z] ✓ Login: Sofía
+[2026-08-17T00:20:32.858Z] ✓ Login: Luis
+[2026-08-17T00:20:45.731Z] ✓ Login: Valentina
+[2026-08-17T00:20:45.732Z] --- Health checks de API routes ---
+[2026-08-17T00:20:49.605Z]   ✓ [Sofía] GET /api/feed → 200
+[2026-08-17T00:20:50.521Z]   ✓ [Sofía] GET /api/hoy → 200
+[2026-08-17T00:20:51.337Z]   ✓ [Sofía] GET /api/activity → 200
+[2026-08-17T00:20:52.165Z]   ✓ [Sofía] GET /api/photos → 200
+[2026-08-17T00:20:52.787Z]   ✓ [Sofía] GET /api/family/map → 200
+[2026-08-17T00:20:53.491Z]   ✓ [Sofía] GET /api/family/roster → 200
+[2026-08-17T00:20:54.418Z]   ✓ [Sofía] GET /api/chat/rooms → 200
+[2026-08-17T00:20:54.999Z]   ✓ [Sofía] GET /api/suggestions → 200
+[2026-08-17T00:20:55.678Z]   ✓ [Sofía] GET /api/events → 200
+[2026-08-17T00:20:56.457Z]   ✓ [Sofía] GET /api/gamification → 200
+[2026-08-17T00:20:56.457Z] --- Interacciones por usuario ---
+[2026-08-17T00:20:56.682Z]   ✓ [Sofía] Chat grupal
+[2026-08-17T00:20:56.815Z]   ✓ [Sofía] Leyó 10 mensajes grupales
+[2026-08-17T00:20:57.640Z]   ✓ [Sofía] DM → Valentina
+[2026-08-17T00:20:57.785Z]   ✓ [Sofía] Memoria creada
+[2026-08-17T00:20:58.061Z]   ✓ [Sofía] Árbol: 2 relaciones activas
+[2026-08-17T00:20:58.199Z]   ✓ [Luis] Chat grupal
+[2026-08-17T00:20:58.333Z]   ✓ [Luis] Leyó 10 mensajes grupales
+[2026-08-17T00:20:58.605Z]   ✓ [Luis] Árbol: 4 relaciones activas
+[2026-08-17T00:20:58.736Z]   ✓ [Valentina] Chat grupal
+[2026-08-17T00:20:58.869Z]   ✓ [Valentina] Leyó 10 mensajes grupales
+[2026-08-17T00:20:58.998Z]   ✓ [Valentina] DM → Sofía
+[2026-08-17T00:20:59.277Z]   ✓ [Valentina] Árbol: 2 relaciones activas
+[2026-08-17T00:21:31.256Z] === Iniciando ciclo de interacciones demo ===
+[2026-08-17T00:21:31.771Z] ✓ Login: Carlos
+[2026-08-17T00:21:31.788Z] ✓ Login: Sofía
+[2026-08-17T00:21:31.894Z] ✓ Login: Valentina
+[2026-08-17T00:21:31.902Z] ✓ Login: Luis
+[2026-08-17T00:21:31.902Z] --- Health checks de API routes ---
+[2026-08-17T00:21:33.541Z]   ✓ [Carlos] GET /api/feed → 200
+[2026-08-17T00:21:34.176Z]   ✓ [Carlos] GET /api/hoy → 200
+[2026-08-17T00:21:35.302Z]   ✓ [Carlos] GET /api/activity → 200
+[2026-08-17T00:21:36.323Z]   ✓ [Carlos] GET /api/photos → 200
+[2026-08-17T00:21:36.920Z]   ✓ [Carlos] GET /api/family/map → 200
+[2026-08-17T00:21:37.953Z]   ✓ [Carlos] GET /api/family/roster → 200
+[2026-08-17T00:21:38.872Z]   ✓ [Carlos] GET /api/chat/rooms → 200
+[2026-08-17T00:21:39.533Z]   ✓ [Carlos] GET /api/suggestions → 200
+[2026-08-17T00:21:40.284Z]   ✓ [Carlos] GET /api/events → 200
+[2026-08-17T00:21:41.102Z]   ✓ [Carlos] GET /api/gamification → 200
+[2026-08-17T00:21:41.102Z] --- Interacciones por usuario ---
+[2026-08-17T00:21:41.456Z]   ✓ [Carlos] Chat grupal
+[2026-08-17T00:21:41.590Z]   ✓ [Carlos] Leyó 10 mensajes grupales
+[2026-08-17T00:21:42.642Z]   ✓ [Carlos] DM → Luis
+[2026-08-17T00:21:42.783Z]   ✓ [Carlos] Memoria creada
+[2026-08-17T00:21:43.045Z]   ✓ [Carlos] Árbol: 2 relaciones activas
+[2026-08-17T00:21:43.176Z]   ✓ [Sofía] Chat grupal
+[2026-08-17T00:21:43.317Z]   ✓ [Sofía] Leyó 10 mensajes grupales
+[2026-08-17T00:21:44.130Z]   ✓ [Sofía] DM → Valentina
+[2026-08-17T00:21:44.400Z]   ✓ [Sofía] Árbol: 2 relaciones activas
+[2026-08-17T00:21:44.522Z]   ✓ [Luis] Chat grupal
+[2026-08-17T00:21:44.656Z]   ✓ [Luis] Leyó 10 mensajes grupales
+[2026-08-17T00:21:44.784Z]   ✓ [Luis] DM → Carlos
+[2026-08-17T00:21:44.939Z]   ✓ [Luis] Memoria creada
+[2026-08-17T00:21:45.199Z]   ✓ [Luis] Árbol: 4 relaciones activas
+[2026-08-17T00:21:45.334Z]   ✓ [Valentina] Chat grupal
+[2026-08-17T00:21:45.468Z]   ✓ [Valentina] Leyó 10 mensajes grupales
+[2026-08-17T00:21:45.604Z]   ✓ [Valentina] DM → Sofía
+[2026-08-17T00:21:45.863Z]   ✓ [Valentina] Árbol: 2 relaciones activas
+[2026-08-17T00:21:45.863Z] === Todas las verificaciones exitosas ✅ ===
+[2026-08-17T00:48:07.490Z] === Iniciando ciclo de interacciones demo ===
+[2026-08-17T00:48:08.656Z] ✓ Login: Luis
+[2026-08-17T00:48:08.657Z] ✓ Login: Carlos
+[2026-08-17T00:48:08.657Z] ✓ Login: Sofía
+[2026-08-17T00:48:08.657Z] ✓ Login: Valentina
+[2026-08-17T00:48:08.658Z] --- Health checks de API routes ---
+[2026-08-17T00:48:11.746Z]   ✓ [Carlos] GET /api/feed → 200
+[2026-08-17T00:48:12.083Z]   ✓ [Carlos] GET /api/hoy → 200
+[2026-08-17T00:48:12.574Z]   ✓ [Carlos] GET /api/activity → 200
+[2026-08-17T00:48:13.077Z]   ✓ [Carlos] GET /api/photos → 200
+[2026-08-17T00:48:13.466Z]   ✓ [Carlos] GET /api/family/map → 200
+[2026-08-17T00:48:13.870Z]   ✓ [Carlos] GET /api/family/roster → 200
+[2026-08-17T00:48:14.561Z]   ✓ [Carlos] GET /api/chat/rooms → 200
+[2026-08-17T00:48:15.002Z]   ✓ [Carlos] GET /api/suggestions → 200
+[2026-08-17T00:48:15.422Z]   ✓ [Carlos] GET /api/events → 200
+[2026-08-17T00:48:16.024Z]   ✓ [Carlos] GET /api/gamification → 200
+[2026-08-17T00:48:16.024Z] --- Interacciones por usuario ---
+[2026-08-17T00:48:16.287Z]   ✓ [Carlos] Chat grupal
+[2026-08-17T00:48:16.638Z]   ✓ [Carlos] Leyó 10 mensajes grupales
+[2026-08-17T00:48:17.715Z]   ✓ [Carlos] DM → Luis
+[2026-08-17T00:48:18.048Z]   ✓ [Carlos] Árbol: 2 relaciones activas
+[2026-08-17T00:48:18.187Z]   ✓ [Sofía] Chat grupal
+[2026-08-17T00:48:18.332Z]   ✓ [Sofía] Leyó 10 mensajes grupales
+[2026-08-17T00:48:19.183Z]   ✓ [Sofía] DM → Valentina
+[2026-08-17T00:48:19.399Z]   ✓ [Sofía] Memoria creada
+[2026-08-17T00:48:19.665Z]   ✓ [Sofía] Árbol: 2 relaciones activas
+[2026-08-17T00:48:19.807Z]   ✓ [Luis] Chat grupal
+[2026-08-17T00:48:19.944Z]   ✓ [Luis] Leyó 10 mensajes grupales
+[2026-08-17T00:48:20.086Z]   ✓ [Luis] DM → Carlos
+[2026-08-17T00:48:20.348Z]   ✓ [Luis] Árbol: 4 relaciones activas
+[2026-08-17T00:48:20.492Z]   ✓ [Valentina] Chat grupal
+[2026-08-17T00:48:20.632Z]   ✓ [Valentina] Leyó 10 mensajes grupales
+[2026-08-17T00:48:20.760Z]   ✓ [Valentina] DM → Sofía
+[2026-08-17T00:48:20.892Z]   ✓ [Valentina] Memoria creada
+[2026-08-17T00:48:21.159Z]   ✓ [Valentina] Árbol: 2 relaciones activas
+[2026-08-17T00:48:21.159Z] === Todas las verificaciones exitosas ✅ ===
+[2026-08-17T04:15:53.969Z] === Iniciando ciclo de interacciones demo ===
+[2026-08-17T04:15:55.401Z] ✓ Login: Luis
+[2026-08-17T04:15:55.402Z] ✓ Login: Carlos
+[2026-08-17T04:15:55.403Z] ✓ Login: Sofía
+[2026-08-17T04:15:55.403Z] ✓ Login: Valentina
+[2026-08-17T04:15:55.403Z] --- Health checks de API routes ---
+[2026-08-17T04:15:59.385Z]   ✓ [Carlos] GET /api/feed → 200
+[2026-08-17T04:16:00.276Z]   ✓ [Carlos] GET /api/hoy → 200
+[2026-08-17T04:16:01.113Z]   ✓ [Carlos] GET /api/activity → 200
+[2026-08-17T04:16:01.946Z]   ✓ [Carlos] GET /api/photos → 200
+[2026-08-17T04:16:03.736Z]   ✓ [Carlos] GET /api/family/map → 200
+[2026-08-17T04:16:04.597Z]   ✓ [Carlos] GET /api/family/roster → 200
+[2026-08-17T04:16:05.556Z]   ✓ [Carlos] GET /api/chat/rooms → 200
+[2026-08-17T04:16:06.251Z]   ✓ [Carlos] GET /api/suggestions → 200
+[2026-08-17T04:16:07.060Z]   ✓ [Carlos] GET /api/events → 200
+[2026-08-17T04:16:07.816Z]   ✓ [Carlos] GET /api/gamification → 200
+[2026-08-17T04:16:07.817Z] --- Interacciones por usuario ---
+[2026-08-17T04:16:08.295Z]   ✓ [Carlos] Chat grupal
+[2026-08-17T04:16:08.660Z]   ✓ [Carlos] Leyó 10 mensajes grupales
+[2026-08-17T04:16:09.280Z]   ✓ [Carlos] DM → Luis
+[2026-08-17T04:16:09.423Z]   ✓ [Carlos] Memoria creada
+[2026-08-17T04:16:09.728Z]   ✓ [Carlos] Árbol: 2 relaciones activas
+[2026-08-17T04:16:09.860Z]   ✓ [Sofía] Chat grupal
+[2026-08-17T04:16:10.008Z]   ✓ [Sofía] Leyó 10 mensajes grupales
+[2026-08-17T04:16:10.571Z]   ✓ [Sofía] DM → Valentina
+[2026-08-17T04:16:10.884Z]   ✓ [Sofía] Árbol: 2 relaciones activas
+[2026-08-17T04:16:11.024Z]   ✓ [Luis] Chat grupal
+[2026-08-17T04:16:11.160Z]   ✓ [Luis] Leyó 10 mensajes grupales
+[2026-08-17T04:16:11.287Z]   ✓ [Luis] DM → Carlos
+[2026-08-17T04:16:11.591Z]   ✓ [Luis] Árbol: 4 relaciones activas
+[2026-08-17T04:16:11.724Z]   ✓ [Valentina] Chat grupal
+[2026-08-17T04:16:12.187Z]   ✓ [Valentina] Leyó 10 mensajes grupales
+[2026-08-17T04:16:12.324Z]   ✓ [Valentina] DM → Sofía
+[2026-08-17T04:16:12.468Z]   ✓ [Valentina] Memoria creada
+[2026-08-17T04:16:12.739Z]   ✓ [Valentina] Árbol: 2 relaciones activas
+[2026-08-17T04:16:12.739Z] === Todas las verificaciones exitosas ✅ ===

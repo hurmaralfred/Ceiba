@@ -1,0 +1,18 @@
+[2026-08-16T19:07:58.964Z] AUTH ERROR Carlos: Invalid API key
+[2026-08-16T19:07:59.044Z] AUTH ERROR Sofía: Invalid API key
+[2026-08-16T19:07:59.097Z] AUTH ERROR Luis: Invalid API key
+[2026-08-16T19:07:59.192Z] AUTH ERROR Valentina: Invalid API key
+[2026-08-16T19:07:59.192Z] === 4 error(es) detectado(s) ❌ ===
+[2026-08-16T19:07:59.192Z] Errores: AUTH ERROR Carlos: Invalid API key | AUTH ERROR Sofía: Invalid API key | AUTH ERROR Luis: Invalid API key | AUTH ERROR Valentina: Invalid API key
+[2026-08-16T23:56:49.757Z]   ✗ [Carlos] GET /api/feed → HTTP 200 | {"birthdays":[],"anniversaries":[],"photos":[{"id":"6f2fb5fb-ee61-4f4d-91b0-ec327643d4ef","uploader_user_id":"67874cce-4
+[2026-08-16T23:56:56.124Z]   ✗ [Carlos] GET /api/chat/rooms → HTTP 200 | {"conversations":[{"roomId":"fb86e62d-c62f-466e-aa16-dbedc9c75650","type":"group","name":"Chat Familiar","lastMessage":"
+[2026-08-16T23:56:59.938Z]   ✗ [Carlos] Sin relaciones activas en árbol
+[2026-08-16T23:57:01.406Z]   ✗ [Sofía] Sin relaciones activas en árbol
+[2026-08-16T23:57:02.218Z]   ✗ [Luis] Sin relaciones activas en árbol
+[2026-08-16T23:57:02.878Z]   ✗ [Valentina] Sin relaciones activas en árbol
+[2026-08-16T23:57:02.878Z] === 2 problema(s) detectado(s) ❌ ===
+[2026-08-16T23:57:02.878Z]   •   ✗ [Carlos] GET /api/feed → HTTP 200 | {"birthdays":[],"anniversaries":[],"photos":[{"id":"6f2fb5fb-ee61-4f4d-91b0-ec327643d4ef","uploader_user_id":"67874cce-4
+[2026-08-16T23:57:02.878Z]   •   ✗ [Carlos] GET /api/chat/rooms → HTTP 200 | {"conversations":[{"roomId":"fb86e62d-c62f-466e-aa16-dbedc9c75650","type":"group","name":"Chat Familiar","lastMessage":"
+[2026-08-17T00:20:29.991Z] AUTH ERROR Carlos: fetch failed
+[2026-08-17T00:20:59.277Z] === 1 problema(s) detectado(s) ❌ ===
+[2026-08-17T00:20:59.277Z]   • AUTH ERROR Carlos: fetch failed
