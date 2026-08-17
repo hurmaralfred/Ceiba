@@ -41,8 +41,8 @@ export async function GET() {
   if (!spaceId) return NextResponse.json({ memories: [] });
 
   const today = new Date();
-  const month = today.getMonth() + 1; // 1-12
-  const day   = today.getDate();
+  const month = today.getUTCMonth() + 1; // 1-12, UTC to match stored dates
+  const day   = today.getUTCDate();
 
   // Postgres: EXTRACT(MONTH FROM memory_date) y EXTRACT(DAY FROM memory_date)
   const { data, error } = await service

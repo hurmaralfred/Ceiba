@@ -34,7 +34,7 @@ export async function GET(
     ? [...new Set([myPersonId, ...familyPersonIds, ...graphPersonIds])]
     : [];
 
-  if (myPersonId && !allPersonIds.includes(personId)) {
+  if (!myPersonId || !allPersonIds.includes(personId)) {
     const { data: selfClaim } = await service
       .from("person_claims")
       .select("person_id")
@@ -222,12 +222,13 @@ export async function PATCH(
   if (!isCreator && isDeceased) {
     // Verify the editor is actually in the same family space
     const myPersonId = await resolveApprovedPersonId(service, user.id);
-    if (myPersonId) {
-      const familyIds = await resolveFamilySpaceMemberIds(service, myPersonId);
-      const allIds = [myPersonId, ...familyIds];
-      if (!allIds.includes(personId)) {
-        return NextResponse.json({ error: "Esta persona no pertenece a tu familia" }, { status: 403 });
-      }
+    if (!myPersonId) {
+      return NextResponse.json({ error: "No tienes permiso para editar este perfil" }, { status: 403 });
+    }
+    const familyIds = await resolveFamilySpaceMemberIds(service, myPersonId);
+    const allIds = [myPersonId, ...familyIds];
+    if (!allIds.includes(personId)) {
+      return NextResponse.json({ error: "Esta persona no pertenece a tu familia" }, { status: 403 });
     }
   }
 
@@ -239,11 +240,12 @@ export async function PATCH(
 
   // Non-creators can only update biographical fields, not the name
   if (!isCreator && isDeceased) {
-    const bioUpdates: Record<string, unknown> = {
-      birth_date: birth_date || null,
-      birth_city: birth_city?.trim() || null,
-      birth_country: birth_country?.trim() || null,
-    };
+    const bioUpdates: Record<string, unknown> = {};
+    if (birth_date !== undefined) bioUpdates.birth_date = birth_date || null;
+    if (birth_city !== undefined) bioUpdates.birth_city = birth_city?.trim() || null;
+    if (birth_country !== undefined) bioUpdates.birth_country = birth_country?.trim() || null;
+    if (Object.keys(bioUpdates).length === 0)
+      return NextResponse.json({ error: "No hay campos para actualizar" }, { status: 400 });
     const { data: updated, error } = await service
       .from("persons").update(bioUpdates).eq("id", personId).select().single();
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });

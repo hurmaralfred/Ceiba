@@ -201,6 +201,7 @@ function PersonaPageInner() {
   const editPhotoRef = useRef<HTMLInputElement>(null);
 
   // Memory contribution (compartir lo que sabes)
+  const [showCompartirForm, setShowCompartirForm] = useState(compartir);
   const [memoryText, setMemoryText] = useState("");
   const [memorySaving, setMemorySaving] = useState(false);
   const [memoryDone, setMemoryDone] = useState(false);
@@ -268,15 +269,15 @@ function PersonaPageInner() {
       const { data: urlData } = supabase.storage.from("family-photos").getPublicUrl(upData.path);
       const { data: { user } } = await supabase.auth.getUser();
       const { data: spaceData } = await supabase
-        .from("family_space_members")
-        .select("family_space_id")
-        .eq("user_id", user!.id)
+        .from("space_memberships")
+        .select("space_id")
+        .eq("person_id", personId)
         .limit(1)
         .single();
       if (!spaceData) throw new Error("Sin espacio familiar");
       await supabase.from("family_memories").insert({
         author_user_id: user!.id,
-        family_space_id: spaceData.family_space_id,
+        family_space_id: (spaceData as any).space_id,
         person_id: personId,
         body: uploadCaption || `Foto de ${person?.first_name ?? "familiar"}`,
         memory_date: new Date().toISOString().slice(0, 10),
@@ -401,8 +402,9 @@ function PersonaPageInner() {
       setMemoryDone(true);
       // Refresh text memories so the new entry shows in Recuerdos tab
       setTextMemoriesLoaded(false);
-    } catch {
-      // stay in form state, no silent failure
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Error al guardar";
+      toast.error(msg);
       setMemorySaving(false);
     } finally {
       setMemorySaving(false);
@@ -664,8 +666,8 @@ function PersonaPageInner() {
             )}
           </div>
 
-          {/* ── COMPARTIR MEMORIA (si llegó desde la tarjeta del home) ───────── */}
-          {compartir && person?.is_deceased && (
+          {/* ── COMPARTIR MEMORIA ───────────────────────────────────────────── */}
+          {showCompartirForm && person?.is_deceased && (
             <div style={{
               margin: "0 16px 4px", padding: "18px 18px 20px",
               background: "linear-gradient(145deg,#0d0b10 0%,#080608 100%)",
@@ -991,7 +993,7 @@ function PersonaPageInner() {
                   </p>
                   {person?.is_deceased && (
                     <button
-                      onClick={() => { setMemoryDone(false); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                      onClick={() => { setMemoryDone(false); setMemoryText(""); setShowCompartirForm(true); setTab("historia"); }}
                       style={{
                         marginTop: 20, padding: "10px 22px", borderRadius: 50,
                         background: "rgba(180,140,255,0.1)", border: "1.5px solid rgba(180,140,255,0.25)",

@@ -49,12 +49,12 @@ const MONTHS_SHORT = ["ENE","FEB","MAR","ABR","MAY","JUN","JUL","AGO","SEP","OCT
 const MONTHS_LONG  = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
 
 function formatDay(dateStr: string): string {
-  const d = new Date(dateStr);
+  const d = new Date(dateStr + "T12:00:00");
   return `${d.getDate()} ${MONTHS_SHORT[d.getMonth()]}`;
 }
 
 function contextPhrase(event: FamilyEvent): string {
-  const d = new Date(event.event_date);
+  const d = new Date(event.event_date + "T12:00:00");
   const now = new Date();
   const years = now.getFullYear() - d.getFullYear();
   const isAnniversaryToday = now.getMonth() === d.getMonth() && now.getDate() === d.getDate();
@@ -78,7 +78,7 @@ function contextPhrase(event: FamilyEvent): string {
 }
 
 function longDate(dateStr: string): string {
-  const d = new Date(dateStr);
+  const d = new Date(dateStr + "T12:00:00");
   return `${d.getDate()} de ${MONTHS_LONG[d.getMonth()]} de ${d.getFullYear()}`;
 }
 
