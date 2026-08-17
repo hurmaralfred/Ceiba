@@ -3,6 +3,7 @@ import { Inter, Playfair_Display } from "next/font/google";
 import { Toaster } from "react-hot-toast";
 import { Analytics } from "@vercel/analytics/react";
 import InstallPrompt from "@/components/InstallPrompt";
+import AmplitudeInit from "@/components/AmplitudeInit";
 import PushRegistrar from "@/components/PushRegistrar";
 import NotificationBanner from "@/components/NotificationBanner";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -51,6 +52,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <PushRegistrar />
         <NotificationBanner />
         <Analytics />
+        <AmplitudeInit />
         <script dangerouslySetInnerHTML={{
           __html: `
             if ('serviceWorker' in navigator) {

@@ -619,6 +619,12 @@ function CircleBtn({ icon: Icon, label, href, color, shadowColor, delay = 0, bad
       gap:8, flexShrink:0, textDecoration:"none" }}>
       <div style={{ position:"relative", width:72, height:72,
         animation:`btn-float 3.8s ease-in-out infinite ${delay}s` }}>
+        {/* Outer pulsing glow halo */}
+        <div style={{
+          position:"absolute", inset:-10, borderRadius:"50%", pointerEvents:"none",
+          background:`radial-gradient(circle, rgba(${color},0.38) 0%, transparent 65%)`,
+          animation:`fab-outer-glow 2.6s ease-in-out infinite ${delay * 0.6}s`,
+        }} />
         {badge > 0 && (
           <div style={{
             position:"absolute", top:-4, right:-4, zIndex:10,
@@ -635,9 +641,7 @@ function CircleBtn({ icon: Icon, label, href, color, shadowColor, delay = 0, bad
         )}
         <div style={{
           width:72, height:72, borderRadius:"50%",
-          background:[
-            `radial-gradient(circle at 38% 28%, rgba(${color},0.55) 0%, rgba(${color},0.12) 40%, rgba(3,1,8,0.96) 70%)`,
-          ].join(","),
+          background:`radial-gradient(circle at 38% 28%, rgba(${color},0.55) 0%, rgba(${color},0.12) 40%, rgba(3,1,8,0.96) 70%)`,
           border:`2px solid rgba(${color},0.80)`,
           boxShadow:[
             `0 10px 0 ${shadowColor}`,
@@ -659,6 +663,13 @@ function CircleBtn({ icon: Icon, label, href, color, shadowColor, delay = 0, bad
           <div style={{ position:"absolute", top:"12%", bottom:"12%", left:0, width:"18%",
             background:"linear-gradient(to right, rgba(255,255,255,0.10) 0%, transparent 100%)",
             borderRadius:"50% 0 0 50%", pointerEvents:"none" }}/>
+          {/* Shimmer sweep */}
+          <div style={{
+            position:"absolute", top:0, width:"40%", height:"100%",
+            background:"linear-gradient(90deg, transparent, rgba(255,255,255,0.28), transparent)",
+            animation:`shimmer-sweep 3.4s ease-in-out infinite ${delay + 0.5}s`,
+            pointerEvents:"none",
+          }}/>
           <Icon size={26} style={{ color:`rgb(${color})`, position:"relative",
             filter:`drop-shadow(0 0 10px rgba(${color},0.90)) drop-shadow(0 2px 4px rgba(0,0,0,0.8))` }}/>
         </div>
@@ -961,6 +972,34 @@ export default function HomePage() {
         </div>
       </GalaxyHero>
 
+      {/* ── PULSO CHIPS ─────────────────────────────────────────────────── */}
+      <div style={{ display:"flex", gap:8, padding:"0 18px 4px", flexWrap:"wrap" }}>
+        {visibleCount > 0 && (
+          <span style={{ background:"rgba(212,175,55,0.11)", border:"1px solid rgba(212,175,55,0.30)",
+            borderRadius:20, padding:"5px 12px", fontSize:10, color:"#d4af37", fontWeight:600 }}>
+            {visibleCount} familiares
+          </span>
+        )}
+        {recentMemories > 0 && (
+          <span style={{ background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.10)",
+            borderRadius:20, padding:"5px 12px", fontSize:10, color:"rgba(255,255,255,0.5)", fontWeight:600 }}>
+            {recentMemories} recuerdos esta semana
+          </span>
+        )}
+        {todayBirthday && (
+          <span style={{ background:"rgba(212,175,55,0.16)", border:"1px solid rgba(212,175,55,0.40)",
+            borderRadius:20, padding:"5px 12px", fontSize:10, color:"#f5e060", fontWeight:700 }}>
+            🎂 {todayBirthday.first_name} cumple hoy
+          </span>
+        )}
+        {!todayBirthday && birthdaysThisMonth > 0 && (
+          <span style={{ background:"rgba(212,175,55,0.10)", border:"1px solid rgba(212,175,55,0.25)",
+            borderRadius:20, padding:"5px 12px", fontSize:10, color:"rgba(212,175,55,0.7)", fontWeight:600 }}>
+            🎂 {birthdaysThisMonth} cumpleaños este mes
+          </span>
+        )}
+      </div>
+
       {/* ── FAMILIA DIRECTA ─────────────────────────────────────────────── */}
       <FamilyRow members={members} />
 
@@ -985,14 +1024,18 @@ export default function HomePage() {
               <Link href="/tree" style={{ textDecoration: "none" }}>
                 <div style={{
                   display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                  padding: "13px 20px", borderRadius: 14,
-                  background: "linear-gradient(135deg, #c9a820, #a07010)",
-                  borderBottom: "2.5px solid #6a5600",
-                  boxShadow: "0 5px 0 #4a3c00, 0 8px 20px rgba(0,0,0,0.5)",
+                  padding: "13px 20px", borderRadius: 50,
+                  background: "#c9a820",
+                  borderTop: "2px solid #ffe060",
                   fontSize: 14, fontWeight: 800, color: "#030208",
+                  position: "relative", overflow: "hidden",
+                  animation: "aura-pulse 2.4s ease-in-out infinite",
                 }}>
-                  <Users size={16} style={{ color: "#030208" }} />
-                  Agregar mi primer familiar
+                  <div style={{ position:"absolute", top:0, width:"45%", height:"100%",
+                    background:"linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent)",
+                    animation:"shimmer-sweep 3s ease-in-out infinite", pointerEvents:"none" }} />
+                  <Users size={16} style={{ color: "#030208", position:"relative" }} />
+                  <span style={{ position:"relative" }}>Agregar mi primer familiar</span>
                 </div>
               </Link>
               <Link href="/invitar" style={{ textDecoration: "none" }}>
@@ -1131,9 +1174,14 @@ export default function HomePage() {
                   {new Date().getFullYear() - new Date(todayBirthday.birth_date).getFullYear()} años
                 </div>
                 <div style={{ display: "inline-flex", alignItems: "center", gap: 8,
-                  background: "#d4af37", color: "#030208", borderRadius: 12,
-                  padding: "10px 22px", fontSize: 13, fontWeight: 800,
-                  boxShadow: "0 4px 0 #6a5600, 0 8px 20px rgba(212,175,55,0.4)" }}>
+                  background: "#c9a820", color: "#030208", borderRadius: 50,
+                  padding: "12px 26px", fontSize: 13, fontWeight: 800,
+                  position: "relative", overflow: "hidden",
+                  borderTop: "2px solid #ffe060",
+                  animation: "aura-pulse 2.4s ease-in-out infinite" }}>
+                  <div style={{ position:"absolute", top:0, width:"45%", height:"100%",
+                    background:"linear-gradient(90deg, transparent, rgba(255,255,255,0.38), transparent)",
+                    animation:"shimmer-sweep 2.8s ease-in-out infinite", pointerEvents:"none" }} />
                   🎉 Felicitar ahora
                 </div>
               </div>
@@ -1170,8 +1218,14 @@ export default function HomePage() {
                   {upcomingBirthday.first_name} {upcomingBirthday.last_name}
                 </div>
                 <div style={{ display: "inline-flex", alignItems: "center", gap: 8,
-                  background: "rgba(212,175,55,0.1)", border: "1px solid rgba(212,175,55,0.3)",
-                  color: "#d4af37", borderRadius: 12, padding: "8px 18px", fontSize: 12, fontWeight: 700 }}>
+                  background: "#0e0c1e", borderTop: "1.5px solid rgba(180,140,255,0.4)",
+                  color: "rgba(200,170,255,0.85)", borderRadius: 50,
+                  padding: "10px 22px", fontSize: 12, fontWeight: 700,
+                  animation: "ghost-aura 2.8s ease-in-out infinite",
+                  position: "relative", overflow: "hidden" }}>
+                  <div style={{ position:"absolute", top:0, width:"40%", height:"100%",
+                    background:"linear-gradient(90deg, transparent, rgba(180,140,255,0.22), transparent)",
+                    animation:"shimmer-sweep 3.4s ease-in-out infinite 1s", pointerEvents:"none" }} />
                   Preparar mensaje →
                 </div>
               </div>
@@ -1347,11 +1401,15 @@ export default function HomePage() {
                     {/* acciones */}
                     <div style={{ display: "flex", gap: 7 }}>
                       <Link href={`/sugerencias/${s.id}`} style={{ textDecoration: "none", flex: 1 }}>
-                        <button style={{ width: "100%", padding: "8px 0", borderRadius: 10, cursor: "pointer",
+                        <button style={{ width: "100%", padding: "10px 0", borderRadius: 50, cursor: "pointer",
                           background: "#c9a820", border: "none",
-                          borderTop: "1.5px solid rgba(255,240,100,0.45)", borderBottom: "2.5px solid #6a5600",
-                          boxShadow: "0 5px 0 #4a3c00, 0 8px 16px rgba(0,0,0,0.6)",
-                          color: "#030208", fontSize: 12, fontWeight: 700 }}>
+                          borderTop: "1.5px solid #ffe060",
+                          animation: "aura-pulse 2.4s ease-in-out infinite",
+                          color: "#030208", fontSize: 12, fontWeight: 700,
+                          position: "relative", overflow: "hidden" }}>
+                          <div style={{ position:"absolute", top:0, width:"45%", height:"100%",
+                            background:"linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent)",
+                            animation:"shimmer-sweep 3s ease-in-out infinite", pointerEvents:"none" }} />
                           Ver y confirmar
                         </button>
                       </Link>
@@ -1373,6 +1431,84 @@ export default function HomePage() {
         <BirthdayCardFeed birthdays={allBirthdays} rosterPersonIds={rosterPersonIds} />
 
       </div>
+
+      {/* ── PREGUNTA DEL DÍA ─────────────────────────────────────────── */}
+      <div style={{ padding:"16px 14px 0" }}>
+        <div style={{
+          background:"#0c0a18", borderRadius:18,
+          border:"1px solid rgba(212,175,55,0.14)",
+          borderTop:"1.5px solid rgba(212,175,55,0.28)",
+          padding:"16px",
+        }}>
+          <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.12em",
+            textTransform:"uppercase", color:"rgba(212,175,55,0.42)", marginBottom:10 }}>
+            Pregunta del día
+          </div>
+          <p style={{ fontSize:14, color:"rgba(255,255,255,0.82)", fontStyle:"italic",
+            margin:"0 0 14px", lineHeight:1.6, fontFamily:"var(--font-playfair), Georgia, serif" }}>
+            {[
+              "¿Cuál es el recuerdo más feliz que tienes de tu infancia?",
+              "¿Qué tradición familiar te gustaría que nunca se perdiera?",
+              "¿Cuál es la historia que más te han contado sobre tus abuelos?",
+              "¿Qué lugar de tu infancia te gustaría volver a visitar con tu familia?",
+              "¿Cuál es el consejo más valioso que te dio un familiar?",
+            ][new Date().getDay() % 5]}
+          </p>
+          <Link href="/events/new" style={{ textDecoration:"none" }}>
+            <div style={{
+              display:"flex", alignItems:"center", justifyContent:"center",
+              padding:"11px", borderRadius:50,
+              background:"#0e0c1e",
+              borderTop:"1.5px solid rgba(180,140,255,0.40)",
+              color:"rgba(200,170,255,0.85)", fontSize:12, fontWeight:700,
+              animation:"ghost-aura 2.8s ease-in-out infinite",
+              position:"relative", overflow:"hidden",
+            }}>
+              <div style={{ position:"absolute", top:0, width:"40%", height:"100%",
+                background:"linear-gradient(90deg, transparent, rgba(180,140,255,0.22), transparent)",
+                animation:"shimmer-sweep 3.4s ease-in-out infinite 1.2s", pointerEvents:"none" }} />
+              Responder con una historia
+            </div>
+          </Link>
+        </div>
+      </div>
+
+      {/* ── INVITE CTA (condicional) ──────────────────────────────────── */}
+      {members.length > 0 && members.length < 5 && (
+        <div style={{ padding:"14px 14px 0" }}>
+          <div style={{
+            background:"rgba(212,175,55,0.04)", borderRadius:16,
+            border:"1px solid rgba(212,175,55,0.16)",
+            padding:"13px 14px",
+            display:"flex", alignItems:"center", gap:12,
+          }}>
+            <span style={{ fontSize:28, flexShrink:0 }}>👥</span>
+            <div style={{ flex:1 }}>
+              <p style={{ fontSize:13, fontWeight:700, color:"#fff", margin:"0 0 2px" }}>
+                Invita a más familiares
+              </p>
+              <p style={{ fontSize:10, color:"rgba(255,255,255,0.38)", margin:0 }}>
+                Tu galaxia tiene {visibleCount} personas — crécela
+              </p>
+            </div>
+            <Link href="/invitar" style={{ textDecoration:"none", flexShrink:0 }}>
+              <div style={{
+                padding:"9px 18px", borderRadius:50,
+                background:"#c9a820",
+                borderTop:"1.5px solid #ffe060",
+                color:"#030208", fontSize:12, fontWeight:800,
+                animation:"aura-pulse 2.4s ease-in-out infinite 0.6s",
+                position:"relative", overflow:"hidden",
+              }}>
+                <div style={{ position:"absolute", top:0, width:"45%", height:"100%",
+                  background:"linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent)",
+                  animation:"shimmer-sweep 3s ease-in-out infinite 0.8s", pointerEvents:"none" }} />
+                Invitar
+              </div>
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Navegación inferior cósmica */}
       <CosmicNav />

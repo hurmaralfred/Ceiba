@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { X, Share, Smartphone } from "lucide-react";
+import { trackEvent } from "@/lib/viral/viralAnalytics";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -17,6 +18,7 @@ if (typeof window !== "undefined") {
 }
 
 const DISMISS_KEY = "ceiba_install_dismissed";
+const ACCEPTED_KEY = "ceiba_install_accepted";
 const DISMISS_DAYS = 7;
 
 export default function InstallPrompt() {
@@ -28,6 +30,9 @@ export default function InstallPrompt() {
     // Already installed as PWA or running inside Capacitor native shell
     if (window.matchMedia("(display-mode: standalone)").matches) return;
     if (typeof (window as any).Capacitor !== "undefined") return;
+
+    // User already accepted the install — never show again
+    if (localStorage.getItem(ACCEPTED_KEY)) return;
 
     // Dismissed recently
     const dismissed = localStorage.getItem(DISMISS_KEY);
@@ -49,6 +54,7 @@ export default function InstallPrompt() {
     const t = setTimeout(() => {
       if (typeof (window as any).Capacitor !== "undefined") return;
       setShow(true);
+      trackEvent("pwa_install_prompted");
     }, 3000);
     return () => { clearTimeout(t); window.removeEventListener("beforeinstallprompt", handler); };
   }, []);
@@ -62,7 +68,14 @@ export default function InstallPrompt() {
     if (prompt) {
       await prompt.prompt();
       const { outcome } = await prompt.userChoice;
-      if (outcome === "accepted") { setShow(false); cachedPrompt = null; }
+      if (outcome === "accepted") {
+        localStorage.setItem(ACCEPTED_KEY, "1");
+        trackEvent("pwa_install_accepted");
+      } else {
+        trackEvent("pwa_install_dismissed");
+      }
+      cachedPrompt = null;
+      dismiss();
     } else {
       // Browser didn't fire beforeinstallprompt (already dismissed, policy, etc.)
       // Fall back to manual instructions page.

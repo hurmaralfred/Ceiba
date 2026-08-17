@@ -434,8 +434,16 @@ export default function OnboardingPage() {
 
   useEffect(() => {
     runInitialCheck();
-    trackEvent("onboarding_started" as any, { type: "organic" });
+    trackEvent("sign_up_start", { type: "organic" });
   }, []);
+
+  // Trackea cada paso del onboarding
+  useEffect(() => {
+    if (step === "checking" || step === "init_error") return;
+    trackEvent("onboarding_step_enter", { step });
+    if (step === "match") trackEvent("match_shown");
+    if (step === "done") trackEvent("onboarding_completed", { relatives_added: filledCount });
+  }, [step]);
 
   // ============================================================
   // Step: Profile
@@ -630,6 +638,7 @@ export default function OnboardingPage() {
       }
 
       setMyPersonId(personId);
+      trackEvent("match_confirmed");
       toast.success("¡Te conectamos con tu galaxia existente!");
 
       // has_relationships lo calcula el propio RPC (relaciones activas de
@@ -819,6 +828,7 @@ export default function OnboardingPage() {
       };
       const msg = buildInviteMessage(template, ctx, result.universalLink);
       await shareInviteWhatsApp(supabase, result.invitationId, msg, person.phone);
+      trackEvent("invite_sent", { channel: "whatsapp", relation: person.relation_type });
       setInvitedIds((prev) => new Set([...prev, person.id]));
     } catch (err: any) {
       toast.error(err.message);
@@ -892,22 +902,22 @@ export default function OnboardingPage() {
             nunca debe atrapar al usuario — siempre ofrece Reintentar o
             Continuar a la galaxia igual. */}
         {step === "init_error" && (
-          <div className="flex flex-col items-center justify-center px-5 flex-1 gap-4 text-center">
-            <AlertTriangle size={48} className="text-red-400" />
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 20px", gap: 16, textAlign: "center", position: "relative", zIndex: 10 }}>
+            <AlertTriangle size={48} style={{ color: "#f87171" }} />
             <div>
-              <h1 className="text-xl font-bold text-ceiba-900 mb-1">No pudimos verificar tu cuenta</h1>
-              <p className="text-ceiba-500 text-sm">{initError}</p>
+              <h1 style={{ fontSize: 20, fontWeight: 800, color: "#fff", marginBottom: 4 }}>No pudimos verificar tu cuenta</h1>
+              <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 14 }}>{initError}</p>
             </div>
-            <div className="flex flex-col gap-3 w-full max-w-xs">
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%", maxWidth: 320 }}>
               <button
                 onClick={() => runInitialCheck()}
-                className="w-full bg-ceiba-500 hover:bg-ceiba-400 text-white font-bold py-3.5 rounded-2xl"
+                style={{ width: "100%", background: "#c9a820", borderTop: "2px solid #f5e060", borderBottom: "4px solid #6a5600", border: "none", boxShadow: "0 8px 0 #4a3c00", color: "#030208", fontWeight: 800, padding: "14px 0", borderRadius: 14, cursor: "pointer", fontSize: 15 }}
               >
                 Reintentar
               </button>
               <button
                 onClick={() => router.push("/tree")}
-                className="w-full text-ceiba-600 hover:text-ceiba-800 text-sm py-2"
+                style={{ width: "100%", color: "rgba(212,175,55,0.6)", background: "none", border: "none", fontSize: 14, padding: "8px 0", cursor: "pointer" }}
               >
                 Continuar a la galaxia
               </button>
@@ -1005,38 +1015,38 @@ export default function OnboardingPage() {
 
         {/* ── MATCH ──────────────────────────────────────────── */}
         {step === "match" && match && (
-          <div className="flex flex-col px-5 pt-6 pb-10 gap-5 flex-1">
-            <h1 className="text-2xl font-bold text-ceiba-900">Parece que alguien ya te agregó</h1>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "24px 20px 40px", gap: 20, position: "relative", zIndex: 10 }}>
+            <h1 style={{ fontSize: 24, fontWeight: 800, color: "#fff", lineHeight: 1.2, letterSpacing: "-0.02em" }}>Parece que alguien ya te agregó</h1>
 
-            <div className="bg-cream-50 rounded-2xl border border-cream-200 shadow-sm p-5 flex items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-ceiba-600 flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
+            <div style={{ background: "#0c0a18", borderRadius: 20, border: "1px solid rgba(212,175,55,0.25)", padding: "20px", display: "flex", alignItems: "center", gap: 16 }}>
+              <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#5c7a52", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 24, fontWeight: 700, flexShrink: 0 }}>
                 {match.first_names[0]}
               </div>
               <div>
-                <p className="font-bold text-ceiba-900 text-lg">
+                <p style={{ fontWeight: 700, color: "#fff", fontSize: 18 }}>
                   {match.first_names} {match.last_names}
                 </p>
                 {match.birth_date && (
-                  <p className="text-ceiba-500 text-sm">
+                  <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 14, marginTop: 2 }}>
                     {new Date(match.birth_date).toLocaleDateString("es", { year: "numeric", month: "long", day: "numeric" })}
                   </p>
                 )}
                 {match.added_by_name && (
-                  <p className="text-ceiba-600 text-xs mt-1">Agregado por {match.added_by_name}</p>
+                  <p style={{ color: "rgba(212,175,55,0.6)", fontSize: 12, marginTop: 4 }}>Agregado por {match.added_by_name}</p>
                 )}
               </div>
             </div>
 
-            <div className="flex flex-col gap-3">
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <button
                 onClick={claimMatch}
-                className="w-full flex items-center justify-center gap-2 bg-ceiba-500 hover:bg-ceiba-400 text-white font-bold py-4 rounded-2xl"
+                style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "#c9a820", borderTop: "2px solid #f5e060", borderBottom: "4px solid #6a5600", border: "none", boxShadow: "0 8px 0 #4a3c00", color: "#030208", fontWeight: 800, padding: "15px 0", borderRadius: 14, cursor: "pointer", fontSize: 15 }}
               >
                 <Check size={20} /> Sí, soy yo
               </button>
               <button
-                onClick={() => { setMatch(null); setStep("profile"); }}
-                className="w-full text-ceiba-500 hover:text-ceiba-800 py-3 text-sm"
+                onClick={() => { trackEvent("match_rejected"); setMatch(null); setStep("profile"); }}
+                style={{ width: "100%", color: "rgba(255,255,255,0.45)", background: "none", border: "none", fontSize: 14, padding: "10px 0", cursor: "pointer" }}
               >
                 No, es otra persona
               </button>
@@ -1099,46 +1109,46 @@ export default function OnboardingPage() {
 
         {/* ── AHA MOMENT ─────────────────────────────────────── */}
         {step === "aha" && (
-          <div className="flex flex-col items-center px-5 pt-10 pb-10 gap-6 flex-1 text-center">
-            <Sparkles size={72} className="text-ceiba-400 animate-bounce" />
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", padding: "40px 20px 40px", gap: 24, textAlign: "center", position: "relative", zIndex: 10 }}>
+            <Sparkles size={72} style={{ color: "rgba(212,175,55,0.85)", animation: "bounce 1s infinite" }} />
             <div>
-              <h1 className="text-3xl font-bold text-ceiba-900 mb-2">
+              <h1 style={{ fontSize: 30, fontWeight: 800, color: "#fff", marginBottom: 8, letterSpacing: "-0.02em", lineHeight: 1.15 }}>
                 ¡Aquí está tu ceiba, {myFirstName}!
               </h1>
-              <p className="text-ceiba-500">Tu galaxia familiar ya está tomando forma.</p>
+              <p style={{ color: "rgba(255,255,255,0.55)" }}>Tu galaxia familiar ya está tomando forma.</p>
             </div>
 
-            <div className="w-full flex flex-col gap-2">
-              <div className="bg-ceiba-50 rounded-2xl px-4 py-3 flex items-center gap-3">
-                <span className="text-xl">🌱</span>
-                <span className="text-ceiba-800 text-sm font-medium">
+            <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 8 }}>
+              <div style={{ background: "#0c0a18", borderRadius: 16, padding: "12px 16px", border: "1px solid rgba(212,175,55,0.2)", display: "flex", alignItems: "center", gap: 12 }}>
+                <span style={{ fontSize: 20 }}>🌱</span>
+                <span style={{ color: "rgba(255,255,255,0.8)", fontSize: 14, fontWeight: 500 }}>
                   {filledCount} familiar{filledCount !== 1 ? "es" : ""} agregado{filledCount !== 1 ? "s" : ""}
                 </span>
               </div>
-              <div className="bg-ceiba-50 rounded-2xl px-4 py-3 flex items-center gap-3">
-                <Cake size={20} className="text-ceiba-600" />
-                <span className="text-ceiba-800 text-sm font-medium">
+              <div style={{ background: "#0c0a18", borderRadius: 16, padding: "12px 16px", border: "1px solid rgba(212,175,55,0.2)", display: "flex", alignItems: "center", gap: 12 }}>
+                <Cake size={20} style={{ color: "rgba(212,175,55,0.65)", flexShrink: 0 }} />
+                <span style={{ color: "rgba(255,255,255,0.8)", fontSize: 14, fontWeight: 500 }}>
                   Recibirás recordatorios de cumpleaños
                 </span>
               </div>
-              <div className="bg-ceiba-50 rounded-2xl px-4 py-3 flex items-center gap-3">
-                <AlertTriangle size={20} className="text-red-500" />
-                <span className="text-ceiba-800 text-sm font-medium">
+              <div style={{ background: "#0c0a18", borderRadius: 16, padding: "12px 16px", border: "1px solid rgba(212,175,55,0.2)", display: "flex", alignItems: "center", gap: 12 }}>
+                <AlertTriangle size={20} style={{ color: "#f87171", flexShrink: 0 }} />
+                <span style={{ color: "rgba(255,255,255,0.8)", fontSize: 14, fontWeight: 500 }}>
                   Tu familia puede mandarte alertas SOS
                 </span>
               </div>
             </div>
 
-            <div className="flex flex-col gap-3 w-full mt-auto">
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%", marginTop: "auto" }}>
               <button
                 onClick={() => setStep("batch_invite")}
-                className="w-full flex items-center justify-center gap-2 bg-ceiba-500 hover:bg-ceiba-400 text-white font-bold py-4 rounded-2xl"
+                style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "#c9a820", borderTop: "2px solid #f5e060", borderBottom: "4px solid #6a5600", border: "none", boxShadow: "0 8px 0 #4a3c00, 0 14px 24px rgba(0,0,0,0.7)", color: "#030208", fontWeight: 800, padding: "15px 0", borderRadius: 14, cursor: "pointer", fontSize: 15 }}
               >
                 <Send size={18} /> Invitar a mi familia
               </button>
               <button
                 onClick={() => router.push("/tree?welcome=1")}
-                className="w-full border border-ceiba-200 text-ceiba-600 hover:bg-ceiba-50 font-semibold text-sm py-3 rounded-2xl transition-colors"
+                style={{ width: "100%", border: "1px solid rgba(212,175,55,0.25)", color: "rgba(212,175,55,0.7)", background: "none", fontWeight: 600, fontSize: 14, padding: "12px 0", borderRadius: 14, cursor: "pointer" }}
               >
                 Ver mi galaxia ahora →
               </button>
@@ -1148,47 +1158,41 @@ export default function OnboardingPage() {
 
         {/* ── BATCH INVITE ───────────────────────────────────── */}
         {step === "batch_invite" && (
-          <div className="flex flex-col px-5 pt-6 pb-32 gap-4 flex-1">
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "24px 20px 128px", gap: 16, position: "relative", zIndex: 10 }}>
             <div>
-              <h1 className="text-2xl font-bold text-ceiba-900 mb-1">Invita a los que agregaste</h1>
-              <p className="text-ceiba-500 text-sm">
-                Cuando entren, cada uno verá la galaxia ya listo.
+              <h1 style={{ fontSize: 24, fontWeight: 800, color: "#fff", marginBottom: 4, letterSpacing: "-0.02em" }}>Invita a los que agregaste</h1>
+              <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 14 }}>
+                Cuando entren, cada uno verá la galaxia ya lista.
               </p>
             </div>
 
-            <div className="flex flex-col gap-3">
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {Object.values(filledSlots).map((person) => {
                 const isInvited = invitedIds.has(person.id);
                 const isLoading = inviteLoading === person.id;
                 return (
                   <div
                     key={person.id}
-                    className={`bg-cream-50 rounded-2xl border p-4 flex items-center gap-3 ${
-                      isInvited ? "border-green-200 bg-green-50" : "border-cream-200"
-                    }`}
+                    style={{ background: isInvited ? "rgba(34,197,94,0.08)" : "#0c0a18", borderRadius: 16, border: isInvited ? "1px solid rgba(34,197,94,0.3)" : "1px solid rgba(212,175,55,0.15)", padding: "14px 16px", display: "flex", alignItems: "center", gap: 12 }}
                   >
-                    <div className="w-11 h-11 rounded-full bg-ceiba-600 flex items-center justify-center text-white font-bold flex-shrink-0">
+                    <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#5c7a52", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, flexShrink: 0 }}>
                       {person.first_names[0]}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm text-ceiba-900 truncate">
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontWeight: 600, fontSize: 14, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {person.first_names} {person.last_names}
                       </p>
-                      {person.phone ? (
-                        <p className="text-ceiba-400 text-xs">{person.phone}</p>
-                      ) : (
-                        <p className="text-ceiba-400 text-xs">Sin teléfono</p>
-                      )}
+                      <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 12 }}>{person.phone || "Sin teléfono"}</p>
                     </div>
                     {isInvited ? (
-                      <span className="flex items-center gap-1 text-green-600 text-xs font-medium">
+                      <span style={{ display: "flex", alignItems: "center", gap: 4, color: "#4ade80", fontSize: 12, fontWeight: 500 }}>
                         <Check size={14} /> Enviada
                       </span>
                     ) : (
                       <button
                         onClick={() => handleInvitePerson(person)}
                         disabled={!!inviteLoading}
-                        className="flex-shrink-0 bg-[#25D366] hover:bg-[#1ebe5c] disabled:opacity-50 text-white text-xs font-bold px-3 py-2 rounded-xl transition-colors"
+                        style={{ flexShrink: 0, background: "#25D366", color: "#fff", fontSize: 12, fontWeight: 700, padding: "8px 12px", borderRadius: 12, border: "none", cursor: "pointer", opacity: inviteLoading ? 0.5 : 1 }}
                       >
                         {isLoading ? "..." : "WhatsApp"}
                       </button>
@@ -1202,38 +1206,38 @@ export default function OnboardingPage() {
 
         {/* ── NOTIFICATIONS ──────────────────────────────────── */}
         {step === "notifications" && (
-          <div className="flex flex-col items-center px-5 pt-10 pb-10 gap-6 flex-1 text-center">
-            <Bell size={64} className="text-ceiba-500" />
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", padding: "40px 20px 40px", gap: 24, textAlign: "center", position: "relative", zIndex: 10 }}>
+            <Bell size={64} style={{ color: "rgba(212,175,55,0.75)" }} />
             <div>
-              <h1 className="text-2xl font-bold text-ceiba-900 mb-2">Un último paso</h1>
-              <p className="text-ceiba-500 text-sm">Ceiba solo te notifica para cosas que importan.</p>
+              <h1 style={{ fontSize: 24, fontWeight: 800, color: "#fff", marginBottom: 8, letterSpacing: "-0.02em" }}>Un último paso</h1>
+              <p style={{ color: "rgba(255,255,255,0.55)", fontSize: 14 }}>Ceiba solo te notifica para cosas que importan.</p>
             </div>
 
-            <div className="w-full flex flex-col gap-2 text-left">
+            <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 8, textAlign: "left" }}>
               {[
                 { icon: "🎂", text: "Cumpleaños de tu familia" },
                 { icon: "✨", text: "Recuerdos del día — un día como hoy" },
                 { icon: "🚨", text: "Alertas SOS" },
                 { icon: "📢", text: "Mensajes familiares importantes" },
               ].map(({ icon, text }) => (
-                <div key={text} className="flex items-center gap-3 bg-ceiba-50 rounded-xl px-4 py-3">
-                  <span className="text-lg">{icon}</span>
-                  <span className="text-ceiba-800 text-sm">{text}</span>
+                <div key={text} style={{ display: "flex", alignItems: "center", gap: 12, background: "#0c0a18", borderRadius: 14, padding: "12px 16px", border: "1px solid rgba(212,175,55,0.15)" }}>
+                  <span style={{ fontSize: 18 }}>{icon}</span>
+                  <span style={{ color: "rgba(255,255,255,0.8)", fontSize: 14 }}>{text}</span>
                 </div>
               ))}
-              <p className="text-center text-ceiba-400 text-xs mt-1">Nunca para publicidad.</p>
+              <p style={{ textAlign: "center", color: "rgba(255,255,255,0.3)", fontSize: 12, marginTop: 4 }}>Nunca para publicidad.</p>
             </div>
 
-            <div className="flex flex-col gap-3 w-full mt-auto">
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%", marginTop: "auto" }}>
               <button
                 onClick={requestNotifications}
-                className="w-full flex items-center justify-center gap-2 bg-ceiba-500 hover:bg-ceiba-400 text-white font-bold py-4 rounded-2xl"
+                style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "#c9a820", borderTop: "2px solid #f5e060", borderBottom: "4px solid #6a5600", border: "none", boxShadow: "0 8px 0 #4a3c00, 0 14px 24px rgba(0,0,0,0.7)", color: "#030208", fontWeight: 800, padding: "15px 0", borderRadius: 14, cursor: "pointer", fontSize: 15 }}
               >
                 <Bell size={18} /> Activar notificaciones
               </button>
               <button
                 onClick={() => router.push("/tree?welcome=1")}
-                className="w-full border border-ceiba-200 text-ceiba-600 hover:bg-ceiba-50 font-semibold text-sm py-3 rounded-2xl transition-colors"
+                style={{ width: "100%", border: "1px solid rgba(212,175,55,0.25)", color: "rgba(212,175,55,0.7)", background: "none", fontWeight: 600, fontSize: 14, padding: "12px 0", borderRadius: 14, cursor: "pointer" }}
               >
                 Ver mi galaxia primero →
               </button>
@@ -1243,22 +1247,22 @@ export default function OnboardingPage() {
 
         {/* ── DONE ───────────────────────────────────────────── */}
         {step === "done" && (
-          <div className="flex flex-col items-center px-5 pt-16 pb-10 gap-6 flex-1 text-center">
-            <div className="relative">
-              <Sparkles size={80} className="text-ceiba-400" />
-              <div className="absolute -top-2 -right-2 w-8 h-8 bg-green-400 rounded-full flex items-center justify-center shadow-lg">
-                <Check size={18} className="text-white" />
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", padding: "64px 20px 40px", gap: 24, textAlign: "center", position: "relative", zIndex: 10 }}>
+            <div style={{ position: "relative" }}>
+              <Sparkles size={80} style={{ color: "rgba(212,175,55,0.85)" }} />
+              <div style={{ position: "absolute", top: -8, right: -8, width: 32, height: 32, background: "#4ade80", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 12px rgba(0,0,0,0.4)" }}>
+                <Check size={18} style={{ color: "#fff" }} />
               </div>
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-ceiba-900 mb-2">
+              <h1 style={{ fontSize: 30, fontWeight: 800, color: "#fff", marginBottom: 8, letterSpacing: "-0.02em", lineHeight: 1.15 }}>
                 ¡Bienvenido/a, {myFirstName}!
               </h1>
-              <p className="text-ceiba-500">Tu galaxia familiar te está esperando.</p>
+              <p style={{ color: "rgba(255,255,255,0.55)" }}>Tu galaxia familiar te está esperando.</p>
             </div>
             <button
               onClick={() => router.push("/tree")}
-              className="w-full flex items-center justify-center gap-2 bg-ceiba-500 hover:bg-ceiba-400 text-white font-bold py-4 rounded-2xl text-lg mt-auto"
+              style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "#c9a820", borderTop: "2px solid #f5e060", borderBottom: "4px solid #6a5600", border: "none", boxShadow: "0 8px 0 #4a3c00, 0 14px 24px rgba(0,0,0,0.7)", color: "#030208", fontWeight: 800, padding: "17px 0", borderRadius: 14, cursor: "pointer", fontSize: 17, marginTop: "auto" }}
             >
               Entrar a mi galaxia
               <ChevronRight size={22} />
@@ -1295,16 +1299,16 @@ export default function OnboardingPage() {
         )}
 
         {step === "batch_invite" && (
-          <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-cream-50 border-t px-5 py-4 flex flex-col gap-2">
+          <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, maxWidth: 480, margin: "0 auto", background: "rgba(3,2,8,0.97)", borderTop: "0.5px solid rgba(212,175,55,0.2)", padding: "14px 20px 32px", backdropFilter: "blur(12px)", zIndex: 50, display: "flex", flexDirection: "column", gap: 8 }}>
             <button
               onClick={() => setStep("notifications")}
-              className="w-full flex items-center justify-center gap-2 bg-ceiba-500 hover:bg-ceiba-400 text-white font-bold py-4 rounded-2xl"
+              style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "#c9a820", borderTop: "2px solid #f5e060", borderBottom: "4px solid #6a5600", border: "none", boxShadow: "0 8px 0 #4a3c00, 0 14px 24px rgba(0,0,0,0.7)", color: "#030208", fontWeight: 800, padding: "15px 0", borderRadius: 14, cursor: "pointer", fontSize: 15 }}
             >
               Continuar <ChevronRight size={20} />
             </button>
             <button
               onClick={() => setStep("notifications")}
-              className="w-full text-ceiba-400 hover:text-ceiba-600 text-sm py-1"
+              style={{ width: "100%", color: "rgba(212,175,55,0.5)", background: "none", border: "none", fontSize: 14, padding: "6px 0", cursor: "pointer" }}
             >
               Saltar por ahora
             </button>
