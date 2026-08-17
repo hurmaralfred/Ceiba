@@ -908,10 +908,9 @@ export default function HomePage() {
   const upcomingBirthday = !todayBirthday
     ? liveBirthdays.filter(b => b.days > 0).sort((a, b) => a.days - b.days)[0] ?? null
     : null;
-  // Fallecidos con cumpleaños próximo o hoy
+  // Fallecidos: solo mostrar si HOY es exactamente su cumpleaños
   const deceasedBirthday = allBirthdays
-    .filter(b => b.is_deceased)
-    .sort((a, b) => a.days - b.days)[0] ?? null;
+    .find(b => b.is_deceased && b.days === 0) ?? null;
   const rosterPersonIds = new Set(roster.map(m => m.person_id));
   const firstName = profile?.first_name ?? "";
   const avatarInitial = firstName[0]?.toUpperCase() ?? "?";
@@ -1257,8 +1256,8 @@ export default function HomePage() {
           </Link>
         )}
 
-        {/* — Caso Fallecido: cumpleaños de un familiar que ya no está — */}
-        {!todayBirthday && !upcomingBirthday && deceasedBirthday && (
+        {/* — Caso Fallecido: hoy es el cumpleaños de alguien que ya no está — */}
+        {deceasedBirthday && (
           <Link href={`/persona/${deceasedBirthday.person_id}`} style={{ textDecoration:"none" }}>
             <div style={{
               borderRadius:22,
@@ -1278,20 +1277,18 @@ export default function HomePage() {
                 borderRadius:100, padding:"3px 10px",
                 fontSize:9, fontWeight:800, letterSpacing:"0.14em", color:"rgba(160,130,210,0.65)",
                 textTransform:"uppercase" }}>
-                {deceasedBirthday.days === 0 ? "Hoy" : deceasedBirthday.days === 1 ? "Mañana" : `En ${deceasedBirthday.days} días`}
+                En su memoria
               </div>
               <div style={{ fontSize:36, lineHeight:1, marginBottom:10 }}>🕊️</div>
               <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em",
                 textTransform:"uppercase", color:"rgba(160,130,210,0.55)", marginBottom:6 }}>
-                {deceasedBirthday.days === 0 ? "En su memoria" : "Próximo aniversario"}
+                Hoy en tu galaxia
               </div>
               <div style={{ fontSize:18, fontWeight:800, color:"rgba(255,255,255,0.88)", lineHeight:1.2, marginBottom:6 }}>
                 {deceasedBirthday.first_name} {deceasedBirthday.last_name}
               </div>
               <div style={{ fontSize:13, color:"rgba(255,255,255,0.45)", lineHeight:1.5 }}>
-                {deceasedBirthday.days === 0
-                  ? `Hoy estaría cumpliendo ${deceasedBirthday.age_would_be} años`
-                  : `El ${new Date(new Date().getFullYear(), new Date(deceasedBirthday.birth_date).getMonth(), new Date(deceasedBirthday.birth_date).getDate()).toLocaleDateString("es", { day:"numeric", month:"long" })} estaría cumpliendo ${deceasedBirthday.age_would_be} años`}
+                Hoy estaría cumpliendo {deceasedBirthday.age_would_be} años
               </div>
             </div>
           </Link>
