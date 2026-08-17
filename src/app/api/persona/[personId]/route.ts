@@ -17,12 +17,22 @@ export async function GET(
   const service = getServiceClient();
   const { personId } = params;
 
-  // Authorization: viewer must be in same family space as the person
+  // Authorization: viewer must be in same family graph as the person
   const myPersonId = await resolveApprovedPersonId(service, user.id);
   const familyPersonIds = myPersonId
     ? await resolveFamilySpaceMemberIds(service, myPersonId)
     : [];
-  const allPersonIds = myPersonId ? [myPersonId, ...familyPersonIds] : [];
+
+  // Also check the relationship graph (same source as the galaxy/feed view)
+  let graphPersonIds: string[] = [];
+  if (myPersonId) {
+    const { data: graphData } = await supabase.rpc("get_my_family_graph", { p_depth: 4 });
+    graphPersonIds = graphData ? ((graphData as any).nodes ?? []).map((n: any) => n.id as string) : [];
+  }
+
+  const allPersonIds = myPersonId
+    ? [...new Set([myPersonId, ...familyPersonIds, ...graphPersonIds])]
+    : [];
 
   if (myPersonId && !allPersonIds.includes(personId)) {
     const { data: selfClaim } = await service
