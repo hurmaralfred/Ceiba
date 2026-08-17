@@ -3,7 +3,6 @@ import { createClient } from "@/lib/supabase/server";
 import {
   getServiceClient,
   resolveApprovedPersonId,
-  resolveFamilySpaceMemberIds,
   resolvePersonsByUserIds,
 } from "@/lib/server/family";
 
@@ -27,8 +26,13 @@ export async function GET(_req: NextRequest) {
     return NextResponse.json({ birthdays: [], photos: [], broadcasts: [], events: [] });
   }
 
-  const familyPersonIds = await resolveFamilySpaceMemberIds(service, myPersonId);
-  const allPersonIds = [myPersonId, ...familyPersonIds];
+  // Use the same relationship graph as the galaxy view (traverses relationships table at depth 4)
+  // This includes ALL family members, not only those in space_memberships.
+  const { data: graphData } = await supabase.rpc("get_my_family_graph", { depth: 4 });
+  const graphPersonIds: string[] = graphData
+    ? ((graphData as any).nodes ?? []).map((n: any) => n.id as string)
+    : [];
+  const allPersonIds = [...new Set([myPersonId, ...graphPersonIds])];
 
   const { data: familyClaims } = await service
     .from("person_claims")
@@ -94,7 +98,7 @@ export async function GET(_req: NextRequest) {
       first_name: p.first_name,
       last_name: p.first_surname,
       birth_date: p.birth_date,
-      is_deceased: !!(p.is_deceased),
+      is_deceased: !!(p.is_deceased) || !!p.death_date,
       age_would_be: currentYear - parseInt(p.birth_date.slice(0, 4)),
     }));
 
