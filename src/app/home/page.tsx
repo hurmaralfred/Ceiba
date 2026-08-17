@@ -759,6 +759,7 @@ export default function HomePage() {
   const [lightboxPhoto, setLightboxPhoto] = useState<FeedPhoto | null>(null);
   const [unreadChats,  setUnreadChats]  = useState(0);
   const [pendingCapsulas, setPendingCapsulas] = useState(0);
+  const [dailyQuestion, setDailyQuestion] = useState<string | null>(null);
 
   // Force dark body background — globals.css uses cream which bleeds through
   useEffect(() => {
@@ -778,7 +779,7 @@ export default function HomePage() {
       if (status.needsConfirmation) { router.replace("/confirmar-datos"); return; }
     }
 
-    const [graphRes, feedRes, sugRes, rosterRes, eventsRes, chatRes, capsulasRes] = await Promise.allSettled([
+    const [graphRes, feedRes, sugRes, rosterRes, eventsRes, chatRes, capsulasRes, questionRes] = await Promise.allSettled([
       supabase.rpc("get_my_family_graph", { p_depth: 4 }),
       fetch("/api/feed"),
       fetch("/api/suggestions"),
@@ -786,6 +787,7 @@ export default function HomePage() {
       fetch("/api/events"),
       fetch("/api/chat/rooms"),
       fetch("/api/capsulas"),
+      fetch("/api/pregunta-del-dia"),
     ]);
 
     if (graphRes.status === "fulfilled" && !graphRes.value.error) {
@@ -870,6 +872,16 @@ export default function HomePage() {
           // Cápsulas para mí que aún no he abierto (locked or unlocked but unopened)
           const pending = (capsulas ?? []).filter((c: any) => c.is_recipient && !c.opened_at).length;
           setPendingCapsulas(pending);
+        }
+      } catch {}
+    }
+
+    if (questionRes.status === "fulfilled") {
+      try {
+        const res = questionRes.value;
+        if (res.ok) {
+          const { question } = await res.json();
+          if (question) setDailyQuestion(question);
         }
       } catch {}
     }
@@ -974,12 +986,6 @@ export default function HomePage() {
 
       {/* ── PULSO CHIPS ─────────────────────────────────────────────────── */}
       <div style={{ display:"flex", gap:8, padding:"0 18px 4px", flexWrap:"wrap" }}>
-        {visibleCount > 0 && (
-          <span style={{ background:"rgba(212,175,55,0.11)", border:"1px solid rgba(212,175,55,0.30)",
-            borderRadius:20, padding:"5px 12px", fontSize:10, color:"#d4af37", fontWeight:600 }}>
-            {visibleCount} familiares
-          </span>
-        )}
         {recentMemories > 0 && (
           <span style={{ background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.10)",
             borderRadius:20, padding:"5px 12px", fontSize:10, color:"rgba(255,255,255,0.5)", fontWeight:600 }}>
@@ -1004,7 +1010,7 @@ export default function HomePage() {
       <FamilyRow members={members} />
 
       {/* ── EMPTY STATE — sin familia aún ──────────────────────────────── */}
-      {profile !== null && members.length === 0 && (
+      {profile !== null && members.length === 0 && visibleCount === 0 && (
         <div style={{ padding: "20px 16px 0" }}>
           <div style={{
             borderRadius: 18, padding: "22px 20px",
@@ -1056,7 +1062,7 @@ export default function HomePage() {
       )}
 
       {/* ── CTA PRINCIPAL ───────────────────────────────────────────────── */}
-      {members.length > 0 && (
+      {visibleCount > 0 && (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "20px 16px 4px", gap: 10 }}>
           <Link href="/tree" style={{ textDecoration: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
             {/* 108px — mismo efecto 3D que el avatar principal (135px × 0.8) */}
@@ -1136,7 +1142,7 @@ export default function HomePage() {
         background: "linear-gradient(90deg, transparent, rgba(212,175,55,0.18), transparent)" }} />
 
       {/* ══ MOMENTO DEL DÍA ══════════════════════════════════════════════ */}
-      {(todayBirthday || (!todayBirthday && upcomingBirthday && upcomingBirthday.days <= 7)) && (
+      {(todayBirthday || upcomingBirthday) && (
       <div style={{ padding: "14px 14px 0" }}>
 
         {/* — Caso A: Cumpleaños HOY — card dominante */}
@@ -1446,13 +1452,7 @@ export default function HomePage() {
           </div>
           <p style={{ fontSize:14, color:"rgba(255,255,255,0.82)", fontStyle:"italic",
             margin:"0 0 14px", lineHeight:1.6, fontFamily:"var(--font-playfair), Georgia, serif" }}>
-            {[
-              "¿Cuál es el recuerdo más feliz que tienes de tu infancia?",
-              "¿Qué tradición familiar te gustaría que nunca se perdiera?",
-              "¿Cuál es la historia que más te han contado sobre tus abuelos?",
-              "¿Qué lugar de tu infancia te gustaría volver a visitar con tu familia?",
-              "¿Cuál es el consejo más valioso que te dio un familiar?",
-            ][new Date().getDay() % 5]}
+            {dailyQuestion ?? "..."}
           </p>
           <Link href="/events/new" style={{ textDecoration:"none" }}>
             <div style={{

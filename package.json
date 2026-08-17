@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@amplitude/analytics-browser": "^2.45.6",
+    "@anthropic-ai/sdk": "^0.117.1",
     "@capacitor/android": "^8.5.0",
     "@capacitor/app": "^8.1.1",
     "@capacitor/browser": "^8.0.4",
