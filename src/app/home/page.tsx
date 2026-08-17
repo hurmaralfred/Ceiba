@@ -24,6 +24,9 @@ interface FeedBirthday {
   person_id: string; first_name: string; last_name: string; birth_date: string;
   is_deceased?: boolean; age_would_be?: number;
 }
+interface DeceasedWithoutDate {
+  person_id: string; first_name: string; last_name: string;
+}
 interface FeedPhoto { id: string; url: string; caption: string | null; created_at: string; uploader_user_id?: string; }
 interface FeedEvent { id: string; title: string; event_type: string; event_date: string; description: string | null; created_at: string; }
 type BirthdayWithDays = FeedBirthday & { days: number };
@@ -750,6 +753,7 @@ export default function HomePage() {
   const [allGenSpan,   setAllGenSpan]   = useState(1);
   const [visibleCount, setVisibleCount] = useState(0);
   const [birthdays,    setBirthdays]    = useState<FeedBirthday[]>([]);
+  const [deceasedWithoutDate, setDeceasedWithoutDate] = useState<DeceasedWithoutDate[]>([]);
   const [photos,       setPhotos]       = useState<FeedPhoto[]>([]);
   const [events,       setEvents]       = useState<FeedEvent[]>([]);
   const [allEvents,    setAllEvents]    = useState<FeedEvent[]>([]);
@@ -813,6 +817,7 @@ export default function HomePage() {
         if (res.ok) {
           const data = await res.json();
           setBirthdays((data.birthdays || []).slice(0, 10));
+          setDeceasedWithoutDate(data.deceasedWithoutDate || []);
           setPhotos((data.photos   || []).slice(0, 10));
           setEvents((data.events   || []).slice(0, 10));
         }
@@ -911,6 +916,12 @@ export default function HomePage() {
   // Fallecidos: solo mostrar si HOY es exactamente su cumpleaños
   const deceasedBirthday = allBirthdays
     .find(b => b.is_deceased && b.days === 0) ?? null;
+
+  // Rotate daily through deceased members with no known birth date
+  const dailyDeceasedQuestion = deceasedWithoutDate.length > 0
+    ? deceasedWithoutDate[Math.floor(Date.now() / 86400000) % deceasedWithoutDate.length]
+    : null;
+
   const rosterPersonIds = new Set(roster.map(m => m.person_id));
   const firstName = profile?.first_name ?? "";
   const avatarInitial = firstName[0]?.toUpperCase() ?? "?";
@@ -1573,6 +1584,45 @@ export default function HomePage() {
           </div>
         </div>
       </div>
+
+      {/* ── MEMORIA VIVA — pregunta diaria sobre fallecido sin fecha ── */}
+      {dailyDeceasedQuestion && (
+        <div style={{ padding:"14px 14px 0" }}>
+          <div style={{
+            background:"linear-gradient(145deg,#0d0b10 0%,#080608 100%)",
+            borderRadius:18,
+            borderTop:"1.5px solid rgba(180,160,220,0.22)",
+            border:"1px solid rgba(140,120,180,0.12)",
+            padding:"16px",
+            position:"relative", overflow:"hidden",
+          }}>
+            <div style={{ position:"absolute", inset:0, pointerEvents:"none",
+              background:"radial-gradient(ellipse at 90% 20%, rgba(160,130,210,0.07) 0%, transparent 60%)" }} />
+            <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.12em",
+              textTransform:"uppercase", color:"rgba(160,130,210,0.5)", marginBottom:10 }}>
+              🕊️ Memoria familiar
+            </div>
+            <p style={{ fontSize:14, color:"rgba(255,255,255,0.78)", fontStyle:"italic",
+              margin:"0 0 14px", lineHeight:1.6, fontFamily:"var(--font-playfair), Georgia, serif" }}>
+              ¿Quién sabe cuántos años tendría hoy{" "}
+              <span style={{ color:"rgba(200,180,255,0.9)", fontWeight:700 }}>
+                {dailyDeceasedQuestion.first_name} {dailyDeceasedQuestion.last_name}
+              </span>?
+            </p>
+            <Link href={`/persona/${dailyDeceasedQuestion.person_id}`} style={{ textDecoration:"none" }}>
+              <div style={{
+                display:"inline-flex", alignItems:"center", justifyContent:"center", gap:6,
+                padding:"10px 20px", borderRadius:50,
+                background:"#0e0c1e",
+                borderTop:"1.5px solid rgba(180,140,255,0.35)",
+                color:"rgba(200,170,255,0.8)", fontSize:12, fontWeight:700,
+              }}>
+                Compartir lo que sabes →
+              </div>
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* ── INVITE CTA (condicional) ──────────────────────────────────── */}
       {members.length > 0 && members.length < 5 && (

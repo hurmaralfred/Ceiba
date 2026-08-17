@@ -141,9 +141,28 @@ export async function GET(_req: NextRequest) {
     }
   });
 
+  // Deceased family members with no known birth date — used for daily memory questions
+  const deceasedWithoutDate = ((persons ?? []) as any[])
+    .filter((p) => (!!(p.is_deceased) || !!p.death_date) && !isValidBirthDate(p.birth_date))
+    .map((p) => ({ person_id: p.id, first_name: p.first_name, last_name: p.first_surname }));
+
+  // Also catch deceased persons not in the persons-with-birth_date query (those with null birth_date)
+  const { data: deceasedNoBirthDate } = await service
+    .from("persons")
+    .select("id, first_name, first_surname")
+    .in("id", allPersonIds)
+    .eq("is_deceased", true)
+    .is("birth_date", null);
+  ((deceasedNoBirthDate ?? []) as any[]).forEach((p) => {
+    if (!deceasedWithoutDate.find((d) => d.person_id === p.id)) {
+      deceasedWithoutDate.push({ person_id: p.id, first_name: p.first_name, last_name: p.first_surname });
+    }
+  });
+
   return NextResponse.json({
     birthdays,
     anniversaries,
+    deceasedWithoutDate,
     photos: ((photos ?? []) as any[]).map((p) => {
       const { data: urlData } = service.storage.from("family-photos").getPublicUrl(p.storage_path as string);
       return {
