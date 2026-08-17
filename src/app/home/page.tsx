@@ -781,7 +781,7 @@ export default function HomePage() {
 
     const [graphRes, feedRes, sugRes, rosterRes, eventsRes, chatRes, capsulasRes, questionRes] = await Promise.allSettled([
       supabase.rpc("get_my_family_graph", { p_depth: 4 }),
-      fetch("/api/feed?birthdayDays=90"),
+      fetch("/api/feed?birthdayDays=365"),
       fetch("/api/suggestions"),
       fetch("/api/family/roster"),
       fetch("/api/events"),
@@ -1194,34 +1194,47 @@ export default function HomePage() {
           </Link>
         )}
 
-        {/* — Caso C: Próximo cumpleaños (≤ 7 días) — card dominante */}
-        {!todayBirthday && upcomingBirthday && upcomingBirthday.days <= 7 && (
+        {/* — Caso C: Próximo cumpleaños — cualquier distancia */}
+        {!todayBirthday && upcomingBirthday && (
           <Link href={`/persona/${upcomingBirthday.person_id}`}>
             <div style={{
               borderRadius: 22, background: "linear-gradient(145deg,#0e0a00 0%,#080600 100%)",
               position: "relative", overflow: "hidden", minHeight: 180,
-              borderTop: "2px solid rgba(212,175,55,0.45)", borderLeft: "1px solid rgba(212,175,55,0.2)",
+              borderTop: upcomingBirthday.days <= 7 ? "2px solid rgba(212,175,55,0.55)" : "2px solid rgba(212,175,55,0.30)",
+              borderLeft: "1px solid rgba(212,175,55,0.2)",
               borderBottom: "5px solid #030200", borderRight: "1px solid rgba(0,0,0,0.7)",
-              boxShadow: "0 8px 0 #030200, 0 16px 32px rgba(0,0,0,0.92), 0 0 32px rgba(212,175,55,0.1)",
+              boxShadow: upcomingBirthday.days <= 7
+                ? "0 8px 0 #030200, 0 16px 32px rgba(0,0,0,0.92), 0 0 42px rgba(212,175,55,0.18)"
+                : "0 8px 0 #030200, 0 16px 32px rgba(0,0,0,0.92), 0 0 20px rgba(212,175,55,0.06)",
             }}>
               <div style={{ position: "absolute", inset: 0, pointerEvents: "none",
-                background: "radial-gradient(ellipse at 15% 50%, rgba(212,175,55,0.1) 0%, transparent 55%)" }} />
+                background: "radial-gradient(ellipse at 15% 50%, rgba(212,175,55,0.08) 0%, transparent 55%)" }} />
               <div style={{ position: "absolute", top: 16, right: 16,
                 background: "rgba(212,175,55,0.08)", border: "1px solid rgba(212,175,55,0.25)",
                 borderRadius: 100, padding: "3px 10px",
                 fontSize: 9, fontWeight: 800, letterSpacing: "0.14em", color: "rgba(212,175,55,0.75)",
                 textTransform: "uppercase" }}>
-                En {upcomingBirthday.days} {upcomingBirthday.days === 1 ? "día" : "días"}
+                {upcomingBirthday.days === 1
+                  ? "Mañana"
+                  : `En ${upcomingBirthday.days} días`}
               </div>
               <div style={{ padding: "22px 20px 20px", position: "relative" }}>
-                <div style={{ fontSize: 42, lineHeight: 1, marginBottom: 10 }}>🎁</div>
+                <div style={{ fontSize: 42, lineHeight: 1, marginBottom: 10 }}>
+                  {upcomingBirthday.days <= 3 ? "🎂" : "🎁"}
+                </div>
                 <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em",
                   textTransform: "uppercase", color: "rgba(212,175,55,0.5)", marginBottom: 6 }}>
-                  Próximo cumpleaños
+                  {upcomingBirthday.days <= 7 ? "Próximo cumpleaños" : "Cumpleaños en tu galaxia"}
                 </div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: "#fff", lineHeight: 1.2, marginBottom: 14 }}>
+                <div style={{ fontSize: 22, fontWeight: 800, color: "#fff", lineHeight: 1.2, marginBottom: 6 }}>
                   {upcomingBirthday.first_name} {upcomingBirthday.last_name}
                 </div>
+                {upcomingBirthday.days > 7 && (
+                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.38)", marginBottom: 12 }}>
+                    {new Date(new Date().getFullYear(), new Date(upcomingBirthday.birth_date).getMonth(), new Date(upcomingBirthday.birth_date).getDate())
+                      .toLocaleDateString("es", { day: "numeric", month: "long" })}
+                  </div>
+                )}
                 <div style={{ display: "inline-flex", alignItems: "center", gap: 8,
                   background: "#0e0c1e", borderTop: "1.5px solid rgba(180,140,255,0.4)",
                   color: "rgba(200,170,255,0.85)", borderRadius: 50,
@@ -1231,7 +1244,7 @@ export default function HomePage() {
                   <div style={{ position:"absolute", top:0, width:"40%", height:"100%",
                     background:"linear-gradient(90deg, transparent, rgba(180,140,255,0.22), transparent)",
                     animation:"shimmer-sweep 3.4s ease-in-out infinite 1s", pointerEvents:"none" }} />
-                  Preparar mensaje →
+                  {upcomingBirthday.days <= 7 ? "Preparar mensaje →" : "Ver perfil →"}
                 </div>
               </div>
             </div>
