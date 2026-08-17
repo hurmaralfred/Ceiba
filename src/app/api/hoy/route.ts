@@ -11,14 +11,23 @@ async function getSpaceId(service: ReturnType<typeof getServiceClient>, userId: 
     .eq("claim_status", "approved")
     .is("revoked_at", null)
     .maybeSingle();
-  if (!claim?.person_id) return null;
 
-  const { data: mem } = await service
-    .from("space_memberships")
-    .select("space_id")
-    .eq("person_id", claim.person_id)
+  if (claim?.person_id) {
+    const { data: mem } = await service
+      .from("space_memberships")
+      .select("space_id")
+      .eq("person_id", claim.person_id)
+      .maybeSingle();
+    if ((mem as any)?.space_id) return (mem as any).space_id;
+  }
+
+  // Fallback: space created by this user directly
+  const { data: space } = await service
+    .from("family_spaces")
+    .select("id")
+    .eq("created_by", userId)
     .maybeSingle();
-  return (mem as any)?.space_id ?? null;
+  return (space as any)?.id ?? null;
 }
 
 /** GET /api/hoy — recuerdos del mismo mes+día en años anteriores */
