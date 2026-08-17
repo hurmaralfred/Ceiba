@@ -97,20 +97,29 @@ export async function POST(req: NextRequest) {
 
   if (!checkRateLimit(`hoy-create:${user.id}`, 10, 60_000)) return rateLimitResponse();
 
-  const { body, memory_date, photo_path } = await req.json().catch(() => ({}));
+  const { body, memory_date, photo_path, person_id } = await req.json().catch(() => ({}));
   if (!body?.trim()) return NextResponse.json({ error: "El recuerdo no puede estar vacío" }, { status: 400 });
-  if (!memory_date || !/^\d{4}-\d{2}-\d{2}$/.test(memory_date))
+  // For memories linked to a deceased person, allow today's date
+  const dateToUse = memory_date ?? new Date().toISOString().slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateToUse))
     return NextResponse.json({ error: "Fecha inválida" }, { status: 400 });
-  if (new Date(memory_date) >= new Date())
-    return NextResponse.json({ error: "La fecha debe ser en el pasado" }, { status: 400 });
 
   const service = getServiceClient();
   const spaceId = await getSpaceId(service, user.id);
   if (!spaceId) return NextResponse.json({ error: "No perteneces a un espacio familiar" }, { status: 403 });
 
+  const insertData: Record<string, unknown> = {
+    author_user_id: user.id,
+    family_space_id: spaceId,
+    body: body.trim(),
+    memory_date: dateToUse,
+    photo_path: photo_path ?? null,
+  };
+  if (person_id) insertData.person_id = person_id;
+
   const { data, error } = await service
     .from("family_memories")
-    .insert({ author_user_id: user.id, family_space_id: spaceId, body: body.trim(), memory_date, photo_path: photo_path ?? null })
+    .insert(insertData)
     .select("id, memory_date, created_at")
     .single();
 

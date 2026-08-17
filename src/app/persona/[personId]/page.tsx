@@ -386,25 +386,24 @@ function PersonaPageInner() {
     if (!memoryText.trim()) return;
     setMemorySaving(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("No autenticado");
-      const { data: spaceData } = await supabase
-        .from("family_space_members")
-        .select("family_space_id")
-        .eq("user_id", user.id)
-        .limit(1)
-        .single();
-      if (!spaceData) throw new Error("Sin espacio familiar");
-      await supabase.from("family_memories").insert({
-        author_user_id: user.id,
-        family_space_id: spaceData.family_space_id,
-        person_id: personId,
-        body: memoryText.trim(),
-        memory_date: new Date().toISOString().slice(0, 10),
+      const res = await fetch("/api/hoy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          body: memoryText.trim(),
+          person_id: personId,
+        }),
       });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d.error ?? "Error al guardar");
+      }
       setMemoryDone(true);
+      // Refresh text memories so the new entry shows in Recuerdos tab
+      setTextMemoriesLoaded(false);
     } catch {
-      // stay in form, silent
+      // stay in form state, no silent failure
+      setMemorySaving(false);
     } finally {
       setMemorySaving(false);
     }
@@ -676,13 +675,24 @@ function PersonaPageInner() {
               {memoryDone ? (
                 <div style={{ textAlign: "center", padding: "10px 0" }}>
                   <div style={{ fontSize: 28, marginBottom: 8 }}>🕊️</div>
-                  <p style={{ fontSize: 14, fontWeight: 700, color: "#c8aaff", marginBottom: 4 }}>
+                  <p style={{ fontSize: 14, fontWeight: 700, color: "#c8aaff", marginBottom: 6 }}>
                     ¡Gracias por compartir!
                   </p>
-                  <p style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", lineHeight: 1.5 }}>
-                    Tu recuerdo quedó guardado en la historia de {person.first_name}.
-                    Otros familiares podrán leerlo y completar lo que falta.
+                  <p style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", lineHeight: 1.5, marginBottom: 14 }}>
+                    Tu recuerdo quedó guardado. Otros familiares podrán leerlo,
+                    confirmar fechas o agregar más detalles.
                   </p>
+                  <button
+                    onClick={() => setTab("recuerdos")}
+                    style={{
+                      padding: "9px 20px", borderRadius: 50, border: "none", cursor: "pointer",
+                      background: "rgba(180,140,255,0.15)",
+                      borderTop: "1.5px solid rgba(180,140,255,0.3)",
+                      color: "rgba(200,170,255,0.9)", fontSize: 12, fontWeight: 700,
+                    }}
+                  >
+                    Ver recuerdos →
+                  </button>
                 </div>
               ) : (
                 <>
