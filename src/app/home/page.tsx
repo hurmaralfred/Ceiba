@@ -5,9 +5,9 @@ import { CosmicNav } from "@/components/ui/cosmic";
 import Link from "next/link";
 import { getDiceBearUrl } from "@/lib/dicebear";
 import {
-  Home, Sparkles, BookOpen, User, Bell, Menu,
-  Users, GitBranch, Send,
-  Trophy, ChevronRight, CalendarDays, X, MessageCircle, Map, Share2, Lock,
+  Sparkles, BookOpen, Bell, Menu,
+  Users, Send,
+  Trophy, CalendarDays, X, MessageCircle, Map, Lock,
 } from "lucide-react";
 import BirthdayCardFeed from "@/components/BirthdayCardFeed";
 import PulseDiario from "@/components/PulseDiario";
@@ -267,31 +267,6 @@ const ORBIT_OUTER = [
   { dx:-132, dy:   0, r: 2.2, color: '#d4af37', glow: 'rgba(212,175,55,0.50)'  },
 ] as const
 
-// ── Nodo estadística ─────────────────────────────────────────────────────────
-function StatNode({ icon: Icon, value, label }: {
-  icon: React.ElementType; value: number; label: string;
-}) {
-  return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
-      <div style={{
-        width: 62, height: 62, borderRadius: "50%",
-        background: "rgba(6,4,18,0.80)",
-        border: "1px solid rgba(212,175,55,0.22)",
-        backdropFilter: "blur(10px)",
-        boxShadow: "0 0 22px rgba(212,175,55,0.07), 0 4px 18px rgba(0,0,0,0.6)",
-        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2,
-      }}>
-        <Icon size={11} style={{ color: "#d4af37", opacity: 0.65 }} />
-        <span style={{ fontSize: 18, fontWeight: 800, color: "#d4af37", lineHeight: 1 }}>{value}</span>
-      </div>
-      <span style={{ fontSize: 8.5, fontWeight: 600, color: "rgba(255,255,255,0.32)", textAlign: "center",
-        letterSpacing: "0.04em", lineHeight: 1.3, maxWidth: 62, whiteSpace: "pre-line" }}>
-        {label}
-      </span>
-    </div>
-  );
-}
-
 // ── Fila de grupos familiares ─────────────────────────────────────────────────
 const GROUP_AVATARS: Record<string, string> = {
   padres:   "/avatars/avatar_elder_m_1.png",
@@ -354,15 +329,11 @@ function FamilyRow({ members }: { members: FamilyMember[] }) {
   );
 }
 
-function GalaxyHero({ children, avatarInitial, avatarUrl, firstName, visibleCount, activeCount, generationsCount, historyCount }: {
+function GalaxyHero({ children, avatarInitial, avatarUrl, firstName }: {
   children: React.ReactNode;
   avatarInitial: string;
   avatarUrl?: string | null;
   firstName: string;
-  visibleCount: number;
-  activeCount: number;
-  generationsCount: number;
-  historyCount: number;
 }) {
   return (
     <div style={{ position: "relative", overflow: "hidden", paddingBottom: 8, textAlign: "center",
@@ -558,51 +529,8 @@ function GalaxyHero({ children, avatarInitial, avatarUrl, firstName, visibleCoun
         Tu universo familiar
       </div>
 
-      {/* Stats strip — luxury glass pill */}
-      <div style={{ position:"relative", zIndex:5, marginBottom:24, padding:"0 20px" }}>
-        <div style={{
-          display:"flex", alignItems:"center", justifyContent:"center",
-          background:"linear-gradient(135deg, rgba(18,12,38,0.82) 0%, rgba(10,8,24,0.90) 100%)",
-          border:"1px solid rgba(212,175,55,0.22)",
-          borderTop:"1px solid rgba(212,175,55,0.42)",
-          borderRadius:22,
-          padding:"14px 8px",
-          backdropFilter:"blur(16px)",
-          boxShadow:"0 4px 0 rgba(0,0,0,0.5), 0 8px 28px rgba(0,0,0,0.6), inset 0 1px 0 rgba(212,175,55,0.12)",
-        }}>
-          {[
-            { value: visibleCount,    label: "Familiares"   },
-            { value: generationsCount, label: "Generaciones" },
-            { value: historyCount,    label: "Recuerdos"    },
-            { value: activeCount,     label: "Activos"      },
-          ].map((stat, i) => (
-            <React.Fragment key={stat.label}>
-              {i > 0 && (
-                <span style={{ fontSize:10, color:"rgba(212,175,55,0.22)", flexShrink:0, padding:"0 2px" }}>✦</span>
-              )}
-              <div style={{ flex:1, textAlign:"center", padding:"0 2px" }}>
-                <div style={{
-                  fontSize:22, fontWeight:900, lineHeight:1,
-                  color:"#e8c84a",
-                  fontVariantNumeric:"tabular-nums",
-                  textShadow:"0 0 18px rgba(212,175,55,0.55), 0 0 36px rgba(212,175,55,0.20)",
-                  letterSpacing:"-0.02em",
-                }}>
-                  {stat.value}
-                </div>
-                <div style={{
-                  fontSize:7.5, fontWeight:700,
-                  color:"rgba(212,175,55,0.40)",
-                  textTransform:"uppercase", letterSpacing:"0.14em",
-                  marginTop:5, lineHeight:1,
-                }}>
-                  {stat.label}
-                </div>
-              </div>
-            </React.Fragment>
-          ))}
-        </div>
-      </div>
+      {/* Bottom breathing room */}
+      <div style={{ height: 16 }} />
 
     </div>
   );
@@ -687,43 +615,6 @@ function CircleBtn({ icon: Icon, label, href, color, shadowColor, delay = 0, bad
   );
 }
 
-// ── Shortcut secundario (también visible en nav inferior) ─────────────────────
-function QuickLink({ icon: Icon, label, href, color }: {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  icon: React.ComponentType<any>;
-  label: string; href: string; color: string;
-}) {
-  return (
-    <Link href={href} style={{ textDecoration: "none" }}>
-      <div style={{
-        display: "flex", flexDirection: "column", alignItems: "center", gap: 7,
-        padding: "12px 6px 10px",
-        borderRadius: 14,
-        background: "rgba(255,255,255,0.03)",
-        border: "1px solid rgba(212,175,55,0.1)",
-      }}>
-        <Icon size={17} style={{ color: `rgb(${color})`, opacity: 0.7 }} />
-        <span style={{
-          fontSize: 9.5, fontWeight: 600, color: "rgba(255,255,255,0.42)",
-          textAlign: "center", lineHeight: 1.2, letterSpacing: "0.01em",
-        }}>{label}</span>
-      </div>
-    </Link>
-  );
-}
-
-// ── Orbe nebulosa (legacy, kept for other uses) ───────────────────────────────
-function NebulaOrb({ top, left, right, color, size = 220 }: {
-  top?: number; left?: number; right?: number; color: string; size?: number;
-}) {
-  return (
-    <div style={{
-      position: "absolute", top, left, right,
-      width: size, height: size, borderRadius: "50%", pointerEvents: "none",
-      background: `radial-gradient(circle,${color} 0%,transparent 70%)`,
-    }} />
-  );
-}
 
 // ── Brillo superior de tarjeta ────────────────────────────────────────────────
 function CardShine({ ar }: { ar: string }) {
@@ -949,10 +840,6 @@ export default function HomePage() {
         avatarInitial={avatarInitial}
         avatarUrl={profile?.avatar_url ?? getDiceBearUrl(profile?.first_name ?? 'user')}
         firstName={profile?.first_name ?? ""}
-        visibleCount={visibleCount}
-        activeCount={activeCount}
-        generationsCount={generationsCount}
-        historyCount={historyCount}
       >
         {/* Barra de navegación superior */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -1352,18 +1239,16 @@ export default function HomePage() {
           textTransform: "uppercase", color: "rgba(212,175,55,0.4)", marginBottom: 16 }}>
           Accesos rápidos
         </div>
-        {/* Tier 1 — funciones no duplicadas en la navegación inferior */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "18px 8px", marginBottom: 16 }}>
-          <CircleBtn icon={CalendarDays} label={"Un día\ncomo hoy"} href="/hoy"     color="212,175,55"  shadowColor="#362000" delay={0}   />
-          <CircleBtn icon={Lock}         label="Cápsulas"           href="/capsulas" color="150,90,255"  shadowColor="#060010" delay={0.4} badge={pendingCapsulas} />
-          <CircleBtn icon={Map}          label="Mapa"               href="/mapa"     color="80,220,250"  shadowColor="#02101e" delay={0.8} />
-          <CircleBtn icon={Send}         label="Invitar"            href="/invitar"  color="212,175,55"  shadowColor="#362000" delay={1.2} />
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "18px 8px", marginBottom: 22 }}>
+          <CircleBtn icon={CalendarDays}  label={"Un día\ncomo hoy"} href="/hoy"     color="212,175,55" shadowColor="#362000" delay={0}   />
+          <CircleBtn icon={Lock}          label="Cápsulas"           href="/capsulas" color="150,90,255" shadowColor="#060010" delay={0.3} badge={pendingCapsulas} />
+          <CircleBtn icon={Map}           label="Mapa"               href="/mapa"     color="80,220,250" shadowColor="#02101e" delay={0.6} />
+          <CircleBtn icon={Send}          label="Invitar"            href="/invitar"  color="212,175,55" shadowColor="#362000" delay={0.9} />
         </div>
-        {/* Tier 2 — accesos también visibles en la navegación inferior */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
-          <QuickLink icon={MessageCircle} label="Chat"      href="/chat"    color="160,170,245" />
-          <QuickLink icon={BookOpen}      label="Recuerdos" href="/events"  color="242,180,60" />
-          <QuickLink icon={Trophy}        label="Logros"    href="/profile" color="210,150,40" />
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "18px 8px" }}>
+          <CircleBtn icon={MessageCircle} label="Chat"      href="/chat"    color="160,170,245" shadowColor="#060810" delay={0.15} badge={unreadChats} />
+          <CircleBtn icon={BookOpen}      label="Recuerdos" href="/events"  color="242,180,60"  shadowColor="#362000" delay={0.45} />
+          <CircleBtn icon={Trophy}        label="Logros"    href="/profile" color="210,150,40"  shadowColor="#2a1a00" delay={0.75} />
         </div>
       </div>
 

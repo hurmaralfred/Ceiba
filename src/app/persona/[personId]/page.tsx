@@ -4,6 +4,7 @@ import { useRouter, useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, MoreHorizontal, MapPin, Settings, Camera, Plus, X, Pencil, Check } from "lucide-react";
 import { CosmicNav, CosmicSpinner, C } from "@/components/ui/cosmic";
+import toast from "react-hot-toast";
 import { getDiceBearUrl } from "@/lib/dicebear";
 import { createClient } from "@/lib/supabase/client";
 
