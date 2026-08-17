@@ -39,7 +39,7 @@ export async function GET(
   // Get person data
   const { data: person } = await service
     .from("persons")
-    .select("id, first_name, middle_name, first_surname, second_surname, birth_date, birth_city, birth_country, photo_path, created_by")
+    .select("id, first_name, middle_name, first_surname, second_surname, birth_date, birth_city, birth_country, photo_path, created_by, is_deceased, death_date")
     .eq("id", personId)
     .single();
 
@@ -57,7 +57,8 @@ export async function GET(
   // Get avatar URL + config + relation type + is_deceased from family_members (if account exists)
   let avatarUrl: string | null = null;
   let avatarConfig: any = null;
-  let is_deceased = false;
+  // Fall back to persons.is_deceased / death_date for unclaimed deceased persons
+  let is_deceased = !!(person as any).is_deceased || !!(person as any).death_date;
   let relationType: string | null = null;
 
   if (claim?.user_id) {
