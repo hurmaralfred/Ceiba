@@ -22,6 +22,7 @@ import type { Profile, FamilyMember } from "@/lib/types";
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 interface FeedBirthday {
   person_id: string; first_name: string; last_name: string; birth_date: string;
+  is_deceased?: boolean; age_would_be?: number;
 }
 interface FeedPhoto { id: string; url: string; caption: string | null; created_at: string; uploader_user_id?: string; }
 interface FeedEvent { id: string; title: string; event_type: string; event_date: string; description: string | null; created_at: string; }
@@ -902,10 +903,15 @@ export default function HomePage() {
   const allBirthdays: BirthdayWithDays[] = birthdays.map(b => ({ ...b, days: daysUntil(b.birth_date) }));
   // Notificaciones en tiempo real (cumpleaños + nuevas historias/recuerdos)
   useFamilyNotifications(myUserId, allBirthdays);
-  const todayBirthday    = allBirthdays.find(b => b.days === 0) ?? null;
+  const liveBirthdays    = allBirthdays.filter(b => !b.is_deceased);
+  const todayBirthday    = liveBirthdays.find(b => b.days === 0) ?? null;
   const upcomingBirthday = !todayBirthday
-    ? allBirthdays.filter(b => b.days > 0).sort((a, b) => a.days - b.days)[0] ?? null
+    ? liveBirthdays.filter(b => b.days > 0).sort((a, b) => a.days - b.days)[0] ?? null
     : null;
+  // Fallecidos con cumpleaños próximo o hoy
+  const deceasedBirthday = allBirthdays
+    .filter(b => b.is_deceased)
+    .sort((a, b) => a.days - b.days)[0] ?? null;
   const rosterPersonIds = new Set(roster.map(m => m.person_id));
   const firstName = profile?.first_name ?? "";
   const avatarInitial = firstName[0]?.toUpperCase() ?? "?";
@@ -1251,8 +1257,48 @@ export default function HomePage() {
           </Link>
         )}
 
+        {/* — Caso Fallecido: cumpleaños de un familiar que ya no está — */}
+        {!todayBirthday && !upcomingBirthday && deceasedBirthday && (
+          <Link href={`/persona/${deceasedBirthday.person_id}`} style={{ textDecoration:"none" }}>
+            <div style={{
+              borderRadius:22,
+              background:"linear-gradient(145deg,#0d0b10 0%,#080608 100%)",
+              position:"relative", overflow:"hidden",
+              borderTop:"1.5px solid rgba(180,160,220,0.28)",
+              borderLeft:"1px solid rgba(140,120,180,0.14)",
+              borderBottom:"4px solid #030204",
+              borderRight:"1px solid rgba(0,0,0,0.65)",
+              boxShadow:"0 6px 0 #030204, 0 12px 28px rgba(0,0,0,0.88), 0 0 24px rgba(160,130,210,0.07)",
+              padding:"20px 20px 18px",
+            }}>
+              <div style={{ position:"absolute", inset:0, pointerEvents:"none",
+                background:"radial-gradient(ellipse at 10% 50%, rgba(160,130,210,0.07) 0%, transparent 55%)" }} />
+              <div style={{ position:"absolute", top:16, right:16,
+                background:"rgba(160,130,210,0.08)", border:"1px solid rgba(160,130,210,0.22)",
+                borderRadius:100, padding:"3px 10px",
+                fontSize:9, fontWeight:800, letterSpacing:"0.14em", color:"rgba(160,130,210,0.65)",
+                textTransform:"uppercase" }}>
+                {deceasedBirthday.days === 0 ? "Hoy" : deceasedBirthday.days === 1 ? "Mañana" : `En ${deceasedBirthday.days} días`}
+              </div>
+              <div style={{ fontSize:36, lineHeight:1, marginBottom:10 }}>🕊️</div>
+              <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em",
+                textTransform:"uppercase", color:"rgba(160,130,210,0.55)", marginBottom:6 }}>
+                {deceasedBirthday.days === 0 ? "En su memoria" : "Próximo aniversario"}
+              </div>
+              <div style={{ fontSize:18, fontWeight:800, color:"rgba(255,255,255,0.88)", lineHeight:1.2, marginBottom:6 }}>
+                {deceasedBirthday.first_name} {deceasedBirthday.last_name}
+              </div>
+              <div style={{ fontSize:13, color:"rgba(255,255,255,0.45)", lineHeight:1.5 }}>
+                {deceasedBirthday.days === 0
+                  ? `Hoy estaría cumpliendo ${deceasedBirthday.age_would_be} años`
+                  : `El ${new Date(new Date().getFullYear(), new Date(deceasedBirthday.birth_date).getMonth(), new Date(deceasedBirthday.birth_date).getDate()).toLocaleDateString("es", { day:"numeric", month:"long" })} estaría cumpliendo ${deceasedBirthday.age_would_be} años`}
+              </div>
+            </div>
+          </Link>
+        )}
+
         {/* — Caso D: sin cumpleaños registrados — invita a completar perfiles */}
-        {!todayBirthday && !upcomingBirthday && (
+        {!todayBirthday && !upcomingBirthday && !deceasedBirthday && (
           <div style={{
             borderRadius:22,
             background:"linear-gradient(145deg,#0a0c14 0%,#080a12 100%)",

@@ -45,7 +45,7 @@ export async function GET(_req: NextRequest) {
   const [{ data: persons }, { data: personsWithDeath }, { data: photos }, { data: broadcasts }, { data: events }] = await Promise.all([
     service
       .from("persons")
-      .select("id, first_name, first_surname, birth_date")
+      .select("id, first_name, first_surname, birth_date, is_deceased, death_date")
       .in("id", allPersonIds)
       .not("birth_date", "is", null),
     service
@@ -86,9 +86,17 @@ export async function GET(_req: NextRequest) {
     return (next.getTime() - now.getTime()) / (1000 * 60 * 60 * 24) <= days;
   };
 
+  const currentYear = now.getFullYear();
   const birthdays = ((persons ?? []) as any[])
     .filter((p) => isBirthdaySoon(p.birth_date, birthdayDays))
-    .map((p) => ({ person_id: p.id, first_name: p.first_name, last_name: p.first_surname, birth_date: p.birth_date }));
+    .map((p) => ({
+      person_id: p.id,
+      first_name: p.first_name,
+      last_name: p.first_surname,
+      birth_date: p.birth_date,
+      is_deceased: !!(p.is_deceased),
+      age_would_be: currentYear - parseInt(p.birth_date.slice(0, 4)),
+    }));
 
   // "Hoy en la historia familiar" — birth & death anniversaries matching today's month-day
   const anniversaries: Array<{
@@ -96,7 +104,6 @@ export async function GET(_req: NextRequest) {
     type: "birth" | "death"; date: string; years: number;
   }> = [];
 
-  const currentYear = now.getFullYear();
   ((persons ?? []) as any[]).forEach((p) => {
     const mmdd = p.birth_date.slice(5, 10); // "MM-DD"
     const birthYear = parseInt(p.birth_date.slice(0, 4));

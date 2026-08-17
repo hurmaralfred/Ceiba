@@ -555,8 +555,10 @@ function TreePageContent() {
       setForm(EMPTY_FORM);
       loadData();
       loadGrowthStats();
-      // Invite prompt — show after 600ms so modal close animation finishes
-      setTimeout(() => setInvitePrompt({ name: addedName, firstName: form.primer_nombre.trim() }), 600);
+      // Invite prompt — only for living persons
+      if (!form.is_deceased) {
+        setTimeout(() => setInvitePrompt({ name: addedName, firstName: form.primer_nombre.trim() }), 600);
+      }
     } catch (err: any) {
       // Se muestra el error REAL devuelto por add_relative (p. ej. permisos o
       // espacio familiar), no un mensaje genérico que oculte la causa.
