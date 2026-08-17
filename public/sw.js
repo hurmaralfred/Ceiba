@@ -46,64 +46,113 @@ self.addEventListener('fetch', (event) => {
 
 // ── Push notifications ────────────────────────────────────────────────────────
 self.addEventListener('push', (event) => {
-  if (!event.data) return;
-  const data = event.data.json();
+  // Always call showNotification — iOS invalidates the subscription if we don't.
+  const show = (title, options) =>
+    self.registration.showNotification(title, options);
 
-  const isSOS  = data.type === 'sos';
-  const isChat = data.type === 'chat';
-
-  // 1. Forward payload to every open client so the app can show an in-app toast.
-  //    We never suppress the system notification because iOS requires showNotification
-  //    to be called on every push event or it invalidates the subscription.
-  const forwardPromise = self.clients
-    .matchAll({ type: 'window', includeUncontrolled: true })
-    .then((clientList) => {
-      clientList.forEach((client) => {
-        client.postMessage({ type: 'ceiba-push', payload: data });
+  const handle = async () => {
+    let data = {};
+    try {
+      if (event.data) data = event.data.json();
+    } catch {
+      // Malformed payload — still show a fallback notification.
+      await show('Ceiba', {
+        body: 'Tienes un mensaje nuevo',
+        icon: '/icons/icon-192.png',
+        tag: 'ceiba-fallback',
+        data: { url: '/home' },
       });
+      return;
+    }
+
+    const isSOS  = data.type === 'sos';
+    const isChat = data.type === 'chat';
+
+    // Forward to open clients for in-app toast (best-effort, never blocks notification)
+    try {
+      const clientList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      clientList.forEach((client) => client.postMessage({ type: 'ceiba-push', payload: data }));
+    } catch { /* ignore — open clients are optional */ }
+
+    const tag     = isSOS ? 'ceiba-sos' : isChat ? `ceiba-chat-${data.roomId || 'group'}` : 'ceiba-announce';
+    const vibrate = isSOS ? [300, 100, 300, 100, 300] : [200, 100, 200];
+
+    await show(data.title || 'Ceiba', {
+      body:               data.body || '',
+      icon:               data.icon || '/icons/icon-192.png',
+      data:               { url: data.url || '/home' },
+      vibrate,
+      tag,
+      renotify:           true,
+      requireInteraction: isSOS,
+      silent:             false,
     });
 
-  // 2. System notification — different tags so SOS never replaces chat.
-  const tag      = isSOS ? 'ceiba-sos' : isChat ? `ceiba-chat-${data.roomId || 'group'}` : 'ceiba-announce';
-  const vibrate  = isSOS ? [300, 100, 300, 100, 300] : [200, 100, 200];
-
-  const notifOptions = {
-    body:             data.body,
-    icon:             data.icon || '/icons/icon-192.png',
-    badge:            '/icons/icon-192.png',
-    data:             { url: data.url || '/home' },
-    vibrate,
-    tag,
-    renotify:         true,
-    requireInteraction: isSOS,   // SOS stays visible until the user taps it
-    silent:           false,
+    // App icon badge count
+    if (self.navigator?.setAppBadge) {
+      await self.navigator.setAppBadge(data.badge ?? 1).catch(() => {});
+    }
   };
 
-  // Set/increment app icon badge
-  const badgePromise = self.navigator?.setAppBadge
-    ? self.navigator.setAppBadge(data.badge ?? 1).catch(() => {})
-    : Promise.resolve();
-
-  const notifPromise = self.registration.showNotification(data.title, notifOptions);
-
-  event.waitUntil(Promise.all([forwardPromise, notifPromise, badgePromise]));
+  event.waitUntil(handle());
 });
 
+// ── Tap on notification ───────────────────────────────────────────────────────
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const url = event.notification.data?.url || '/home';
 
+  const url = event.notification.data?.url || '/home';
   if (self.navigator?.clearAppBadge) self.navigator.clearAppBadge().catch(() => {});
 
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      for (const client of clientList) {
-        if ('focus' in client) {
-          client.navigate(url);
-          return client.focus();
+    self.clients
+      .matchAll({ type: 'window', includeUncontrolled: true })
+      .then((clientList) => {
+        // Try to focus an existing window at the target URL first
+        for (const client of clientList) {
+          if (client.url.endsWith(url) && 'focus' in client) {
+            return client.focus();
+          }
         }
-      }
-      return clients.openWindow(url);
-    })
+        // Focus any existing window and navigate it
+        for (const client of clientList) {
+          if ('focus' in client) {
+            client.focus();
+            if ('navigate' in client) client.navigate(url);
+            return;
+          }
+        }
+        // No window open — open a new one
+        return self.clients.openWindow(url);
+      })
   );
+});
+
+// ── Auto-renew push subscription ─────────────────────────────────────────────
+// iOS (and other browsers) rotate push subscriptions periodically.
+// Without this handler, the old endpoint gets a 410 → deleted from DB →
+// user stops receiving pushes until they manually open the app.
+self.addEventListener('pushsubscriptionchange', (event) => {
+  const resubscribe = async () => {
+    try {
+      // Reuse the same VAPID options that created the original subscription
+      const options = event.oldSubscription
+        ? event.oldSubscription.options
+        : event.newSubscription?.options;
+
+      if (!options) return;
+
+      const newSub = await self.registration.pushManager.subscribe(options);
+
+      await fetch('/api/push/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newSub.toJSON()),
+      });
+    } catch (err) {
+      console.error('[SW] pushsubscriptionchange resubscribe failed:', err);
+    }
+  };
+
+  event.waitUntil(resubscribe());
 });
