@@ -156,6 +156,7 @@ function PersonaPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isSelf = searchParams.get("self") === "true";
+  const compartir = searchParams.get("compartir") === "true";
   const { personId } = useParams<{ personId: string }>();
 
   const [person, setPerson] = useState<PersonData | null>(null);
@@ -167,11 +168,14 @@ function PersonaPageInner() {
   const [tab, setTab] = useState<TabKey>("historia");
   const [moreOpen, setMoreOpen] = useState(false);
 
-  // Gallery state
   const supabase = createClient();
+
+  // Gallery state
   const [galleryPhotos, setGalleryPhotos] = useState<Array<{ id: string; photo_path: string; body: string; memory_date: string }>>([]);
   const [galleryLoading, setGalleryLoading] = useState(false);
   const [galleryLoaded, setGalleryLoaded] = useState(false);
+  const [textMemories, setTextMemories] = useState<Array<{ id: string; body: string; memory_date: string }>>([]);
+  const [textMemoriesLoaded, setTextMemoriesLoaded] = useState(false);
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [uploadCaption, setUploadCaption] = useState("");
   const [uploadFile, setUploadFile] = useState<File | null>(null);
@@ -196,6 +200,11 @@ function PersonaPageInner() {
   const [editError, setEditError] = useState("");
   const editPhotoRef = useRef<HTMLInputElement>(null);
 
+  // Memory contribution (compartir lo que sabes)
+  const [memoryText, setMemoryText] = useState("");
+  const [memorySaving, setMemorySaving] = useState(false);
+  const [memoryDone, setMemoryDone] = useState(false);
+
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null));
   }, [supabase]);
@@ -213,6 +222,21 @@ function PersonaPageInner() {
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
   }, [personId]);
+
+  useEffect(() => {
+    if (tab !== "recuerdos" || textMemoriesLoaded) return;
+    (async () => {
+      const { data } = await supabase
+        .from("family_memories")
+        .select("id, body, memory_date")
+        .eq("person_id", personId)
+        .is("photo_path", null)
+        .order("created_at", { ascending: false })
+        .limit(30);
+      setTextMemories((data ?? []) as any[]);
+      setTextMemoriesLoaded(true);
+    })();
+  }, [tab, textMemoriesLoaded, supabase, personId]);
 
   useEffect(() => {
     if (tab !== "galeria" || galleryLoaded) return;
@@ -355,6 +379,34 @@ function PersonaPageInner() {
       setEditError(e.message ?? "Error al guardar");
     } finally {
       setEditSaving(false);
+    }
+  };
+
+  const handleShareMemory = async () => {
+    if (!memoryText.trim()) return;
+    setMemorySaving(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("No autenticado");
+      const { data: spaceData } = await supabase
+        .from("family_space_members")
+        .select("family_space_id")
+        .eq("user_id", user.id)
+        .limit(1)
+        .single();
+      if (!spaceData) throw new Error("Sin espacio familiar");
+      await supabase.from("family_memories").insert({
+        author_user_id: user.id,
+        family_space_id: spaceData.family_space_id,
+        person_id: personId,
+        body: memoryText.trim(),
+        memory_date: new Date().toISOString().slice(0, 10),
+      });
+      setMemoryDone(true);
+    } catch {
+      // stay in form, silent
+    } finally {
+      setMemorySaving(false);
     }
   };
 
@@ -613,6 +665,67 @@ function PersonaPageInner() {
             )}
           </div>
 
+          {/* ── COMPARTIR MEMORIA (si llegó desde la tarjeta del home) ───────── */}
+          {compartir && person?.is_deceased && (
+            <div style={{
+              margin: "0 16px 4px", padding: "18px 18px 20px",
+              background: "linear-gradient(145deg,#0d0b10 0%,#080608 100%)",
+              border: "1px solid rgba(180,140,255,0.25)",
+              borderRadius: 18,
+            }}>
+              {memoryDone ? (
+                <div style={{ textAlign: "center", padding: "10px 0" }}>
+                  <div style={{ fontSize: 28, marginBottom: 8 }}>🕊️</div>
+                  <p style={{ fontSize: 14, fontWeight: 700, color: "#c8aaff", marginBottom: 4 }}>
+                    ¡Gracias por compartir!
+                  </p>
+                  <p style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", lineHeight: 1.5 }}>
+                    Tu recuerdo quedó guardado en la historia de {person.first_name}.
+                    Otros familiares podrán leerlo y completar lo que falta.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: "rgba(180,140,255,0.9)", marginBottom: 4 }}>
+                    🕊️ ¿Qué sabes sobre {person.first_name}?
+                  </p>
+                  <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginBottom: 12, lineHeight: 1.5 }}>
+                    Escribe una fecha aproximada, un lugar, una historia o cualquier dato que recuerdes.
+                    Otros familiares podrán confirmarlo o agregar más.
+                  </p>
+                  <textarea
+                    value={memoryText}
+                    onChange={e => setMemoryText(e.target.value)}
+                    placeholder={`Ej: Creo que ${person.first_name} nació alrededor de 1920 en Bogotá...`}
+                    rows={3}
+                    style={{
+                      width: "100%", background: "rgba(255,255,255,0.05)",
+                      border: "1px solid rgba(180,140,255,0.2)", borderRadius: 12,
+                      padding: "10px 12px", color: "#fff", fontSize: 13,
+                      lineHeight: 1.5, resize: "none", outline: "none",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                  <button
+                    onClick={handleShareMemory}
+                    disabled={memorySaving || !memoryText.trim()}
+                    style={{
+                      marginTop: 10, width: "100%", padding: "11px 0",
+                      borderRadius: 50, border: "none", cursor: "pointer",
+                      background: memoryText.trim() ? "rgba(180,140,255,0.18)" : "rgba(255,255,255,0.05)",
+                      color: memoryText.trim() ? "rgba(200,170,255,0.9)" : "rgba(255,255,255,0.2)",
+                      fontSize: 13, fontWeight: 700,
+                      borderTop: memoryText.trim() ? "1.5px solid rgba(180,140,255,0.35)" : "1.5px solid transparent",
+                      transition: "all 0.2s",
+                    }}
+                  >
+                    {memorySaving ? "Guardando..." : "Compartir recuerdo"}
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+
           {/* ── TABS ─────────────────────────────────────────────────────────── */}
           <div style={{
             display: "flex", borderBottom: "0.5px solid rgba(212,175,55,0.14)",
@@ -855,8 +968,9 @@ function PersonaPageInner() {
 
             {/* RECUERDOS TAB */}
             {tab === "recuerdos" && (() => {
-              const memories = events.filter(ev => ev.description && ev.description.length > 0);
-              return memories.length === 0 ? (
+              const eventMemories = events.filter(ev => ev.description && ev.description.length > 0);
+              const hasAny = eventMemories.length > 0 || textMemories.length > 0;
+              return !hasAny ? (
                 <div style={{ padding: "48px 0", textAlign: "center" }}>
                   <div style={{ fontSize: 32, marginBottom: 14, opacity: 0.3 }}>◈</div>
                   <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 14, fontWeight: 600, marginBottom: 6 }}>
@@ -865,10 +979,35 @@ function PersonaPageInner() {
                   <p style={{ color: "rgba(255,255,255,0.22)", fontSize: 12, lineHeight: 1.5 }}>
                     Los momentos especiales de {firstName}<br />vivirán aquí.
                   </p>
+                  {person?.is_deceased && (
+                    <button
+                      onClick={() => { setMemoryDone(false); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                      style={{
+                        marginTop: 20, padding: "10px 22px", borderRadius: 50,
+                        background: "rgba(180,140,255,0.1)", border: "1.5px solid rgba(180,140,255,0.25)",
+                        color: "rgba(200,170,255,0.8)", fontSize: 12, fontWeight: 700, cursor: "pointer",
+                      }}
+                    >
+                      🕊️ Compartir un recuerdo
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  {memories.slice(0, 5).map(ev => (
+                  {textMemories.map(m => (
+                    <div key={m.id} style={{
+                      background: "rgba(180,140,255,0.05)", borderRadius: 14, padding: "14px 16px",
+                      border: "1px solid rgba(180,140,255,0.15)",
+                    }}>
+                      <div style={{ fontSize: 11, color: "rgba(180,140,255,0.45)", marginBottom: 6 }}>
+                        🕊️ {formatDate(m.memory_date)}
+                      </div>
+                      <div style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", lineHeight: 1.6 }}>
+                        {m.body}
+                      </div>
+                    </div>
+                  ))}
+                  {eventMemories.slice(0, 5).map(ev => (
                     <div key={ev.id} style={{
                       background: "rgba(12,10,24,0.85)", borderRadius: 14, padding: "15px 16px",
                       border: "1px solid rgba(212,175,55,0.1)",

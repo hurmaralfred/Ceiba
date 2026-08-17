@@ -167,7 +167,8 @@ export async function GET(
 }
 
 // PATCH /api/persona/[personId]
-// Allows the original creator to edit an unclaimed person's data
+// Creator can edit any unclaimed person.
+// For deceased persons, any family member can contribute biographical data.
 export async function PATCH(
   req: NextRequest,
   { params }: { params: { personId: string } }
@@ -179,18 +180,13 @@ export async function PATCH(
   const service = getServiceClient();
   const { personId } = params;
 
-  // Fetch person to verify creator and claim status
   const { data: person } = await service
     .from("persons")
-    .select("id, created_by")
+    .select("id, created_by, is_deceased")
     .eq("id", personId)
     .single();
 
   if (!person) return NextResponse.json({ error: "Persona no encontrada" }, { status: 404 });
-
-  // Only the original creator can edit
-  if (person.created_by !== user.id)
-    return NextResponse.json({ error: "No tienes permiso para editar este perfil" }, { status: 403 });
 
   // Editing is blocked once someone has claimed the profile
   const { data: existingClaim } = await service
@@ -204,11 +200,44 @@ export async function PATCH(
   if (existingClaim)
     return NextResponse.json({ error: "Este perfil ya fue reclamado y no puede editarse" }, { status: 403 });
 
+  const isCreator = person.created_by === user.id;
+  const isDeceased = !!(person as any).is_deceased;
+
+  if (!isCreator && !isDeceased) {
+    // Non-creators can only contribute to deceased members
+    return NextResponse.json({ error: "No tienes permiso para editar este perfil" }, { status: 403 });
+  }
+
+  if (!isCreator && isDeceased) {
+    // Verify the editor is actually in the same family space
+    const myPersonId = await resolveApprovedPersonId(service, user.id);
+    if (myPersonId) {
+      const familyIds = await resolveFamilySpaceMemberIds(service, myPersonId);
+      const allIds = [myPersonId, ...familyIds];
+      if (!allIds.includes(personId)) {
+        return NextResponse.json({ error: "Esta persona no pertenece a tu familia" }, { status: 403 });
+      }
+    }
+  }
+
   const body = await req.json().catch(() => ({}));
   const {
     first_name, middle_name, first_surname, second_surname,
     birth_date, birth_city, birth_country, photo_path,
   } = body;
+
+  // Non-creators can only update biographical fields, not the name
+  if (!isCreator && isDeceased) {
+    const bioUpdates: Record<string, unknown> = {
+      birth_date: birth_date || null,
+      birth_city: birth_city?.trim() || null,
+      birth_country: birth_country?.trim() || null,
+    };
+    const { data: updated, error } = await service
+      .from("persons").update(bioUpdates).eq("id", personId).select().single();
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ person: updated });
+  }
 
   if (!first_name || typeof first_name !== "string" || first_name.trim().length < 1)
     return NextResponse.json({ error: "El nombre es requerido" }, { status: 400 });

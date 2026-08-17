@@ -1609,7 +1609,7 @@ export default function HomePage() {
                 {dailyDeceasedQuestion.first_name} {dailyDeceasedQuestion.last_name}
               </span>?
             </p>
-            <Link href={`/persona/${dailyDeceasedQuestion.person_id}`} style={{ textDecoration:"none" }}>
+            <Link href={`/persona/${dailyDeceasedQuestion.person_id}?compartir=true`} style={{ textDecoration:"none" }}>
               <div style={{
                 display:"inline-flex", alignItems:"center", justifyContent:"center", gap:6,
                 padding:"10px 20px", borderRadius:50,
