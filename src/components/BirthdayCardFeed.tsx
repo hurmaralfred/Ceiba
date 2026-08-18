@@ -3,6 +3,32 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Gift, Share2, Copy, X } from "lucide-react";
 
+// ── Gorrito de fiesta SVG ─────────────────────────────────────────────────────
+function PartyHat({ days }: { days: number }) {
+  // Colores: dorado para hoy, rosa/morado para próximos
+  const cone  = days === 0 ? "#f5c842" : days <= 3 ? "#e854a4" : "#9b59e8";
+  const band  = days === 0 ? "#fff6c0" : days <= 3 ? "#ffc0e0" : "#d0b8ff";
+  const pom   = days === 0 ? "#fff"    : days <= 3 ? "#ff80c8" : "#c090ff";
+  return (
+    <svg width="26" height="30" viewBox="0 0 26 30"
+      style={{ position:"absolute", top:-20, left:"50%",
+        transform:"translateX(-38%) rotate(-18deg)",
+        zIndex:10, filter:"drop-shadow(0 2px 4px rgba(0,0,0,0.55))",
+        pointerEvents:"none" }}
+      aria-hidden>
+      {/* Cuerpo del gorro */}
+      <polygon points="13,1 24,26 2,26" fill={cone} />
+      {/* Franja diagonal decorativa */}
+      <polygon points="13,1 17.5,13.5 9,13.5" fill={band} opacity="0.55" />
+      {/* Ribete inferior */}
+      <rect x="1" y="24" width="24" height="4" rx="2" fill={band} />
+      {/* Pompón en la punta */}
+      <circle cx="13" cy="3" r="4" fill={pom} />
+      <circle cx="13" cy="3" r="2.5" fill="white" opacity="0.5" />
+    </svg>
+  );
+}
+
 interface BirthdayWithDays {
   person_id: string;
   first_name: string;
@@ -144,8 +170,10 @@ export default function BirthdayCardFeed({
               flexShrink:0, width:80,
               animation:`bdfPop .28s ease both ${i * 0.06}s`,
             }}>
-              {/* Avatar con anillo */}
-              <div style={{ position:"relative", width:60, height:60 }}>
+              {/* Avatar con anillo y gorrito */}
+              <div style={{ position:"relative", width:60, height:60, overflow:"visible" }}>
+                {/* Gorrito de fiesta encima del avatar */}
+                <PartyHat days={p.days} />
                 {gold && (
                   <div style={{
                     position:"absolute", inset:-3, borderRadius:"50%",
