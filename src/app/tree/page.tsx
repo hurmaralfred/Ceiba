@@ -891,44 +891,22 @@ function TreePageContent() {
   };
 
   const shareTree = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    const name = profile?.first_name ?? "Mi familia";
+    const text = `¡Hola! Estoy construyendo el árbol genealógico de ${name} en Ceiba. Únete para ver a toda la familia conectada 🌳`;
+    const url = "https://ceibapp.com";
 
-    let { data: existing } = await supabase
-      .from("shared_trees")
-      .select("token")
-      .eq("profile_id", user.id)
-      .single();
-
-    if (!existing) {
-      const { data: created, error } = await supabase
-        .from("shared_trees")
-        .insert({ profile_id: user.id })
-        .select("token")
-        .single();
-      if (error || !created) { toast.error("Error al generar link"); return; }
-      existing = created;
-    }
-
-    const link = `${window.location.origin}/share/${existing.token}`;
-
-    // Usar Web Share API en móvil (abre WhatsApp, Instagram, etc.)
     if (typeof navigator.share === "function") {
       try {
-        await navigator.share({
-          title: "Mi galaxia familiar en Ceiba",
-          text: "Te comparto mi galaxia familiar 🌳 — únete para ver toda la familia conectada.",
-          url: link,
-        });
+        await navigator.share({ title: "Galaxia familiar en Ceiba", text, url });
         return;
       } catch (err) {
-        if ((err as Error).name === "AbortError") return; // usuario canceló
+        if ((err as Error).name === "AbortError") return;
       }
     }
 
-    // Fallback: copiar al clipboard
-    await navigator.clipboard.writeText(link);
-    toast.success("¡Link copiado! Compártelo con tu familia.");
+    // Fallback: WhatsApp
+    const wa = `https://api.whatsapp.com/send?text=${encodeURIComponent(text + " " + url)}`;
+    window.open(wa, "_blank", "noopener");
   };
 
   const activateMap = () => {

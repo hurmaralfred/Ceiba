@@ -607,7 +607,7 @@ function InvitarPageInner() {
           <span style={{ fontSize:16, fontWeight:600, color:"#fff" }}>Tu universo</span>
         </header>
         <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center",
-          justifyContent:"center", gap:18, padding:"0 24px", textAlign:"center", position:"relative", zIndex:5 }}>
+          justifyContent:"center", gap:18, padding:"32px 24px", textAlign:"center", position:"relative", zIndex:5 }}>
           <div style={{ fontSize:48, filter:"drop-shadow(0 0 20px rgba(242,180,60,0.5))" }}>⭐</div>
           <h2 style={{ fontSize:22, fontWeight:700, color:"#fff", letterSpacing:"-0.02em" }}>
             Tu constelación está completa
@@ -623,6 +623,11 @@ function InvitarPageInner() {
               Explorar mi universo
             </div>
           </Link>
+
+          {/* Invitar amigo — siguiente paso natural cuando la familia ya está completa */}
+          <div style={{ width:"100%", maxWidth:360, marginTop:8 }}>
+            <ShareCeibaBlock inviterName={meFirstName} />
+          </div>
         </div>
       </div>
     );
