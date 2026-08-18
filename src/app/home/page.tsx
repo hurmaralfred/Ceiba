@@ -813,7 +813,9 @@ export default function HomePage() {
     ? deceasedWithoutDate[Math.floor(Date.now() / 86400000) % deceasedWithoutDate.length]
     : null;
 
+  // Map person_id → user_id para identificar usuarios registrados en el feed de cumpleaños
   const rosterPersonIds = new Set(roster.map(m => m.person_id));
+  const rosterPersonMap: Record<string, string> = Object.fromEntries(roster.map(m => [m.person_id, m.user_id]));
   const firstName = profile?.first_name ?? "";
   const avatarInitial = firstName[0]?.toUpperCase() ?? "?";
 
@@ -1409,7 +1411,7 @@ export default function HomePage() {
         )}
 
         {/* Feed de cumpleaños — Sprint 0 */}
-        <BirthdayCardFeed birthdays={allBirthdays} rosterPersonIds={rosterPersonIds} />
+        <BirthdayCardFeed birthdays={allBirthdays} rosterPersonMap={rosterPersonMap} />
 
       </div>
 

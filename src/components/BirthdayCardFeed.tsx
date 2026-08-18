@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Gift, Share2, Copy, X } from "lucide-react";
-import Link from "next/link";
 
 interface BirthdayWithDays {
   person_id: string;
@@ -15,7 +15,7 @@ interface BirthdayWithDays {
 function daysChip(days: number): { label: string; gold: boolean } {
   if (days === 0) return { label: "Hoy 🎂", gold: true  };
   if (days === 1) return { label: "Mañana", gold: true  };
-  if (days <= 7)  return { label: `${days}d 🎁`,  gold: false };
+  if (days <= 7)  return { label: `${days}d 🎁`, gold: false };
   return              { label: `${days}d`,    gold: false };
 }
 
@@ -40,15 +40,18 @@ function getTemplates(firstName: string, days: number) {
 
 export default function BirthdayCardFeed({
   birthdays,
-  rosterPersonIds,
+  rosterPersonMap,
 }: {
   birthdays: BirthdayWithDays[];
-  rosterPersonIds: Set<string>;
+  // person_id → user_id de familiares registrados en Ceiba
+  rosterPersonMap: Record<string, string>;
 }) {
-  const [inviting, setInviting]   = useState<BirthdayWithDays | null>(null);
+  const router = useRouter();
+  const [inviting, setInviting]       = useState<BirthdayWithDays | null>(null);
   const [templateIdx, setTemplateIdx] = useState(0);
-  const [copied, setCopied]       = useState(false);
-  const [sent, setSent]           = useState<Set<string>>(new Set());
+  const [copied, setCopied]           = useState(false);
+  const [sent, setSent]               = useState<Set<string>>(new Set());
+  const [loading, setLoading]         = useState<string | null>(null); // person_id en curso
 
   if (birthdays.length === 0) return null;
 
@@ -62,7 +65,31 @@ export default function BirthdayCardFeed({
     .sort((a, b) => a.days - b.days)
     .slice(0, 6);
 
-  const openInvite = (p: BirthdayWithDays) => { setInviting(p); setTemplateIdx(0); setCopied(false); };
+  // Abre un DM con el familiar registrado y navega a esa sala
+  const handleFelicitar = async (p: BirthdayWithDays) => {
+    const userId = rosterPersonMap[p.person_id];
+    if (!userId) return;
+    setLoading(p.person_id);
+    try {
+      const res = await fetch("/api/chat/rooms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ otherUserId: userId }),
+      });
+      if (res.ok) {
+        const { roomId } = await res.json();
+        router.push(`/chat/${roomId}`);
+      } else {
+        router.push("/chat");
+      }
+    } catch {
+      router.push("/chat");
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const openInvite  = (p: BirthdayWithDays) => { setInviting(p); setTemplateIdx(0); setCopied(false); };
   const closeInvite = () => { setInviting(null); setCopied(false); };
 
   const handleCopy = async (msg: string) => {
@@ -104,50 +131,15 @@ export default function BirthdayCardFeed({
         WebkitOverflowScrolling:"touch" as any,
       }}>
         {cards.map((p, i) => {
-          const inApp   = rosterPersonIds.has(p.person_id);
+          const userId  = rosterPersonMap[p.person_id];
+          const inApp   = !!userId;           // registrado en Ceiba
           const wasSent = sent.has(p.person_id);
+          const busy    = loading === p.person_id;
           const { label, gold } = daysChip(p.days);
-          const initials = `${p.first_name[0] ?? ""}`.toUpperCase();
+          const initials  = p.first_name[0]?.toUpperCase() ?? "?";
           const firstName = p.first_name.split(" ")[0];
-
-          // Color accent: gold for in-app, terracotta for not in app
           const accentRgb = inApp ? "212,175,55" : "196,98,45";
           const accentHex = inApp ? "#d4af37"    : "#c4622d";
-
-          const ActionEl = () => {
-            if (inApp) {
-              return (
-                <Link href="/chat" style={{ textDecoration:"none" }}>
-                  <div style={{
-                    marginTop:8, padding:"5px 10px", borderRadius:20, fontSize:10, fontWeight:700,
-                    background: gold ? "#c9a820" : "rgba(212,175,55,0.08)",
-                    color:      gold ? "#030208" : "rgba(212,175,55,0.75)",
-                    border:     gold ? "none"    : "1px solid rgba(212,175,55,0.20)",
-                    borderTop:  gold ? "1.5px solid #ffe060" : undefined,
-                    boxShadow:  gold ? "0 3px 0 rgba(90,60,0,0.5)" : "none",
-                    textAlign:"center", whiteSpace:"nowrap",
-                  }}>
-                    {gold ? "🎉 Felicitar" : "Felicitar"}
-                  </div>
-                </Link>
-              );
-            }
-            if (wasSent) {
-              return (
-                <div style={{ marginTop:8, fontSize:10, fontWeight:700,
-                  color:"#6DC994", textAlign:"center" }}>✓ Enviado</div>
-              );
-            }
-            return (
-              <button onClick={() => openInvite(p)}
-                style={{ marginTop:8, padding:"5px 10px", borderRadius:20, fontSize:10,
-                  fontWeight:700, cursor:"pointer", fontFamily:"inherit",
-                  background:"rgba(196,98,45,0.10)", border:"1px solid rgba(196,98,45,0.28)",
-                  color:"#c4622d", whiteSpace:"nowrap" }}>
-                Invitar
-              </button>
-            );
-          };
 
           return (
             <div key={p.person_id} style={{
@@ -157,7 +149,6 @@ export default function BirthdayCardFeed({
             }}>
               {/* Avatar con anillo */}
               <div style={{ position:"relative", width:60, height:60 }}>
-                {/* Anillo animado para urgente */}
                 {gold && (
                   <div style={{
                     position:"absolute", inset:-3, borderRadius:"50%",
@@ -166,12 +157,10 @@ export default function BirthdayCardFeed({
                     filter:"blur(1px)",
                   }} />
                 )}
-                {/* Gap entre anillo y foto */}
                 {gold && (
                   <div style={{ position:"absolute", inset:-1, borderRadius:"50%",
                     background:"#030208", zIndex:1 }} />
                 )}
-                {/* Círculo avatar */}
                 <div style={{
                   position:"relative", zIndex:2,
                   width:60, height:60, borderRadius:"50%",
@@ -203,7 +192,7 @@ export default function BirthdayCardFeed({
                 {firstName}
               </div>
 
-              {/* Days chip */}
+              {/* Días chip */}
               <div style={{
                 marginTop:4, padding:"2px 8px", borderRadius:20, fontSize:9, fontWeight:800,
                 background: gold ? "rgba(212,175,55,0.15)" : "rgba(255,255,255,0.04)",
@@ -214,14 +203,49 @@ export default function BirthdayCardFeed({
                 {label}
               </div>
 
-              {/* Acción */}
-              <ActionEl />
+              {/* ── Acción según si está o no registrado ── */}
+              {inApp ? (
+                // Registrado → abrir DM y felicitar
+                <button
+                  disabled={busy}
+                  onClick={() => handleFelicitar(p)}
+                  style={{
+                    marginTop:8, padding:"5px 10px", borderRadius:20, fontSize:10,
+                    fontWeight:700, cursor: busy ? "default" : "pointer", fontFamily:"inherit",
+                    background: gold ? "#c9a820" : "rgba(212,175,55,0.08)",
+                    color:      gold ? "#030208" : "rgba(212,175,55,0.75)",
+                    border:     gold ? "none"    : "1px solid rgba(212,175,55,0.20)",
+                    borderTop:  gold ? "1.5px solid #ffe060" : undefined,
+                    boxShadow:  gold ? "0 3px 0 rgba(90,60,0,0.5)" : "none",
+                    whiteSpace:"nowrap", opacity: busy ? 0.6 : 1,
+                  }}>
+                  {busy ? "…" : gold ? "🎉 Felicitar" : "Felicitar"}
+                </button>
+              ) : wasSent ? (
+                // Invitación ya enviada
+                <div style={{ marginTop:8, fontSize:10, fontWeight:700,
+                  color:"#6DC994", textAlign:"center" }}>
+                  ✓ Enviado
+                </div>
+              ) : (
+                // No registrado → invitar a Ceiba
+                <button
+                  onClick={() => openInvite(p)}
+                  style={{
+                    marginTop:8, padding:"5px 10px", borderRadius:20, fontSize:10,
+                    fontWeight:700, cursor:"pointer", fontFamily:"inherit",
+                    background:"rgba(196,98,45,0.10)", border:"1px solid rgba(196,98,45,0.28)",
+                    color:"#c4622d", whiteSpace:"nowrap",
+                  }}>
+                  Invitar
+                </button>
+              )}
             </div>
           );
         })}
       </div>
 
-      {/* Modal de invitación */}
+      {/* Modal de invitación (solo para no registrados) */}
       {inviting && (() => {
         const templates = getTemplates(inviting.first_name, inviting.days);
         const msg       = templates[templateIdx]?.text ?? "";
