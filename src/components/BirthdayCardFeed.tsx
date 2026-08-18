@@ -228,24 +228,31 @@ export default function BirthdayCardFeed({
                 {label}
               </div>
 
-              {/* ── Acción según si está o no registrado ── */}
-              {inApp ? (
-                // Registrado → abrir DM y felicitar
+              {/* ── Acción según si está o no registrado y si es hoy ── */}
+              {inApp && p.days === 0 ? (
+                // Registrado + cumple HOY → botón Felicitar
                 <button
                   disabled={busy}
                   onClick={() => handleFelicitar(p)}
                   style={{
                     marginTop:8, padding:"5px 10px", borderRadius:20, fontSize:10,
                     fontWeight:700, cursor: busy ? "default" : "pointer", fontFamily:"inherit",
-                    background: gold ? "#c9a820" : "rgba(212,175,55,0.08)",
-                    color:      gold ? "#030208" : "rgba(212,175,55,0.75)",
-                    border:     gold ? "none"    : "1px solid rgba(212,175,55,0.20)",
-                    borderTop:  gold ? "1.5px solid #ffe060" : undefined,
-                    boxShadow:  gold ? "0 3px 0 rgba(90,60,0,0.5)" : "none",
+                    background:"#c9a820", color:"#030208",
+                    border:"none", borderTop:"1.5px solid #ffe060",
+                    boxShadow:"0 3px 0 rgba(90,60,0,0.5)",
                     whiteSpace:"nowrap", opacity: busy ? 0.6 : 1,
                   }}>
-                  {busy ? "…" : gold ? "🎉 Felicitar" : "Felicitar"}
+                  {busy ? "…" : "🎉 Felicitar"}
                 </button>
+              ) : inApp ? (
+                // Registrado pero aún no es su día → solo cuenta regresiva
+                <div style={{
+                  marginTop:8, padding:"3px 8px", borderRadius:20, fontSize:9, fontWeight:700,
+                  background:"rgba(212,175,55,0.06)", border:"1px solid rgba(212,175,55,0.14)",
+                  color:"rgba(212,175,55,0.4)", textAlign:"center", whiteSpace:"nowrap",
+                }}>
+                  {p.days === 1 ? "Mañana 🎂" : `${p.days}d 🎁`}
+                </div>
               ) : wasSent ? (
                 // Invitación ya enviada
                 <div style={{ marginTop:8, fontSize:10, fontWeight:700,

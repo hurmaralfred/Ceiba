@@ -28,6 +28,7 @@ import { createInviteLink } from "@/lib/viral/inviteFlow";
 import { CosmicNav } from "@/components/ui/cosmic";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useFamilyPresenceContext } from "@/contexts/FamilyPresenceContext";
+import RotateHintWeb from "@/components/RotateHintWeb";
 import toast from "react-hot-toast";
 
 const FamilyTreeGraph = lazyLoad(
@@ -1332,6 +1333,7 @@ function TreePageContent() {
                           {" personas"}
                         </span>
                       </div>
+                      <RotateHintWeb />
                       {/* Classic view toggle — discrete, bottom-left */}
                       <button
                         onClick={() => {
@@ -1392,6 +1394,7 @@ function TreePageContent() {
                           {" personas"}
                         </span>
                       </div>
+                      <RotateHintWeb />
                       {/* Return to galaxy view */}
                       <button
                         onClick={() => {
