@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
+import { Gift, Share2, Copy, X } from "lucide-react";
 import Link from "next/link";
-import { Gift, Share2, Copy, X, ChevronRight } from "lucide-react";
 
 interface BirthdayWithDays {
   person_id: string;
@@ -9,13 +9,14 @@ interface BirthdayWithDays {
   last_name: string;
   birth_date: string;
   days: number;
+  photo_path?: string | null;
 }
 
-function daysLabel(days: number): { icon: string; text: string; urgent: boolean } {
-  if (days === 0) return { icon: "🎂", text: "Hoy",     urgent: true  };
-  if (days === 1) return { icon: "🎁", text: "Mañana",  urgent: true  };
-  if (days <= 7)  return { icon: "🎁", text: `${days}d`, urgent: false };
-  return              { icon: "📅", text: `${days}d`, urgent: false };
+function daysChip(days: number): { label: string; gold: boolean } {
+  if (days === 0) return { label: "Hoy 🎂", gold: true  };
+  if (days === 1) return { label: "Mañana", gold: true  };
+  if (days <= 7)  return { label: `${days}d 🎁`,  gold: false };
+  return              { label: `${days}d`,    gold: false };
 }
 
 function getTemplates(firstName: string, days: number) {
@@ -44,42 +45,33 @@ export default function BirthdayCardFeed({
   birthdays: BirthdayWithDays[];
   rosterPersonIds: Set<string>;
 }) {
-  const [inviting, setInviting] = useState<BirthdayWithDays | null>(null);
+  const [inviting, setInviting]   = useState<BirthdayWithDays | null>(null);
   const [templateIdx, setTemplateIdx] = useState(0);
-  const [copied, setCopied]   = useState(false);
-  const [sent, setSent]       = useState<Set<string>>(new Set());
+  const [copied, setCopied]       = useState(false);
+  const [sent, setSent]           = useState<Set<string>>(new Set());
 
   if (birthdays.length === 0) return null;
 
   const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
   const cards = birthdays
-    .slice()
     .filter(p => {
       if (p.days === 0) return true;
       const bd = new Date(p.birth_date);
-      const thisYearBd = new Date(todayStart.getFullYear(), bd.getMonth(), bd.getDate());
-      return thisYearBd >= todayStart;
+      return new Date(todayStart.getFullYear(), bd.getMonth(), bd.getDate()) >= todayStart;
     })
     .sort((a, b) => a.days - b.days)
-    .slice(0, 5);
+    .slice(0, 6);
 
-  const openInvite = (p: BirthdayWithDays) => {
-    setInviting(p); setTemplateIdx(0); setCopied(false);
-  };
+  const openInvite = (p: BirthdayWithDays) => { setInviting(p); setTemplateIdx(0); setCopied(false); };
   const closeInvite = () => { setInviting(null); setCopied(false); };
 
   const handleCopy = async (msg: string) => {
-    try { await navigator.clipboard.writeText(msg); } catch { /* sin clipboard */ }
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
+    try { await navigator.clipboard.writeText(msg); } catch { /**/ }
+    setCopied(true); setTimeout(() => setCopied(false), 2500);
   };
-
   const handleShare = async (msg: string) => {
-    if (navigator.share) {
-      await navigator.share({ text: msg }).catch(() => handleCopy(msg));
-    } else {
-      await handleCopy(msg);
-    }
+    if (navigator.share) await navigator.share({ text: msg }).catch(() => handleCopy(msg));
+    else await handleCopy(msg);
     if (inviting) setSent(prev => new Set([...prev, inviting.person_id]));
     closeInvite();
   };
@@ -89,99 +81,147 @@ export default function BirthdayCardFeed({
       <style>{`
         @keyframes bdfFade    { from{opacity:0} to{opacity:1} }
         @keyframes bdfModalUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
-        @keyframes bdfRow     { from{opacity:0;transform:translateX(-6px)} to{opacity:1;transform:translateX(0)} }
+        @keyframes bdfPop     { from{opacity:0;transform:scale(0.88)} to{opacity:1;transform:scale(1)} }
+        @keyframes bday-ring  { 0%,100%{opacity:0.7} 50%{opacity:1} }
       `}</style>
 
       {/* Encabezado */}
-      <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:10 }}>
+      <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:12 }}>
         <Gift size={12} style={{ color:"#d4af37" }} />
         <span style={{ fontSize:11, fontWeight:700, color:"rgba(212,175,55,0.65)",
           letterSpacing:"0.1em", textTransform:"uppercase", flex:1 }}>
           Próximos cumpleaños
         </span>
-        <span style={{ fontSize:10, color:"rgba(255,255,255,0.2)", fontWeight:600 }}>
-          {cards.length}
-        </span>
+        <span style={{ fontSize:10, color:"rgba(255,255,255,0.2)", fontWeight:600 }}>{cards.length}</span>
       </div>
 
-      {/* Lista compacta */}
+      {/* Tira horizontal scrollable */}
       <div style={{
-        borderRadius:14,
-        border:"1px solid rgba(212,175,55,0.10)",
-        borderTop:"1.5px solid rgba(212,175,55,0.18)",
-        overflow:"hidden",
-        background:"rgba(255,255,255,0.02)",
+        display:"flex", gap:12,
+        overflowX:"auto", paddingBottom:4,
+        scrollbarWidth:"none",
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        WebkitOverflowScrolling:"touch" as any,
       }}>
         {cards.map((p, i) => {
           const inApp   = rosterPersonIds.has(p.person_id);
           const wasSent = sent.has(p.person_id);
-          const { icon, text, urgent } = daysLabel(p.days);
-          const isLast  = i === cards.length - 1;
+          const { label, gold } = daysChip(p.days);
+          const initials = `${p.first_name[0] ?? ""}`.toUpperCase();
+          const firstName = p.first_name.split(" ")[0];
+
+          // Color accent: gold for in-app, terracotta for not in app
+          const accentRgb = inApp ? "212,175,55" : "196,98,45";
+          const accentHex = inApp ? "#d4af37"    : "#c4622d";
+
+          const ActionEl = () => {
+            if (inApp) {
+              return (
+                <Link href="/chat" style={{ textDecoration:"none" }}>
+                  <div style={{
+                    marginTop:8, padding:"5px 10px", borderRadius:20, fontSize:10, fontWeight:700,
+                    background: gold ? "#c9a820" : "rgba(212,175,55,0.08)",
+                    color:      gold ? "#030208" : "rgba(212,175,55,0.75)",
+                    border:     gold ? "none"    : "1px solid rgba(212,175,55,0.20)",
+                    borderTop:  gold ? "1.5px solid #ffe060" : undefined,
+                    boxShadow:  gold ? "0 3px 0 rgba(90,60,0,0.5)" : "none",
+                    textAlign:"center", whiteSpace:"nowrap",
+                  }}>
+                    {gold ? "🎉 Felicitar" : "Felicitar"}
+                  </div>
+                </Link>
+              );
+            }
+            if (wasSent) {
+              return (
+                <div style={{ marginTop:8, fontSize:10, fontWeight:700,
+                  color:"#6DC994", textAlign:"center" }}>✓ Enviado</div>
+              );
+            }
+            return (
+              <button onClick={() => openInvite(p)}
+                style={{ marginTop:8, padding:"5px 10px", borderRadius:20, fontSize:10,
+                  fontWeight:700, cursor:"pointer", fontFamily:"inherit",
+                  background:"rgba(196,98,45,0.10)", border:"1px solid rgba(196,98,45,0.28)",
+                  color:"#c4622d", whiteSpace:"nowrap" }}>
+                Invitar
+              </button>
+            );
+          };
 
           return (
             <div key={p.person_id} style={{
-              display:"flex", alignItems:"center", gap:11,
-              padding:"11px 14px",
-              borderBottom: isLast ? "none" : "1px solid rgba(255,255,255,0.04)",
-              animation:`bdfRow .25s ease both ${i * 0.05}s`,
+              display:"flex", flexDirection:"column", alignItems:"center",
+              flexShrink:0, width:80,
+              animation:`bdfPop .28s ease both ${i * 0.06}s`,
             }}>
-              {/* Emoji */}
-              <div style={{ fontSize:18, lineHeight:1, width:24, textAlign:"center", flexShrink:0 }}>
-                {icon}
-              </div>
-
-              {/* Nombre */}
-              <div style={{ flex:1, minWidth:0 }}>
-                <div style={{ fontSize:13, fontWeight:700, color:"#fff",
-                  overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
-                  {p.first_name} {p.last_name}
+              {/* Avatar con anillo */}
+              <div style={{ position:"relative", width:60, height:60 }}>
+                {/* Anillo animado para urgente */}
+                {gold && (
+                  <div style={{
+                    position:"absolute", inset:-3, borderRadius:"50%",
+                    background:"conic-gradient(from 0deg, rgba(242,180,60,0.9) 0deg, rgba(200,120,48,0.5) 120deg, rgba(242,180,60,0.9) 360deg)",
+                    animation:"home-ring-spin 5s linear infinite, bday-ring 2s ease-in-out infinite",
+                    filter:"blur(1px)",
+                  }} />
+                )}
+                {/* Gap entre anillo y foto */}
+                {gold && (
+                  <div style={{ position:"absolute", inset:-1, borderRadius:"50%",
+                    background:"#030208", zIndex:1 }} />
+                )}
+                {/* Círculo avatar */}
+                <div style={{
+                  position:"relative", zIndex:2,
+                  width:60, height:60, borderRadius:"50%",
+                  background:`rgba(${accentRgb},0.10)`,
+                  border:`2px solid rgba(${accentRgb},${gold ? 0.6 : 0.25})`,
+                  boxShadow: gold
+                    ? `0 0 18px rgba(${accentRgb},0.35), 0 4px 12px rgba(0,0,0,0.6)`
+                    : `0 4px 12px rgba(0,0,0,0.45)`,
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                  overflow:"hidden",
+                }}>
+                  {p.photo_path ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={p.photo_path} alt={p.first_name}
+                      style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                  ) : (
+                    <span style={{ fontSize:22, fontWeight:800, color:accentHex,
+                      textShadow:`0 0 12px rgba(${accentRgb},0.5)` }}>
+                      {initials}
+                    </span>
+                  )}
                 </div>
               </div>
 
-              {/* Días */}
+              {/* Nombre */}
+              <div style={{ marginTop:7, fontSize:11, fontWeight:700, color:"#fff",
+                maxWidth:78, overflow:"hidden", textOverflow:"ellipsis",
+                whiteSpace:"nowrap", textAlign:"center" }}>
+                {firstName}
+              </div>
+
+              {/* Days chip */}
               <div style={{
-                fontSize:10, fontWeight:800, flexShrink:0,
-                padding:"3px 8px", borderRadius:20,
-                background: urgent
-                  ? "rgba(212,175,55,0.15)"
-                  : "rgba(255,255,255,0.04)",
-                border: urgent
-                  ? "1px solid rgba(212,175,55,0.35)"
-                  : "1px solid rgba(255,255,255,0.07)",
-                color: urgent ? "#d4af37" : "rgba(255,255,255,0.30)",
+                marginTop:4, padding:"2px 8px", borderRadius:20, fontSize:9, fontWeight:800,
+                background: gold ? "rgba(212,175,55,0.15)" : "rgba(255,255,255,0.04)",
+                border:     gold ? "1px solid rgba(212,175,55,0.35)" : "1px solid rgba(255,255,255,0.08)",
+                color:      gold ? "#d4af37" : "rgba(255,255,255,0.28)",
+                textAlign:"center",
               }}>
-                {text}
+                {label}
               </div>
 
               {/* Acción */}
-              {inApp ? (
-                <Link href="/chat" style={{ textDecoration:"none", flexShrink:0 }}>
-                  <div style={{
-                    width:30, height:30, borderRadius:"50%", display:"flex",
-                    alignItems:"center", justifyContent:"center",
-                    background: urgent ? "#c9a820" : "rgba(212,175,55,0.07)",
-                    border: urgent ? "none" : "1px solid rgba(212,175,55,0.18)",
-                    borderTop: urgent ? "1.5px solid #ffe060" : undefined,
-                    boxShadow: urgent ? "0 3px 0 rgba(90,60,0,0.5), 0 5px 12px rgba(0,0,0,0.5)" : "none",
-                  }}>
-                    <span style={{ fontSize:13 }}>🎉</span>
-                  </div>
-                </Link>
-              ) : wasSent ? (
-                <div style={{ fontSize:10, color:"#6DC994", fontWeight:700, flexShrink:0 }}>✓</div>
-              ) : (
-                <button onClick={() => openInvite(p)}
-                  style={{ background:"none", border:"none", cursor:"pointer",
-                    padding:0, flexShrink:0, display:"flex", alignItems:"center" }}>
-                  <ChevronRight size={16} style={{ color:"rgba(196,98,45,0.6)" }} />
-                </button>
-              )}
+              <ActionEl />
             </div>
           );
         })}
       </div>
 
-      {/* Modal de invitación — sin cambios funcionales */}
+      {/* Modal de invitación */}
       {inviting && (() => {
         const templates = getTemplates(inviting.first_name, inviting.days);
         const msg       = templates[templateIdx]?.text ?? "";
@@ -200,10 +240,8 @@ export default function BirthdayCardFeed({
                 padding:`0 0 max(24px, env(safe-area-inset-bottom))`,
                 maxHeight:"88vh", overflowY:"auto",
                 animation:"bdfModalUp .3s cubic-bezier(.22,.8,.36,1)" }}>
-
               <div style={{ width:36, height:4, borderRadius:2,
                 background:"rgba(255,255,255,0.15)", margin:"10px auto 16px" }} />
-
               <div style={{ padding:"0 20px 14px",
                 borderBottom:"1px solid rgba(255,255,255,0.05)",
                 display:"flex", alignItems:"center", justifyContent:"space-between" }}>
@@ -212,7 +250,7 @@ export default function BirthdayCardFeed({
                     Invitar a {inviting.first_name}
                   </div>
                   <div style={{ fontSize:12, color:"rgba(255,255,255,0.35)" }}>
-                    {daysLabel(inviting.days).icon} {daysLabel(inviting.days).text}
+                    {daysChip(inviting.days).label}
                   </div>
                 </div>
                 <button onClick={closeInvite}
@@ -221,7 +259,6 @@ export default function BirthdayCardFeed({
                   <X size={18} />
                 </button>
               </div>
-
               <div style={{ display:"flex", gap:8, padding:"12px 20px 0", overflowX:"auto" }}>
                 {templates.map((t, i) => (
                   <button key={t.id} onClick={() => setTemplateIdx(i)}
@@ -235,7 +272,6 @@ export default function BirthdayCardFeed({
                   </button>
                 ))}
               </div>
-
               <div style={{ padding:"12px 20px" }}>
                 <div style={{ fontSize:11, color:"rgba(255,255,255,0.3)",
                   letterSpacing:".06em", textTransform:"uppercase", marginBottom:8 }}>Mensaje</div>
@@ -246,7 +282,6 @@ export default function BirthdayCardFeed({
                   {msg}
                 </div>
               </div>
-
               <div style={{ padding:"0 20px", display:"flex", flexDirection:"column", gap:8 }}>
                 <button onClick={() => handleShare(msg)}
                   style={{ width:"100%", padding:"13px", borderRadius:12, cursor:"pointer",
@@ -266,8 +301,7 @@ export default function BirthdayCardFeed({
                 </button>
                 <button onClick={closeInvite}
                   style={{ width:"100%", padding:"10px", borderRadius:12, cursor:"pointer",
-                    background:"transparent",
-                    border:"1px solid rgba(255,255,255,0.07)",
+                    background:"transparent", border:"1px solid rgba(255,255,255,0.07)",
                     color:"rgba(255,255,255,0.3)", fontSize:13, fontFamily:"inherit" }}>
                   Cancelar
                 </button>
