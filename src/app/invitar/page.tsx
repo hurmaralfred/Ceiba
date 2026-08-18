@@ -160,7 +160,7 @@ function StarBackground() {
 // ── Member card — galactic style ───────────────────────────────────────────────
 
 function MemberCard({
-  member, batchMode, isSelected, inviterFirstName, previewNames, template, onSent, onToggleSelect, animDelay,
+  member, batchMode, isSelected, inviterFirstName, previewNames, template, onSent, onToggleSelect, animDelay, isSentPersisted,
 }: {
   member: FamilyMember;
   batchMode: boolean;
@@ -171,6 +171,7 @@ function MemberCard({
   onSent: (memberId: string, event: React.MouseEvent) => void;
   onToggleSelect: (memberId: string) => void;
   animDelay: number;
+  isSentPersisted: boolean;
 }) {
   const supabase = createClient();
   const [state, setState] = useState<CardState>("idle");
@@ -230,7 +231,8 @@ function MemberCard({
     toast.success("Número guardado");
   };
 
-  const isSent = state === "sent";
+  // Persisted trumps local: once in localStorage, card stays "sent" across reloads
+  const isSent = isSentPersisted || state === "sent";
 
   return (
     <div
@@ -270,7 +272,7 @@ function MemberCard({
           {/* Estado */}
           <div style={{ fontSize:10, marginTop:7, letterSpacing:"0.04em",
             color: member.joined ? "rgba(100,220,180,0.85)" : isSent ? "rgba(100,220,130,0.70)" : "rgba(255,255,255,0.28)" }}>
-            {member.joined ? "✓ Ya se unió" : isSent ? "✦ Invitación enviada" : "🌑 Sin invitar"}
+            {member.joined ? "✓ Aceptada" : isSent ? "✦ Invitación enviada" : "· Pendiente de invitar"}
           </div>
 
           {/* Teléfono (discreto) */}
@@ -330,7 +332,7 @@ function MemberCard({
             <div style={{ display:"flex", alignItems:"center", gap:6,
               color:"rgba(100,220,130,0.70)", fontSize:12, fontWeight:500 }}>
               <Check size={13} />
-              Enviada
+              Invitación enviada
             </div>
             <button onClick={e => { e.stopPropagation(); setState("idle"); }}
               style={{ background:"none", border:"none", cursor:"pointer",
@@ -466,6 +468,13 @@ function InvitarPageInner() {
   const [batchMode, setBatchMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [sentCount, setSentCount] = useState(0);
+  // Persisted across reloads via localStorage
+  const [sentIds, setSentIds] = useState<Set<string>>(() => {
+    try {
+      const raw = typeof window !== "undefined" ? localStorage.getItem("ceiba:sent_invites") : null;
+      return raw ? new Set(JSON.parse(raw) as string[]) : new Set();
+    } catch { return new Set(); }
+  });
   const [confettiBurst, setConfettiBurst] = useState<{ x: number; y: number } | null>(null);
   const [showModal, setShowModal] = useState(false);
 
@@ -550,6 +559,12 @@ function InvitarPageInner() {
   const handleSent = (memberId: string, e: React.MouseEvent) => {
     const newCount = sentCount + 1;
     setSentCount(newCount);
+    // Persist so "Invitación enviada" survives page reloads
+    setSentIds(prev => {
+      const next = new Set(prev).add(memberId);
+      try { localStorage.setItem("ceiba:sent_invites", JSON.stringify([...next])); } catch {}
+      return next;
+    });
     setConfettiBurst({ x: e.clientX, y: e.clientY });
     setTimeout(() => setConfettiBurst(null), 900);
     if (newCount === 5) setTimeout(() => setShowModal(true), 700);
@@ -760,6 +775,7 @@ function InvitarPageInner() {
                   onSent={handleSent}
                   onToggleSelect={toggleSelect}
                   animDelay={i * 55}
+                  isSentPersisted={sentIds.has(m.id)}
                 />
               ))}
 
