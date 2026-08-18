@@ -21,6 +21,7 @@ function typeIcon(type: ActivityItem["type"]) {
 
 function typeHref(type: ActivityItem["type"]) {
   if (type === "photo") return "/photos";
+  if (type === "memory") return "/muro";
   return "/hoy";
 }
 

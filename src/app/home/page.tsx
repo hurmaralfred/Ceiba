@@ -1241,7 +1241,7 @@ export default function HomePage() {
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "18px 8px" }}>
           <CircleBtn icon={MessageCircle} label="Chat"      href="/chat"    color="160,170,245" shadowColor="#060810" delay={0.15} badge={unreadChats} />
-          <CircleBtn icon={BookOpen}      label="Recuerdos" href="/events"  color="242,180,60"  shadowColor="#362000" delay={0.45} />
+          <CircleBtn icon={BookOpen}      label="Recuerdos" href="/muro"    color="242,180,60"  shadowColor="#362000" delay={0.45} />
           <CircleBtn icon={Trophy}        label="Logros"    href="/profile" color="210,150,40"  shadowColor="#2a1a00" delay={0.75} />
         </div>
       </div>
@@ -1428,7 +1428,7 @@ export default function HomePage() {
             {dailyQuestion ?? "..."}
           </p>
           <div style={{ display:"flex", gap:8 }}>
-            <Link href="/events" style={{ textDecoration:"none", flex:1 }}>
+            <Link href="/muro" style={{ textDecoration:"none", flex:1 }}>
               <div style={{
                 display:"flex", alignItems:"center", justifyContent:"center", gap:6,
                 padding:"11px", borderRadius:50,
