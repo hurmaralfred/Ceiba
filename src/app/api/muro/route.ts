@@ -137,8 +137,10 @@ export async function GET(req: NextRequest) {
 
 /**
  * POST /api/muro
- * Body: { body: string, photo_path?: string }
+ * Body: { body: string, question_text?: string, photo_path?: string }
  * Creates a memory response for today's daily question.
+ * If question_text is provided, it is upserted to daily_family_question
+ * so the question is always retrievable for this date.
  */
 export async function POST(req: NextRequest) {
   const supabase = createClient();
@@ -147,7 +149,7 @@ export async function POST(req: NextRequest) {
 
   if (!checkRateLimit(`muro-post:${user.id}`, 20, 60_000)) return rateLimitResponse();
 
-  const { body, photo_path } = await req.json().catch(() => ({}));
+  const { body, photo_path, question_text } = await req.json().catch(() => ({}));
   if (!body?.trim()) return NextResponse.json({ error: "El texto no puede estar vacío" }, { status: 400 });
 
   const service = getServiceClient();
@@ -156,13 +158,23 @@ export async function POST(req: NextRequest) {
 
   const today = new Date().toISOString().slice(0, 10);
 
+  // Persist the question so future readers always have context for this date
+  if (question_text?.trim()) {
+    await service
+      .from("daily_family_question")
+      .upsert(
+        { space_id: spaceId, question_date: today, question_text: question_text.trim() },
+        { onConflict: "space_id,question_date", ignoreDuplicates: true }
+      );
+  }
+
   const { data, error } = await service
     .from("family_memories")
     .insert({
       author_user_id: user.id,
       family_space_id: spaceId,
       body: body.trim(),
-      memory_date: today,   // anchor to today so it also appears in "Un día como hoy" future years
+      memory_date: today,
       photo_path: photo_path ?? null,
     })
     .select("id, created_at")

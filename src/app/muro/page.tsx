@@ -29,13 +29,9 @@ function fmtDate(iso: string): string {
   return d.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" });
 }
 
-function timeAgo(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const min = Math.floor(diff / 60000);
-  if (min < 2) return "ahora mismo";
-  if (min < 60) return `hace ${min} min`;
-  const hrs = Math.floor(min / 60);
-  return hrs === 1 ? "hace 1 hora" : `hace ${hrs} horas`;
+function fmtTime(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
 }
 
 function isToday(dateStr: string): boolean {
@@ -64,7 +60,6 @@ export default function MuroPage() {
 
   useEffect(() => { load(activeDate); }, [activeDate, load]);
 
-  // Reload after submit to show new response
   useEffect(() => {
     if (submitted) {
       const t = setTimeout(() => { load(activeDate); setSubmitted(false); }, 600);
@@ -80,7 +75,8 @@ export default function MuroPage() {
       const r = await fetch("/api/muro", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ body: text.trim() }),
+        // Always send the active question so it gets persisted for future readers
+        body: JSON.stringify({ body: text.trim(), question_text: data?.question ?? undefined }),
       });
       if (r.ok) { setText(""); setSubmitted(true); }
     } finally {
@@ -92,8 +88,12 @@ export default function MuroPage() {
     ? [...new Set([today, ...(data.dates ?? [])])].sort((a, b) => b.localeCompare(a)).slice(0, 14)
     : [today];
 
+  const question = data?.question ?? null;
+  const responses = data?.responses ?? [];
+
   return (
     <div style={{ minHeight: "100vh", background: "#050410", color: "rgba(255,255,255,0.9)", fontFamily: "system-ui,sans-serif" }}>
+
       {/* ── Header ── */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "20px 16px 12px" }}>
         <Link href="/home" style={{
@@ -103,7 +103,7 @@ export default function MuroPage() {
           textDecoration: "none", color: "rgba(255,255,255,0.5)", fontSize: 16, flexShrink: 0,
         }}>←</Link>
         <div>
-          <div style={{ fontSize: 16, fontWeight: 700, letterSpacing: "0.02em" }}>Muro familiar</div>
+          <div style={{ fontSize: 16, fontWeight: 700 }}>Muro familiar</div>
           <div style={{ fontSize: 11, color: "rgba(212,175,55,0.55)", marginTop: 1 }}>
             Recuerdos compartidos por todos
           </div>
@@ -114,33 +114,29 @@ export default function MuroPage() {
       <div style={{ overflowX: "auto", display: "flex", gap: 8, padding: "0 16px 16px", scrollbarWidth: "none" }}>
         {allDates.map((d) => {
           const active = d === activeDate;
-          const label = isToday(d) ? "Hoy" : new Date(d + "T12:00:00").toLocaleDateString("es-ES", { day: "numeric", month: "short" });
+          const label = isToday(d)
+            ? "Hoy"
+            : new Date(d + "T12:00:00").toLocaleDateString("es-ES", { day: "numeric", month: "short" });
           return (
-            <button
-              key={d}
-              onClick={() => setActiveDate(d)}
-              style={{
-                flexShrink: 0, padding: "7px 16px", borderRadius: 50,
-                border: active ? "1px solid rgba(212,175,55,0.6)" : "1px solid rgba(255,255,255,0.08)",
-                background: active ? "rgba(212,175,55,0.12)" : "rgba(255,255,255,0.03)",
-                color: active ? "#d4af37" : "rgba(255,255,255,0.4)",
-                fontSize: 12, fontWeight: active ? 700 : 500, cursor: "pointer",
-                transition: "all 0.18s",
-              }}
-            >
+            <button key={d} onClick={() => setActiveDate(d)} style={{
+              flexShrink: 0, padding: "7px 16px", borderRadius: 50,
+              border: active ? "1px solid rgba(212,175,55,0.6)" : "1px solid rgba(255,255,255,0.08)",
+              background: active ? "rgba(212,175,55,0.12)" : "rgba(255,255,255,0.03)",
+              color: active ? "#d4af37" : "rgba(255,255,255,0.4)",
+              fontSize: 12, fontWeight: active ? 700 : 500, cursor: "pointer",
+            }}>
               {label}
             </button>
           );
         })}
       </div>
 
-      {/* ── Question ── */}
-      <div style={{ margin: "0 16px 16px" }}>
+      {/* ── Question card ── */}
+      <div style={{ margin: "0 16px 20px" }}>
         <div style={{
-          background: "#0c0a18",
-          borderRadius: 18,
+          background: "#0c0a18", borderRadius: 18,
           border: "1px solid rgba(212,175,55,0.14)",
-          borderTop: "1.5px solid rgba(212,175,55,0.28)",
+          borderTop: "1.5px solid rgba(212,175,55,0.30)",
           padding: "16px",
         }}>
           <div style={{
@@ -150,48 +146,33 @@ export default function MuroPage() {
             {isToday(activeDate) ? "Pregunta del día" : fmtDate(activeDate)}
           </div>
           {loading ? (
-            <div style={{ height: 20, background: "rgba(255,255,255,0.05)", borderRadius: 4, width: "80%" }} />
-          ) : (
+            <div style={{ height: 18, background: "rgba(255,255,255,0.05)", borderRadius: 4, width: "75%" }} />
+          ) : question ? (
             <p style={{
-              fontSize: 15, color: "rgba(255,255,255,0.88)", fontStyle: "italic",
+              fontSize: 15, color: "rgba(255,255,255,0.90)", fontStyle: "italic",
               margin: 0, lineHeight: 1.65,
               fontFamily: "Georgia, 'Times New Roman', serif",
             }}>
-              {data?.question ?? "Sin pregunta registrada para este día"}
+              {question}
+            </p>
+          ) : (
+            <p style={{
+              fontSize: 13, color: "rgba(255,255,255,0.35)", margin: 0, lineHeight: 1.5,
+            }}>
+              No hay pregunta registrada para este día.
             </p>
           )}
         </div>
       </div>
 
-      {/* ── Responses ── */}
-      <div style={{ margin: "0 16px", display: "flex", flexDirection: "column", gap: 10 }}>
-        {loading ? (
-          [0, 1].map((i) => (
-            <div key={i} style={{ height: 80, background: "rgba(255,255,255,0.03)", borderRadius: 16 }} />
-          ))
-        ) : (data?.responses ?? []).length === 0 ? (
-          <div style={{
-            textAlign: "center", padding: "32px 20px",
-            color: "rgba(255,255,255,0.28)", fontSize: 13,
-          }}>
-            Nadie ha respondido aún{isToday(activeDate) ? ". ¡Sé el primero!" : "."}
-          </div>
-        ) : (
-          (data?.responses ?? []).map((r) => (
-            <ResponseCard key={r.id} response={r} />
-          ))
-        )}
-      </div>
-
-      {/* ── Write response (only on today) ── */}
+      {/* ── Write response (today only, above responses so it's immediately visible) ── */}
       {isToday(activeDate) && (
-        <div style={{ margin: "16px 16px 0" }}>
+        <div style={{ margin: "0 16px 20px" }}>
           <form onSubmit={submit}>
             <div style={{
-              background: "#0c0a18",
-              borderRadius: 18,
+              background: "#0c0a18", borderRadius: 18,
               border: "1px solid rgba(180,140,255,0.12)",
-              borderTop: "1.5px solid rgba(180,140,255,0.28)",
+              borderTop: "1.5px solid rgba(180,140,255,0.30)",
               padding: "14px",
             }}>
               <div style={{
@@ -205,7 +186,7 @@ export default function MuroPage() {
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 placeholder="Comparte lo que sabes, lo que recuerdas…"
-                rows={4}
+                rows={3}
                 style={{
                   width: "100%", background: "transparent",
                   border: "none", outline: "none", resize: "none",
@@ -235,68 +216,117 @@ export default function MuroPage() {
         </div>
       )}
 
-      {/* Bottom padding */}
+      {/* ── Section label ── */}
+      {!loading && responses.length > 0 && (
+        <div style={{
+          padding: "0 16px 10px",
+          fontSize: 10, fontWeight: 700, letterSpacing: "0.12em",
+          textTransform: "uppercase", color: "rgba(255,255,255,0.18)",
+        }}>
+          {responses.length} {responses.length === 1 ? "respuesta" : "respuestas"}
+        </div>
+      )}
+
+      {/* ── Responses ── */}
+      <div style={{ margin: "0 16px", display: "flex", flexDirection: "column", gap: 10 }}>
+        {loading ? (
+          [0, 1].map((i) => (
+            <div key={i} style={{ height: 80, background: "rgba(255,255,255,0.03)", borderRadius: 16 }} />
+          ))
+        ) : responses.length === 0 ? (
+          <div style={{
+            textAlign: "center", padding: "28px 20px",
+            color: "rgba(255,255,255,0.25)", fontSize: 13,
+          }}>
+            {isToday(activeDate)
+              ? "Sé el primero en compartir algo hoy."
+              : "Nadie compartió nada en este día."}
+          </div>
+        ) : (
+          responses.map((r) => (
+            <ResponseCard key={r.id} response={r} question={question} isPast={!isToday(activeDate)} />
+          ))
+        )}
+      </div>
+
       <div style={{ height: 48 }} />
     </div>
   );
 }
 
-function ResponseCard({ response }: { response: Response }) {
-  const initials = response.author.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+function ResponseCard({ response, question, isPast }: {
+  response: Response;
+  question: string | null;
+  isPast: boolean;
+}) {
+  const initials = response.author.name
+    .split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
 
   return (
     <div style={{
       background: response.is_mine ? "rgba(212,175,55,0.05)" : "#0c0a18",
       borderRadius: 16,
       border: response.is_mine
-        ? "1px solid rgba(212,175,55,0.20)"
+        ? "1px solid rgba(212,175,55,0.22)"
         : "1px solid rgba(255,255,255,0.06)",
-      padding: "14px",
+      overflow: "hidden",
     }}>
-      {/* Author row */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+      {/* Question context stripe — only on past dates when there IS a question,
+          so the card makes sense standalone without scrolling up */}
+      {isPast && question && (
         <div style={{
-          width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
-          background: "#1a1030",
-          border: "1.5px solid rgba(212,175,55,0.20)",
-          overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 11, fontWeight: 700, color: "rgba(212,175,55,0.7)",
+          padding: "9px 14px",
+          background: "rgba(212,175,55,0.06)",
+          borderBottom: "1px solid rgba(212,175,55,0.10)",
+          display: "flex", alignItems: "flex-start", gap: 8,
         }}>
-          {response.author.photo ? (
-            <Image
-              src={response.author.photo}
-              alt={response.author.name}
-              width={32} height={32}
-              style={{ objectFit: "cover", width: "100%", height: "100%" }}
-            />
-          ) : initials}
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.85)" }}>
-            {response.is_mine ? "Tú" : response.author.name}
-          </div>
-          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 1 }}>
-            {timeAgo(response.created_at)}
-          </div>
-        </div>
-        {response.is_mine && (
-          <div style={{
-            fontSize: 10, fontWeight: 700, color: "rgba(212,175,55,0.5)",
-            background: "rgba(212,175,55,0.08)", border: "1px solid rgba(212,175,55,0.15)",
-            borderRadius: 50, padding: "2px 10px",
+          <span style={{ fontSize: 12, flexShrink: 0, marginTop: 1 }}>💬</span>
+          <p style={{
+            margin: 0, fontSize: 11, color: "rgba(212,175,55,0.65)",
+            fontStyle: "italic", lineHeight: 1.5,
+            fontFamily: "Georgia, serif",
           }}>
-            Tú
-          </div>
-        )}
-      </div>
+            {question}
+          </p>
+        </div>
+      )}
 
-      {/* Body */}
-      <p style={{
-        margin: 0, fontSize: 14, color: "rgba(255,255,255,0.78)", lineHeight: 1.65,
-        fontFamily: "Georgia, serif", fontStyle: "italic",
-      }}>
-        {response.body}
-      </p>
+      <div style={{ padding: "14px" }}>
+        {/* Author row */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+          <div style={{
+            width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
+            background: "#1a1030", border: "1.5px solid rgba(212,175,55,0.20)",
+            overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 11, fontWeight: 700, color: "rgba(212,175,55,0.7)",
+          }}>
+            {response.author.photo ? (
+              <Image
+                src={response.author.photo}
+                alt={response.author.name}
+                width={32} height={32}
+                style={{ objectFit: "cover", width: "100%", height: "100%" }}
+              />
+            ) : initials}
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.85)" }}>
+              {response.is_mine ? "Tú" : response.author.name}
+            </div>
+            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.28)", marginTop: 1 }}>
+              {new Date(response.created_at).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}
+            </div>
+          </div>
+        </div>
+
+        {/* Body */}
+        <p style={{
+          margin: 0, fontSize: 14, color: "rgba(255,255,255,0.82)", lineHeight: 1.65,
+          fontFamily: "Georgia, serif", fontStyle: "italic",
+        }}>
+          {response.body}
+        </p>
+      </div>
     </div>
   );
 }
