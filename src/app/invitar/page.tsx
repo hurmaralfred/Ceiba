@@ -387,33 +387,24 @@ function InvitarPageInner() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push("/auth/login"); return; }
 
-      const { data: graph, error: graphError } = await supabase.rpc("get_my_family_graph", { p_depth: 2 });
-      if (graphError) throw graphError;
-      if (!graph) { setMembers([]); return; }
+      // Server endpoint uses service client to read person_claims —
+      // the browser client can only see the current user's own claim (RLS),
+      // which caused all family members to appear as "not yet registered".
+      const res = await fetch("/api/invitar/persons");
+      if (!res.ok) throw new Error("No se pudieron cargar los familiares");
+      const { persons, me: myId, edges } = await res.json();
 
-      const nodes: any[] = Array.isArray(graph.nodes) ? graph.nodes : [];
-      const edges: any[] = Array.isArray(graph.edges) ? graph.edges : [];
-      const myId: string | null = graph.me ?? null;
+      const nodes = persons as any[];
 
-      const personIds = nodes.map((n: any) => n.id).filter((id: any): id is string => Boolean(id));
-      const claimedPersonIds = new Set<string>();
+      // Find me node to get first name (myId is the person_id of the caller)
+      // We need the caller's own node — but myId here is the person_id from the API.
+      // Grab caller's user info just for the greeting name.
+      const { data: { user: u } } = await supabase.auth.getUser();
+      if (u?.user_metadata?.first_name) setMeFirstName(u.user_metadata.first_name);
 
-      if (personIds.length > 0) {
-        const { data: claims } = await supabase
-          .from("person_claims")
-          .select("person_id")
-          .in("person_id", personIds)
-          .eq("claim_status", "approved")
-          .is("revoked_at", null);
-        for (const claim of claims ?? []) {
-          if (claim.person_id) claimedPersonIds.add(claim.person_id);
-        }
-      }
-
-      const me = nodes.find((n: any) => n.id === myId);
-      if (me?.first_name) setMeFirstName(me.first_name);
-
-      const { byPersonId: relationsById } = resolveRelationsFromRoot({ me: myId, nodes, edges } as unknown as FamilyGraph);
+      const { byPersonId: relationsById } = resolveRelationsFromRoot(
+        { me: myId, nodes, edges } as unknown as FamilyGraph
+      );
 
       const toMember = (n: any, joined: boolean): FamilyMember => ({
         id: n.id,
@@ -429,14 +420,14 @@ function InvitarPageInner() {
       });
 
       const pending: FamilyMember[] = nodes
-        .filter((n: any) => n.id !== myId && n.deleted_at == null && n.is_deceased !== true && !claimedPersonIds.has(n.id))
+        .filter((n: any) => n.deleted_at == null && n.is_deceased !== true && !n.registered)
         .map((n: any) => toMember(n, false));
 
       const joinedMembers: FamilyMember[] = nodes
-        .filter((n: any) => n.id !== myId && n.deleted_at == null && claimedPersonIds.has(n.id))
+        .filter((n: any) => n.deleted_at == null && n.registered)
         .map((n: any) => toMember(n, true));
 
-      // Use joined members for context in invite messages (they appear as "ya somos X adentro")
+      // Use joined members for context in invite messages ("ya somos X adentro")
       const active = joinedMembers.slice(0, 3).map(m => m.first_names.split(" ")[0]).filter(Boolean);
       setPreviewNames(active);
 
@@ -447,7 +438,7 @@ function InvitarPageInner() {
         if (idx > 0) { const [hit] = pending.splice(idx, 1); pending.unshift(hit); }
       }
 
-      // Only show members who haven't joined yet — registered users have nothing to be invited to
+      // Only show members who haven't joined yet
       setMembers(pending);
     } catch (err) {
       console.error("Error cargando familiares:", err);
