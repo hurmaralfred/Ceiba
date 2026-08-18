@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   Sparkles, ChevronLeft, Check, Users,
-  Phone, Copy, Send, Plus, X,
+  Phone, Copy, Send, Plus, X, Share2,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -358,6 +358,99 @@ function MemberCard({
   );
 }
 
+// ── Compartir Ceiba a un amigo (flujo diferente: crea su propia galaxia) ───────
+
+function ShareCeibaBlock({ inviterName }: { inviterName: string }) {
+  const [shared, setShared] = useState(false);
+
+  const msg = `¡Hola! ${inviterName ? `Soy ${inviterName} y ` : ""}estoy construyendo mi árbol genealógico en Ceiba, una app para conectar a toda la familia y preservar los recuerdos. ¿Te animas a crear el tuyo? 🌳 https://ceibapp.com`;
+  const encoded = encodeURIComponent(msg);
+  const waUrl = `https://api.whatsapp.com/send?text=${encoded}`;
+
+  function share() {
+    if (typeof navigator !== "undefined" && navigator.share) {
+      navigator.share({ text: msg, url: "https://ceibapp.com" }).catch(() => {});
+    } else {
+      window.open(waUrl, "_blank", "noopener");
+    }
+    setShared(true);
+    setTimeout(() => setShared(false), 3000);
+  }
+
+  return (
+    <div style={{ marginTop: 12 }}>
+      {/* Separador con label */}
+      <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:16 }}>
+        <div style={{ flex:1, height:"0.5px", background:"rgba(255,255,255,0.07)" }} />
+        <span style={{ fontSize:9, fontWeight:700, letterSpacing:"0.12em",
+          textTransform:"uppercase", color:"rgba(255,255,255,0.18)", whiteSpace:"nowrap" }}>
+          ¿Conoces a alguien más?
+        </span>
+        <div style={{ flex:1, height:"0.5px", background:"rgba(255,255,255,0.07)" }} />
+      </div>
+
+      {/* Card */}
+      <div style={{
+        background:"#07091a",
+        borderRadius:20,
+        border:"0.5px solid rgba(100,160,255,0.15)",
+        borderTop:"1px solid rgba(100,160,255,0.28)",
+        padding:"16px",
+      }}>
+        {/* Icon + heading */}
+        <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:10 }}>
+          <div style={{
+            width:40, height:40, borderRadius:12, flexShrink:0,
+            background:"rgba(100,160,255,0.08)",
+            border:"0.5px solid rgba(100,160,255,0.22)",
+            display:"flex", alignItems:"center", justifyContent:"center",
+            fontSize:20,
+          }}>🌍</div>
+          <div>
+            <div style={{ fontSize:13, fontWeight:700, color:"rgba(255,255,255,0.85)", lineHeight:1.3 }}>
+              Invita a un amigo a crear su galaxia
+            </div>
+            <div style={{ fontSize:11, color:"rgba(255,255,255,0.35)", marginTop:3, lineHeight:1.4 }}>
+              No está en tu árbol — creará el suyo desde cero
+            </div>
+          </div>
+        </div>
+
+        {/* Message preview */}
+        <div style={{
+          background:"rgba(255,255,255,0.03)", borderRadius:10,
+          border:"0.5px solid rgba(255,255,255,0.06)",
+          padding:"10px 12px", marginBottom:12,
+          fontSize:12, color:"rgba(255,255,255,0.40)", lineHeight:1.55,
+          fontStyle:"italic",
+        }}>
+          "{msg.length > 110 ? msg.slice(0, 110) + "…" : msg}"
+        </div>
+
+        {/* Share button */}
+        <button
+          onClick={share}
+          style={{
+            width:"100%", display:"flex", alignItems:"center",
+            justifyContent:"center", gap:8,
+            background: shared ? "rgba(60,200,120,0.12)" : "rgba(100,160,255,0.10)",
+            border: shared ? "0.5px solid rgba(60,200,120,0.35)" : "0.5px solid rgba(100,160,255,0.35)",
+            borderRadius:14, color: shared ? "rgba(80,220,140,0.85)" : "rgba(120,180,255,0.85)",
+            fontWeight:700, fontSize:13, padding:"12px 0",
+            cursor:"pointer", transition:"all 0.2s", fontFamily:"inherit",
+          }}
+        >
+          {shared ? (
+            <>✓ Mensaje listo para enviar</>
+          ) : (
+            <><Share2 size={15} /> Compartir Ceiba</>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── Main page ──────────────────────────────────────────────────────────────────
 
 function InvitarPageInner() {
@@ -664,6 +757,11 @@ function InvitarPageInner() {
                   animDelay={i * 55}
                 />
               ))}
+
+          {/* ── Invitar amigo a crear su propia galaxia ── */}
+          {!loading && (
+            <ShareCeibaBlock inviterName={meFirstName} />
+          )}
         </div>
 
         {/* Footer flotante */}
