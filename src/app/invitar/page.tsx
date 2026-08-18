@@ -436,15 +436,19 @@ function InvitarPageInner() {
         .filter((n: any) => n.id !== myId && n.deleted_at == null && claimedPersonIds.has(n.id))
         .map((n: any) => toMember(n, true));
 
+      // Use joined members for context in invite messages (they appear as "ya somos X adentro")
       const active = joinedMembers.slice(0, 3).map(m => m.first_names.split(" ")[0]).filter(Boolean);
       setPreviewNames(active);
 
+      // Bubble up a specific person if coming from the tree/galaxy
       const highlightId = searchParams.get("person");
       if (highlightId) {
         const idx = pending.findIndex(m => m.id === highlightId);
         if (idx > 0) { const [hit] = pending.splice(idx, 1); pending.unshift(hit); }
       }
-      setMembers([...pending, ...joinedMembers]);
+
+      // Only show members who haven't joined yet — registered users have nothing to be invited to
+      setMembers(pending);
     } catch (err) {
       console.error("Error cargando familiares:", err);
       toast.error("No se pudieron cargar los familiares");
@@ -505,7 +509,7 @@ function InvitarPageInner() {
 
   // ── Empty state ──
 
-  if (!loading && members.filter(m => !m.joined).length === 0 && members.length === 0) {
+  if (!loading && members.length === 0) {
     return (
       <div style={{ minHeight:"100vh", background:"#030208", display:"flex", flexDirection:"column" }}>
         <StarBackground />
@@ -639,7 +643,7 @@ function InvitarPageInner() {
               borderRadius:20, background:"rgba(242,180,60,0.07)",
               border:"0.5px solid rgba(242,180,60,0.18)" }}>
               <span style={{ fontSize:13, color:"rgba(242,180,60,0.65)" }}>✦</span>
-              <span style={{ fontSize:14, fontWeight:700, color:"#F2B43C" }}>{members.filter(m => !m.joined).length}</span>
+              <span style={{ fontSize:14, fontWeight:700, color:"#F2B43C" }}>{members.length}</span>
               <span style={{ fontSize:12, color:"rgba(255,255,255,0.40)", letterSpacing:"0.02em" }}>
                 estrellas esperan ser descubiertas
               </span>

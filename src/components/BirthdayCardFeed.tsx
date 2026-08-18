@@ -46,7 +46,7 @@ function daysChip(days: number): { label: string; gold: boolean } {
 }
 
 function getTemplates(firstName: string, days: number) {
-  const link = "ceibapp.com/invitar";
+  const link = "https://ceibapp.com/invitar";
   return [
     {
       id: days === 0 ? "T1" : "T2",

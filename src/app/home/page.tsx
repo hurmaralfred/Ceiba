@@ -1134,20 +1134,16 @@ export default function HomePage() {
                   {!isClose && ` · ${bdDate}`}
                 </div>
               </div>
-              {/* Botón felicitar */}
-              <Link href="/chat" style={{ textDecoration: "none", flexShrink: 0 }}>
-                <div style={{
-                  padding: "8px 14px", borderRadius: 50, fontSize: 11, fontWeight: 700,
-                  background: isClose ? "#c9a820" : "rgba(212,175,55,0.08)",
-                  color: isClose ? "#030208" : "rgba(212,175,55,0.75)",
-                  border: isClose ? "none" : "1px solid rgba(212,175,55,0.22)",
-                  borderTop: isClose ? "1.5px solid #ffe060" : "1px solid rgba(212,175,55,0.30)",
-                  boxShadow: isClose ? "0 4px 0 rgba(90,60,0,0.5), 0 6px 16px rgba(0,0,0,0.6)" : "none",
-                  whiteSpace: "nowrap",
-                }}>
-                  {isClose ? "🎉 Felicitar" : "Felicitar"}
-                </div>
-              </Link>
+              {/* Cuenta regresiva — sin botón Felicitar antes del día */}
+              <div style={{
+                padding: "6px 12px", borderRadius: 50, fontSize: 11, fontWeight: 700,
+                background: isClose ? "rgba(212,175,55,0.12)" : "rgba(255,255,255,0.04)",
+                color: isClose ? "#d4af37" : "rgba(255,255,255,0.25)",
+                border: isClose ? "1px solid rgba(212,175,55,0.30)" : "1px solid rgba(255,255,255,0.07)",
+                whiteSpace: "nowrap", flexShrink: 0,
+              }}>
+                {upcomingBirthday.days === 1 ? "Mañana 🎂" : `${upcomingBirthday.days}d 🎁`}
+              </div>
             </div>
           );
         })()}

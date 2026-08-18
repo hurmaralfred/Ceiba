@@ -162,9 +162,11 @@ export async function shareInviteWhatsApp(
 ) {
   // Build URL first (no async needed)
   const encoded = encodeURIComponent(message);
+  // wa.me without a phone number does NOT pre-fill the message on mobile;
+  // api.whatsapp.com/send?text= works correctly without a recipient.
   const url = phoneNumber
     ? `https://wa.me/${phoneNumber.replace(/[^\d]/g, "")}?text=${encoded}`
-    : `https://wa.me/?text=${encoded}`;
+    : `https://api.whatsapp.com/send?text=${encoded}`;
 
   // Navigate pre-opened window (mobile-safe) or open now (desktop/batch fallback)
   if (typeof window !== "undefined") {
