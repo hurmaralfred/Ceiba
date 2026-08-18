@@ -124,11 +124,8 @@ export default function BirthdayCardFeed({
 
       {/* Tira horizontal scrollable */}
       <div style={{
-        display:"flex", gap:12,
-        overflowX:"auto", paddingBottom:4,
-        scrollbarWidth:"none",
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        WebkitOverflowScrolling:"touch" as any,
+        display:"flex", gap:12, justifyContent:"center", flexWrap:"wrap",
+        paddingBottom:4,
       }}>
         {cards.map((p, i) => {
           const userId  = rosterPersonMap[p.person_id];
