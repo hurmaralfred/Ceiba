@@ -656,6 +656,10 @@ export default function HomePage() {
   const [unreadChats,  setUnreadChats]  = useState(0);
   const [pendingCapsulas, setPendingCapsulas] = useState(0);
   const [dailyQuestion, setDailyQuestion] = useState<string | null>(null);
+  const [answerOpen,    setAnswerOpen]    = useState(false);
+  const [answerText,    setAnswerText]    = useState("");
+  const [answerSent,    setAnswerSent]    = useState(false);
+  const [answerBusy,    setAnswerBusy]    = useState(false);
 
   // Force dark body background — globals.css uses cream which bleeds through
   useEffect(() => {
@@ -788,6 +792,24 @@ export default function HomePage() {
     setDismissedIds(prev => new Set([...prev, id]));
     await fetch(`/api/suggestions/${id}/dismiss`, { method: "POST" });
   }, []);
+
+  async function submitAnswer(e: React.FormEvent) {
+    e.preventDefault();
+    if (!answerText.trim() || answerBusy) return;
+    setAnswerBusy(true);
+    try {
+      await fetch("/api/muro", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ body: answerText.trim(), question_text: dailyQuestion ?? undefined }),
+      });
+      setAnswerText("");
+      setAnswerSent(true);
+      setAnswerOpen(false);
+    } finally {
+      setAnswerBusy(false);
+    }
+  }
 
   useEffect(() => { load(); }, [load]);
 
@@ -1427,40 +1449,108 @@ export default function HomePage() {
             margin:"0 0 14px", lineHeight:1.6, fontFamily:"var(--font-playfair), Georgia, serif" }}>
             {dailyQuestion ?? "..."}
           </p>
-          <div style={{ display:"flex", gap:8 }}>
-            <Link href="/muro" style={{ textDecoration:"none", flex:1 }}>
+
+          {/* ── Inline answer form ── */}
+          {answerSent ? (
+            /* Success state */
+            <div style={{ marginBottom:10 }}>
               <div style={{
-                display:"flex", alignItems:"center", justifyContent:"center", gap:6,
-                padding:"11px", borderRadius:50,
-                background:"#0e0c1e",
-                borderTop:"1.5px solid rgba(180,140,255,0.40)",
-                color:"rgba(200,170,255,0.85)", fontSize:12, fontWeight:700,
-                animation:"ghost-aura 2.8s ease-in-out infinite",
-                position:"relative", overflow:"hidden",
+                display:"flex", alignItems:"center", justifyContent:"space-between",
+                padding:"10px 14px", borderRadius:14,
+                background:"rgba(60,200,120,0.08)",
+                border:"0.5px solid rgba(60,200,120,0.25)",
               }}>
+                <span style={{ fontSize:12, color:"rgba(80,220,140,0.85)", fontWeight:700 }}>
+                  ✓ Respuesta compartida con tu familia
+                </span>
+                <Link href="/muro" style={{
+                  fontSize:11, color:"rgba(212,175,55,0.65)",
+                  textDecoration:"none", fontWeight:700,
+                }}>
+                  Ver muro →
+                </Link>
+              </div>
+            </div>
+          ) : answerOpen ? (
+            /* Expanded write mode */
+            <form onSubmit={submitAnswer} style={{ marginBottom:10 }}>
+              <textarea
+                autoFocus
+                value={answerText}
+                onChange={e => setAnswerText(e.target.value)}
+                placeholder="Comparte lo que sabes o recuerdas…"
+                rows={3}
+                style={{
+                  width:"100%", boxSizing:"border-box",
+                  background:"rgba(255,255,255,0.03)",
+                  border:"0.5px solid rgba(180,140,255,0.28)",
+                  borderRadius:12, padding:"10px 12px",
+                  color:"rgba(255,255,255,0.85)", fontSize:13, lineHeight:1.6,
+                  fontFamily:"Georgia, serif", fontStyle:"italic",
+                  resize:"none", outline:"none", caretColor:"#d4af37",
+                  marginBottom:8,
+                }}
+              />
+              <div style={{ display:"flex", gap:8 }}>
+                <button type="button" onClick={() => { setAnswerOpen(false); setAnswerText(""); }}
+                  style={{
+                    flex:1, padding:"10px", borderRadius:50,
+                    background:"transparent", border:"0.5px solid rgba(255,255,255,0.08)",
+                    color:"rgba(255,255,255,0.3)", fontSize:12, fontWeight:700, cursor:"pointer",
+                  }}>
+                  Cancelar
+                </button>
+                <button type="submit" disabled={!answerText.trim() || answerBusy}
+                  style={{
+                    flex:2, padding:"10px", borderRadius:50,
+                    background: answerText.trim() ? "rgba(180,140,255,0.15)" : "rgba(255,255,255,0.04)",
+                    border: answerText.trim() ? "0.5px solid rgba(180,140,255,0.45)" : "0.5px solid rgba(255,255,255,0.06)",
+                    color: answerText.trim() ? "rgba(200,170,255,0.9)" : "rgba(255,255,255,0.2)",
+                    fontSize:12, fontWeight:700, cursor: answerText.trim() ? "pointer" : "default",
+                    transition:"all 0.18s",
+                  }}>
+                  {answerBusy ? "Guardando…" : "Compartir con la familia"}
+                </button>
+              </div>
+            </form>
+          ) : (
+            /* Default: tap to open + video button */
+            <div style={{ display:"flex", gap:8 }}>
+              <button onClick={() => setAnswerOpen(true)}
+                style={{
+                  flex:1, display:"flex", alignItems:"center", justifyContent:"center", gap:6,
+                  padding:"11px", borderRadius:50, cursor:"pointer",
+                  background:"#0e0c1e", fontFamily:"inherit",
+                  borderTop:"1.5px solid rgba(180,140,255,0.40)",
+                  border:"0.5px solid rgba(180,140,255,0.18)",
+                  color:"rgba(200,170,255,0.85)", fontSize:12, fontWeight:700,
+                  animation:"ghost-aura 2.8s ease-in-out infinite",
+                  position:"relative", overflow:"hidden",
+                }}>
                 <div style={{ position:"absolute", top:0, width:"40%", height:"100%",
                   background:"linear-gradient(90deg, transparent, rgba(180,140,255,0.22), transparent)",
                   animation:"shimmer-sweep 3.4s ease-in-out infinite 1.2s", pointerEvents:"none" }} />
                 ✍️ Escribe tu respuesta
-              </div>
-            </Link>
-            <Link href="/capsulas" style={{ textDecoration:"none", flex:1 }}>
-              <div style={{
-                display:"flex", alignItems:"center", justifyContent:"center", gap:6,
-                padding:"11px", borderRadius:50,
-                background:"#0e0c1e",
-                borderTop:"1.5px solid rgba(212,175,55,0.40)",
-                color:"rgba(240,210,100,0.85)", fontSize:12, fontWeight:700,
-                position:"relative", overflow:"hidden",
-                animation:"aura-pulse 2.8s ease-in-out infinite 0.6s",
-              }}>
-                <div style={{ position:"absolute", top:0, width:"40%", height:"100%",
-                  background:"linear-gradient(90deg, transparent, rgba(212,175,55,0.18), transparent)",
-                  animation:"shimmer-sweep 3.4s ease-in-out infinite 0.8s", pointerEvents:"none" }} />
-                🎥 Graba en video
-              </div>
-            </Link>
-          </div>
+              </button>
+              <Link href="/capsulas" style={{ textDecoration:"none", flex:1 }}>
+                <div style={{
+                  display:"flex", alignItems:"center", justifyContent:"center", gap:6,
+                  padding:"11px", borderRadius:50,
+                  background:"#0e0c1e",
+                  borderTop:"1.5px solid rgba(212,175,55,0.40)",
+                  border:"0.5px solid rgba(212,175,55,0.12)",
+                  color:"rgba(240,210,100,0.85)", fontSize:12, fontWeight:700,
+                  position:"relative", overflow:"hidden",
+                  animation:"aura-pulse 2.8s ease-in-out infinite 0.6s",
+                }}>
+                  <div style={{ position:"absolute", top:0, width:"40%", height:"100%",
+                    background:"linear-gradient(90deg, transparent, rgba(212,175,55,0.18), transparent)",
+                    animation:"shimmer-sweep 3.4s ease-in-out infinite 0.8s", pointerEvents:"none" }} />
+                  🎥 Graba en video
+                </div>
+              </Link>
+            </div>
+          )}
         </div>
       </div>
 
