@@ -305,6 +305,9 @@ export default function OnboardingPage() {
   const [profCity, setProfCity] = useState("");
   const [profGender, setProfGender] = useState<OnboardingGender | null>(null);
   const [profLoading, setProfLoading] = useState(false);
+  // Controls input visibility — once shown, never hidden until submit.
+  // Avoids the bug where typing one letter makes inputs disappear.
+  const [showNameFields, setShowNameFields] = useState(false);
 
   // Match candidate
   const [match, setMatch] = useState<MatchCandidate | null>(null);
@@ -358,6 +361,12 @@ export default function OnboardingPage() {
         setMyLastName(meta.last_name);
       }
 
+      // Show input fields immediately when Google didn't provide both names,
+      // so the user never sees inputs appear then disappear while typing.
+      if (!meta.first_name || !meta.last_name) {
+        setShowNameFields(true);
+      }
+
       const { data: claim, error: claimError } = await supabase
         .from("person_claims")
         .select("person_id")
@@ -406,6 +415,11 @@ export default function OnboardingPage() {
         if (!meta.last_name) {
           setProfLastNames(lastNames);
           setMyLastName(lastNames);
+        }
+
+        // If the DB record also lacks a last name, show the input fields
+        if (!meta.first_name || !meta.last_name) {
+          if (!firstNames || !lastNames) setShowNameFields(true);
         }
       }
 
@@ -935,43 +949,47 @@ export default function OnboardingPage() {
               </h1>
             </div>
 
-            {/* Avatar + nombre como confirmación */}
-            <div style={{
-              background: "#0c0a18", borderRadius: 18, padding: "16px 18px",
-              borderTop: "1.5px solid rgba(212,175,55,0.3)", borderLeft: "1px solid rgba(212,175,55,0.12)",
-              borderBottom: "3px solid #040300", borderRight: "1px solid rgba(0,0,0,0.6)",
-              boxShadow: "0 7px 0 #040300, 0 12px 22px rgba(0,0,0,0.6)",
-              display: "flex", alignItems: "center", gap: 14,
-            }}>
+            {/* Avatar + nombre como confirmación — solo cuando Google llenó ambos campos */}
+            {!showNameFields && profFirstNames && profLastNames && (
               <div style={{
-                width: 52, height: 52, borderRadius: "50%", flexShrink: 0,
-                background: "radial-gradient(circle at 35% 30%, rgba(212,175,55,0.3), rgba(3,2,8,0.9))",
-                border: "1.5px solid rgba(212,175,55,0.4)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 22, fontWeight: 800, color: "#d4af37",
+                background: "#0c0a18", borderRadius: 18, padding: "16px 18px",
+                borderTop: "1.5px solid rgba(212,175,55,0.3)", borderLeft: "1px solid rgba(212,175,55,0.12)",
+                borderBottom: "3px solid #040300", borderRight: "1px solid rgba(0,0,0,0.6)",
+                boxShadow: "0 7px 0 #040300, 0 12px 22px rgba(0,0,0,0.6)",
+                display: "flex", alignItems: "center", gap: 14,
               }}>
-                {profFirstNames ? profFirstNames[0].toUpperCase() : "?"}
+                <div style={{
+                  width: 52, height: 52, borderRadius: "50%", flexShrink: 0,
+                  background: "radial-gradient(circle at 35% 30%, rgba(212,175,55,0.3), rgba(3,2,8,0.9))",
+                  border: "1.5px solid rgba(212,175,55,0.4)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 22, fontWeight: 800, color: "#d4af37",
+                }}>
+                  {profFirstNames[0].toUpperCase()}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: 15, fontWeight: 700, color: "#fff" }}>{profFirstNames} {profLastNames}</p>
+                  <button
+                    onClick={() => { setProfFirstNames(""); setProfLastNames(""); setShowNameFields(true); }}
+                    style={{ fontSize: 11, color: "rgba(212,175,55,0.45)", background: "none", border: "none", cursor: "pointer", padding: 0, marginTop: 2 }}
+                  >
+                    No es mi nombre
+                  </button>
+                </div>
               </div>
-              <div style={{ flex: 1 }}>
-                <p style={{ fontSize: 15, fontWeight: 700, color: "#fff" }}>{profFirstNames} {profLastNames}</p>
-                <button
-                  onClick={() => { setProfFirstNames(""); setProfLastNames(""); }}
-                  style={{ fontSize: 11, color: "rgba(212,175,55,0.45)", background: "none", border: "none", cursor: "pointer", padding: 0, marginTop: 2 }}
-                >
-                  No es mi nombre
-                </button>
-              </div>
-            </div>
+            )}
 
-            {/* Campos de nombre si fueron borrados */}
-            {(!profFirstNames || !profLastNames) && (
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            {/* Campos de nombre — visibles cuando showNameFields=true.
+                Una vez mostrados no se ocultan para que el usuario pueda
+                escribir su apellido completo sin que el campo desaparezca. */}
+            {showNameFields && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 <input type="text" placeholder="Nombres *" value={profFirstNames}
                   onChange={(e) => setProfFirstNames(e.target.value)} autoFocus
-                  style={{ background: "#0c0a18", border: "1px solid rgba(212,175,55,0.25)", borderRadius: 12, padding: "12px 14px", color: "#fff", fontSize: 14, outline: "none" }} />
+                  style={{ background: "#0c0a18", border: "1px solid rgba(212,175,55,0.25)", borderRadius: 12, padding: "12px 14px", color: "#fff", fontSize: 14, outline: "none", width: "100%", boxSizing: "border-box" }} />
                 <input type="text" placeholder="Apellidos *" value={profLastNames}
                   onChange={(e) => setProfLastNames(e.target.value)}
-                  style={{ background: "#0c0a18", border: "1px solid rgba(212,175,55,0.25)", borderRadius: 12, padding: "12px 14px", color: "#fff", fontSize: 14, outline: "none" }} />
+                  style={{ background: "#0c0a18", border: "1px solid rgba(212,175,55,0.25)", borderRadius: 12, padding: "12px 14px", color: "#fff", fontSize: 14, outline: "none", width: "100%", boxSizing: "border-box" }} />
               </div>
             )}
 
