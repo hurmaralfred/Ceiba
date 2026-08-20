@@ -205,24 +205,27 @@ function StoreBadges({ centered = false }: { centered?: boolean }) {
     justifyContent: centered ? "center" : "flex-start",
   };
   const badge = (label: string, sub: string, icon: React.ReactNode): React.ReactNode => (
-    <div style={{
-      display:"flex", alignItems:"center", gap:12,
-      background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.12)",
-      borderRadius:14, padding:"10px 18px", cursor:"pointer", minWidth:160,
-    }}>
-      <div style={{ color:"rgba(255,255,255,0.75)", flexShrink:0 }}>{icon}</div>
-      <div>
-        <div style={{ fontSize:8, color:"rgba(255,255,255,0.45)", fontWeight:600, letterSpacing:"0.10em", textTransform:"uppercase" }}>{sub}</div>
-        <div style={{ fontSize:14, color:"#fff", fontWeight:700, lineHeight:1.2 }}>{label}</div>
+    <Link href="/instalar" style={{ textDecoration:"none" }}>
+      <div style={{
+        display:"flex", alignItems:"center", gap:12,
+        background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.12)",
+        borderRadius:14, padding:"10px 18px", cursor:"pointer", minWidth:160,
+        transition:"background 0.18s",
+      }}>
+        <div style={{ color:"rgba(255,255,255,0.75)", flexShrink:0 }}>{icon}</div>
+        <div>
+          <div style={{ fontSize:8, color:"rgba(255,255,255,0.45)", fontWeight:600, letterSpacing:"0.10em", textTransform:"uppercase" }}>{sub}</div>
+          <div style={{ fontSize:14, color:"#fff", fontWeight:700, lineHeight:1.2 }}>{label}</div>
+        </div>
       </div>
-    </div>
+    </Link>
   );
   return (
     <div style={wrap}>
-      {badge("App Store", "Descargar en",
+      {badge("iPhone / Safari", "Instalar en",
         <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
       )}
-      {badge("Google Play", "Descargar en",
+      {badge("Android / Chrome", "Instalar en",
         <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M3 20.5v-17c0-.83.94-1.3 1.6-.8l14 8.5c.6.36.6 1.24 0 1.6l-14 8.5c-.66.5-1.6.03-1.6-.8z"/></svg>
       )}
     </div>
@@ -302,7 +305,7 @@ export default function LandingPage() {
             fontSize:13, color:"rgba(255,255,255,0.50)", fontWeight:600, textDecoration:"none",
             padding:"8px 18px", border:"1px solid rgba(255,255,255,0.10)", borderRadius:10,
           }}>Iniciar sesión</Link>
-          <Link href="/auth/register" style={{ textDecoration:"none" }}>
+          <Link href="/instalar" style={{ textDecoration:"none" }}>
             <div style={{
               display:"inline-flex", alignItems:"center", gap:6,
               background:"linear-gradient(to bottom, #e0bc2a 0%, #c09810 100%)",
@@ -310,7 +313,7 @@ export default function LandingPage() {
               borderRadius:10, color:BG, fontWeight:800, fontSize:13,
               padding:"9px 20px", cursor:"pointer", whiteSpace:"nowrap",
               boxShadow:"0 4px 0 #3d3000, 0 6px 18px rgba(0,0,0,0.55)",
-            }}>Descargar ↓</div>
+            }}>Instalar app ↓</div>
           </Link>
         </div>
       </nav>
