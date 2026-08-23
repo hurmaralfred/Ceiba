@@ -102,11 +102,11 @@ export async function createInviteLink(
   });
   if (error) throw error;
 
-  const code = data.code as string;
+  const token = (data.token ?? data.code) as string;
   const invitationId = data.id as string;
 
-  // 2) Universal link (funciona para ambos: Branch y Firebase)
-  const universalLink = `${CEIBA_UNIVERSAL_LINK_DOMAIN}/${code}`;
+  // 2) Universal link — token is a 64-hex string (32 random bytes, SHA-256 hashed in DB)
+  const universalLink = `${CEIBA_UNIVERSAL_LINK_DOMAIN}/${token}`;
 
   // 3) (Opcional) Branch.io — genera un short link con analytics
   let branchLink: string | undefined;
