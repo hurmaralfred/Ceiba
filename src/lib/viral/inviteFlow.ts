@@ -123,7 +123,7 @@ export async function createInviteLink(
           $desktop_url: universalLink,
           $android_url: universalLink,
           $ios_url: universalLink,
-          invitation_code: code,
+          invitation_code: token,
         },
       }),
     });
@@ -137,13 +137,13 @@ export async function createInviteLink(
 
   trackEvent("invite_link_generated", {
     invitation_id: invitationId,
-    code,
+    token,
     template_id: template,
   });
 
   return {
     invitationId,
-    code,
+    code: token,
     universalLink,
     branchLink,
   };
