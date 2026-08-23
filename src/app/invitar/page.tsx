@@ -365,7 +365,7 @@ function MemberCard({
 function ShareCeibaBlock({ inviterName }: { inviterName: string }) {
   const [shared, setShared] = useState(false);
 
-  const msg = `¡Hola! ${inviterName ? `Soy ${inviterName} y ` : ""}estoy construyendo mi árbol genealógico en Ceiba, una app para conectar a toda la familia y preservar los recuerdos. ¿Te animas a crear el tuyo? 🌳 https://ceibapp.com`;
+  const msg = `¡Hola! ${inviterName ? `Soy ${inviterName} y ` : ""}estoy construyendo la galaxia familiar de mi familia en Ceiba, una app para conectar a toda la familia y preservar sus recuerdos. ¿Te animas a crear la tuya? ✨ https://ceibapp.com`;
   const encoded = encodeURIComponent(msg);
   const waUrl = `https://api.whatsapp.com/send?text=${encoded}`;
 
@@ -413,7 +413,7 @@ function ShareCeibaBlock({ inviterName }: { inviterName: string }) {
               Invita a un amigo a crear su galaxia
             </div>
             <div style={{ fontSize:11, color:"rgba(255,255,255,0.35)", marginTop:3, lineHeight:1.4 }}>
-              No está en tu árbol — creará el suyo desde cero
+              No está en tu galaxia — creará la suya desde cero
             </div>
           </div>
         </div>

@@ -5,18 +5,51 @@ const GOLD   = "#d4af37";
 const GOLD_L = "#f5e070";
 const BG     = "#030208";
 
-function StarField() {
-  const stars = Array.from({ length: 120 }, (_, i) => ({
-    cx: ((i * 137.5) % 100).toFixed(1),
-    cy: ((i * 97.3)  % 100).toFixed(1),
-    r:  (0.30 + (i % 5) * 0.14).toFixed(2),
-    op: (0.08 + (i % 9) * 0.05).toFixed(2),
+function UniverseBg() {
+  /* Two layers of stars: 200 tiny (r≤0.18) + 60 micro-brights (r≤0.10).
+     Max opacity 0.22 so they read as distant stars, not paint splatter. */
+  const tiny = Array.from({ length: 200 }, (_, i) => ({
+    cx: ((i * 137.508) % 100).toFixed(2),
+    cy: ((i * 83.721)  % 100).toFixed(2),
+    r:  (0.06 + (i % 4) * 0.03).toFixed(2),
+    op: (0.06 + (i % 7) * 0.023).toFixed(3),
+  }));
+  const bright = Array.from({ length: 60 }, (_, i) => ({
+    cx: ((i * 61.803 + 12) % 100).toFixed(2),
+    cy: ((i * 94.427 + 7)  % 100).toFixed(2),
+    r:  (0.08 + (i % 3) * 0.02).toFixed(2),
+    op: (0.12 + (i % 5) * 0.02).toFixed(3),
   }));
   return (
-    <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice"
-      style={{ position:"fixed", inset:0, width:"100%", height:"100%", pointerEvents:"none", zIndex:0 }}>
-      {stars.map((s, i) => <circle key={i} cx={s.cx} cy={s.cy} r={s.r} fill="white" opacity={s.op}/>)}
-    </svg>
+    <>
+      {/* Deep-space nebula — large, very soft colour washes */}
+      <div style={{ position:"fixed", inset:0, pointerEvents:"none", zIndex:0 }} aria-hidden>
+        {/* Core galaxy glow — centre-top, deep violet */}
+        <div style={{ position:"absolute", top:"-20%", left:"50%", transform:"translateX(-50%)",
+          width:900, height:800,
+          background:"radial-gradient(ellipse, rgba(38,18,90,0.55) 0%, rgba(20,8,50,0.18) 45%, transparent 72%)",
+          filter:"blur(110px)" }}/>
+        {/* Warm amber arm — bottom right */}
+        <div style={{ position:"absolute", bottom:"-10%", right:"-10%", width:600, height:500,
+          background:"radial-gradient(ellipse, rgba(140,80,8,0.18) 0%, transparent 65%)",
+          filter:"blur(90px)" }}/>
+        {/* Cool blue-violet arm — left */}
+        <div style={{ position:"absolute", top:"30%", left:"-15%", width:500, height:500,
+          background:"radial-gradient(ellipse, rgba(24,12,80,0.28) 0%, transparent 68%)",
+          filter:"blur(85px)" }}/>
+        {/* Subtle gold haze — centre, behind content */}
+        <div style={{ position:"absolute", top:"38%", left:"50%", transform:"translateX(-50%)",
+          width:340, height:240,
+          background:"radial-gradient(ellipse, rgba(180,130,20,0.07) 0%, transparent 70%)",
+          filter:"blur(48px)" }}/>
+      </div>
+      {/* Star field */}
+      <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice"
+        style={{ position:"fixed", inset:0, width:"100%", height:"100%", pointerEvents:"none", zIndex:1 }}>
+        {tiny.map((s, i)   => <circle key={`t${i}`} cx={s.cx} cy={s.cy} r={s.r} fill="white" opacity={s.op}/>)}
+        {bright.map((s, i) => <circle key={`b${i}`} cx={s.cx} cy={s.cy} r={s.r} fill="white" opacity={s.op}/>)}
+      </svg>
+    </>
   );
 }
 
@@ -72,7 +105,7 @@ export default function LandingPage() {
       display:"flex", flexDirection:"column",
       position:"relative", overflowX:"hidden",
     }}>
-      <StarField/><NebulaBg/>
+      <UniverseBg/>
 
       <style>{`
         html,body{background:#030208!important}
