@@ -6,48 +6,124 @@ const GOLD_L = "#f5e070";
 const BG     = "#030208";
 
 function UniverseBg() {
-  /* Two layers of stars: 200 tiny (r≤0.18) + 60 micro-brights (r≤0.10).
-     Max opacity 0.22 so they read as distant stars, not paint splatter. */
   const tiny = Array.from({ length: 200 }, (_, i) => ({
     cx: ((i * 137.508) % 100).toFixed(2),
     cy: ((i * 83.721)  % 100).toFixed(2),
     r:  (0.06 + (i % 4) * 0.03).toFixed(2),
     op: (0.06 + (i % 7) * 0.023).toFixed(3),
+    tw: i % 4,   // twinkle group 0-3
   }));
   const bright = Array.from({ length: 60 }, (_, i) => ({
     cx: ((i * 61.803 + 12) % 100).toFixed(2),
     cy: ((i * 94.427 + 7)  % 100).toFixed(2),
-    r:  (0.08 + (i % 3) * 0.02).toFixed(2),
-    op: (0.12 + (i % 5) * 0.02).toFixed(3),
+    r:  (0.10 + (i % 3) * 0.025).toFixed(2),
+    op: (0.18 + (i % 5) * 0.03).toFixed(3),
+    tw: i % 4,
   }));
   return (
     <>
-      {/* Deep-space nebula — large, very soft colour washes */}
+      <style>{`
+        @keyframes twinkle0 {
+          0%,100%{opacity:var(--op)} 50%{opacity:calc(var(--op)*0.25)}
+        }
+        @keyframes twinkle1 {
+          0%,100%{opacity:var(--op)} 35%{opacity:calc(var(--op)*0.15)} 70%{opacity:calc(var(--op)*0.9)}
+        }
+        @keyframes twinkle2 {
+          0%,100%{opacity:var(--op)} 20%{opacity:calc(var(--op)*0.8)} 60%{opacity:calc(var(--op)*0.1)}
+        }
+        @keyframes twinkle3 {
+          0%,100%{opacity:var(--op)} 45%{opacity:calc(var(--op)*0.5)}
+        }
+        @keyframes nebulaBreath {
+          0%,100%{transform:scale(1) translateX(0px) translateY(0px)}
+          33%{transform:scale(1.06) translateX(8px) translateY(-6px)}
+          66%{transform:scale(0.96) translateX(-5px) translateY(10px)}
+        }
+        @keyframes nebulaBreath2 {
+          0%,100%{transform:scale(1) translateX(0px) translateY(0px)}
+          40%{transform:scale(1.08) translateX(-10px) translateY(8px)}
+          80%{transform:scale(0.95) translateX(6px) translateY(-5px)}
+        }
+        @keyframes nebulaBreath3 {
+          0%,100%{transform:scale(1) translateX(0px)}
+          50%{transform:scale(1.05) translateX(12px) translateY(4px)}
+        }
+        @keyframes starDrift {
+          0%{transform:translate(0,0)}
+          25%{transform:translate(0.4%,0.3%)}
+          50%{transform:translate(0.1%,0.6%)}
+          75%{transform:translate(-0.3%,0.2%)}
+          100%{transform:translate(0,0)}
+        }
+        .star-tw0{animation:twinkle0 4s ease-in-out infinite}
+        .star-tw1{animation:twinkle1 6s ease-in-out infinite}
+        .star-tw2{animation:twinkle2 5s ease-in-out infinite}
+        .star-tw3{animation:twinkle3 7s ease-in-out infinite}
+      `}</style>
+
+      {/* Nebula layers — each blob breathes independently */}
       <div style={{ position:"fixed", inset:0, pointerEvents:"none", zIndex:0 }} aria-hidden>
-        {/* Core galaxy glow — centre-top, deep violet */}
-        <div style={{ position:"absolute", top:"-20%", left:"50%", transform:"translateX(-50%)",
+        <div style={{
+          position:"absolute", top:"-20%", left:"50%",
           width:900, height:800,
           background:"radial-gradient(ellipse, rgba(38,18,90,0.55) 0%, rgba(20,8,50,0.18) 45%, transparent 72%)",
-          filter:"blur(110px)" }}/>
-        {/* Warm amber arm — bottom right */}
-        <div style={{ position:"absolute", bottom:"-10%", right:"-10%", width:600, height:500,
-          background:"radial-gradient(ellipse, rgba(140,80,8,0.18) 0%, transparent 65%)",
-          filter:"blur(90px)" }}/>
-        {/* Cool blue-violet arm — left */}
-        <div style={{ position:"absolute", top:"30%", left:"-15%", width:500, height:500,
-          background:"radial-gradient(ellipse, rgba(24,12,80,0.28) 0%, transparent 68%)",
-          filter:"blur(85px)" }}/>
-        {/* Subtle gold haze — centre, behind content */}
-        <div style={{ position:"absolute", top:"38%", left:"50%", transform:"translateX(-50%)",
+          filter:"blur(110px)",
+          animation:"nebulaBreath 22s ease-in-out infinite",
+          transformOrigin:"center center",
+        }}/>
+        <div style={{
+          position:"absolute", bottom:"-10%", right:"-10%",
+          width:600, height:500,
+          background:"radial-gradient(ellipse, rgba(140,80,8,0.20) 0%, transparent 65%)",
+          filter:"blur(90px)",
+          animation:"nebulaBreath2 28s ease-in-out infinite",
+          transformOrigin:"center center",
+        }}/>
+        <div style={{
+          position:"absolute", top:"30%", left:"-15%",
+          width:500, height:500,
+          background:"radial-gradient(ellipse, rgba(24,12,80,0.30) 0%, transparent 68%)",
+          filter:"blur(85px)",
+          animation:"nebulaBreath3 18s ease-in-out infinite",
+          transformOrigin:"center center",
+        }}/>
+        <div style={{
+          position:"absolute", top:"38%", left:"50%", transform:"translateX(-50%)",
           width:340, height:240,
-          background:"radial-gradient(ellipse, rgba(180,130,20,0.07) 0%, transparent 70%)",
-          filter:"blur(48px)" }}/>
+          background:"radial-gradient(ellipse, rgba(180,130,20,0.09) 0%, transparent 70%)",
+          filter:"blur(48px)",
+          animation:"nebulaBreath2 34s ease-in-out infinite reverse",
+          transformOrigin:"center center",
+        }}/>
       </div>
-      {/* Star field */}
+
+      {/* Star field — whole field drifts slowly, individual stars twinkle */}
       <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice"
-        style={{ position:"fixed", inset:0, width:"100%", height:"100%", pointerEvents:"none", zIndex:1 }}>
-        {tiny.map((s, i)   => <circle key={`t${i}`} cx={s.cx} cy={s.cy} r={s.r} fill="white" opacity={s.op}/>)}
-        {bright.map((s, i) => <circle key={`b${i}`} cx={s.cx} cy={s.cy} r={s.r} fill="white" opacity={s.op}/>)}
+        style={{
+          position:"fixed", inset:0, width:"102%", height:"102%",
+          marginLeft:"-1%", marginTop:"-1%",
+          pointerEvents:"none", zIndex:1,
+          animation:"starDrift 90s ease-in-out infinite",
+        }}>
+        {tiny.map((s, i) => (
+          <circle
+            key={`t${i}`}
+            className={`star-tw${s.tw}`}
+            cx={s.cx} cy={s.cy} r={s.r}
+            fill="white"
+            style={{ "--op": s.op, animationDelay:`${(i * 0.37) % 7}s` } as React.CSSProperties}
+          />
+        ))}
+        {bright.map((s, i) => (
+          <circle
+            key={`b${i}`}
+            className={`star-tw${s.tw}`}
+            cx={s.cx} cy={s.cy} r={s.r}
+            fill="white"
+            style={{ "--op": s.op, animationDelay:`${(i * 0.91) % 6}s` } as React.CSSProperties}
+          />
+        ))}
       </svg>
     </>
   );
