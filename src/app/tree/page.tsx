@@ -205,9 +205,11 @@ function TreePageContent() {
   };
 
   const loadData = async () => {
+    let currentUser: { id: string } | null = null;
     try {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { router.push("/auth/login"); return; }
+    currentUser = user;
 
     // Fire-and-forget: presencia + auto-link si nuevo usuario
     fetch("/api/presence", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) }).catch(() => {});
@@ -218,7 +220,8 @@ function TreePageContent() {
 
     const graph = graphData as FamilyGraph | null;
     if (!graph || !graph.me) {
-      setLoading(false);
+      // No claimed identity — send to onboarding instead of blank screen
+      router.replace("/onboarding");
       return;
     }
 
@@ -363,7 +366,8 @@ function TreePageContent() {
       const { data: connReqs } = await supabase
         .from("family_connection_requests")
         .select("id, requester_person_id, relation_key, created_at")
-        .eq("status", "pending");
+        .eq("status", "pending")
+        .eq("target_user_id", currentUser?.id ?? "");
       if (connReqs && connReqs.length > 0) {
         const personIds = connReqs.map((r: any) => r.requester_person_id);
         const { data: personRows } = await supabase

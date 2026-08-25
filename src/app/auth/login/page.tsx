@@ -81,7 +81,8 @@ export default function LoginPage() {
         const code = await signInWithGoogleCapacitor(data.url);
         const { error: sessionError } = await supabase.auth.exchangeCodeForSession(code);
         if (sessionError) throw sessionError;
-        router.push("/home");
+        const pendingToken = typeof window !== "undefined" && sessionStorage.getItem("pending_invite_token");
+        router.push(pendingToken ? `/invite/${pendingToken}` : "/home");
         return;
       }
       // Web flow
@@ -103,7 +104,8 @@ export default function LoginPage() {
       const { error } = await supabase.auth.signInWithPassword(form);
       if (error) throw error;
       router.refresh();
-      router.push("/home");
+      const pendingToken = typeof window !== "undefined" && sessionStorage.getItem("pending_invite_token");
+      router.push(pendingToken ? `/invite/${pendingToken}` : "/home");
     } catch (err: any) {
       toast.error(err.message || "Error al iniciar sesión");
     } finally {

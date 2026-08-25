@@ -668,7 +668,15 @@ export default function HomePage() {
   }, []);
 
   const load = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+    let user: any;
+    try {
+      const { data, error } = await supabase.auth.getUser();
+      if (error || !data.user) { router.push("/auth/login"); return; }
+      user = data.user;
+    } catch {
+      router.push("/auth/login");
+      return;
+    }
     if (!user) { router.push("/auth/login"); return; }
     setMyUserId(user.id);
 
@@ -798,14 +806,18 @@ export default function HomePage() {
     if (!answerText.trim() || answerBusy) return;
     setAnswerBusy(true);
     try {
-      await fetch("/api/muro", {
+      const r = await fetch("/api/muro", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ body: answerText.trim(), question_text: dailyQuestion ?? undefined }),
       });
+      if (!r.ok) throw new Error("Error al guardar respuesta");
       setAnswerText("");
       setAnswerSent(true);
       setAnswerOpen(false);
+    } catch (err: any) {
+      const { toast } = await import("react-hot-toast");
+      toast.error(err?.message || "No se pudo enviar la respuesta");
     } finally {
       setAnswerBusy(false);
     }

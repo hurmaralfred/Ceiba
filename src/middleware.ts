@@ -27,7 +27,13 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  const { data: { user } } = await supabase.auth.getUser()
+  let user: { id: string } | null = null;
+  try {
+    const { data, error } = await supabase.auth.getUser();
+    if (!error) user = data.user;
+  } catch {
+    // Supabase unavailable — allow public pages, block protected ones
+  }
 
   // /invite (sin token) requiere sesión — es el flujo de invitar a otros.
   // /invite/[token] debe quedar público: es el enlace que recibe un familiar

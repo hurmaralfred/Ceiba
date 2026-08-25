@@ -255,17 +255,22 @@ export default function AcceptInvitePage() {
               >
                 <Users size={18} /> Crear cuenta y unirme
               </button>
-              <Link
-                href="/auth/login"
+              <button
+                type="button"
+                onClick={() => {
+                  if (typeof window !== "undefined") {
+                    sessionStorage.setItem(PENDING_INVITE_KEY, token);
+                  }
+                  router.push("/auth/login");
+                }}
                 className="w-full flex items-center justify-center py-2.5 text-sm text-gray-500 hover:text-gray-700"
               >
                 Ya tengo cuenta — iniciar sesión
-              </Link>
+              </button>
             </div>
 
             <p className="text-center text-xs text-gray-400">
-              Es gratis. Si inicias sesión en vez de registrarte, vuelve a
-              abrir este enlace para completar la conexión.
+              Es gratis. Tu invitación se completará automáticamente al iniciar sesión.
             </p>
           </div>
         </div>
