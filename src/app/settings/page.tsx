@@ -6,7 +6,7 @@ import { LogOut, Bell, BellOff, BellRing, MapPin, Smile, ChevronRight, User, Sma
 import { createClient } from "@/lib/supabase/client";
 import { CosmicNav, CosmicHeader, CosmicSpinner, s3dCard, GoldDivider, C } from "@/components/ui/cosmic";
 
-const VAPID_PUB_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!;
+const VAPID_PUB_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "";
 
 function urlBase64ToUint8Array(b64: string): Uint8Array<ArrayBuffer> {
   const pad = "=".repeat((4 - (b64.length % 4)) % 4);

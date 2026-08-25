@@ -252,7 +252,7 @@ async function pushChatNotification(
     .in("user_id", otherIds);
 
   if (subs && subs.length > 0) {
-    webpush.setVapidDetails("mailto:ceiba-app@noreply.com", publicKey, privateKey);
+    webpush.setVapidDetails("mailto:soporte@ceibapp.com", publicKey, privateKey);
     const results = await Promise.allSettled(
       (subs as any[]).map(sub =>
         webpush.sendNotification(

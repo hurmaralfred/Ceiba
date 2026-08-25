@@ -142,7 +142,7 @@ async function pushSOS(
 
   if (!subs || subs.length === 0) return 0;
 
-  webpush.setVapidDetails("mailto:ceiba-app@noreply.com", publicKey, privateKey);
+  webpush.setVapidDetails("mailto:soporte@ceibapp.com", publicKey, privateKey);
 
   const payload = JSON.stringify({
     title: `🚨 ${senderName} — EMERGENCIA`,

@@ -9,7 +9,7 @@ function configureWebPush() {
   const pub = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
   const priv = process.env.VAPID_PRIVATE_KEY;
   if (pub && priv) {
-    webpush.setVapidDetails("mailto:ceiba-app@noreply.com", pub, priv);
+    webpush.setVapidDetails("mailto:soporte@ceibapp.com", pub, priv);
   }
 }
 

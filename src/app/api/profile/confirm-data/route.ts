@@ -121,7 +121,7 @@ async function notifySpaceOwnerOnJoin(
   const vapidPrivate = process.env.VAPID_PRIVATE_KEY;
   if (!vapidPublic || !vapidPrivate) return;
 
-  webpush.setVapidDetails("mailto:ceiba-app@noreply.com", vapidPublic, vapidPrivate);
+  webpush.setVapidDetails("mailto:soporte@ceibapp.com", vapidPublic, vapidPrivate);
 
   const joinerName = `${firstName} ${firstSurname}`.trim();
   const payload = JSON.stringify({

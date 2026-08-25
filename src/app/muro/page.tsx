@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import toast, { Toaster } from "react-hot-toast";
 
 interface Author {
   name: string;
@@ -53,6 +54,9 @@ export default function MuroPage() {
     try {
       const r = await fetch(`/api/muro?date=${date}`);
       if (r.ok) setData(await r.json());
+      else toast.error("No se pudo cargar el muro familiar");
+    } catch {
+      toast.error("Error de conexión");
     } finally {
       setLoading(false);
     }
@@ -79,6 +83,9 @@ export default function MuroPage() {
         body: JSON.stringify({ body: text.trim(), question_text: data?.question ?? undefined }),
       });
       if (r.ok) { setText(""); setSubmitted(true); }
+      else { const d = await r.json().catch(() => ({})); toast.error(d.error || "No se pudo publicar tu respuesta"); }
+    } catch {
+      toast.error("Error de conexión");
     } finally {
       setSubmitting(false);
     }
@@ -93,6 +100,7 @@ export default function MuroPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#050410", color: "rgba(255,255,255,0.9)", fontFamily: "system-ui,sans-serif" }}>
+      <Toaster position="top-center" toastOptions={{ style: { background: "#1a1a2e", color: "#fff" } }} />
 
       {/* ── Header ── */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "20px 16px 12px" }}>

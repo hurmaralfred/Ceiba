@@ -11,7 +11,7 @@ function getServiceClient() {
 
 function configureWebPush() {
   webpush.setVapidDetails(
-    "mailto:ceiba-app@noreply.com",
+    "mailto:soporte@ceibapp.com",
     process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
     process.env.VAPID_PRIVATE_KEY!
   );

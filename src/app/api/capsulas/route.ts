@@ -228,7 +228,7 @@ async function notifyRecipient(
     badge: 1,
   });
 
-  webpush.setVapidDetails("mailto:ceiba-app@noreply.com", publicKey, privateKey);
+  webpush.setVapidDetails("mailto:soporte@ceibapp.com", publicKey, privateKey);
   await Promise.allSettled(
     (subs as any[]).map(sub =>
       webpush.sendNotification(

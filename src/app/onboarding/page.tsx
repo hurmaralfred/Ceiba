@@ -457,6 +457,7 @@ export default function OnboardingPage() {
     trackEvent("onboarding_step_enter", { step });
     if (step === "match") trackEvent("match_shown");
     if (step === "done") trackEvent("onboarding_completed", { relatives_added: filledCount });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
 
   // ============================================================

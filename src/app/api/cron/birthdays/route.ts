@@ -103,7 +103,7 @@ export async function GET(req: NextRequest) {
   if (!vapidConfigured) {
     console.warn("[birthday-cron] VAPID keys not configured — push notifications will be skipped");
   } else {
-    webpush.setVapidDetails("mailto:ceiba-app@noreply.com", vapidPublicKey!, vapidPrivateKey!);
+    webpush.setVapidDetails("mailto:soporte@ceibapp.com", vapidPublicKey!, vapidPrivateKey!);
   }
 
   let pushSent = 0, emailSent = 0;

@@ -16,7 +16,7 @@ function configureWebPush() {
   }
 
   webpush.setVapidDetails(
-    "mailto:ceiba-app@noreply.com",
+    "mailto:soporte@ceibapp.com",
     publicKey,
     privateKey,
   );
