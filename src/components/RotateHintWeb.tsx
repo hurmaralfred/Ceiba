@@ -1,22 +1,20 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
 
-const STORAGE_KEY = "ceiba:rotate_hint_dismissed";
-
 export default function RotateHintWeb() {
   const [portrait, setPortrait] = useState(false);
-  const [dismissed, setDismissed] = useState(true); // start hidden, reveal after check
+  const [dismissed, setDismissed] = useState(false);
   const frameRef = useRef<number | null>(null);
   const rotRef = useRef(0);
   const dirRef = useRef(1);
   const iconRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (localStorage.getItem(STORAGE_KEY) === "1") return; // already dismissed forever
-    setDismissed(false);
-
     const check = () => {
-      setPortrait(window.innerHeight > window.innerWidth);
+      const isPortrait = window.innerHeight > window.innerWidth;
+      setPortrait(isPortrait);
+      // Re-show hint whenever user returns to portrait
+      if (isPortrait) setDismissed(false);
     };
     check();
     window.addEventListener("resize", check);
@@ -50,7 +48,6 @@ export default function RotateHintWeb() {
   if (dismissed || !portrait) return null;
 
   const dismiss = () => {
-    localStorage.setItem(STORAGE_KEY, "1");
     setDismissed(true);
   };
 
