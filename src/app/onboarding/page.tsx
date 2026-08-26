@@ -203,9 +203,9 @@ function AddRelativeModal({
         borderTop: "1.5px solid rgba(212,175,55,0.4)", borderLeft: "1px solid rgba(212,175,55,0.15)",
         borderRight: "1px solid rgba(0,0,0,0.6)",
         borderRadius: "24px 24px 0 0",
-        padding: "20px 20px 40px",
+        padding: "20px 20px 16px",
         boxShadow: "0 -12px 40px rgba(0,0,0,0.8), 0 0 30px rgba(212,175,55,0.08)",
-        maxHeight: "90vh", overflowY: "auto",
+        maxHeight: "90vh", overflowY: "auto", display: "flex", flexDirection: "column",
       }}>
         {/* Barra de arrastre */}
         <div style={{ width: 36, height: 3, borderRadius: 2, background: "rgba(212,175,55,0.2)", margin: "0 auto 20px" }} />
@@ -257,6 +257,10 @@ function AddRelativeModal({
             Fallecido/a — aparece con † en la galaxia
           </button>
 
+        </div>
+
+        {/* Botón sticky — siempre visible aunque el teclado esté abierto */}
+        <div style={{ position: "sticky", bottom: 0, background: "#0c0a18", paddingTop: 12, paddingBottom: 24 }}>
           <button
             onClick={() => {
               if (!form.first_names.trim()) { toast.error("El nombre es obligatorio"); return; }
@@ -266,7 +270,7 @@ function AddRelativeModal({
             }}
             disabled={loading}
             style={{
-              width: "100%", padding: "14px 0", borderRadius: 14, marginTop: 4,
+              width: "100%", padding: "14px 0", borderRadius: 14,
               background: loading ? "#6a5600" : "#c9a820",
               borderTop: "2px solid #f5e060", borderLeft: "1.5px solid rgba(255,240,100,0.5)",
               borderBottom: "4px solid #6a5600", borderRight: "1.5px solid rgba(0,0,0,0.4)",
@@ -1290,15 +1294,12 @@ export default function OnboardingPage() {
         )}
 
         {/* Footer botones de navegación */}
-        {/* 0/5 es progreso recomendado, NUNCA un requisito: el botón está
-            siempre habilitado, ya sea para omitir (0 agregados) o para
-            continuar (1+). Al pulsarlo se completa el onboarding y se
-            redirige directo a /tree. */}
         {step === "add_family" && (
           <div style={{
             position: "fixed", bottom: 0, left: 0, right: 0, maxWidth: 480, margin: "0 auto",
             background: "rgba(3,2,8,0.97)", borderTop: "0.5px solid rgba(212,175,55,0.2)",
             padding: "14px 20px 32px", backdropFilter: "blur(12px)", zIndex: 50,
+            display: "flex", flexDirection: "column", gap: 8,
           }}>
             <button
               onClick={() => setStep("aha")}
@@ -1312,8 +1313,19 @@ export default function OnboardingPage() {
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
               }}
             >
-              {getAddFamilyContinueLabel(filledCount)} <ChevronRight size={18} />
+              {filledCount > 0 ? "Continuar a la galaxia" : "Omitir por ahora"} <ChevronRight size={18} />
             </button>
+            {filledCount > 0 && (
+              <button
+                onClick={() => setStep("aha")}
+                style={{
+                  width: "100%", color: "rgba(212,175,55,0.5)", background: "none",
+                  border: "none", fontSize: 14, padding: "6px 0", cursor: "pointer",
+                }}
+              >
+                Omitir el resto por ahora
+              </button>
+            )}
           </div>
         )}
 
