@@ -1,147 +1,239 @@
 "use client";
 import Link from "next/link";
+import { useEffect, useRef } from "react";
 
 const GOLD   = "#d4af37";
 const GOLD_L = "#f5e070";
 const BG     = "#030208";
 
-function UniverseBg() {
-  const tiny = Array.from({ length: 200 }, (_, i) => ({
-    cx: ((i * 137.508) % 100).toFixed(2),
-    cy: ((i * 83.721)  % 100).toFixed(2),
-    r:  (0.06 + (i % 4) * 0.03).toFixed(2),
-    op: (0.06 + (i % 7) * 0.023).toFixed(3),
-    tw: i % 4,   // twinkle group 0-3
-  }));
-  const bright = Array.from({ length: 60 }, (_, i) => ({
-    cx: ((i * 61.803 + 12) % 100).toFixed(2),
-    cy: ((i * 94.427 + 7)  % 100).toFixed(2),
-    r:  (0.10 + (i % 3) * 0.025).toFixed(2),
-    op: (0.18 + (i % 5) * 0.03).toFixed(3),
-    tw: i % 4,
-  }));
+// ── Canvas galaxy — nodos familiares conectados, vivos ──────────────────────
+function GalaxyCanvas() {
+  const ref = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = ref.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d") as CanvasRenderingContext2D;
+
+    let W = 0, H = 0, raf = 0;
+    const t0 = performance.now();
+
+    // ── Stars ──
+    type Star = { x: number; y: number; r: number; op: number; phase: number; speed: number };
+    let stars: Star[] = [];
+
+    // ── Family nodes ──
+    type Node = { ox: number; oy: number; r: number; delay: number; idx: number };
+    let nodes: Node[] = [];
+
+    // Edges: pairs of node indices
+    const edges = [[0,1],[0,2],[1,3],[2,4],[0,5],[0,6],[2,7]];
+
+    function buildScene() {
+      stars = Array.from({ length: 280 }, () => ({
+        x: Math.random() * W,
+        y: Math.random() * H,
+        r: 0.3 + Math.random() * 1.8,
+        op: 0.08 + Math.random() * 0.78,
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.0004 + Math.random() * 0.0014,
+      }));
+
+      // Positions relative to canvas center — felt organic, not symmetric
+      const cx = W * 0.5, cy = H * 0.52;
+      const raw: [number, number, number][] = [
+        [  0,     0,    16], // 0 center — "Tú"
+        [-0.26,  -0.22, 11], // 1 upper-left parent
+        [ 0.28,  -0.20, 11], // 2 upper-right parent
+        [-0.42,   0.04,  9], // 3 left sibling
+        [ 0.38,   0.06,  9], // 4 right partner
+        [-0.14,   0.30,  8], // 5 child lower-left
+        [ 0.18,   0.32,  8], // 6 child lower-right
+        [ 0.26,  -0.42,  7], // 7 grandparent (distant)
+      ];
+      nodes = raw.map(([dx, dy, r], i) => ({
+        ox: cx + dx * W,
+        oy: cy + dy * H,
+        r,
+        delay: i * 0.45,  // staggered reveal in seconds
+        idx: i,
+      }));
+    }
+
+    function resize() {
+      const dpr = window.devicePixelRatio || 1;
+      W = window.innerWidth;
+      H = window.innerHeight;
+      canvas!.width  = W * dpr;
+      canvas!.height = H * dpr;
+      canvas!.style.width  = W + "px";
+      canvas!.style.height = H + "px";
+      ctx.scale(dpr, dpr);
+      buildScene();
+    }
+
+    function ease(x: number) {
+      // ease-out cubic
+      return 1 - Math.pow(1 - Math.min(x, 1), 3);
+    }
+
+    function nodeOpacity(n: Node, elapsed: number): number {
+      const progress = (elapsed - n.delay) / 1.2; // 1.2s fade per node
+      return Math.min(ease(progress), 1);
+    }
+
+    function draw() {
+      const now = performance.now();
+      const elapsed = (now - t0) / 1000; // seconds
+
+      ctx.clearRect(0, 0, W, H);
+
+      // ── Background ──
+      const bg = ctx.createRadialGradient(W * 0.5, H * 0.45, 0, W * 0.5, H * 0.45, Math.max(W, H) * 0.75);
+      bg.addColorStop(0, "#130a30");
+      bg.addColorStop(0.5, "#0a0520");
+      bg.addColorStop(1, "#030208");
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, W, H);
+
+      // ── Nebula blobs ──
+      const breathe1 = 0.96 + 0.04 * Math.sin(elapsed * 0.28);
+      const breathe2 = 0.97 + 0.03 * Math.sin(elapsed * 0.19 + 1.5);
+      const breathe3 = 0.95 + 0.05 * Math.sin(elapsed * 0.23 + 3.1);
+
+      const nb1 = ctx.createRadialGradient(W * 0.55, H * 0.3 * breathe1, 0, W * 0.55, H * 0.3, W * 0.5);
+      nb1.addColorStop(0, "rgba(55,22,130,0.42)");
+      nb1.addColorStop(0.5, "rgba(28,10,65,0.16)");
+      nb1.addColorStop(1, "transparent");
+      ctx.fillStyle = nb1;
+      ctx.fillRect(0, 0, W, H);
+
+      const nb2 = ctx.createRadialGradient(W * 0.15 * breathe2, H * 0.72, 0, W * 0.15, H * 0.72, W * 0.42);
+      nb2.addColorStop(0, "rgba(28,12,80,0.30)");
+      nb2.addColorStop(1, "transparent");
+      ctx.fillStyle = nb2;
+      ctx.fillRect(0, 0, W, H);
+
+      const nb3 = ctx.createRadialGradient(W * 0.82, H * 0.15 * breathe3, 0, W * 0.82, H * 0.15, W * 0.36);
+      nb3.addColorStop(0, "rgba(120, 70, 8, 0.14)");
+      nb3.addColorStop(1, "transparent");
+      ctx.fillStyle = nb3;
+      ctx.fillRect(0, 0, W, H);
+
+      // ── Stars — drift + twinkle ──
+      const driftX = Math.sin(elapsed * 0.018) * 4;
+      const driftY = Math.cos(elapsed * 0.012) * 3;
+      ctx.save();
+      ctx.translate(driftX, driftY);
+      stars.forEach(s => {
+        const twinkle = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(elapsed * s.speed * 6000 + s.phase));
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(220,210,255,${s.op * twinkle})`;
+        ctx.fill();
+      });
+      ctx.restore();
+
+      // ── Edges (connection lines) ──
+      edges.forEach(([ai, bi]) => {
+        const a = nodes[ai], b = nodes[bi];
+        const opA = nodeOpacity(a, elapsed);
+        const opB = nodeOpacity(b, elapsed);
+        const lineOp = Math.min(opA, opB);
+        if (lineOp <= 0) return;
+
+        // Slow pulse along the line
+        const pulse = 0.06 + 0.05 * Math.sin(elapsed * 0.7 + ai * 1.1);
+        const grad = ctx.createLinearGradient(a.ox, a.oy, b.ox, b.oy);
+        grad.addColorStop(0, `rgba(201,162,39,${pulse * lineOp})`);
+        grad.addColorStop(0.5, `rgba(201,162,39,${(pulse + 0.04) * lineOp})`);
+        grad.addColorStop(1, `rgba(201,162,39,${pulse * lineOp})`);
+
+        ctx.beginPath();
+        ctx.moveTo(a.ox, a.oy);
+        ctx.lineTo(b.ox, b.oy);
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = 0.9;
+        ctx.stroke();
+
+        // Traveling particle on each line
+        const progress = ((elapsed * 0.22 + ai * 0.37 + bi * 0.19) % 1);
+        const px = a.ox + (b.ox - a.ox) * progress;
+        const py = a.oy + (b.oy - a.oy) * progress;
+        ctx.beginPath();
+        ctx.arc(px, py, 1.4, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(245,224,112,${0.6 * lineOp})`;
+        ctx.fill();
+      });
+
+      // ── Nodes ──
+      nodes.forEach((n, i) => {
+        const op = nodeOpacity(n, elapsed);
+        if (op <= 0) return;
+
+        const breathe = 0.85 + 0.15 * Math.sin(elapsed * 0.6 + i * 1.4);
+
+        // Outer glow
+        const glow = ctx.createRadialGradient(n.ox, n.oy, 0, n.ox, n.oy, n.r * 4.5);
+        glow.addColorStop(0, `rgba(201,162,39,${0.22 * breathe * op})`);
+        glow.addColorStop(0.4, `rgba(140,100,20,${0.08 * op})`);
+        glow.addColorStop(1, "transparent");
+        ctx.beginPath();
+        ctx.arc(n.ox, n.oy, n.r * 4.5, 0, Math.PI * 2);
+        ctx.fillStyle = glow;
+        ctx.fill();
+
+        // Core
+        const isCenter = i === 0;
+        ctx.beginPath();
+        ctx.arc(n.ox, n.oy, n.r * breathe, 0, Math.PI * 2);
+        ctx.fillStyle = isCenter
+          ? `rgba(230,185,55,${0.88 * op})`
+          : `rgba(180,148,200,${0.65 * op})`;
+        ctx.fill();
+
+        // Ring
+        ctx.beginPath();
+        ctx.arc(n.ox, n.oy, n.r * breathe + 2.5, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(201,162,39,${0.28 * op})`;
+        ctx.lineWidth = 0.9;
+        ctx.stroke();
+      });
+
+      // ── Vignette ──
+      const vig = ctx.createRadialGradient(W*0.5, H*0.5, H*0.18, W*0.5, H*0.5, H*0.72);
+      vig.addColorStop(0, "transparent");
+      vig.addColorStop(1, "rgba(3,2,8,0.68)");
+      ctx.fillStyle = vig;
+      ctx.fillRect(0, 0, W, H);
+
+      raf = requestAnimationFrame(draw);
+    }
+
+    resize();
+    const ro = new ResizeObserver(resize);
+    ro.observe(document.documentElement);
+    draw();
+
+    return () => {
+      cancelAnimationFrame(raf);
+      ro.disconnect();
+    };
+  }, []);
+
   return (
-    <>
-      <style>{`
-        @keyframes twinkle0 {
-          0%,100%{opacity:var(--op)} 50%{opacity:calc(var(--op)*0.25)}
-        }
-        @keyframes twinkle1 {
-          0%,100%{opacity:var(--op)} 35%{opacity:calc(var(--op)*0.15)} 70%{opacity:calc(var(--op)*0.9)}
-        }
-        @keyframes twinkle2 {
-          0%,100%{opacity:var(--op)} 20%{opacity:calc(var(--op)*0.8)} 60%{opacity:calc(var(--op)*0.1)}
-        }
-        @keyframes twinkle3 {
-          0%,100%{opacity:var(--op)} 45%{opacity:calc(var(--op)*0.5)}
-        }
-        @keyframes nebulaBreath {
-          0%,100%{transform:scale(1) translateX(0px) translateY(0px)}
-          33%{transform:scale(1.06) translateX(8px) translateY(-6px)}
-          66%{transform:scale(0.96) translateX(-5px) translateY(10px)}
-        }
-        @keyframes nebulaBreath2 {
-          0%,100%{transform:scale(1) translateX(0px) translateY(0px)}
-          40%{transform:scale(1.08) translateX(-10px) translateY(8px)}
-          80%{transform:scale(0.95) translateX(6px) translateY(-5px)}
-        }
-        @keyframes nebulaBreath3 {
-          0%,100%{transform:scale(1) translateX(0px)}
-          50%{transform:scale(1.05) translateX(12px) translateY(4px)}
-        }
-        @keyframes starDrift {
-          0%{transform:translate(0,0)}
-          25%{transform:translate(0.4%,0.3%)}
-          50%{transform:translate(0.1%,0.6%)}
-          75%{transform:translate(-0.3%,0.2%)}
-          100%{transform:translate(0,0)}
-        }
-        .star-tw0{animation:twinkle0 4s ease-in-out infinite}
-        .star-tw1{animation:twinkle1 6s ease-in-out infinite}
-        .star-tw2{animation:twinkle2 5s ease-in-out infinite}
-        .star-tw3{animation:twinkle3 7s ease-in-out infinite}
-      `}</style>
-
-      {/* Nebula layers — each blob breathes independently */}
-      <div style={{ position:"fixed", inset:0, pointerEvents:"none", zIndex:0 }} aria-hidden>
-        <div style={{
-          position:"absolute", top:"-20%", left:"50%",
-          width:900, height:800,
-          background:"radial-gradient(ellipse, rgba(38,18,90,0.55) 0%, rgba(20,8,50,0.18) 45%, transparent 72%)",
-          filter:"blur(110px)",
-          animation:"nebulaBreath 22s ease-in-out infinite",
-          transformOrigin:"center center",
-        }}/>
-        <div style={{
-          position:"absolute", bottom:"-10%", right:"-10%",
-          width:600, height:500,
-          background:"radial-gradient(ellipse, rgba(140,80,8,0.20) 0%, transparent 65%)",
-          filter:"blur(90px)",
-          animation:"nebulaBreath2 28s ease-in-out infinite",
-          transformOrigin:"center center",
-        }}/>
-        <div style={{
-          position:"absolute", top:"30%", left:"-15%",
-          width:500, height:500,
-          background:"radial-gradient(ellipse, rgba(24,12,80,0.30) 0%, transparent 68%)",
-          filter:"blur(85px)",
-          animation:"nebulaBreath3 18s ease-in-out infinite",
-          transformOrigin:"center center",
-        }}/>
-        <div style={{
-          position:"absolute", top:"38%", left:"50%", transform:"translateX(-50%)",
-          width:340, height:240,
-          background:"radial-gradient(ellipse, rgba(180,130,20,0.09) 0%, transparent 70%)",
-          filter:"blur(48px)",
-          animation:"nebulaBreath2 34s ease-in-out infinite reverse",
-          transformOrigin:"center center",
-        }}/>
-      </div>
-
-      {/* Star field — whole field drifts slowly, individual stars twinkle */}
-      <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice"
-        style={{
-          position:"fixed", inset:0, width:"102%", height:"102%",
-          marginLeft:"-1%", marginTop:"-1%",
-          pointerEvents:"none", zIndex:1,
-          animation:"starDrift 90s ease-in-out infinite",
-        }}>
-        {tiny.map((s, i) => (
-          <circle
-            key={`t${i}`}
-            className={`star-tw${s.tw}`}
-            cx={s.cx} cy={s.cy} r={s.r}
-            fill="white"
-            style={{ "--op": s.op, animationDelay:`${(i * 0.37) % 7}s` } as React.CSSProperties}
-          />
-        ))}
-        {bright.map((s, i) => (
-          <circle
-            key={`b${i}`}
-            className={`star-tw${s.tw}`}
-            cx={s.cx} cy={s.cy} r={s.r}
-            fill="white"
-            style={{ "--op": s.op, animationDelay:`${(i * 0.91) % 6}s` } as React.CSSProperties}
-          />
-        ))}
-      </svg>
-    </>
+    <canvas
+      ref={ref}
+      style={{
+        position: "fixed", inset: 0,
+        pointerEvents: "none", zIndex: 0,
+        display: "block",
+      }}
+    />
   );
 }
 
-function NebulaBg() {
-  return (
-    <div style={{ position:"fixed", inset:0, pointerEvents:"none", zIndex:0 }} aria-hidden>
-      <div style={{ position:"absolute", top:"-8%", left:"10%", width:700, height:600,
-        background:"radial-gradient(ellipse, rgba(30,14,70,0.38) 0%, transparent 70%)", filter:"blur(90px)" }}/>
-      <div style={{ position:"absolute", top:"35%", right:"-8%", width:480, height:480,
-        background:"radial-gradient(ellipse, rgba(120,70,10,0.16) 0%, transparent 70%)", filter:"blur(72px)" }}/>
-      <div style={{ position:"absolute", bottom:"8%", left:"-5%", width:420, height:420,
-        background:"radial-gradient(ellipse, rgba(50,18,90,0.20) 0%, transparent 70%)", filter:"blur(75px)" }}/>
-    </div>
-  );
-}
-
+// ── Wordmark ──────────────────────────────────────────────────────────────────
 function CeibaWordmark() {
   return (
     <div style={{ display:"flex", alignItems:"center", gap:10 }}>
@@ -174,6 +266,7 @@ function CeibaWordmark() {
   );
 }
 
+// ── Landing ───────────────────────────────────────────────────────────────────
 export default function LandingPage() {
   return (
     <main style={{
@@ -181,7 +274,7 @@ export default function LandingPage() {
       display:"flex", flexDirection:"column",
       position:"relative", overflowX:"hidden",
     }}>
-      <UniverseBg/>
+      <GalaxyCanvas />
 
       <style>{`
         html,body{background:#030208!important}
@@ -192,7 +285,7 @@ export default function LandingPage() {
         }
       `}</style>
 
-      {/* Hero — fills the viewport */}
+      {/* Hero */}
       <div style={{
         flex:1, position:"relative", zIndex:10,
         display:"flex", flexDirection:"column",
@@ -202,12 +295,10 @@ export default function LandingPage() {
         minHeight:"calc(100dvh - 72px)",
       }} className="hero-pad">
 
-        {/* Wordmark */}
         <div style={{ marginBottom:40 }}>
           <CeibaWordmark/>
         </div>
 
-        {/* Headline */}
         <h1
           className="hero-title"
           style={{
@@ -220,7 +311,6 @@ export default function LandingPage() {
           <em style={{ fontStyle:"italic", fontWeight:400, color:"rgba(255,255,255,0.90)" }}>de tu familia.</em>
         </h1>
 
-        {/* Subtitle */}
         <p
           className="hero-sub"
           style={{
@@ -232,7 +322,6 @@ export default function LandingPage() {
           Tu familia conectada, sus historias<br/>y recuerdos en un solo lugar.
         </p>
 
-        {/* Primary CTA */}
         <Link href="/auth/register" style={{ textDecoration:"none", marginBottom:18 }}>
           <div style={{
             display:"inline-flex", alignItems:"center", justifyContent:"center",
@@ -247,7 +336,6 @@ export default function LandingPage() {
           </div>
         </Link>
 
-        {/* Secondary link */}
         <Link href="/auth/login" style={{
           fontSize:14, color:"rgba(255,255,255,0.40)", textDecoration:"none",
           fontWeight:500, display:"block", marginBottom:48,
@@ -255,7 +343,6 @@ export default function LandingPage() {
           ¿Ya tienes cuenta? <span style={{ color:"rgba(212,175,55,0.70)", fontWeight:600 }}>Iniciar sesión →</span>
         </Link>
 
-        {/* Footer-micro */}
         <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:10 }}>
           <p style={{ fontSize:12, color:"rgba(255,255,255,0.22)", margin:0 }}>
             Solo tu familia lo ve. Sin ads, sin algoritmos.
@@ -272,7 +359,6 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* Footer */}
       <footer style={{
         position:"relative", zIndex:10,
         borderTop:"1px solid rgba(212,175,55,0.07)",
