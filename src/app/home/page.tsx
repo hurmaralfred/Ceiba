@@ -74,11 +74,19 @@ function s3dChip(): React.CSSProperties {
 }
 
 // ── Utilidades ────────────────────────────────────────────────────────────────
+function parseBDParts(s: string): [number, number] {
+  // "YYYY-MM-DD" → [month 0-indexed, day]
+  // Never use new Date(s) for month/day: YYYY-MM-DD parses as UTC midnight,
+  // which shifts the date back one day in UTC-5 (Colombia/Bogotá).
+  const parts = s.split("-");
+  return [+parts[1] - 1, +parts[2]];
+}
+
 function daysUntil(birth_date: string): number {
   const today = new Date();
-  const bd = new Date(birth_date);
-  if (bd.getMonth() === today.getMonth() && bd.getDate() === today.getDate()) return 0;
-  const next = new Date(today.getFullYear(), bd.getMonth(), bd.getDate());
+  const [bm, bd] = parseBDParts(birth_date);
+  if (bm === today.getMonth() && bd === today.getDate()) return 0;
+  const next = new Date(today.getFullYear(), bm, bd);
   if (next <= today) next.setFullYear(today.getFullYear() + 1);
   return Math.ceil((next.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 }
@@ -1135,10 +1143,9 @@ export default function HomePage() {
 
         {/* — Caso C: Próximo cumpleaños — tira compacta */}
         {!todayBirthday && upcomingBirthday && (() => {
+          const [ubm, ubd] = parseBDParts(upcomingBirthday.birth_date);
           const bdDate = new Date(
-            new Date().getFullYear(),
-            new Date(upcomingBirthday.birth_date).getMonth(),
-            new Date(upcomingBirthday.birth_date).getDate()
+            new Date().getFullYear(), ubm, ubd
           ).toLocaleDateString("es", { day: "numeric", month: "long" });
           const isClose = upcomingBirthday.days <= 7;
           return (

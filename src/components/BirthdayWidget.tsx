@@ -9,17 +9,24 @@ interface BirthdayEntry {
   age: number | null;
 }
 
+function parseBDParts(s: string): [number, number] {
+  // YYYY-MM-DD parses as UTC midnight → wrong local date in UTC-5 (Colombia)
+  const parts = s.split("-");
+  return [+parts[1] - 1, +parts[2]];
+}
+
 function getDaysUntil(birthDate: string): number {
   const now = new Date();
-  const bd = new Date(birthDate);
-  const next = new Date(now.getFullYear(), bd.getMonth(), bd.getDate());
+  const [bm, bd] = parseBDParts(birthDate);
+  const next = new Date(now.getFullYear(), bm, bd);
   if (next < now) next.setFullYear(now.getFullYear() + 1);
   const diff = Math.round((next.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
   return diff >= 365 ? 0 : diff;
 }
 
 function fmtDate(birthDate: string) {
-  return new Date(birthDate).toLocaleDateString("es", { day: "numeric", month: "long" });
+  const [bm, bd] = parseBDParts(birthDate);
+  return new Date(new Date().getFullYear(), bm, bd).toLocaleDateString("es", { day: "numeric", month: "long" });
 }
 
 export default function BirthdayWidget({ userId: _userId }: { userId: string }) {
