@@ -82,16 +82,20 @@ export async function GET(_req: NextRequest) {
   ]);
 
   const now = new Date();
+  // Truncate to local midnight so today's birthday = 0 days (not skipped because next < now)
+  const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const todayMMDD = `${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
   // dates stored as "0001-01-01" are empty/null placeholders — skip them
   const isValidBirthDate = (dateStr: string) => parseInt(dateStr.slice(0, 4)) >= 1900;
 
   const daysUntilBirthday = (dateStr: string) => {
-    const bd = new Date(dateStr);
-    const next = new Date(now.getFullYear(), bd.getMonth(), bd.getDate());
-    if (next < now) next.setFullYear(now.getFullYear() + 1);
-    return (next.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
+    // Parse as local parts — new Date("YYYY-MM-DD") is UTC midnight, which shifts
+    // the date back on UTC-5 servers and causes today's birthday to be skipped.
+    const parts = dateStr.split("-");
+    const next = new Date(now.getFullYear(), +parts[1] - 1, +parts[2]);
+    if (next < todayMidnight) next.setFullYear(now.getFullYear() + 1);
+    return (next.getTime() - todayMidnight.getTime()) / (1000 * 60 * 60 * 24);
   };
 
   const isBirthdaySoon = (dateStr: string, days = 7) =>
@@ -99,7 +103,7 @@ export async function GET(_req: NextRequest) {
 
   const currentYear = now.getFullYear();
   const birthdays = ((persons ?? []) as any[])
-    .filter((p) => isBirthdaySoon(p.birth_date, birthdayDays))
+    .filter((p) => p.id !== myPersonId && isBirthdaySoon(p.birth_date, birthdayDays))
     .map((p) => ({
       person_id: p.id,
       first_name: p.first_name,
