@@ -490,13 +490,13 @@ function GalaxyHero({ children, avatarInitial, avatarUrl, firstName }: {
         </svg>
 
         {/* Avatar — 30% larger (104→135px) with living animated ring */}
-        <div style={{ position:"relative", width:135, height:135, zIndex:2 }}>
+        <div style={{ position:"relative", width:90, height:90, zIndex:2 }}>
           {/* Pulse glow — breathes independently */}
-          <div style={{ position:"absolute", inset:-16, borderRadius:"50%",
+          <div style={{ position:"absolute", inset:-11, borderRadius:"50%",
             background:"radial-gradient(circle, rgba(242,180,60,0.30) 0%, rgba(130,60,230,0.10) 40%, transparent 70%)",
             animation:"home-ring-breathe 3.5s ease-in-out infinite", pointerEvents:"none" }} />
           {/* Conic ring — rotates continuously */}
-          <div style={{ position:"absolute", inset:-7, borderRadius:"50%",
+          <div style={{ position:"absolute", inset:-5, borderRadius:"50%",
             background:"conic-gradient(from 0deg, rgba(242,180,60,0.95) 0deg, rgba(200,120,48,0.55) 80deg, rgba(184,160,216,0.30) 160deg, rgba(123,175,212,0.55) 230deg, rgba(242,180,60,0.80) 295deg, rgba(242,180,60,0.95) 360deg)",
             animation:"home-ring-spin 7s linear infinite",
             filter:"blur(1.5px)", pointerEvents:"none" }} />
@@ -504,7 +504,7 @@ function GalaxyHero({ children, avatarInitial, avatarUrl, firstName }: {
           <div style={{ position:"absolute", inset:-1, borderRadius:"50%",
             background:"#030208", pointerEvents:"none", zIndex:1 }} />
           {/* Photo */}
-          <div style={{ width:135, height:135, borderRadius:"50%", background:"#0c0a18",
+          <div style={{ width:90, height:90, borderRadius:"50%", background:"#0c0a18",
             display:"flex", alignItems:"center", justifyContent:"center", position:"relative", zIndex:2,
             boxShadow:"inset 0 3px 28px rgba(120,60,220,0.3), inset 0 -3px 14px rgba(0,0,0,0.7)" }}>
             <div style={{ position:"absolute", inset:0, borderRadius:"50%",
@@ -512,9 +512,9 @@ function GalaxyHero({ children, avatarInitial, avatarUrl, firstName }: {
             {avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={avatarUrl} alt={firstName}
-                style={{ width:135, height:135, borderRadius:"50%", objectFit:"cover", position:"relative" }} />
+                style={{ width:90, height:90, borderRadius:"50%", objectFit:"cover", position:"relative" }} />
             ) : (
-              <span style={{ fontSize:52, color:"#d4af37", fontWeight:800, position:"relative",
+              <span style={{ fontSize:36, color:"#d4af37", fontWeight:800, position:"relative",
                 textShadow:"0 0 20px rgba(212,175,55,0.6)" }}>
                 {avatarInitial}
               </span>
@@ -526,7 +526,7 @@ function GalaxyHero({ children, avatarInitial, avatarUrl, firstName }: {
       </div>{/* /avatar row */}
 
       {/* Name */}
-      <div style={{ fontSize:25, fontWeight:800, color:"#fff", letterSpacing:0.2, marginBottom:4,
+      <div style={{ fontSize:22, fontWeight:800, color:"#fff", letterSpacing:0.2, marginBottom:4,
         position:"relative", zIndex:5, animation:"name-glow 5s ease-in-out infinite" }}>
         {firstName || "Cargando..."}
       </div>
@@ -939,12 +939,6 @@ export default function HomePage() {
             {recentMemories} recuerdos esta semana
           </span>
         )}
-        {todayBirthday && (
-          <span style={{ background:"rgba(212,175,55,0.16)", border:"1px solid rgba(212,175,55,0.40)",
-            borderRadius:20, padding:"5px 12px", fontSize:10, color:"#f5e060", fontWeight:700 }}>
-            🎂 {todayBirthday.first_name} cumple hoy
-          </span>
-        )}
         {!todayBirthday && birthdaysThisMonth > 0 && (
           <span style={{ background:"rgba(212,175,55,0.10)", border:"1px solid rgba(212,175,55,0.25)",
             borderRadius:20, padding:"5px 12px", fontSize:10, color:"rgba(212,175,55,0.7)", fontWeight:600 }}>
@@ -952,137 +946,6 @@ export default function HomePage() {
           </span>
         )}
       </div>
-
-      {/* ── FAMILIA DIRECTA ─────────────────────────────────────────────── */}
-      <FamilyRow members={members} />
-
-      {/* ── EMPTY STATE — sin familia aún ──────────────────────────────── */}
-      {profile !== null && members.length === 0 && visibleCount === 0 && (
-        <div style={{ padding: "20px 16px 0" }}>
-          <div style={{
-            borderRadius: 18, padding: "22px 20px",
-            background: "linear-gradient(135deg, #0e0b1f 0%, #0a0818 100%)",
-            border: "1px solid rgba(212,175,55,0.18)",
-            borderTop: "1.5px solid rgba(212,175,55,0.3)",
-            boxShadow: "0 4px 0 #000, 0 8px 24px rgba(0,0,0,0.5)",
-          }}>
-            <div style={{ fontSize: 36, marginBottom: 12 }}>🌱</div>
-            <div style={{ fontSize: 16, fontWeight: 800, color: "#fff", marginBottom: 6 }}>
-              Tu galaxia está esperando
-            </div>
-            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", lineHeight: 1.6, marginBottom: 18 }}>
-              Agrega a tu primer familiar para comenzar a construir tu universo familiar.
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <Link href="/tree" style={{ textDecoration: "none" }}>
-                <div style={{
-                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                  padding: "13px 20px", borderRadius: 50,
-                  background: "#c9a820",
-                  borderTop: "2px solid #ffe060",
-                  fontSize: 14, fontWeight: 800, color: "#030208",
-                  position: "relative", overflow: "hidden",
-                  animation: "aura-pulse 2.4s ease-in-out infinite",
-                }}>
-                  <div style={{ position:"absolute", top:0, width:"45%", height:"100%",
-                    background:"linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent)",
-                    animation:"shimmer-sweep 3s ease-in-out infinite", pointerEvents:"none" }} />
-                  <Users size={16} style={{ color: "#030208", position:"relative" }} />
-                  <span style={{ position:"relative" }}>Agregar mi primer familiar</span>
-                </div>
-              </Link>
-              <Link href="/invitar" style={{ textDecoration: "none" }}>
-                <div style={{
-                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                  padding: "12px 20px", borderRadius: 14,
-                  background: "rgba(212,175,55,0.06)",
-                  border: "1px solid rgba(212,175,55,0.2)",
-                  fontSize: 13, fontWeight: 700, color: "rgba(212,175,55,0.8)",
-                }}>
-                  <Send size={14} style={{ color: "rgba(212,175,55,0.7)" }} />
-                  Invitar a un familiar
-                </div>
-              </Link>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── CTA PRINCIPAL ───────────────────────────────────────────────── */}
-      {visibleCount > 0 && (
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "20px 16px 4px", gap: 10 }}>
-          <Link href="/tree" style={{ textDecoration: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
-            {/* 108px — mismo efecto 3D que el avatar principal (135px × 0.8) */}
-            <div style={{ position: "relative", width: 108, height: 108 }}>
-              {/* Glow exterior pulsante */}
-              <div style={{ position: "absolute", inset: -14, borderRadius: "50%", pointerEvents: "none",
-                background: "radial-gradient(circle, rgba(242,180,60,0.32) 0%, rgba(130,60,230,0.12) 40%, transparent 70%)",
-                animation: "home-ring-breathe 3.5s ease-in-out infinite" }} />
-              {/* Anillo cónico giratorio */}
-              <div style={{ position: "absolute", inset: -6, borderRadius: "50%", pointerEvents: "none",
-                background: "conic-gradient(from 0deg, rgba(242,180,60,0.95) 0deg, rgba(200,120,48,0.55) 80deg, rgba(184,160,216,0.30) 160deg, rgba(123,175,212,0.55) 230deg, rgba(242,180,60,0.80) 295deg, rgba(242,180,60,0.95) 360deg)",
-                animation: "home-ring-spin 7s linear infinite",
-                filter: "blur(1.5px)" }} />
-              {/* Gap oscuro entre anillo y botón */}
-              <div style={{ position: "absolute", inset: -1, borderRadius: "50%",
-                background: "#030208", pointerEvents: "none", zIndex: 1 }} />
-              {/* Cuerpo del botón */}
-              <div style={{
-                width: 108, height: 108, borderRadius: "50%", position: "relative", zIndex: 2,
-                background: "radial-gradient(circle at 38% 28%, rgba(242,180,60,0.55) 0%, rgba(180,100,20,0.25) 35%, rgba(8,5,20,0.98) 70%)",
-                boxShadow: "inset 0 3px 22px rgba(120,60,220,0.28), inset 0 -3px 12px rgba(0,0,0,0.7), 0 12px 0 rgba(90,60,0,0.7), 0 20px 36px rgba(0,0,0,0.9)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-              }}>
-                <div style={{ position: "absolute", inset: 0, borderRadius: "50%",
-                  background: "radial-gradient(circle at 35% 25%, rgba(212,175,55,0.22) 0%, transparent 55%)" }} />
-                <Sparkles size={28} style={{ color: "#d4af37", position: "relative",
-                  filter: "drop-shadow(0 0 8px rgba(212,175,55,0.7))" }} />
-              </div>
-            </div>
-            <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(212,175,55,0.75)",
-              letterSpacing: "0.1em", textTransform: "uppercase", textAlign: "center" }}>
-              Ver mi galaxia
-            </span>
-          </Link>
-        </div>
-      )}
-
-      {/* ── EN LÍNEA AHORA ──────────────────────────────────────────────── */}
-      {onlineFamily.length > 0 && (
-        <div style={{ padding: "14px 18px", borderBottom: "0.5px solid rgba(212,175,55,0.1)" }}>
-          <style>{`@keyframes home-online-pulse{0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,0.5)}50%{box-shadow:0 0 0 5px rgba(34,197,94,0)}}`}</style>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
-            <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e",
-              animation: "home-online-pulse 2s infinite" }} />
-            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em",
-              textTransform: "uppercase", color: "rgba(34,197,94,0.75)" }}>En línea ahora</span>
-          </div>
-          <div style={{ display: "flex", gap: 12 }}>
-            {onlineFamily.slice(0, 6).map(m => (
-              <Link key={m.user_id} href="/chat" style={{ textDecoration: "none",
-                display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
-                <div style={{ position: "relative" }}>
-                  <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#1a1030",
-                    border: "2px solid rgba(34,197,94,0.5)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 15, fontWeight: 800, color: "#d4af37", overflow: "hidden" }}>
-                    {m.photo_path
-                      // eslint-disable-next-line @next/next/no-img-element
-                      ? <img src={m.photo_path} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" />
-                      : `${m.first_name[0] ?? ""}${(m.last_name || "")[0] ?? ""}`.toUpperCase()}
-                  </div>
-                  <div style={{ position: "absolute", bottom: 1, right: 1, width: 11, height: 11,
-                    borderRadius: "50%", background: "#22c55e", border: "2px solid #030208",
-                    animation: "home-online-pulse 2s infinite" }} />
-                </div>
-                <span style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", fontWeight: 600,
-                  maxWidth: 44, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                  textAlign: "center" }}>{m.first_name}</span>
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Divisor */}
       <div style={{ margin: "20px 16px 0", height: 1,
@@ -1257,6 +1120,259 @@ export default function HomePage() {
         )}
 
       </div>
+
+      {/* ── PREGUNTA DEL DÍA ─────────────────────────────────────────── */}
+      <div style={{ padding:"16px 14px 0" }}>
+        <div style={{
+          background:"#0c0a18", borderRadius:18,
+          border:"1px solid rgba(212,175,55,0.14)",
+          borderTop:"1.5px solid rgba(212,175,55,0.28)",
+          padding:"16px",
+        }}>
+          <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.12em",
+            textTransform:"uppercase", color:"rgba(212,175,55,0.42)", marginBottom:10 }}>
+            Pregunta del día
+          </div>
+          <p style={{ fontSize:14, color:"rgba(255,255,255,0.82)", fontStyle:"italic",
+            margin:"0 0 14px", lineHeight:1.6, fontFamily:"var(--font-playfair), Georgia, serif" }}>
+            {dailyQuestion ?? "..."}
+          </p>
+
+          {/* ── Inline answer form ── */}
+          {answerSent ? (
+            /* Success state */
+            <div style={{ marginBottom:10 }}>
+              <div style={{
+                display:"flex", alignItems:"center", justifyContent:"space-between",
+                padding:"10px 14px", borderRadius:14,
+                background:"rgba(60,200,120,0.08)",
+                border:"0.5px solid rgba(60,200,120,0.25)",
+              }}>
+                <span style={{ fontSize:12, color:"rgba(80,220,140,0.85)", fontWeight:700 }}>
+                  ✓ Respuesta compartida con tu familia
+                </span>
+                <Link href="/muro" style={{
+                  fontSize:11, color:"rgba(212,175,55,0.65)",
+                  textDecoration:"none", fontWeight:700,
+                }}>
+                  Ver muro →
+                </Link>
+              </div>
+            </div>
+          ) : answerOpen ? (
+            /* Expanded write mode */
+            <form onSubmit={submitAnswer} style={{ marginBottom:10 }}>
+              <textarea
+                autoFocus
+                value={answerText}
+                onChange={e => setAnswerText(e.target.value)}
+                placeholder="Comparte lo que sabes o recuerdas…"
+                rows={3}
+                style={{
+                  width:"100%", boxSizing:"border-box",
+                  background:"rgba(255,255,255,0.03)",
+                  border:"0.5px solid rgba(180,140,255,0.28)",
+                  borderRadius:12, padding:"10px 12px",
+                  color:"rgba(255,255,255,0.85)", fontSize:13, lineHeight:1.6,
+                  fontFamily:"Georgia, serif", fontStyle:"italic",
+                  resize:"none", outline:"none", caretColor:"#d4af37",
+                  marginBottom:8,
+                }}
+              />
+              <div style={{ display:"flex", gap:8 }}>
+                <button type="button" onClick={() => { setAnswerOpen(false); setAnswerText(""); }}
+                  style={{
+                    flex:1, padding:"10px", borderRadius:50,
+                    background:"transparent", border:"0.5px solid rgba(255,255,255,0.08)",
+                    color:"rgba(255,255,255,0.3)", fontSize:12, fontWeight:700, cursor:"pointer",
+                  }}>
+                  Cancelar
+                </button>
+                <button type="submit" disabled={!answerText.trim() || answerBusy}
+                  style={{
+                    flex:2, padding:"10px", borderRadius:50,
+                    background: answerText.trim() ? "rgba(180,140,255,0.15)" : "rgba(255,255,255,0.04)",
+                    border: answerText.trim() ? "0.5px solid rgba(180,140,255,0.45)" : "0.5px solid rgba(255,255,255,0.06)",
+                    color: answerText.trim() ? "rgba(200,170,255,0.9)" : "rgba(255,255,255,0.2)",
+                    fontSize:12, fontWeight:700, cursor: answerText.trim() ? "pointer" : "default",
+                    transition:"all 0.18s",
+                  }}>
+                  {answerBusy ? "Guardando…" : "Compartir con la familia"}
+                </button>
+              </div>
+            </form>
+          ) : (
+            /* Default: tap to open + video button */
+            <div style={{ display:"flex", gap:8 }}>
+              <button onClick={() => setAnswerOpen(true)}
+                style={{
+                  flex:1, display:"flex", alignItems:"center", justifyContent:"center", gap:6,
+                  padding:"11px", borderRadius:50, cursor:"pointer",
+                  background:"#0e0c1e", fontFamily:"inherit",
+                  borderTop:"1.5px solid rgba(180,140,255,0.40)",
+                  border:"0.5px solid rgba(180,140,255,0.18)",
+                  color:"rgba(200,170,255,0.85)", fontSize:12, fontWeight:700,
+                  animation:"ghost-aura 2.8s ease-in-out infinite",
+                  position:"relative", overflow:"hidden",
+                }}>
+                <div style={{ position:"absolute", top:0, width:"40%", height:"100%",
+                  background:"linear-gradient(90deg, transparent, rgba(180,140,255,0.22), transparent)",
+                  animation:"shimmer-sweep 3.4s ease-in-out infinite 1.2s", pointerEvents:"none" }} />
+                ✍️ Escribe tu respuesta
+              </button>
+              <Link href="/capsulas" style={{ textDecoration:"none", flex:1 }}>
+                <div style={{
+                  display:"flex", alignItems:"center", justifyContent:"center", gap:6,
+                  padding:"11px", borderRadius:50,
+                  background:"#0e0c1e",
+                  borderTop:"1.5px solid rgba(212,175,55,0.40)",
+                  border:"0.5px solid rgba(212,175,55,0.12)",
+                  color:"rgba(240,210,100,0.85)", fontSize:12, fontWeight:700,
+                  position:"relative", overflow:"hidden",
+                  animation:"aura-pulse 2.8s ease-in-out infinite 0.6s",
+                }}>
+                  <div style={{ position:"absolute", top:0, width:"40%", height:"100%",
+                    background:"linear-gradient(90deg, transparent, rgba(212,175,55,0.18), transparent)",
+                    animation:"shimmer-sweep 3.4s ease-in-out infinite 0.8s", pointerEvents:"none" }} />
+                  🎥 Graba en video
+                </div>
+              </Link>
+            </div>
+          )}
+        </div>
+      </div>
+
+
+      {/* ── FAMILIA DIRECTA ─────────────────────────────────────────────── */}
+      <FamilyRow members={members} />
+
+      {/* ── EMPTY STATE — sin familia aún ──────────────────────────────── */}
+      {profile !== null && members.length === 0 && visibleCount === 0 && (
+        <div style={{ padding: "20px 16px 0" }}>
+          <div style={{
+            borderRadius: 18, padding: "22px 20px",
+            background: "linear-gradient(135deg, #0e0b1f 0%, #0a0818 100%)",
+            border: "1px solid rgba(212,175,55,0.18)",
+            borderTop: "1.5px solid rgba(212,175,55,0.3)",
+            boxShadow: "0 4px 0 #000, 0 8px 24px rgba(0,0,0,0.5)",
+          }}>
+            <div style={{ fontSize: 36, marginBottom: 12 }}>🌱</div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: "#fff", marginBottom: 6 }}>
+              Tu galaxia está esperando
+            </div>
+            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", lineHeight: 1.6, marginBottom: 18 }}>
+              Agrega a tu primer familiar para comenzar a construir tu universo familiar.
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <Link href="/tree" style={{ textDecoration: "none" }}>
+                <div style={{
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                  padding: "13px 20px", borderRadius: 50,
+                  background: "#c9a820",
+                  borderTop: "2px solid #ffe060",
+                  fontSize: 14, fontWeight: 800, color: "#030208",
+                  position: "relative", overflow: "hidden",
+                  animation: "aura-pulse 2.4s ease-in-out infinite",
+                }}>
+                  <div style={{ position:"absolute", top:0, width:"45%", height:"100%",
+                    background:"linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent)",
+                    animation:"shimmer-sweep 3s ease-in-out infinite", pointerEvents:"none" }} />
+                  <Users size={16} style={{ color: "#030208", position:"relative" }} />
+                  <span style={{ position:"relative" }}>Agregar mi primer familiar</span>
+                </div>
+              </Link>
+              <Link href="/invitar" style={{ textDecoration: "none" }}>
+                <div style={{
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                  padding: "12px 20px", borderRadius: 14,
+                  background: "rgba(212,175,55,0.06)",
+                  border: "1px solid rgba(212,175,55,0.2)",
+                  fontSize: 13, fontWeight: 700, color: "rgba(212,175,55,0.8)",
+                }}>
+                  <Send size={14} style={{ color: "rgba(212,175,55,0.7)" }} />
+                  Invitar a un familiar
+                </div>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── CTA PRINCIPAL ───────────────────────────────────────────────── */}
+      {visibleCount > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "20px 16px 4px", gap: 10 }}>
+          <Link href="/tree" style={{ textDecoration: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+            {/* 108px — mismo efecto 3D que el avatar principal (135px × 0.8) */}
+            <div style={{ position: "relative", width: 90, height: 90 }}>
+              {/* Glow exterior pulsante */}
+              <div style={{ position: "absolute", inset: -11, borderRadius: "50%", pointerEvents: "none",
+                background: "radial-gradient(circle, rgba(242,180,60,0.32) 0%, rgba(130,60,230,0.12) 40%, transparent 70%)",
+                animation: "home-ring-breathe 3.5s ease-in-out infinite" }} />
+              {/* Anillo cónico giratorio */}
+              <div style={{ position: "absolute", inset: -5, borderRadius: "50%", pointerEvents: "none",
+                background: "conic-gradient(from 0deg, rgba(242,180,60,0.95) 0deg, rgba(200,120,48,0.55) 80deg, rgba(184,160,216,0.30) 160deg, rgba(123,175,212,0.55) 230deg, rgba(242,180,60,0.80) 295deg, rgba(242,180,60,0.95) 360deg)",
+                animation: "home-ring-spin 7s linear infinite",
+                filter: "blur(1.5px)" }} />
+              {/* Gap oscuro entre anillo y botón */}
+              <div style={{ position: "absolute", inset: -1, borderRadius: "50%",
+                background: "#030208", pointerEvents: "none", zIndex: 1 }} />
+              {/* Cuerpo del botón */}
+              <div style={{
+                width: 90, height: 90, borderRadius: "50%", position: "relative", zIndex: 2,
+                background: "radial-gradient(circle at 38% 28%, rgba(242,180,60,0.55) 0%, rgba(180,100,20,0.25) 35%, rgba(8,5,20,0.98) 70%)",
+                boxShadow: "inset 0 3px 22px rgba(120,60,220,0.28), inset 0 -3px 12px rgba(0,0,0,0.7), 0 12px 0 rgba(90,60,0,0.7), 0 20px 36px rgba(0,0,0,0.9)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <div style={{ position: "absolute", inset: 0, borderRadius: "50%",
+                  background: "radial-gradient(circle at 35% 25%, rgba(212,175,55,0.22) 0%, transparent 55%)" }} />
+                <Sparkles size={28} style={{ color: "#d4af37", position: "relative",
+                  filter: "drop-shadow(0 0 8px rgba(212,175,55,0.7))" }} />
+              </div>
+            </div>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(212,175,55,0.75)",
+              letterSpacing: "0.1em", textTransform: "uppercase", textAlign: "center" }}>
+              Ver mi galaxia
+            </span>
+          </Link>
+        </div>
+      )}
+
+      {/* ── EN LÍNEA AHORA ──────────────────────────────────────────────── */}
+      {onlineFamily.length > 0 && (
+        <div style={{ padding: "14px 18px", borderBottom: "0.5px solid rgba(212,175,55,0.1)" }}>
+          <style>{`@keyframes home-online-pulse{0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,0.5)}50%{box-shadow:0 0 0 5px rgba(34,197,94,0)}}`}</style>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
+            <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e",
+              animation: "home-online-pulse 2s infinite" }} />
+            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em",
+              textTransform: "uppercase", color: "rgba(34,197,94,0.75)" }}>En línea ahora</span>
+          </div>
+          <div style={{ display: "flex", gap: 12 }}>
+            {onlineFamily.slice(0, 6).map(m => (
+              <Link key={m.user_id} href="/chat" style={{ textDecoration: "none",
+                display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
+                <div style={{ position: "relative" }}>
+                  <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#1a1030",
+                    border: "2px solid rgba(34,197,94,0.5)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 15, fontWeight: 800, color: "#d4af37", overflow: "hidden" }}>
+                    {m.photo_path
+                      // eslint-disable-next-line @next/next/no-img-element
+                      ? <img src={m.photo_path} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" />
+                      : `${m.first_name[0] ?? ""}${(m.last_name || "")[0] ?? ""}`.toUpperCase()}
+                  </div>
+                  <div style={{ position: "absolute", bottom: 1, right: 1, width: 11, height: 11,
+                    borderRadius: "50%", background: "#22c55e", border: "2px solid #030208",
+                    animation: "home-online-pulse 2s infinite" }} />
+                </div>
+                <span style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", fontWeight: 600,
+                  maxWidth: 44, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                  textAlign: "center" }}>{m.first_name}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ══ PULSO DIARIO — recuerdos del mismo día en años anteriores ═══ */}
       <div style={{ marginTop: 20 }}>
@@ -1450,127 +1566,6 @@ export default function HomePage() {
         {/* Feed de cumpleaños — Sprint 0 */}
         <BirthdayCardFeed birthdays={allBirthdays} rosterPersonMap={rosterPersonMap} />
 
-      </div>
-
-      {/* ── PREGUNTA DEL DÍA ─────────────────────────────────────────── */}
-      <div style={{ padding:"16px 14px 0" }}>
-        <div style={{
-          background:"#0c0a18", borderRadius:18,
-          border:"1px solid rgba(212,175,55,0.14)",
-          borderTop:"1.5px solid rgba(212,175,55,0.28)",
-          padding:"16px",
-        }}>
-          <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.12em",
-            textTransform:"uppercase", color:"rgba(212,175,55,0.42)", marginBottom:10 }}>
-            Pregunta del día
-          </div>
-          <p style={{ fontSize:14, color:"rgba(255,255,255,0.82)", fontStyle:"italic",
-            margin:"0 0 14px", lineHeight:1.6, fontFamily:"var(--font-playfair), Georgia, serif" }}>
-            {dailyQuestion ?? "..."}
-          </p>
-
-          {/* ── Inline answer form ── */}
-          {answerSent ? (
-            /* Success state */
-            <div style={{ marginBottom:10 }}>
-              <div style={{
-                display:"flex", alignItems:"center", justifyContent:"space-between",
-                padding:"10px 14px", borderRadius:14,
-                background:"rgba(60,200,120,0.08)",
-                border:"0.5px solid rgba(60,200,120,0.25)",
-              }}>
-                <span style={{ fontSize:12, color:"rgba(80,220,140,0.85)", fontWeight:700 }}>
-                  ✓ Respuesta compartida con tu familia
-                </span>
-                <Link href="/muro" style={{
-                  fontSize:11, color:"rgba(212,175,55,0.65)",
-                  textDecoration:"none", fontWeight:700,
-                }}>
-                  Ver muro →
-                </Link>
-              </div>
-            </div>
-          ) : answerOpen ? (
-            /* Expanded write mode */
-            <form onSubmit={submitAnswer} style={{ marginBottom:10 }}>
-              <textarea
-                autoFocus
-                value={answerText}
-                onChange={e => setAnswerText(e.target.value)}
-                placeholder="Comparte lo que sabes o recuerdas…"
-                rows={3}
-                style={{
-                  width:"100%", boxSizing:"border-box",
-                  background:"rgba(255,255,255,0.03)",
-                  border:"0.5px solid rgba(180,140,255,0.28)",
-                  borderRadius:12, padding:"10px 12px",
-                  color:"rgba(255,255,255,0.85)", fontSize:13, lineHeight:1.6,
-                  fontFamily:"Georgia, serif", fontStyle:"italic",
-                  resize:"none", outline:"none", caretColor:"#d4af37",
-                  marginBottom:8,
-                }}
-              />
-              <div style={{ display:"flex", gap:8 }}>
-                <button type="button" onClick={() => { setAnswerOpen(false); setAnswerText(""); }}
-                  style={{
-                    flex:1, padding:"10px", borderRadius:50,
-                    background:"transparent", border:"0.5px solid rgba(255,255,255,0.08)",
-                    color:"rgba(255,255,255,0.3)", fontSize:12, fontWeight:700, cursor:"pointer",
-                  }}>
-                  Cancelar
-                </button>
-                <button type="submit" disabled={!answerText.trim() || answerBusy}
-                  style={{
-                    flex:2, padding:"10px", borderRadius:50,
-                    background: answerText.trim() ? "rgba(180,140,255,0.15)" : "rgba(255,255,255,0.04)",
-                    border: answerText.trim() ? "0.5px solid rgba(180,140,255,0.45)" : "0.5px solid rgba(255,255,255,0.06)",
-                    color: answerText.trim() ? "rgba(200,170,255,0.9)" : "rgba(255,255,255,0.2)",
-                    fontSize:12, fontWeight:700, cursor: answerText.trim() ? "pointer" : "default",
-                    transition:"all 0.18s",
-                  }}>
-                  {answerBusy ? "Guardando…" : "Compartir con la familia"}
-                </button>
-              </div>
-            </form>
-          ) : (
-            /* Default: tap to open + video button */
-            <div style={{ display:"flex", gap:8 }}>
-              <button onClick={() => setAnswerOpen(true)}
-                style={{
-                  flex:1, display:"flex", alignItems:"center", justifyContent:"center", gap:6,
-                  padding:"11px", borderRadius:50, cursor:"pointer",
-                  background:"#0e0c1e", fontFamily:"inherit",
-                  borderTop:"1.5px solid rgba(180,140,255,0.40)",
-                  border:"0.5px solid rgba(180,140,255,0.18)",
-                  color:"rgba(200,170,255,0.85)", fontSize:12, fontWeight:700,
-                  animation:"ghost-aura 2.8s ease-in-out infinite",
-                  position:"relative", overflow:"hidden",
-                }}>
-                <div style={{ position:"absolute", top:0, width:"40%", height:"100%",
-                  background:"linear-gradient(90deg, transparent, rgba(180,140,255,0.22), transparent)",
-                  animation:"shimmer-sweep 3.4s ease-in-out infinite 1.2s", pointerEvents:"none" }} />
-                ✍️ Escribe tu respuesta
-              </button>
-              <Link href="/capsulas" style={{ textDecoration:"none", flex:1 }}>
-                <div style={{
-                  display:"flex", alignItems:"center", justifyContent:"center", gap:6,
-                  padding:"11px", borderRadius:50,
-                  background:"#0e0c1e",
-                  borderTop:"1.5px solid rgba(212,175,55,0.40)",
-                  border:"0.5px solid rgba(212,175,55,0.12)",
-                  color:"rgba(240,210,100,0.85)", fontSize:12, fontWeight:700,
-                  position:"relative", overflow:"hidden",
-                  animation:"aura-pulse 2.8s ease-in-out infinite 0.6s",
-                }}>
-                  <div style={{ position:"absolute", top:0, width:"40%", height:"100%",
-                    background:"linear-gradient(90deg, transparent, rgba(212,175,55,0.18), transparent)",
-                    animation:"shimmer-sweep 3.4s ease-in-out infinite 0.8s", pointerEvents:"none" }} />
-                  🎥 Graba en video
-                </div>
-              </Link>
-            </div>
-          )}
-        </div>
       </div>
 
       {/* ── MEMORIA VIVA — pregunta diaria sobre fallecido sin fecha ── */}
