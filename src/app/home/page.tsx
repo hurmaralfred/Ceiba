@@ -833,6 +833,27 @@ export default function HomePage() {
 
   useEffect(() => { load(); }, [load]);
 
+  const [greetBusy, setGreetBusy] = useState(false);
+  async function greetPerson(personId: string) {
+    const userId = rosterPersonMap[personId];
+    if (!userId) { router.push("/chat"); return; }
+    if (greetBusy) return;
+    setGreetBusy(true);
+    try {
+      const res = await fetch("/api/chat/rooms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ otherUserId: userId }),
+      });
+      const body = await res.json();
+      router.push(`/chat/${body.roomId}`);
+    } catch {
+      router.push("/chat");
+    } finally {
+      setGreetBusy(false);
+    }
+  }
+
   // ── Datos derivados ───────────────────────────────────────────────────────
   const rosterUserIds = roster.map(m => m.user_id);
   const onlineIds = useFamilyPresence(myUserId, rosterUserIds);
@@ -987,19 +1008,21 @@ export default function HomePage() {
               <div style={{ fontSize: 13, color: "rgba(212,175,55,0.6)", marginBottom: 20 }}>
                 {new Date().getFullYear() - new Date(todayBirthday.birth_date).getFullYear()} años
               </div>
-              <Link href="/chat" style={{ textDecoration: "none" }}>
-                <div style={{ display: "inline-flex", alignItems: "center", gap: 8,
+              <button
+                onClick={() => greetPerson(todayBirthday.person_id)}
+                disabled={greetBusy}
+                style={{ display: "inline-flex", alignItems: "center", gap: 8,
                   background: "#c9a820", color: "#030208", borderRadius: 50,
                   padding: "12px 26px", fontSize: 13, fontWeight: 800,
                   position: "relative", overflow: "hidden",
-                  borderTop: "2px solid #ffe060",
-                  animation: "aura-pulse 2.4s ease-in-out infinite" }}>
-                  <div style={{ position:"absolute", top:0, width:"45%", height:"100%",
-                    background:"linear-gradient(90deg, transparent, rgba(255,255,255,0.38), transparent)",
-                    animation:"shimmer-sweep 2.8s ease-in-out infinite", pointerEvents:"none" }} />
-                  🎉 Felicitar ahora
-                </div>
-              </Link>
+                  borderTop: "2px solid #ffe060", border: "none", cursor: "pointer",
+                  animation: "aura-pulse 2.4s ease-in-out infinite",
+                  opacity: greetBusy ? 0.7 : 1 }}>
+                <div style={{ position:"absolute", top:0, width:"45%", height:"100%",
+                  background:"linear-gradient(90deg, transparent, rgba(255,255,255,0.38), transparent)",
+                  animation:"shimmer-sweep 2.8s ease-in-out infinite", pointerEvents:"none" }} />
+                {greetBusy ? "Abriendo chat…" : "🎉 Felicitar ahora"}
+              </button>
             </div>
           </div>
         )}
