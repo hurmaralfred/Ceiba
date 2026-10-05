@@ -5,6 +5,8 @@ import {
   resolveApprovedPersonId,
   resolvePersonsByUserIds,
 } from "@/lib/server/family";
+import { resolveRelationsFromRoot, describeRelation } from "@/lib/genealogy";
+import type { FamilyGraph } from "@/lib/graphAdapter";
 
 /**
  * GET /api/feed
@@ -37,10 +39,19 @@ export async function GET(_req: NextRequest) {
 
   const { data: familyClaims } = await service
     .from("person_claims")
-    .select("user_id, person_id")
+    .select("user_id, person_id, approved_at")
     .in("person_id", allPersonIds)
     .eq("claim_status", "approved")
     .is("revoked_at", null);
+
+  // Parentesco canónico (mismo cálculo que /tree e /invitar) para etiquetar a cada persona.
+  const { byPersonId: relationsById } = resolveRelationsFromRoot({
+    me: myPersonId,
+    nodes: ((graphData as any)?.nodes ?? []),
+    edges: ((graphData as any)?.edges ?? []),
+  } as unknown as FamilyGraph);
+  const relationLabelOf = (personId: string) =>
+    relationsById.has(personId) ? describeRelation(relationsById.get(personId)) : null;
 
   const familyUserIds = [...new Set([user.id, ...((familyClaims ?? []) as any[]).map((c) => c.user_id as string)])];
   const personDisplayByUser = await resolvePersonsByUserIds(service, familyUserIds);
@@ -112,6 +123,7 @@ export async function GET(_req: NextRequest) {
       is_deceased: !!(p.is_deceased) || !!p.death_date,
       age_would_be: currentYear - parseInt(p.birth_date.slice(0, 4)),
       days_until: Math.ceil(daysUntilBirthday(p.birth_date)),
+      relation_label: relationLabelOf(p.id),
     }))
     // sort ascending so the home page slice(0,10) always gets the soonest birthdays first
     .sort((a, b) => a.days_until - b.days_until);
@@ -163,8 +175,24 @@ export async function GET(_req: NextRequest) {
     }
   });
 
+  // Familiares que se unieron (claim aprobado) en los últimos 7 días
+  const joinCutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const recentJoins = ((familyClaims ?? []) as any[])
+    .filter((c) => c.user_id !== user.id && c.approved_at && new Date(c.approved_at).getTime() > joinCutoff)
+    .map((c) => {
+      const d = personDisplayByUser.get(c.user_id as string);
+      return {
+        person_id: c.person_id as string,
+        first_name: d?.first_name ?? "",
+        joined_at: c.approved_at as string,
+        relation_label: relationLabelOf(c.person_id as string),
+      };
+    })
+    .filter((j) => j.first_name);
+
   return NextResponse.json({
     birthdays,
+    recentJoins,
     anniversaries,
     deceasedWithoutDate,
     photos: ((photos ?? []) as any[]).map((p) => {
