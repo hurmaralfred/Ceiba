@@ -302,24 +302,24 @@ export default function LandingPage() {
         <h1
           className="hero-title"
           style={{
-            fontWeight:300, lineHeight:1.1, letterSpacing:"-0.02em",
-            fontSize:"clamp(2.2rem,7vw,4.4rem)",
-            marginBottom:18, maxWidth:560,
+            fontWeight:300, lineHeight:1.15, letterSpacing:"-0.02em",
+            fontSize:"clamp(2.2rem,7vw,4.2rem)",
+            marginBottom:16, maxWidth:560,
           }}
         >
-          El hogar digital<br/>
-          <em style={{ fontStyle:"italic", fontWeight:400, color:"rgba(255,255,255,0.90)" }}>de tu familia.</em>
+          Tu familia,<br/>
+          <em style={{ fontStyle:"italic", fontWeight:400, color:"rgba(255,255,255,0.90)" }}>en un solo lugar.</em>
         </h1>
 
         <p
           className="hero-sub"
           style={{
-            fontSize:"clamp(15px,2vw,17px)", lineHeight:1.75,
-            color:"rgba(255,255,255,0.65)",
-            maxWidth:420, margin:"0 auto 40px",
+            fontSize:"clamp(15px,2vw,17px)", lineHeight:1.6,
+            color:"rgba(255,255,255,0.62)",
+            maxWidth:340, margin:"0 auto 36px",
           }}
         >
-          Tu familia conectada, sus historias<br/>y recuerdos en un solo lugar.
+          Fotos, historias y cumpleaños.<br/>Solo para tu familia.
         </p>
 
         <Link href="/auth/register" style={{ textDecoration:"none", marginBottom:18 }}>
@@ -332,31 +332,17 @@ export default function LandingPage() {
             boxShadow:"0 8px 0 #3d3000, 0 14px 32px rgba(0,0,0,0.65)",
             letterSpacing:"-0.01em",
           }}>
-            Crear cuenta gratis
+            Empezar
           </div>
         </Link>
 
         <Link href="/auth/login" style={{
           fontSize:14, color:"rgba(255,255,255,0.40)", textDecoration:"none",
-          fontWeight:500, display:"block", marginBottom:48,
+          fontWeight:500, display:"block",
         }}>
           ¿Ya tienes cuenta? <span style={{ color:"rgba(212,175,55,0.70)", fontWeight:600 }}>Iniciar sesión →</span>
         </Link>
 
-        <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:10 }}>
-          <p style={{ fontSize:12, color:"rgba(255,255,255,0.22)", margin:0 }}>
-            Solo tu familia lo ve. Sin ads, sin algoritmos.
-          </p>
-          <Link href="/instalar" style={{
-            fontSize:12, color:"rgba(212,175,55,0.50)", textDecoration:"none", fontWeight:600,
-            display:"flex", alignItems:"center", gap:5,
-          }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <path d="M12 5v14M5 12l7 7 7-7"/>
-            </svg>
-            Instalar app — iPhone / Android
-          </Link>
-        </div>
       </div>
 
       <footer style={{
