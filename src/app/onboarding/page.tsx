@@ -862,7 +862,8 @@ export default function OnboardingPage() {
       relatives_added: filledCount,
       invites_sent: invitedIds.size,
     });
-    router.push("/tree?welcome=1");
+    // Si ya invitó aquí, no repetirle la invitación en la bienvenida del árbol.
+    router.push(invitedIds.size > 0 ? "/tree" : "/tree?welcome=1");
   };
 
   // ============================================================
