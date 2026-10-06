@@ -1000,7 +1000,7 @@ function TreePageContent() {
 
       {/* ── Overlay bienvenida primer uso ── */}
       {showWelcome && visibleMembers.length > 0 && (
-        <div style={{
+        <div data-blocking-overlay="true" style={{
           position: "fixed", inset: 0, zIndex: 200,
           background: "rgba(3,2,8,0.88)", backdropFilter: "blur(8px)",
           display: "flex", alignItems: "flex-end", justifyContent: "center",

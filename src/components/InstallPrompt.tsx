@@ -55,6 +55,9 @@ export default function InstallPrompt() {
     // Show after 3s — also recheck Capacitor in case bridge wasn't ready at mount
     const t = setTimeout(() => {
       if (typeof (window as any).Capacitor !== "undefined") return;
+      // No tapar la bienvenida del árbol (u otra hoja bloqueante): se ofrece en la
+      // próxima visita en lugar de competir con la primera acción.
+      if (document.querySelector("[data-blocking-overlay]")) return;
       setShow(true);
       trackEvent("pwa_install_prompted");
     }, 3000);

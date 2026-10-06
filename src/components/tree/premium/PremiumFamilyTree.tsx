@@ -155,10 +155,13 @@ function nodeBaseOpacity(rt: string): number {
   return 0.95;
 }
 
-function nodeRelationColor(rt: string): string {
-  if (ANCESTOR_TYPES.has(rt)) return TERRA_SOFT;
-  if (OTHER_TYPES.has(rt)) return STEEL_SOFT;
-  return GOLD_DIM;
+// Texto de la etiqueta de parentesco bajo cada nodo ("Madre", "Hermano"...). Los
+// colores de arriba (alfa 0.16–0.36) sirven para trazos y brillos, pero como texto
+// de 8 px eran prácticamente invisibles sobre el fondo oscuro.
+function nodeRelationLabelColor(rt: string): string {
+  if (ANCESTOR_TYPES.has(rt)) return "rgba(224,150,126,0.88)";
+  if (OTHER_TYPES.has(rt)) return "rgba(168,180,200,0.85)";
+  return "rgba(242,201,76,0.80)";
 }
 
 // Soft bezier curves — no rigid orthogonal lines
@@ -455,8 +458,8 @@ function FamilyNode({
           x={cx}
           y={cy + vr + LBL_GAP + (node.nameLine2 ? 26 : 13)}
           textAnchor="middle"
-          fill={nodeRelationColor(relationType)}
-          fontSize={8}
+          fill={nodeRelationLabelColor(relationType)}
+          fontSize={10}
           fontFamily="system-ui,-apple-system,sans-serif"
           letterSpacing="0.06em"
           style={{ userSelect: "none", pointerEvents: "none" }}
