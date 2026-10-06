@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { createClient as createServiceClient } from "@supabase/supabase-js";
+import { getServiceClient, resolveFamilyUserIds, resolvePersonsByUserIds } from "@/lib/server/family";
 import webpush from "web-push";
 import { sendNewContentEmail } from "@/lib/email";
 
@@ -34,41 +34,28 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid type" }, { status: 400 });
   }
 
-  // Service role to read other users' profiles and push subs
-  const service = createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  // Service role to read other users' persons/claims and push subs
+  const service = getServiceClient();
 
-  // Get uploader's name
-  const { data: myProfile } = await service
-    .from("profiles")
-    .select("first_name, last_name")
-    .eq("id", user.id)
-    .single();
-  const uploaderName = myProfile
-    ? `${myProfile.first_name} ${myProfile.last_name || ""}`.trim()
-    : "Un familiar";
+  // Uploader's name (persons vía person_claims)
+  const uploaders = await resolvePersonsByUserIds(service, [user.id]);
+  const up = uploaders.get(user.id);
+  const uploaderName = up ? `${up.first_name} ${up.last_name}`.trim() || "Un familiar" : "Un familiar";
 
-  // Get family members who have joined (profile_id set), excluding self
-  const { data: members } = await service
-    .from("family_members")
-    .select("profile_id")
-    .eq("added_by", user.id)
-    .not("profile_id", "is", null);
-
-  if (!members || members.length === 0) {
-    return NextResponse.json({ ok: true, pushSent: 0, emailSent: 0 });
-  }
-
-  const profileIds = [...new Set(members.map(m => m.profile_id as string))].filter(id => id !== user.id);
+  // Recipients: my family_space (canonical model), excluding self
+  const profileIds = (await resolveFamilyUserIds(service, user.id)).filter(id => id !== user.id);
   if (profileIds.length === 0) return NextResponse.json({ ok: true, pushSent: 0, emailSent: 0 });
 
-  // Get profiles for name + email
-  const { data: profiles } = await service
-    .from("profiles")
-    .select("id, first_name, email")
-    .in("id", profileIds);
+  // Names + emails: name from persons, email from auth.users (profiles has no email column)
+  const recipientPersons = await resolvePersonsByUserIds(service, profileIds);
+  const profiles = (
+    await Promise.all(
+      profileIds.map(async (id) => {
+        const { data } = await service.auth.admin.getUserById(id);
+        return { id, email: data?.user?.email ?? null, first_name: recipientPersons.get(id)?.first_name ?? "" };
+      })
+    )
+  );
 
   // Get all push subscriptions for those users
   const { data: allSubs } = await service

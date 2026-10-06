@@ -2,8 +2,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Cake, UserPlus, Sparkles, X } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
-import { RELATION_LABELS, RelationType } from "@/lib/types";
 
 interface TodayItem {
   type: "birthday" | "joined" | "none";
@@ -12,16 +10,7 @@ interface TodayItem {
   dismissKey?: string;
 }
 
-function getDaysUntil(birthDate: string): number {
-  const today = new Date();
-  const bd = new Date(birthDate);
-  const next = new Date(today.getFullYear(), bd.getMonth(), bd.getDate());
-  if (next.getTime() < today.setHours(0,0,0,0)) next.setFullYear(next.getFullYear() + 1);
-  return Math.ceil((next.getTime() - Date.now()) / 86400000);
-}
-
 export default function TodayWidget({ userId }: { userId: string }) {
-  const supabase = createClient();
   const [item, setItem] = useState<TodayItem | null>(null);
 
   const dismiss = (e: React.MouseEvent) => {
@@ -37,76 +26,51 @@ export default function TodayWidget({ userId }: { userId: string }) {
   }, [userId]);
 
   async function load() {
-    const cutoff7 = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    // Fuente canónica: /api/feed (persons + relationships + person_claims)
+    let feed: any;
+    try {
+      const res = await fetch("/api/feed?birthdayDays=7");
+      if (!res.ok) { setItem(null); return; }
+      feed = await res.json();
+    } catch {
+      setItem(null);
+      return;
+    }
+
+    const birthdays: any[] = (feed?.birthdays ?? []).filter((b: any) => !b.is_deceased);
 
     // Check birthdays first (today = priority)
-    const { data: members } = await supabase
-      .from("family_members")
-      .select("first_name, last_name, relation_type, birth_date")
-      .eq("added_by", userId)
-      .not("birth_date", "is", null);
-
-    const today = new Date();
-
-    type BirthdayMember = NonNullable<typeof members>[number];
-
-    let todayBday: BirthdayMember | undefined;
-    let soonBday: BirthdayMember | undefined;
-    let minDays = 99;
-
-    (members || []).forEach(m => {
-      if (!m.birth_date) return;
-      const bd = new Date(m.birth_date);
-      const isToday = bd.getMonth() === today.getMonth() && bd.getDate() === today.getDate();
-      if (isToday) { todayBday = m; return; }
-      const days = getDaysUntil(m.birth_date);
-      if (days <= 7 && days < minDays) { minDays = days; soonBday = m; }
-    });
-
+    const todayBday = birthdays.find((b) => b.days_until === 0);
     if (todayBday) {
-      const rel = RELATION_LABELS[(todayBday as any).relation_type as RelationType] || (todayBday as any).relation_type;
       setItem({
         type: "birthday",
-        text: `🎂 Hoy cumple ${(todayBday as any).first_name}`,
-        subtext: rel,
+        text: `🎂 Hoy cumple ${todayBday.first_name}`,
+        subtext: todayBday.relation_label ?? undefined,
       });
       return;
     }
 
     // Check recent joins
-    const { data: joined } = await supabase
-      .from("family_members")
-      .select("first_name, last_name, relation_type, profiles:profile_id(created_at)")
-      .eq("added_by", userId)
-      .not("profile_id", "is", null);
-
-    const recentJoin = (joined || []).find((m: any) => {
-      const profile = Array.isArray(m.profiles) ? m.profiles[0] : m.profiles;
-      return profile?.created_at && new Date(profile.created_at) > cutoff7;
-    });
-
+    const recentJoin = (feed?.recentJoins ?? [])[0];
     if (recentJoin) {
-      const profile = Array.isArray((recentJoin as any).profiles) ? (recentJoin as any).profiles[0] : (recentJoin as any).profiles;
-      const joinedAt = profile?.created_at ?? "";
-      const dismissKey = `tw_join_${(recentJoin as any).first_name}_${joinedAt}`;
+      const dismissKey = `tw_join_${recentJoin.first_name}_${recentJoin.joined_at}`;
       if (typeof window !== "undefined" && localStorage.getItem(dismissKey)) return; // dismissed
-      const rel = RELATION_LABELS[(recentJoin as any).relation_type as RelationType] || (recentJoin as any).relation_type;
       setItem({
         type: "joined",
-        text: `${(recentJoin as any).first_name} se unió a la galaxia`,
-        subtext: `Tu ${rel.toLowerCase()}`,
+        text: `${recentJoin.first_name} se unió a la galaxia`,
+        subtext: recentJoin.relation_label ? `Tu ${String(recentJoin.relation_label).toLowerCase()}` : undefined,
         dismissKey,
       });
       return;
     }
 
     // Soon birthday
+    const soonBday = birthdays.find((b) => b.days_until > 0 && b.days_until <= 7);
     if (soonBday) {
-      const rel = RELATION_LABELS[(soonBday as any).relation_type as RelationType] || (soonBday as any).relation_type;
       setItem({
         type: "birthday",
-        text: `🎂 En ${minDays} días cumple ${(soonBday as any).first_name}`,
-        subtext: rel,
+        text: `🎂 En ${soonBday.days_until} días cumple ${soonBday.first_name}`,
+        subtext: soonBday.relation_label ?? undefined,
       });
       return;
     }

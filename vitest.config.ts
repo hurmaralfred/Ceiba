@@ -11,7 +11,7 @@ export default defineConfig({
   // poder importar componentes .tsx directamente en pruebas de integración
   // (p. ej. buildLayout de FamilyTreeGraph).
   oxc: {
-    jsx: "automatic",
+    jsx: { runtime: "automatic" },
   },
   test: {
     environment: "node",

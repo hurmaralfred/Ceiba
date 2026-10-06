@@ -45,19 +45,6 @@ interface EventItem {
 
 
 // ── Label maps ────────────────────────────────────────────────────────────────
-const RELATION_LABELS: Record<string, string> = {
-  father: "Padre", mother: "Madre", son: "Hijo", daughter: "Hija",
-  spouse: "Cónyuge", sibling: "Hermano/a", brother: "Hermano", sister: "Hermana",
-  grandfather_paternal: "Abuelo paterno", grandmother_paternal: "Abuela paterna",
-  grandfather_maternal: "Abuelo materno", grandmother_maternal: "Abuela materna",
-  uncle_paternal: "Tío paterno", aunt_paternal: "Tía paterna",
-  uncle_maternal: "Tío materno", aunt_maternal: "Tía materna",
-  cousin: "Primo/a", nephew: "Sobrino", niece: "Sobrina",
-  grandson: "Nieto", granddaughter: "Nieta",
-  father_in_law: "Suegro", mother_in_law: "Suegra",
-  root: "Tú", other: "Familiar",
-};
-
 const EVENT_SYMBOL: Record<string, string> = {
   birth: "✦", marriage: "◎", death: "✦", graduation: "⬟",
   reunion: "◈", anniversary: "★", other: "◇",
@@ -163,7 +150,7 @@ function PersonaPageInner() {
   const [person, setPerson] = useState<PersonData | null>(null);
   const [relatives, setRelatives] = useState<RelativeItem[]>([]);
   const [events, setEvents] = useState<EventItem[]>([]);
-  const [relationType, setRelationType] = useState<string | null>(null);
+  const [relationLabel, setRelationLabel] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<TabKey>("historia");
@@ -215,11 +202,11 @@ function PersonaPageInner() {
     if (!personId) return;
     fetch(`/api/persona/${personId}`)
       .then(r => { if (!r.ok) throw new Error("No autorizado"); return r.json(); })
-      .then(({ person: p, relatives: rel, events: ev, relationType: rt }) => {
+      .then(({ person: p, relatives: rel, events: ev, relationLabel: rl }) => {
         setPerson(p);
         setRelatives(rel ?? []);
         setEvents(ev ?? []);
-        setRelationType(rt ?? null);
+        setRelationLabel(rl ?? null);
       })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
@@ -307,7 +294,6 @@ function PersonaPageInner() {
     : "";
   const bYear = birthYear(person?.birth_date);
   const avatarSrc = person?.avatarUrl ?? (person?.photo_path ?? (person ? getDiceBearUrl(person.id) : null));
-  const relationLabel = relationType ? (RELATION_LABELS[relationType] ?? relationType) : null;
 
   const canEditProfile = !!(
     currentUserId &&
@@ -370,11 +356,11 @@ function PersonaPageInner() {
       // Refresh person data
       const freshRes = await fetch(`/api/persona/${personId}`);
       if (freshRes.ok) {
-        const { person: p, relatives: rel, events: ev, relationType: rt } = await freshRes.json();
+        const { person: p, relatives: rel, events: ev, relationLabel: rl } = await freshRes.json();
         setPerson(p);
         setRelatives(rel ?? []);
         setEvents(ev ?? []);
-        setRelationType(rt ?? null);
+        setRelationLabel(rl ?? null);
       }
       setEditOpen(false);
     } catch (e: any) {

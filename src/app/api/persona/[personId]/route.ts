@@ -5,6 +5,8 @@ import {
   resolveApprovedPersonId,
   resolveFamilySpaceMemberIds,
 } from "@/lib/server/family";
+import { resolveRelationsFromRoot, describeRelation } from "@/lib/genealogy";
+import type { FamilyGraph } from "@/lib/graphAdapter";
 
 export async function GET(
   _req: NextRequest,
@@ -25,8 +27,10 @@ export async function GET(
 
   // Also check the relationship graph (same source as the galaxy/feed view)
   let graphPersonIds: string[] = [];
+  let graphJson: any = null;
   if (myPersonId) {
     const { data: graphData } = await supabase.rpc("get_my_family_graph", { p_depth: 4 });
+    graphJson = graphData;
     graphPersonIds = graphData ? ((graphData as any).nodes ?? []).map((n: any) => n.id as string) : [];
   }
 
@@ -64,37 +68,45 @@ export async function GET(
     .is("revoked_at", null)
     .maybeSingle();
 
-  // Get avatar URL + config + relation type + is_deceased from family_members (if account exists)
+  // Avatar URL + config from profiles (if account exists); is_deceased comes from persons;
+  // relation comes from the canonical graph (resolveRelationsFromRoot)
   let avatarUrl: string | null = null;
   let avatarConfig: any = null;
   // Fall back to persons.is_deceased / death_date for unclaimed deceased persons
   let is_deceased = !!(person as any).is_deceased || !!(person as any).death_date;
   let relationType: string | null = null;
+  let relationLabel: string | null = null;
+
+  if (myPersonId && graphJson) {
+    if (personId === myPersonId) {
+      relationType = "root";
+      relationLabel = "Tú";
+    } else {
+      const { byPersonId } = resolveRelationsFromRoot({
+        me: myPersonId,
+        nodes: graphJson.nodes ?? [],
+        edges: graphJson.edges ?? [],
+      } as unknown as FamilyGraph);
+      const resolved = byPersonId.get(personId);
+      if (resolved) {
+        relationType = resolved.relation;
+        relationLabel = describeRelation(resolved);
+      }
+    }
+  }
 
   if (claim?.user_id) {
-    const [{ data: profile }, { data: member }] = await Promise.all([
-      service
-        .from("profiles")
-        .select("avatar_path, avatar_config")
-        .eq("user_id", claim.user_id)
-        .maybeSingle(),
-      service
-        .from("family_members")
-        .select("is_deceased, relation_type")
-        .eq("profile_id", claim.user_id)
-        .maybeSingle(),
-    ]);
+    const { data: profile } = await service
+      .from("profiles")
+      .select("avatar_path, avatar_config")
+      .eq("user_id", claim.user_id)
+      .maybeSingle();
 
     if (profile?.avatar_path) {
       const { data: urlData } = service.storage.from("avatars").getPublicUrl(profile.avatar_path);
       avatarUrl = urlData.publicUrl;
     }
     avatarConfig = profile?.avatar_config ?? null;
-
-    if (member) {
-      is_deceased = member.is_deceased ?? false;
-      relationType = (member as any).relation_type ?? null;
-    }
   }
 
   // Get sibling persons in the family space who have Ceiba accounts (for relatives + familyInCeiba)
@@ -170,6 +182,7 @@ export async function GET(
       is_deceased,
     },
     relationType,
+    relationLabel,
     relatives,
     familyInCeiba,
     totalInSpace: allPersonIds.length,
