@@ -1,11 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Sparkles, ChevronRight, ChevronLeft, Check, Plus, X,
-  Eye, EyeOff, Bell, BellOff, Send, Users, Cake,
-  AlertTriangle, Megaphone
-} from "lucide-react";
+import { Sparkles, ChevronRight, Check, Plus, X, AlertTriangle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { createInviteLink, buildInviteMessage, shareInviteWhatsApp, InviteTemplate } from "@/lib/viral/inviteFlow";
 import { trackEvent } from "@/lib/viral/viralAnalytics";
@@ -14,7 +10,7 @@ import PhoneInput, { isValidPhoneNumber } from "react-phone-number-input";
 import phoneLabels from "react-phone-number-input/locale/es";
 import "react-phone-number-input/style.css";
 import { ONBOARDING_GENDER_OPTIONS, getProfileGenderFormState, type OnboardingGender } from "@/lib/onboardingGender";
-import { decideExistingIdentityStep, getAddFamilyContinueLabel } from "@/lib/onboardingFlow";
+import { decideExistingIdentityStep } from "@/lib/onboardingFlow";
 
 // ============================================================
 // Tipos y constantes
@@ -25,11 +21,8 @@ type Step =
   | "init_error"    // 0b — la verificación inicial falló: reintentar o continuar
   | "profile"       // 3 — Cuéntanos quién eres
   | "match"         // 4 — Match condicional
-  | "add_family"    // 5 — Agregar 5 familiares
-  | "aha"           // 6 — ¡Aquí está tu ceiba!
-  | "batch_invite"  // 7 — Invitar en batch
-  | "notifications" // 8 — Habilitar notificaciones
-  | "done";         // 9 — ¡Listo!
+  | "add_family"    // 2 — Agregar a tu mamá o a tu papá (con uno basta)
+  | "batch_invite"; // 3 — Invitarlos por WhatsApp, justo después de agregarlos
 
 /**
  * ¿La persona identificada (nueva, reclamada o ya vinculada) tiene
@@ -52,11 +45,14 @@ async function personHasActiveRelationships(
   return (data?.length ?? 0) > 0;
 }
 
-const TOTAL_STEPS = 7;
+const TOTAL_STEPS = 3;
 const STEP_INDEX: Record<Step, number> = {
   checking: 0, init_error: 0,
-  profile: 1, match: 2, add_family: 3, aha: 4, batch_invite: 5, notifications: 6, done: 7
+  profile: 1, match: 1, add_family: 2, batch_invite: 3
 };
+
+// Con uno basta para empezar: el resto (pareja, hijos, tutor) se agrega desde el árbol.
+const ONBOARDING_SLOT_IDS = ["mom", "dad"];
 
 type CanonicalRelationship =
   | "parent"
@@ -460,7 +456,6 @@ export default function OnboardingPage() {
     if (step === "checking" || step === "init_error") return;
     trackEvent("onboarding_step_enter", { step });
     if (step === "match") trackEvent("match_shown");
-    if (step === "done") trackEvent("onboarding_completed", { relatives_added: filledCount });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
 
@@ -857,16 +852,17 @@ export default function OnboardingPage() {
   };
 
   // ============================================================
-  // Step: Notifications
+  // Fin del onboarding
   // ============================================================
 
-  const requestNotifications = async () => {
-    if (!("Notification" in window)) { setStep("done"); return; }
-    try {
-      const perm = await Notification.requestPermission();
-      trackEvent("notification_permission_result" as any, { result: perm });
-    } catch (_) {}
-    setStep("done");
+  // Las notificaciones ya no se piden aquí: NotificationBanner las ofrece dentro de
+  // la app, con contexto, en lugar de como un paso más antes de ver la galaxia.
+  const finishOnboarding = () => {
+    trackEvent("onboarding_completed", {
+      relatives_added: filledCount,
+      invites_sent: invitedIds.size,
+    });
+    router.push("/tree?welcome=1");
   };
 
   // ============================================================
@@ -1082,21 +1078,13 @@ export default function OnboardingPage() {
           <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "20px 20px 140px", gap: 18, position: "relative", zIndex: 10 }}>
             <div>
               <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "rgba(212,175,55,0.5)", marginBottom: 8 }}>Tu galaxia familiar</p>
-              <h1 style={{ fontSize: 24, fontWeight: 800, color: "#fff", lineHeight: 1.2, letterSpacing: "-0.02em", marginBottom: 4 }}>¿Quién está en tu familia?</h1>
-              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)" }}>Agrega al menos uno para ver tu galaxia.</p>
-            </div>
-
-            {/* Barra de progreso */}
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{ flex: 1, height: 5, background: "rgba(212,175,55,0.1)", borderRadius: 100, overflow: "hidden" }}>
-                <div style={{ width: `${(filledCount / 5) * 100}%`, height: "100%", background: "#d4af37", borderRadius: 100, transition: "width 0.5s ease", boxShadow: "0 0 8px rgba(212,175,55,0.5)" }} />
-              </div>
-              <span style={{ fontSize: 12, fontWeight: 700, color: "rgba(212,175,55,0.6)", flexShrink: 0 }}>{filledCount} / 5</span>
+              <h1 style={{ fontSize: 24, fontWeight: 800, color: "#fff", lineHeight: 1.2, letterSpacing: "-0.02em", marginBottom: 4 }}>¿Quién es tu mamá o tu papá?</h1>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)" }}>Con uno basta para empezar. Después agregas al resto.</p>
             </div>
 
             {/* Slots */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-              {SUGGESTED_SLOTS.map((slot) => {
+              {SUGGESTED_SLOTS.filter((slot) => ONBOARDING_SLOT_IDS.includes(slot.id)).map((slot) => {
                 const filled = filledSlots[slot.id];
                 return filled ? (
                   <div key={slot.id} style={{
@@ -1130,62 +1118,13 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* ── AHA MOMENT ─────────────────────────────────────── */}
-        {step === "aha" && (
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", padding: "40px 20px 40px", gap: 24, textAlign: "center", position: "relative", zIndex: 10 }}>
-            <Sparkles size={72} style={{ color: "rgba(212,175,55,0.85)", animation: "bounce 1s infinite" }} />
-            <div>
-              <h1 style={{ fontSize: 30, fontWeight: 800, color: "#fff", marginBottom: 8, letterSpacing: "-0.02em", lineHeight: 1.15 }}>
-                ¡Aquí está tu ceiba, {myFirstName}!
-              </h1>
-              <p style={{ color: "rgba(255,255,255,0.55)" }}>Tu galaxia familiar ya está tomando forma.</p>
-            </div>
-
-            <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 8 }}>
-              <div style={{ background: "#0c0a18", borderRadius: 16, padding: "12px 16px", border: "1px solid rgba(212,175,55,0.2)", display: "flex", alignItems: "center", gap: 12 }}>
-                <span style={{ fontSize: 20 }}>🌱</span>
-                <span style={{ color: "rgba(255,255,255,0.8)", fontSize: 14, fontWeight: 500 }}>
-                  {filledCount} familiar{filledCount !== 1 ? "es" : ""} agregado{filledCount !== 1 ? "s" : ""}
-                </span>
-              </div>
-              <div style={{ background: "#0c0a18", borderRadius: 16, padding: "12px 16px", border: "1px solid rgba(212,175,55,0.2)", display: "flex", alignItems: "center", gap: 12 }}>
-                <Cake size={20} style={{ color: "rgba(212,175,55,0.65)", flexShrink: 0 }} />
-                <span style={{ color: "rgba(255,255,255,0.8)", fontSize: 14, fontWeight: 500 }}>
-                  Recibirás recordatorios de cumpleaños
-                </span>
-              </div>
-              <div style={{ background: "#0c0a18", borderRadius: 16, padding: "12px 16px", border: "1px solid rgba(212,175,55,0.2)", display: "flex", alignItems: "center", gap: 12 }}>
-                <AlertTriangle size={20} style={{ color: "#f87171", flexShrink: 0 }} />
-                <span style={{ color: "rgba(255,255,255,0.8)", fontSize: 14, fontWeight: 500 }}>
-                  Tu familia puede mandarte alertas SOS
-                </span>
-              </div>
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%", marginTop: "auto" }}>
-              <button
-                onClick={() => setStep("batch_invite")}
-                style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "#c9a820", borderTop: "2px solid #f5e060", borderBottom: "4px solid #6a5600", border: "none", boxShadow: "0 8px 0 #4a3c00, 0 14px 24px rgba(0,0,0,0.7)", color: "#030208", fontWeight: 800, padding: "15px 0", borderRadius: 14, cursor: "pointer", fontSize: 15 }}
-              >
-                <Send size={18} /> Invitar a mi familia
-              </button>
-              <button
-                onClick={() => router.push("/tree?welcome=1")}
-                style={{ width: "100%", border: "1px solid rgba(212,175,55,0.25)", color: "rgba(212,175,55,0.7)", background: "none", fontWeight: 600, fontSize: 14, padding: "12px 0", borderRadius: 14, cursor: "pointer" }}
-              >
-                Ver mi galaxia ahora →
-              </button>
-            </div>
-          </div>
-        )}
-
         {/* ── BATCH INVITE ───────────────────────────────────── */}
         {step === "batch_invite" && (
           <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "24px 20px 128px", gap: 16, position: "relative", zIndex: 10 }}>
             <div>
-              <h1 style={{ fontSize: 24, fontWeight: 800, color: "#fff", marginBottom: 4, letterSpacing: "-0.02em" }}>Invita a los que agregaste</h1>
+              <h1 style={{ fontSize: 24, fontWeight: 800, color: "#fff", marginBottom: 4, letterSpacing: "-0.02em" }}>Avísales por WhatsApp</h1>
               <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 14 }}>
-                Cuando entren, cada uno verá la galaxia ya lista.
+                Un toque y el mensaje sale listo. Entran en menos de un minuto.
               </p>
             </div>
 
@@ -1227,72 +1166,6 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* ── NOTIFICATIONS ──────────────────────────────────── */}
-        {step === "notifications" && (
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", padding: "40px 20px 40px", gap: 24, textAlign: "center", position: "relative", zIndex: 10 }}>
-            <Bell size={64} style={{ color: "rgba(212,175,55,0.75)" }} />
-            <div>
-              <h1 style={{ fontSize: 24, fontWeight: 800, color: "#fff", marginBottom: 8, letterSpacing: "-0.02em" }}>Un último paso</h1>
-              <p style={{ color: "rgba(255,255,255,0.55)", fontSize: 14 }}>Ceiba solo te notifica para cosas que importan.</p>
-            </div>
-
-            <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 8, textAlign: "left" }}>
-              {[
-                { icon: "🎂", text: "Cumpleaños de tu familia" },
-                { icon: "✨", text: "Recuerdos del día — un día como hoy" },
-                { icon: "🚨", text: "Alertas SOS" },
-                { icon: "📢", text: "Mensajes familiares importantes" },
-              ].map(({ icon, text }) => (
-                <div key={text} style={{ display: "flex", alignItems: "center", gap: 12, background: "#0c0a18", borderRadius: 14, padding: "12px 16px", border: "1px solid rgba(212,175,55,0.15)" }}>
-                  <span style={{ fontSize: 18 }}>{icon}</span>
-                  <span style={{ color: "rgba(255,255,255,0.8)", fontSize: 14 }}>{text}</span>
-                </div>
-              ))}
-              <p style={{ textAlign: "center", color: "rgba(255,255,255,0.3)", fontSize: 12, marginTop: 4 }}>Nunca para publicidad.</p>
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%", marginTop: "auto" }}>
-              <button
-                onClick={requestNotifications}
-                style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "#c9a820", borderTop: "2px solid #f5e060", borderBottom: "4px solid #6a5600", border: "none", boxShadow: "0 8px 0 #4a3c00, 0 14px 24px rgba(0,0,0,0.7)", color: "#030208", fontWeight: 800, padding: "15px 0", borderRadius: 14, cursor: "pointer", fontSize: 15 }}
-              >
-                <Bell size={18} /> Activar notificaciones
-              </button>
-              <button
-                onClick={() => router.push("/tree?welcome=1")}
-                style={{ width: "100%", border: "1px solid rgba(212,175,55,0.25)", color: "rgba(212,175,55,0.7)", background: "none", fontWeight: 600, fontSize: 14, padding: "12px 0", borderRadius: 14, cursor: "pointer" }}
-              >
-                Ver mi galaxia primero →
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ── DONE ───────────────────────────────────────────── */}
-        {step === "done" && (
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", padding: "64px 20px 40px", gap: 24, textAlign: "center", position: "relative", zIndex: 10 }}>
-            <div style={{ position: "relative" }}>
-              <Sparkles size={80} style={{ color: "rgba(212,175,55,0.85)" }} />
-              <div style={{ position: "absolute", top: -8, right: -8, width: 32, height: 32, background: "#4ade80", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 12px rgba(0,0,0,0.4)" }}>
-                <Check size={18} style={{ color: "#fff" }} />
-              </div>
-            </div>
-            <div>
-              <h1 style={{ fontSize: 30, fontWeight: 800, color: "#fff", marginBottom: 8, letterSpacing: "-0.02em", lineHeight: 1.15 }}>
-                ¡Bienvenido/a, {myFirstName}!
-              </h1>
-              <p style={{ color: "rgba(255,255,255,0.55)" }}>Tu galaxia familiar te está esperando.</p>
-            </div>
-            <button
-              onClick={() => router.push("/tree")}
-              style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "#c9a820", borderTop: "2px solid #f5e060", borderBottom: "4px solid #6a5600", border: "none", boxShadow: "0 8px 0 #4a3c00, 0 14px 24px rgba(0,0,0,0.7)", color: "#030208", fontWeight: 800, padding: "17px 0", borderRadius: 14, cursor: "pointer", fontSize: 17, marginTop: "auto" }}
-            >
-              Entrar a mi galaxia
-              <ChevronRight size={22} />
-            </button>
-          </div>
-        )}
-
         {/* Footer botones de navegación */}
         {step === "add_family" && (
           <div style={{
@@ -1301,29 +1174,31 @@ export default function OnboardingPage() {
             padding: "14px 20px 32px", backdropFilter: "blur(12px)", zIndex: 50,
             display: "flex", flexDirection: "column", gap: 8,
           }}>
-            <button
-              onClick={() => setStep("aha")}
-              style={{
-                width: "100%", padding: "15px 0", borderRadius: 14,
-                background: "#c9a820",
-                borderTop: "2px solid #f5e060", borderLeft: "1.5px solid rgba(255,240,100,0.5)",
-                borderBottom: "4px solid #6a5600", borderRight: "1.5px solid rgba(0,0,0,0.4)",
-                boxShadow: "0 8px 0 #4a3c00, 0 14px 24px rgba(0,0,0,0.7), 0 0 20px rgba(212,175,55,0.2)",
-                color: "#030208", fontSize: 15, fontWeight: 800, cursor: "pointer", border: "none",
-                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-              }}
-            >
-              {filledCount > 0 ? "Continuar a la galaxia" : "Omitir por ahora"} <ChevronRight size={18} />
-            </button>
-            {filledCount > 0 && (
+            {filledCount > 0 ? (
               <button
-                onClick={() => setStep("aha")}
+                onClick={() => setStep("batch_invite")}
                 style={{
-                  width: "100%", color: "rgba(212,175,55,0.5)", background: "none",
-                  border: "none", fontSize: 14, padding: "6px 0", cursor: "pointer",
+                  width: "100%", padding: "15px 0", borderRadius: 14,
+                  background: "#c9a820",
+                  borderTop: "2px solid #f5e060", borderLeft: "1.5px solid rgba(255,240,100,0.5)",
+                  borderBottom: "4px solid #6a5600", borderRight: "1.5px solid rgba(0,0,0,0.4)",
+                  boxShadow: "0 8px 0 #4a3c00, 0 14px 24px rgba(0,0,0,0.7), 0 0 20px rgba(212,175,55,0.2)",
+                  color: "#030208", fontSize: 15, fontWeight: 800, cursor: "pointer", border: "none",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
                 }}
               >
-                Omitir el resto por ahora
+                Continuar <ChevronRight size={18} />
+              </button>
+            ) : (
+              <button
+                onClick={finishOnboarding}
+                style={{
+                  width: "100%", color: "rgba(212,175,55,0.7)", background: "none",
+                  border: "1px solid rgba(212,175,55,0.25)", borderRadius: 14,
+                  fontSize: 14, fontWeight: 600, padding: "13px 0", cursor: "pointer",
+                }}
+              >
+                Más tarde
               </button>
             )}
           </div>
@@ -1332,16 +1207,10 @@ export default function OnboardingPage() {
         {step === "batch_invite" && (
           <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, maxWidth: 480, margin: "0 auto", background: "rgba(3,2,8,0.97)", borderTop: "0.5px solid rgba(212,175,55,0.2)", padding: "14px 20px 32px", backdropFilter: "blur(12px)", zIndex: 50, display: "flex", flexDirection: "column", gap: 8 }}>
             <button
-              onClick={() => setStep("notifications")}
-              style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "#c9a820", borderTop: "2px solid #f5e060", borderBottom: "4px solid #6a5600", border: "none", boxShadow: "0 8px 0 #4a3c00, 0 14px 24px rgba(0,0,0,0.7)", color: "#030208", fontWeight: 800, padding: "15px 0", borderRadius: 14, cursor: "pointer", fontSize: 15 }}
+              onClick={finishOnboarding}
+              style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "#c9a820", borderTop: "2px solid #f5e060", borderLeft: "1.5px solid rgba(255,240,100,0.5)", borderBottom: "4px solid #6a5600", borderRight: "1.5px solid rgba(0,0,0,0.4)", boxShadow: "0 8px 0 #4a3c00, 0 14px 24px rgba(0,0,0,0.7)", color: "#030208", fontSize: 15, fontWeight: 800, padding: "15px 0", borderRadius: 14, cursor: "pointer", border: "none" }}
             >
-              Continuar <ChevronRight size={20} />
-            </button>
-            <button
-              onClick={() => setStep("notifications")}
-              style={{ width: "100%", color: "rgba(212,175,55,0.5)", background: "none", border: "none", fontSize: 14, padding: "6px 0", cursor: "pointer" }}
-            >
-              Saltar por ahora
+              {invitedIds.size > 0 ? "Entrar a mi galaxia" : "Ir a mi galaxia"} <ChevronRight size={20} />
             </button>
           </div>
         )}
