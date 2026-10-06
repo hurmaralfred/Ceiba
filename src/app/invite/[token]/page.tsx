@@ -5,6 +5,16 @@ import Link from "next/link";
 import { Sparkles, Check, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
+import { buildHighlights, type InvitationHook } from "@/lib/viral/inviteHighlights";
+import type { CeibaEvent } from "@/lib/viral/viralAnalytics";
+
+// Carga diferida: el SDK de Amplitude ya lo inicializa el layout; importarlo aquí
+// de forma estática lo sumaba al tamaño inicial de la página.
+const trackEvent = (event: CeibaEvent, properties?: Record<string, any>) => {
+  import("@/lib/viral/viralAnalytics")
+    .then((m) => m.trackEvent(event, properties))
+    .catch(() => {});
+};
 
 // Clave de sessionStorage compartida con /auth/register: permite volver
 // aquí después de crear la cuenta y completar accept_invitation ya
@@ -31,10 +41,23 @@ interface InvitationPreview {
     id: string;
     name: string;
   };
+  // Datos agregados de la familia (get_invitation_by_token). Opcional: una
+  // versión anterior de la función no lo devuelve.
+  hook?: InvitationHook;
 }
 
 function fullName(p: InvitationPreview["person"]): string {
   return [p.first_name, p.first_surname].filter(Boolean).join(" ");
+}
+
+// avatar_path es una ruta de storage, no una URL.
+function avatarSrc(
+  supabase: ReturnType<typeof createClient>,
+  path: string | null
+): string | null {
+  if (!path) return null;
+  if (/^https?:\/\//.test(path)) return path;
+  return supabase.storage.from("avatars").getPublicUrl(path).data.publicUrl;
 }
 
 export default function AcceptInvitePage() {
@@ -69,6 +92,17 @@ export default function AcceptInvitePage() {
     }
 
     setInvitation(data as InvitationPreview);
+
+    // Embudo: una apertura por navegador y enlace (recargar no cuenta de nuevo).
+    // Falla en silencio: medir nunca debe bloquear al invitado.
+    try {
+      const seenKey = `invite_opened_${token}`;
+      if (!sessionStorage.getItem(seenKey)) {
+        sessionStorage.setItem(seenKey, "1");
+        trackEvent("invite_link_opened", { status: (data as InvitationPreview).status });
+        void supabase.rpc("record_invitation_event", { p_token: token, p_event: "opened" });
+      }
+    } catch { /* sessionStorage no disponible */ }
 
     // Si ya hay sesión activa, se acepta de inmediato: cubre tanto al
     // usuario que vuelve desde /auth/register tras registrarse, como a
@@ -111,6 +145,8 @@ export default function AcceptInvitePage() {
         sessionStorage.removeItem(PENDING_INVITE_KEY);
       }
 
+      if (!data?.already_accepted) trackEvent("invite_converted", {});
+
       toast.success(
         data?.already_accepted
           ? "Ya estabas conectado con tu familia 🌳"
@@ -118,16 +154,29 @@ export default function AcceptInvitePage() {
       );
       router.push("/tree");
     } catch (err: any) {
+      // Si falla, no dejar el token pendiente: evitaría un bucle de redirección
+      // desde PendingInviteRedirect hacia una invitación que no se puede aceptar.
+      if (typeof window !== "undefined") sessionStorage.removeItem(PENDING_INVITE_KEY);
       setAccepting(false);
       setLoading(false);
       toast.error(err.message || "No se pudo aceptar la invitación");
     }
   };
 
+  const recordCta = (action: "register" | "login") => {
+    trackEvent("sign_up_start", { source: "invite", action });
+    void supabase.rpc("record_invitation_event", {
+      p_token: token,
+      p_event: "cta_clicked",
+      p_metadata: { action },
+    });
+  };
+
   const goToRegister = () => {
     if (typeof window !== "undefined") {
       sessionStorage.setItem(PENDING_INVITE_KEY, token);
     }
+    recordCta("register");
     router.push("/auth/register");
   };
 
@@ -181,6 +230,8 @@ export default function AcceptInvitePage() {
 
   const inviterName = invitation.inviter.display_name;
   const memberName = fullName(invitation.person);
+  const highlights = buildHighlights(invitation.hook);
+  const inviterAvatar = avatarSrc(supabase, invitation.inviter.avatar_path);
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-ceiba-950 via-ceiba-900 to-ceiba-800 px-4 py-8 flex flex-col items-center">
@@ -201,9 +252,9 @@ export default function AcceptInvitePage() {
           {/* Inviter header */}
           <div className="bg-gradient-to-r from-ceiba-800 to-ceiba-600 px-6 py-5 text-white">
             <div className="flex items-center gap-4">
-              {invitation.inviter.avatar_path ? (
+              {inviterAvatar ? (
                 <img
-                  src={invitation.inviter.avatar_path}
+                  src={inviterAvatar}
                   alt=""
                   className="w-14 h-14 rounded-2xl object-cover border-2 border-white/30"
                 />
@@ -231,21 +282,33 @@ export default function AcceptInvitePage() {
               </p>
             </div>
 
-            {/* What they get */}
-            <div className="bg-gray-50 rounded-2xl px-4 py-3 space-y-2">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Al unirte podrás</p>
-              {[
-                "Ver y completar la galaxia familiar",
-                "Ver dónde vive tu familia en el mapa",
-                "Chatear con grupos de la familia",
-                "Compartir fotos e historias familiares",
-              ].map((b, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <Check size={13} className="text-ceiba-600 shrink-0" />
-                  <span className="text-xs text-gray-600">{b}</span>
-                </div>
-              ))}
-            </div>
+            {/* Razones concretas (si la familia ya tiene contenido) o lista genérica */}
+            {highlights.length > 0 ? (
+              <div className="bg-gray-50 rounded-2xl px-4 py-3 space-y-2">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Te está esperando</p>
+                {highlights.map((h, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <Check size={13} className="text-ceiba-600 shrink-0" />
+                    <span className="text-sm text-gray-700">{h}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="bg-gray-50 rounded-2xl px-4 py-3 space-y-2">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Al unirte podrás</p>
+                {[
+                  "Ver y completar la galaxia familiar",
+                  "Ver dónde vive tu familia en el mapa",
+                  "Chatear con grupos de la familia",
+                  "Compartir fotos e historias familiares",
+                ].map((b, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <Check size={13} className="text-ceiba-600 shrink-0" />
+                    <span className="text-xs text-gray-600">{b}</span>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* CTAs */}
             <div className="space-y-2 pt-1">
@@ -261,6 +324,7 @@ export default function AcceptInvitePage() {
                   if (typeof window !== "undefined") {
                     sessionStorage.setItem(PENDING_INVITE_KEY, token);
                   }
+                  recordCta("login");
                   router.push("/auth/login");
                 }}
                 className="w-full flex items-center justify-center py-2.5 text-sm text-gray-500 hover:text-gray-700"

@@ -4,6 +4,7 @@ import { Toaster } from "react-hot-toast";
 import { Analytics } from "@vercel/analytics/react";
 import InstallPrompt from "@/components/InstallPrompt";
 import AmplitudeInit from "@/components/AmplitudeInit";
+import PendingInviteRedirect from "@/components/PendingInviteRedirect";
 import PushRegistrar from "@/components/PushRegistrar";
 import NotificationBanner from "@/components/NotificationBanner";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -53,6 +54,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <NotificationBanner />
         <Analytics />
         <AmplitudeInit />
+        <PendingInviteRedirect />
         <script dangerouslySetInnerHTML={{
           __html: `
             if ('serviceWorker' in navigator) {
