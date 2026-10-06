@@ -1,4 +1,5 @@
 "use client";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { X, Share, Smartphone } from "lucide-react";
@@ -22,6 +23,7 @@ const ACCEPTED_KEY = "ceiba_install_accepted";
 const DISMISS_DAYS = 7;
 
 export default function InstallPrompt() {
+  const pathname = usePathname();
   const [show, setShow] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [prompt, setPrompt] = useState<BeforeInstallPromptEvent | null>(null);
@@ -83,7 +85,14 @@ export default function InstallPrompt() {
     }
   };
 
-  if (!show) return null;
+  // Nada que compita con el primer paso: ni en la landing, ni en el registro/login,
+  // ni en la página de invitación. Se ofrece ya dentro de la app.
+  const isEntryRoute =
+    pathname === "/" ||
+    pathname.startsWith("/auth") ||
+    pathname.startsWith("/invite") ||
+    pathname.startsWith("/instalar");
+  if (!show || isEntryRoute) return null;
 
   return (
     <div style={{

@@ -8,10 +8,10 @@ const trackEvent = (event: CeibaEvent, properties?: Record<string, any>) => {
     .then((m) => m.trackEvent(event, properties))
     .catch(() => {});
 };
-import { useState, useRef, Suspense } from "react";
+import { useState, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Eye, EyeOff, ArrowRight, ArrowLeft, Camera, Check } from "lucide-react";
+import { Eye, EyeOff, ArrowRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 
@@ -87,13 +87,9 @@ function DarkInput({ type = "text", placeholder, value, onChange, required, clas
 function RegisterFormInner() {
   const router = useRouter();
   const supabase = createClient();
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [step, setStep] = useState(1); // 1 = nombre+foto, 2 = email+pass
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
 
   const [form, setForm] = useState({
     nombre: "",      // primer + segundo nombre completo
@@ -102,26 +98,10 @@ function RegisterFormInner() {
     password: "",
   });
 
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { toast.error("La foto debe pesar menos de 5MB"); return; }
-    setPhotoFile(file);
-    setPhotoPreview(URL.createObjectURL(file));
-  };
-
-  const handleStep1 = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.nombre.trim() || !form.apellido.trim()) {
-      toast.error("Ingresa tu nombre y apellido");
-      return;
-    }
-    setStep(2);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (form.password.length < 6) { toast.error("Mínimo 6 caracteres"); return; }
+    if (!form.nombre.trim() || !form.apellido.trim()) { toast.error("Ingresa tu nombre y apellido"); return; }
+    if (form.password.length < 6) { toast.error("La contraseña necesita al menos 6 caracteres"); return; }
 
     setLoading(true);
     try {
@@ -143,46 +123,6 @@ function RegisterFormInner() {
         router.push("/auth/login?registered=1");
         return;
       }
-
-      let avatarPath: string | null = null;
-      let avatarPublicUrl: string | null = null;
-
-      if (photoFile) {
-        const ext = photoFile.name.split(".").pop() || "jpg";
-        avatarPath = `${userId}/avatar.${ext}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from("avatars")
-          .upload(avatarPath, photoFile, { upsert: true });
-
-        if (uploadError) {
-          console.error("Avatar upload error:", uploadError);
-        } else {
-          const { data: urlData } = supabase.storage
-            .from("avatars")
-            .getPublicUrl(avatarPath);
-
-          avatarPublicUrl = urlData.publicUrl;
-        }
-      }
-
-      if (avatarPath) {
-        const { error: profileAvatarError } = await supabase
-          .from("profiles")
-          .update({ avatar_path: avatarPath })
-          .eq("user_id", userId);
-
-        if (profileAvatarError) {
-          console.error("Profile avatar error:", profileAvatarError);
-        }
-      }
-
-      // NOTA: la foto de perfil ya quedó en profiles.avatar_path (arriba).
-      // Vincularla también a `persons` no aplica aqui: en este punto del
-      // registro el usuario todavia no tiene ninguna persona reclamada
-      // (eso ocurre en /onboarding o al aceptar una invitacion), y
-      // `persons` no tiene una columna `linked_user_id` — el vinculo
-      // usuario<->persona vive en `person_claims`.
 
       trackEvent("sign_up_complete", { from_invite: !!(typeof window !== "undefined" && sessionStorage.getItem("pending_invite_token")) });
       toast.success("¡Bienvenido a Ceiba! ✨");
@@ -252,37 +192,15 @@ function RegisterFormInner() {
           <span className="font-display text-xl font-bold text-white mt-1">Ceiba</span>
         </Link>
 
-        {/* Progress dots */}
-        <div className="flex items-center gap-2 mb-6">
-          {[1, 2].map(s => (
-            <div key={s} className="flex items-center gap-2">
-              <div
-                className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300"
-                style={
-                  s < step
-                    ? { background: "rgba(92,122,82,0.25)", border: "1px solid #5c7a52", color: "#8aad7e" }
-                    : s === step
-                    ? { background: "linear-gradient(135deg, #c1603a, #a84f2f)", color: "white", boxShadow: "0 0 16px rgba(193,96,58,0.4)" }
-                    : { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#4b5563" }
-                }
-              >
-                {s < step ? <Check size={12} /> : s}
-              </div>
-              {s < 2 && (
-                <div className="w-8 h-px transition-all duration-300"
-                  style={{ background: s < step ? "rgba(92,122,82,0.5)" : "rgba(255,255,255,0.1)" }}
-                />
-              )}
-            </div>
-          ))}
-        </div>
-
         <div className="w-full max-w-sm">
 
-          {/* ── STEP 1: Nombre + foto ── */}
-          {step === 1 && (
-            <div className="rounded-3xl p-6" style={cardStyle}>
-              {/* Google at top of step 1 */}
+          <div className="rounded-3xl p-6" style={cardStyle}>
+            <div className="text-center mb-5">
+              <h1 className="text-white font-bold text-xl">Crea tu cuenta</h1>
+              <p className="text-gray-500 text-xs mt-1">Gratis · tarda menos de un minuto</p>
+            </div>
+
+              {/* Google: el camino más corto (un toque) */}
               <button
                 type="button"
                 onClick={async () => {
@@ -311,7 +229,7 @@ function RegisterFormInner() {
                 style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)" }}
               >
                 <GoogleIcon />
-                Registrarse con Google
+                Continuar con Google
               </button>
 
               <div className="flex items-center gap-3 mb-4">
@@ -320,103 +238,20 @@ function RegisterFormInner() {
                 <div className="flex-1 h-px bg-gray-800" />
               </div>
 
-              <form onSubmit={handleStep1} className="space-y-4">
-                {/* Headline */}
-                <div className="text-center mb-2">
-                  <h2 className="text-white font-bold text-lg">¿Cómo te llamas?</h2>
-                  <p className="text-gray-500 text-xs mt-1">Así aparecerás en la galaxia familiar</p>
-                </div>
-
-                {/* Avatar upload — centered */}
-                <div className="flex flex-col items-center gap-2 pb-1">
-                  <div
-                    onClick={() => fileInputRef.current?.click()}
-                    className="w-20 h-20 rounded-full flex items-center justify-center cursor-pointer transition-all overflow-hidden relative group"
-                    style={{
-                      background: photoPreview ? "transparent" : "rgba(92,122,82,0.1)",
-                      border: photoPreview ? "2px solid #5c7a52" : "2px dashed rgba(92,122,82,0.4)",
-                    }}
-                  >
-                    {photoPreview
-                      ? <img src={photoPreview} alt="" className="w-full h-full object-cover" />
-                      : <Camera size={22} className="text-earth-400 group-hover:text-earth-300 transition-colors" />
-                    }
-                    {photoPreview && (
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <Camera size={18} className="text-white" />
-                      </div>
-                    )}
-                  </div>
-                  <button type="button" onClick={() => fileInputRef.current?.click()}
-                    className="text-xs text-earth-400 hover:text-earth-300 font-medium transition-colors">
-                    {photoPreview ? "Cambiar foto" : "Añadir foto (opcional)"}
-                  </button>
-                  <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
-                </div>
-
+              <form onSubmit={handleSubmit} className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <DarkInput
-                    placeholder="Nombre(s)"
+                    placeholder="Nombre"
                     value={form.nombre}
                     onChange={v => setForm(f => ({ ...f, nombre: v }))}
                     required
                   />
                   <DarkInput
-                    placeholder="Apellido(s)"
+                    placeholder="Apellido"
                     value={form.apellido}
                     onChange={v => setForm(f => ({ ...f, apellido: v }))}
                     required
                   />
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full flex items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-bold text-white transition-all active:scale-[0.98]"
-                  style={{
-                    background: "linear-gradient(135deg, #c1603a 0%, #a84f2f 100%)",
-                    boxShadow: "0 4px 24px rgba(193,96,58,0.4)",
-                  }}
-                >
-                  Siguiente <ArrowRight size={16} />
-                </button>
-              </form>
-            </div>
-          )}
-
-          {/* ── STEP 2: Email + contraseña ── */}
-          {step === 2 && (
-            <div className="rounded-3xl p-6" style={cardStyle}>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Back + headline */}
-                <div className="flex items-center gap-3 mb-1">
-                  <button type="button" onClick={() => setStep(1)}
-                    className="w-8 h-8 rounded-full flex items-center justify-center text-gray-500 hover:text-white hover:bg-white/10 transition-all">
-                    <ArrowLeft size={16} />
-                  </button>
-                  <div>
-                    <h2 className="text-white font-bold text-lg">
-                      Hola, {form.nombre.split(" ")[0]} 👋
-                    </h2>
-                    <p className="text-gray-500 text-xs">Un paso más para entrar</p>
-                  </div>
-                </div>
-
-                {/* Preview del usuario */}
-                <div
-                  className="flex items-center gap-3 rounded-2xl px-4 py-3"
-                  style={{ background: "rgba(92,122,82,0.1)", border: "1px solid rgba(92,122,82,0.2)" }}
-                >
-                  <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center text-sm font-bold text-white shrink-0"
-                    style={{ background: "linear-gradient(135deg, #4a6342, #1a2417)" }}>
-                    {photoPreview
-                      ? <img src={photoPreview} className="w-full h-full object-cover" alt="" />
-                      : `${form.nombre[0] || ""}${form.apellido[0] || ""}`.toUpperCase()
-                    }
-                  </div>
-                  <div>
-                    <p className="text-white text-sm font-semibold">{form.nombre} {form.apellido}</p>
-                    <p className="text-earth-400 text-xs">Nuevo miembro de Ceiba</p>
-                  </div>
                 </div>
 
                 <DarkInput
@@ -440,6 +275,7 @@ function RegisterFormInner() {
                     onBlur={e => (e.currentTarget.style.border = "1px solid rgba(255,255,255,0.08)")}
                   />
                   <button type="button"
+                    aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-400 transition-colors"
                     onClick={() => setShowPassword(!showPassword)}>
                     {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
@@ -457,16 +293,17 @@ function RegisterFormInner() {
                     boxShadow: loading ? "none" : "0 4px 24px rgba(193,96,58,0.4)",
                   }}
                 >
-                  {loading ? "Creando tu galaxia..." : <>Entrar a Ceiba <ArrowRight size={16} /></>}
+                  {loading ? "Creando tu cuenta..." : <>Crear cuenta <ArrowRight size={16} /></>}
                 </button>
 
-                <p className="text-center text-gray-700 text-xs">
-                  Al registrarte aceptas los{" "}
-                  <span className="text-earth-400">términos y privacidad</span>
+                <p className="text-center text-gray-600 text-xs">
+                  Al continuar aceptas los{" "}
+                  <Link href="/terminos" className="text-earth-400 underline">términos</Link>
+                  {" "}y la{" "}
+                  <Link href="/privacidad" className="text-earth-400 underline">privacidad</Link>
                 </p>
               </form>
-            </div>
-          )}
+          </div>
 
           <p className="text-center text-gray-600 text-sm mt-6">
             ¿Ya tienes cuenta?{" "}
