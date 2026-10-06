@@ -1,4 +1,13 @@
 "use client";
+import type { CeibaEvent } from "@/lib/viral/viralAnalytics";
+
+// Carga diferida: el SDK de Amplitude ya lo inicializa el layout; importarlo aquí
+// de forma estática lo sumaba al tamaño inicial de la página.
+const trackEvent = (event: CeibaEvent, properties?: Record<string, any>) => {
+  import("@/lib/viral/viralAnalytics")
+    .then((m) => m.trackEvent(event, properties))
+    .catch(() => {});
+};
 import { useState, useRef, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -175,6 +184,7 @@ function RegisterFormInner() {
       // `persons` no tiene una columna `linked_user_id` — el vinculo
       // usuario<->persona vive en `person_claims`.
 
+      trackEvent("sign_up_complete", { from_invite: !!(typeof window !== "undefined" && sessionStorage.getItem("pending_invite_token")) });
       toast.success("¡Bienvenido a Ceiba! ✨");
 
       // Si llegamos aqui desde /invite/[token] (invitacion personalizada),

@@ -6,6 +6,15 @@ import { Sparkles, Check, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 import { buildHighlights, type InvitationHook } from "@/lib/viral/inviteHighlights";
+import type { CeibaEvent } from "@/lib/viral/viralAnalytics";
+
+// Carga diferida: el SDK de Amplitude ya lo inicializa el layout; importarlo aquí
+// de forma estática lo sumaba al tamaño inicial de la página.
+const trackEvent = (event: CeibaEvent, properties?: Record<string, any>) => {
+  import("@/lib/viral/viralAnalytics")
+    .then((m) => m.trackEvent(event, properties))
+    .catch(() => {});
+};
 
 // Clave de sessionStorage compartida con /auth/register: permite volver
 // aquí después de crear la cuenta y completar accept_invitation ya
@@ -84,6 +93,17 @@ export default function AcceptInvitePage() {
 
     setInvitation(data as InvitationPreview);
 
+    // Embudo: una apertura por navegador y enlace (recargar no cuenta de nuevo).
+    // Falla en silencio: medir nunca debe bloquear al invitado.
+    try {
+      const seenKey = `invite_opened_${token}`;
+      if (!sessionStorage.getItem(seenKey)) {
+        sessionStorage.setItem(seenKey, "1");
+        trackEvent("invite_link_opened", { status: (data as InvitationPreview).status });
+        void supabase.rpc("record_invitation_event", { p_token: token, p_event: "opened" });
+      }
+    } catch { /* sessionStorage no disponible */ }
+
     // Si ya hay sesión activa, se acepta de inmediato: cubre tanto al
     // usuario que vuelve desde /auth/register tras registrarse, como a
     // quien abre el link ya con sesión iniciada de antes.
@@ -125,6 +145,8 @@ export default function AcceptInvitePage() {
         sessionStorage.removeItem(PENDING_INVITE_KEY);
       }
 
+      if (!data?.already_accepted) trackEvent("invite_converted", {});
+
       toast.success(
         data?.already_accepted
           ? "Ya estabas conectado con tu familia 🌳"
@@ -132,16 +154,29 @@ export default function AcceptInvitePage() {
       );
       router.push("/tree");
     } catch (err: any) {
+      // Si falla, no dejar el token pendiente: evitaría un bucle de redirección
+      // desde PendingInviteRedirect hacia una invitación que no se puede aceptar.
+      if (typeof window !== "undefined") sessionStorage.removeItem(PENDING_INVITE_KEY);
       setAccepting(false);
       setLoading(false);
       toast.error(err.message || "No se pudo aceptar la invitación");
     }
   };
 
+  const recordCta = (action: "register" | "login") => {
+    trackEvent("sign_up_start", { source: "invite", action });
+    void supabase.rpc("record_invitation_event", {
+      p_token: token,
+      p_event: "cta_clicked",
+      p_metadata: { action },
+    });
+  };
+
   const goToRegister = () => {
     if (typeof window !== "undefined") {
       sessionStorage.setItem(PENDING_INVITE_KEY, token);
     }
+    recordCta("register");
     router.push("/auth/register");
   };
 
@@ -289,6 +324,7 @@ export default function AcceptInvitePage() {
                   if (typeof window !== "undefined") {
                     sessionStorage.setItem(PENDING_INVITE_KEY, token);
                   }
+                  recordCta("login");
                   router.push("/auth/login");
                 }}
                 className="w-full flex items-center justify-center py-2.5 text-sm text-gray-500 hover:text-gray-700"
