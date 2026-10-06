@@ -3,7 +3,7 @@
 // ------------------------------------------------------------
 // Cubre:
 //   1) Crear invitación en Supabase
-//   2) Generar link mágico con Branch.io o Firebase Dynamic Links
+//   2) Generar el link universal (ceibapp.com/invite/<token>)
 //   3) Compartir por WhatsApp / SMS / copiar
 //   4) Registrar el evento de share
 // ============================================================
@@ -11,10 +11,7 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { trackEvent } from "./viralAnalytics";
 
-// Configuración: pega tus claves aquí
 const CEIBA_UNIVERSAL_LINK_DOMAIN = "https://ceibapp.com/invite";
-const BRANCH_KEY = "key_live_xxxxx";              // si usas Branch.io
-const FIREBASE_DYNAMIC_LINK_DOMAIN = "ceiba.page.link"; // si usas Firebase
 
 // ------------------------------------------------------------
 // Templates A/B (mismos IDs que en el catálogo de copy/)
@@ -83,7 +80,6 @@ export interface InviteLinkResult {
   invitationId: string;
   code: string;
   universalLink: string;
-  branchLink?: string;
 }
 
 /**
@@ -108,33 +104,6 @@ export async function createInviteLink(
   // 2) Universal link — token is a 64-hex string (32 random bytes, SHA-256 hashed in DB)
   const universalLink = `${CEIBA_UNIVERSAL_LINK_DOMAIN}/${token}`;
 
-  // 3) (Opcional) Branch.io — genera un short link con analytics
-  let branchLink: string | undefined;
-  try {
-    const res = await fetch("https://api2.branch.io/v1/url", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        branch_key: BRANCH_KEY,
-        channel: "app",
-        feature: "family_invite",
-        data: {
-          $canonical_url: universalLink,
-          $desktop_url: universalLink,
-          $android_url: universalLink,
-          $ios_url: universalLink,
-          invitation_code: token,
-        },
-      }),
-    });
-    if (res.ok) {
-      const json = await res.json();
-      branchLink = json.url;
-    }
-  } catch (_e) {
-    // Silencioso: si Branch falla, usamos el universal link
-  }
-
   trackEvent("invite_link_generated", {
     invitation_id: invitationId,
     token,
@@ -145,7 +114,6 @@ export async function createInviteLink(
     invitationId,
     code: token,
     universalLink,
-    branchLink,
   };
 }
 
