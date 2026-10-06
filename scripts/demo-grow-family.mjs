@@ -14,7 +14,11 @@ import { join } from "path";
 // ── Config ──────────────────────────────────────────────────────────────────
 
 const SUPABASE_URL = "https://txxdzxdzetqlfecqhxkl.supabase.co";
-const SERVICE_KEY  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR4eGR6eGR6ZXRxbGZlY3FoeGtsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MjQ0MjE1OCwiZXhwIjoyMDk4MDE4MTU4fQ.0ymRFVpmkUHdxb0yQHCbSh8Tsa0REYdqOYnQ5ehLF4s";
+const SERVICE_KEY  = process.env.SUPABASE_SERVICE_ROLE_KEY;
+if (!SERVICE_KEY) {
+  console.error("Falta SUPABASE_SERVICE_ROLE_KEY en el entorno (nunca la escribas en el código).");
+  process.exit(1);
+}
 const ANON_KEY     = "sb_publishable_DqXTl9m0osO7axGLJ6lbxw_3YQj3FsG";
 
 // IDs fijos de la familia base

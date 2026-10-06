@@ -36,3 +36,9 @@ www/
 
 # Android native project (iOS-only for now)
 android/
+
+# Datos y registros de la simulación local (no versionar)
+scripts/family-state.json
+scripts/sim-log.jsonl
+scripts/ceiba-seed-family.py
+scripts/ceiba-daily-sim.py

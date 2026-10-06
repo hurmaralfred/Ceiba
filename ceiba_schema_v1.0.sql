@@ -3448,7 +3448,7 @@ CREATE OR REPLACE TRIGGER "on_auth_user_created" AFTER INSERT ON "auth"."users" 
 
 
 
-CREATE OR REPLACE TRIGGER "sos_dispatcher" AFTER INSERT ON "public"."sos_alerts" FOR EACH ROW EXECUTE FUNCTION "supabase_functions"."http_request"('https://txxdzxdzetqlfecqhxkl.supabase.co/functions/v1/sos-dispatcher', 'POST', '{"Content-type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR4eGR6eGR6ZXRxbGZlY3FoeGtsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MjQ0MjE1OCwiZXhwIjoyMDk4MDE4MTU4fQ.0ymRFVpmkUHdxb0yQHCbSh8Tsa0REYdqOYnQ5ehLF4s"}', '{}', '5000');
+CREATE OR REPLACE TRIGGER "sos_dispatcher" AFTER INSERT ON "public"."sos_alerts" FOR EACH ROW EXECUTE FUNCTION "supabase_functions"."http_request"('https://txxdzxdzetqlfecqhxkl.supabase.co/functions/v1/sos-dispatcher', 'POST', '{"Content-type":"application/json","Authorization":"Bearer <SERVICE_ROLE_KEY: leer de Supabase Vault, no escribir aquí>"}', '{}', '5000');
 
 
 
