@@ -179,6 +179,13 @@ function TreePageContent() {
     }
   }, []);
 
+  // La bienvenida solo tiene sentido si ya hay familiares a quienes invitar. Sin
+  // ninguno, el estado vacío ("Agregar primer familiar") ya guía al usuario; se
+  // descarta para que no reaparezca después, al agregar al primero.
+  useEffect(() => {
+    if (showWelcome && !loading && visibleMembers.length === 0) setShowWelcome(false);
+  }, [showWelcome, loading, visibleMembers.length]);
+
   const requestNotificationPermission = async () => {
     if (!("Notification" in window) || !("serviceWorker" in navigator)) return;
     if (Notification.permission === "granted") { subscribeUser(); setNotifPermission("granted"); return; }
@@ -992,7 +999,7 @@ function TreePageContent() {
       )}
 
       {/* ── Overlay bienvenida primer uso ── */}
-      {showWelcome && (
+      {showWelcome && visibleMembers.length > 0 && (
         <div style={{
           position: "fixed", inset: 0, zIndex: 200,
           background: "rgba(3,2,8,0.88)", backdropFilter: "blur(8px)",
@@ -1014,10 +1021,10 @@ function TreePageContent() {
             <div style={{ textAlign: "center", marginBottom: 24 }}>
               <div style={{ fontSize: 48, marginBottom: 12 }}>🌳</div>
               <h2 style={{ fontSize: 22, fontWeight: 800, color: "#fff", marginBottom: 8, letterSpacing: "-0.02em" }}>
-                ¡Tu galaxia familiar está vivo!
+                ¡Tu galaxia familiar está viva!
               </h2>
               <p style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", lineHeight: 1.6 }}>
-                Cuando tus familiares entren, la galaxia ya estará listo para ellos.
+                Cuando tus familiares entren, la galaxia ya estará lista para ellos.
               </p>
             </div>
 
@@ -1025,10 +1032,10 @@ function TreePageContent() {
               <button
                 onClick={() => {
                   setShowWelcome(false);
-                  if (profile?.id) {
-                    const msg = `Hola, te invito a Ceiba — la app donde nuestra familia se mantiene conectada. Entra aquí: https://ceibapp.com`;
-                    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
-                  }
+                  // /invitar crea una invitación real por persona (con enlace propio y
+                  // seguimiento). El enlace genérico https://ceibapp.com no conectaba al
+                  // invitado con la familia: se registraba como usuario suelto.
+                  router.push("/invitar");
                 }}
                 style={{
                   width: "100%", padding: "14px 0", borderRadius: 14,
@@ -1039,7 +1046,7 @@ function TreePageContent() {
                   color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer", border: "none",
                 }}
               >
-                Invitar familia por WhatsApp
+                Invitar a mi familia
               </button>
 
               <button
