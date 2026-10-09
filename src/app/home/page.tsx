@@ -1,7 +1,7 @@
 "use client";
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { CosmicNav } from "@/components/ui/cosmic";
+import BottomNav from "@/components/BottomNav";
 import Link from "next/link";
 import { getDiceBearUrl } from "@/lib/dicebear";
 import {
@@ -44,32 +44,35 @@ interface KinshipSuggestion {
   space_b: { id: string; name: string } | null;
 }
 
-// ── Helpers de estilo 3D ──────────────────────────────────────────────────────
-function s3dCard(bg: string, ar: string, sh: string, glow = 0.1): React.CSSProperties {
+// ── Helpers de estilo Linaje ──────────────────────────────────────────────────
+function linCard(): React.CSSProperties {
   return {
-    borderRadius: 18, background: bg, position: "relative", overflow: "hidden",
-    borderTop: `1.5px solid rgba(${ar},0.5)`, borderLeft: `1px solid rgba(${ar},0.22)`,
-    borderBottom: `4px solid ${sh}`, borderRight: `1px solid rgba(0,0,0,0.65)`,
-    boxShadow: `0 8px 0 ${sh}, 0 16px 32px rgba(0,0,0,0.92), 0 0 32px rgba(${ar},${glow})`,
-    transition: "transform 0.12s ease, box-shadow 0.12s ease",
+    borderRadius: 16, background: "#FDFCFA", position: "relative", overflow: "hidden",
+    border: "1px solid #DDD8CF",
+    boxShadow: "0 2px 8px rgba(30,46,74,0.07), 0 1px 2px rgba(30,46,74,0.04)",
+    transition: "box-shadow 0.15s ease",
   };
 }
-function s3dIcon(bg: string, ar: string, sh: string): React.CSSProperties {
+function linCardNavy(): React.CSSProperties {
   return {
-    width: 36, height: 36, borderRadius: 11, background: bg, flexShrink: 0,
-    borderTop: `1.5px solid rgba(${ar},0.55)`, borderLeft: `1px solid rgba(${ar},0.22)`,
-    borderBottom: `2.5px solid ${sh}`, borderRight: `1px solid rgba(0,0,0,0.55)`,
-    boxShadow: `0 4px 0 ${sh}, 0 7px 14px rgba(0,0,0,0.75), 0 0 12px rgba(${ar},0.18)`,
-    display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20,
+    borderRadius: 16, background: "#1E2E4A", position: "relative", overflow: "hidden",
+    border: "1px solid #162338",
+    boxShadow: "0 4px 16px rgba(30,46,74,0.20), 0 1px 4px rgba(30,46,74,0.12)",
   };
 }
-function s3dChip(): React.CSSProperties {
+function linIcon(color: string): React.CSSProperties {
   return {
-    background: "#0c0a1a",
-    borderTop: "1px solid rgba(212,175,55,0.28)", borderLeft: "1px solid rgba(212,175,55,0.12)",
-    borderBottom: "2px solid #000", borderRight: "1px solid rgba(0,0,0,0.5)",
-    boxShadow: "0 4px 0 #02010a, 0 6px 12px rgba(0,0,0,0.6)",
+    width: 36, height: 36, borderRadius: 10, background: color, flexShrink: 0,
+    boxShadow: "0 2px 6px rgba(30,46,74,0.12)",
+    display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16,
+  };
+}
+function linChip(active = false): React.CSSProperties {
+  return {
+    background: active ? "rgba(200,136,42,0.10)" : "#F4F1EC",
+    border: active ? "1px solid rgba(200,136,42,0.30)" : "1px solid #DDD8CF",
     borderRadius: 100, padding: "5px 12px", display: "flex", alignItems: "center", gap: 5,
+    fontSize: 10, color: active ? "#C8882A" : "#6B6258", fontWeight: 600,
   };
 }
 
@@ -91,189 +94,6 @@ function daysUntil(birth_date: string): number {
   return Math.ceil((next.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 }
 
-// ── Full-screen universe background ──────────────────────────────────────────
-function UniverseBackground() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    const resize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    };
-    resize();
-    window.addEventListener("resize", resize);
-
-    const rng = (n: number) => Math.random() * n;
-
-    const stars = Array.from({ length: 240 }, () => ({
-      x: rng(1), y: rng(1),
-      r: rng(0.85) + 0.18,
-      baseOpacity: rng(0.45) + 0.18,
-      twinkleAmp: rng(0.28) + 0.08,
-      twinkleSpeed: rng(0.014) + 0.003,
-      twinklePhase: rng(Math.PI * 2),
-    }));
-
-    const goldStars = Array.from({ length: 10 }, () => ({
-      x: rng(1), y: rng(1),
-      r: rng(0.65) + 0.75,
-      phase: rng(Math.PI * 2),
-    }));
-
-    const dust = Array.from({ length: 70 }, () => ({
-      x: rng(1), y: rng(1),
-      r: rng(0.55) + 0.12,
-      vx: (Math.random() - 0.5) * 0.00011,
-      vy: (Math.random() - 0.5) * 0.000075,
-      opacity: rng(0.32) + 0.06,
-      phase: rng(Math.PI * 2),
-    }));
-
-    type ShootStar = { x: number; y: number; vx: number; vy: number; len: number; life: number; maxLife: number };
-    const shootingStars: ShootStar[] = [];
-    let shootCooldown = 150;
-
-    let frame = 0;
-    let animId: number;
-
-    const draw = () => {
-      frame++;
-      const w = canvas.width;
-      const h = canvas.height;
-      ctx.clearRect(0, 0, w, h);
-
-      // White stars with twinkling
-      for (const s of stars) {
-        const o = s.baseOpacity + s.twinkleAmp * Math.sin(frame * s.twinkleSpeed + s.twinklePhase);
-        ctx.beginPath();
-        ctx.arc(s.x * w, s.y * h, s.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(255,255,255,${Math.max(0, o)})`;
-        ctx.fill();
-      }
-
-      // Gold accent stars
-      for (const s of goldStars) {
-        const o = 0.65 + 0.28 * Math.sin(frame * 0.018 + s.phase);
-        ctx.beginPath();
-        ctx.arc(s.x * w, s.y * h, s.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(212,175,55,${o})`;
-        ctx.fill();
-      }
-
-      // Floating star dust
-      for (const d of dust) {
-        d.x = ((d.x + d.vx) + 1) % 1;
-        d.y = ((d.y + d.vy) + 1) % 1;
-        const pulse = 0.7 + 0.3 * Math.sin(frame * 0.012 + d.phase);
-        ctx.beginPath();
-        ctx.arc(d.x * w, d.y * h, d.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(212,175,55,${d.opacity * pulse})`;
-        ctx.fill();
-      }
-
-      // Shooting stars — spawn every 3-7s
-      shootCooldown--;
-      if (shootCooldown <= 0) {
-        shootCooldown = 180 + Math.floor(Math.random() * 240);
-        const angle = (Math.random() * 35 + 18) * (Math.PI / 180);
-        const speed = Math.random() * 6 + 5;
-        shootingStars.push({
-          x: Math.random() * w * 0.85 + w * 0.05,
-          y: Math.random() * h * 0.55,
-          vx: -Math.cos(angle) * speed,
-          vy: Math.sin(angle) * speed,
-          len: Math.random() * 110 + 80,
-          life: 0,
-          maxLife: 32 + Math.floor(Math.random() * 22),
-        });
-      }
-
-      for (let i = shootingStars.length - 1; i >= 0; i--) {
-        const s = shootingStars[i];
-        s.x += s.vx;
-        s.y += s.vy;
-        s.life++;
-        if (s.life >= s.maxLife) { shootingStars.splice(i, 1); continue; }
-
-        const progress = s.life / s.maxLife;
-        const opacity = progress < 0.15 ? progress / 0.15 : 1 - (progress - 0.15) / 0.85;
-        const mag = Math.sqrt(s.vx * s.vx + s.vy * s.vy);
-        const tailX = s.x - (s.vx / mag) * s.len;
-        const tailY = s.y - (s.vy / mag) * s.len;
-
-        const grad = ctx.createLinearGradient(s.x, s.y, tailX, tailY);
-        grad.addColorStop(0, `rgba(255,255,255,${opacity})`);
-        grad.addColorStop(0.25, `rgba(212,175,55,${opacity * 0.55})`);
-        grad.addColorStop(1, "rgba(255,255,255,0)");
-        ctx.beginPath();
-        ctx.strokeStyle = grad;
-        ctx.lineWidth = 1.6;
-        ctx.moveTo(s.x, s.y);
-        ctx.lineTo(tailX, tailY);
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.arc(s.x, s.y, 2.2, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(255,255,255,${opacity})`;
-        ctx.fill();
-      }
-
-      animId = requestAnimationFrame(draw);
-    };
-
-    draw();
-    return () => {
-      cancelAnimationFrame(animId);
-      window.removeEventListener("resize", resize);
-    };
-  }, []);
-
-  return (
-    <>
-      <canvas ref={canvasRef} style={{ position:"fixed", inset:0, width:"100%", height:"100%", pointerEvents:"none", zIndex:-1 }} />
-      {/* Nebulae — GPU-accelerated CSS blur, cover the whole viewport */}
-      <div style={{ position:"fixed", top:"-5%",  left:"-8%",   width:300, height:300, borderRadius:"50%", background:"radial-gradient(circle,rgba(100,30,220,0.16) 0%,transparent 70%)", filter:"blur(45px)", pointerEvents:"none", zIndex:-1, animation:"nebula-drift 52s ease-in-out infinite" }} />
-      <div style={{ position:"fixed", top:"0%",   right:"-10%", width:260, height:260, borderRadius:"50%", background:"radial-gradient(circle,rgba(20,60,200,0.13) 0%,transparent 70%)", filter:"blur(38px)", pointerEvents:"none", zIndex:-1, animation:"nebula-drift 44s ease-in-out infinite 8s" }} />
-      <div style={{ position:"fixed", top:"28%",  left:"10%",   width:360, height:220, borderRadius:"50%", background:"radial-gradient(ellipse,rgba(212,175,55,0.07) 0%,transparent 65%)", filter:"blur(32px)", pointerEvents:"none", zIndex:-1, animation:"nebula-drift 68s ease-in-out infinite 3s" }} />
-      <div style={{ position:"fixed", top:"50%",  left:"-10%",  width:280, height:240, borderRadius:"50%", background:"radial-gradient(circle,rgba(80,20,160,0.12) 0%,transparent 70%)", filter:"blur(42px)", pointerEvents:"none", zIndex:-1, animation:"nebula-drift 58s ease-in-out infinite 15s" }} />
-      <div style={{ position:"fixed", top:"55%",  right:"-12%", width:320, height:280, borderRadius:"50%", background:"radial-gradient(circle,rgba(150,40,200,0.10) 0%,transparent 70%)", filter:"blur(48px)", pointerEvents:"none", zIndex:-1, animation:"nebula-drift 72s ease-in-out infinite 22s" }} />
-      <div style={{ position:"fixed", top:"78%",  left:"20%",   width:340, height:220, borderRadius:"50%", background:"radial-gradient(ellipse,rgba(30,80,180,0.11) 0%,transparent 65%)", filter:"blur(36px)", pointerEvents:"none", zIndex:-1, animation:"nebula-drift 62s ease-in-out infinite 10s" }} />
-      <div style={{ position:"fixed", top:"35%",  right:"2%",   width:220, height:220, borderRadius:"50%", background:"radial-gradient(circle,rgba(180,60,30,0.08) 0%,transparent 70%)", filter:"blur(34px)", pointerEvents:"none", zIndex:-1, animation:"nebula-drift 55s ease-in-out infinite 18s" }} />
-    </>
-  );
-}
-
-// ── Family constellation: 3 orbital rings, each slowly rotating ─────────────
-// dx/dy are offsets from SVG center (150,150). Colors signal family line.
-// Gold=#F2B43C (focal line), Blue=#7BAFD4 (maternal/paternal), Copper=#c87830 (siblings), Lavender=#B8A0D8 (extended)
-const ORBIT_INNER = [
-  { dx:  40, dy: -55, r: 6.5, color: '#F2B43C', glow: 'rgba(242,180,60,0.75)'  },
-  { dx:  60, dy:  32, r: 6.0, color: '#7BAFD4', glow: 'rgba(123,175,212,0.70)' },
-  { dx: -52, dy:  45, r: 6.5, color: '#F2B43C', glow: 'rgba(242,180,60,0.75)'  },
-  { dx: -65, dy: -22, r: 5.5, color: '#c87830', glow: 'rgba(200,120,48,0.70)'  },
-] as const
-
-const ORBIT_MID = [
-  { dx: 105, dy:   0, r: 4.5, color: '#F2B43C', glow: 'rgba(242,180,60,0.60)'  },
-  { dx:  32, dy:  99, r: 4.0, color: '#c87830', glow: 'rgba(200,120,48,0.60)'  },
-  { dx: -95, dy:  42, r: 4.5, color: '#7BAFD4', glow: 'rgba(123,175,212,0.60)' },
-  { dx: -58, dy: -88, r: 4.0, color: '#F2B43C', glow: 'rgba(242,180,60,0.60)'  },
-  { dx:  80, dy: -68, r: 3.8, color: '#B8A0D8', glow: 'rgba(184,160,216,0.55)' },
-] as const
-
-const ORBIT_OUTER = [
-  { dx:   0, dy:-132, r: 2.8, color: '#d4af37', glow: 'rgba(212,175,55,0.50)'  },
-  { dx:  98, dy: -86, r: 2.5, color: '#B8A0D8', glow: 'rgba(184,160,216,0.50)' },
-  { dx: 132, dy:   0, r: 3.0, color: '#7BAFD4', glow: 'rgba(123,175,212,0.50)' },
-  { dx:  88, dy: 100, r: 2.5, color: '#d4af37', glow: 'rgba(212,175,55,0.50)'  },
-  { dx: -75, dy: 108, r: 2.8, color: '#B8A0D8', glow: 'rgba(184,160,216,0.50)' },
-  { dx:-132, dy:   0, r: 2.2, color: '#d4af37', glow: 'rgba(212,175,55,0.50)'  },
-] as const
 
 // ── Fila de grupos familiares ─────────────────────────────────────────────────
 const GROUP_AVATARS: Record<string, string> = {
@@ -305,7 +125,7 @@ function FamilyRow({ members }: { members: FamilyMember[] }) {
   return (
     <div style={{ padding: "16px 16px 0" }}>
       <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.14em",
-        textTransform: "uppercase", color: "rgba(212,175,55,0.4)", marginBottom: 14 }}>
+        textTransform: "uppercase", color: "#9A9084", marginBottom: 14 }}>
         Familia cercana
       </div>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-around" }}>
@@ -317,17 +137,17 @@ function FamilyRow({ members }: { members: FamilyMember[] }) {
             <Link key={g.key} href="/tree" style={{ textDecoration: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
               <div style={{
                 width: 58, height: 58, borderRadius: "50%",
-                background: "#0e0c1e",
-                border: "1.5px solid rgba(212,175,55,0.28)",
-                boxShadow: "0 6px 20px rgba(0,0,0,0.65), 0 0 0 3px rgba(212,175,55,0.07)",
+                background: "#F4F1EC",
+                border: "2px solid #DDD8CF",
+                boxShadow: "0 2px 8px rgba(30,46,74,0.10)",
                 overflow: "hidden",
               }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={imgSrc} alt={g.label} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               </div>
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
-                <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.6)" }}>{g.label}</span>
-                <span style={{ fontSize: 12, fontWeight: 800, color: "rgba(212,175,55,0.75)" }}>{g.count}</span>
+                <span style={{ fontSize: 11, fontWeight: 500, color: "#6B6258" }}>{g.label}</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: "#C8882A" }}>{g.count}</span>
               </div>
             </Link>
           );
@@ -337,74 +157,34 @@ function FamilyRow({ members }: { members: FamilyMember[] }) {
   );
 }
 
-function GalaxyHero({ children, avatarInitial, avatarUrl, firstName }: {
+function LinajeHero({ children, avatarInitial, avatarUrl, firstName }: {
   children: React.ReactNode;
   avatarInitial: string;
   avatarUrl?: string | null;
   firstName: string;
 }) {
   return (
-    <div style={{ position: "relative", overflow: "hidden", paddingBottom: 8, textAlign: "center",
-      background: "radial-gradient(ellipse 120% 80% at 50% 0%, #12082a 0%, #060318 45%, #030208 100%)" }}>
+    <div style={{
+      position: "relative", overflow: "hidden", paddingBottom: 8, textAlign: "center",
+      background: "#1E2E4A",
+    }}>
+      {/* Subtle warm overlay */}
+      <div style={{ position:"absolute", top:0, right:0, width:200, height:200, borderRadius:"50%", pointerEvents:"none",
+        background:"radial-gradient(circle,rgba(200,136,42,0.12) 0%,transparent 70%)" }} />
+      <div style={{ position:"absolute", bottom:0, left:0, width:160, height:160, borderRadius:"50%", pointerEvents:"none",
+        background:"radial-gradient(circle,rgba(122,140,110,0.10) 0%,transparent 70%)" }} />
 
-      {/* Deep nebula layers */}
-      <div style={{ position:"absolute", top:-60, left:-60, width:280, height:280, borderRadius:"50%", pointerEvents:"none",
-        background:"radial-gradient(circle,rgba(100,30,220,0.22) 0%,transparent 70%)", filter:"blur(30px)" }} />
-      <div style={{ position:"absolute", top:-40, right:-50, width:240, height:240, borderRadius:"50%", pointerEvents:"none",
-        background:"radial-gradient(circle,rgba(20,60,200,0.18) 0%,transparent 70%)", filter:"blur(24px)" }} />
-      <div style={{ position:"absolute", top:80, left:"20%", width:320, height:180, borderRadius:"50%", pointerEvents:"none",
-        background:"radial-gradient(ellipse,rgba(212,175,55,0.1) 0%,transparent 65%)", filter:"blur(20px)" }} />
-      <div style={{ position:"absolute", bottom:-20, left:"10%", width:260, height:140, borderRadius:"50%", pointerEvents:"none",
-        background:"radial-gradient(ellipse,rgba(80,20,160,0.14) 0%,transparent 70%)", filter:"blur(18px)" }} />
-
-      {/* Star field */}
-      <svg style={{ position:"absolute", inset:0, width:"100%", height:"100%", pointerEvents:"none" }} aria-hidden>
-        {[
-          [22,18,0.5],[58,32,0.4],[110,8,0.55],[178,22,0.42],[230,14,0.5],[280,28,0.38],[318,12,0.48],
-          [8,65,0.45],[44,78,0.38],[92,54,0.5],[148,68,0.4],[196,44,0.45],[248,72,0.35],[302,58,0.48],
-          [18,120,0.4],[62,108,0.38],[120,132,0.42],[168,98,0.5],[222,118,0.36],[274,104,0.44],[312,128,0.4],
-          [30,170,0.45],[78,158,0.38],[136,182,0.42],[184,162,0.48],[238,176,0.35],[290,164,0.44],
-        ].map(([x,y,o],i) => <circle key={i} cx={x} cy={y} r="0.65" fill="white" opacity={o} />)}
-        <circle cx="40"  cy="24"  r="1.1" fill="white"   opacity="0.9"  style={{ animation:"twinkle-a 3.1s ease-in-out infinite" }} />
-        <circle cx="288" cy="18"  r="1.0" fill="white"   opacity="0.8"  style={{ animation:"twinkle-b 2.7s ease-in-out infinite 0.4s" }} />
-        <circle cx="72"  cy="140" r="0.9" fill="white"   opacity="0.75" style={{ animation:"twinkle-c 3.5s ease-in-out infinite 0.9s" }} />
-        <circle cx="310" cy="178" r="1.0" fill="white"   opacity="0.75" style={{ animation:"twinkle-c 2.8s ease-in-out infinite 1.1s" }} />
-        <circle cx="160" cy="12"  r="1.4" fill="#d4af37" opacity="0.95" style={{ animation:"twinkle-b 4.1s ease-in-out infinite" }} />
-        <circle cx="228" cy="16"  r="1.2" fill="#f0d060" opacity="0.88" style={{ animation:"twinkle-a 3.4s ease-in-out infinite 1.5s" }} />
-        <line x1="260" y1="40" x2="295" y2="28" stroke="white" strokeWidth="0.8" opacity="0"
-          style={{ animation:"shoot 8s linear infinite 2s", transformOrigin:"260px 40px" }} />
-        <line x1="80"  y1="18" x2="118" y2="6"  stroke="white" strokeWidth="0.7" opacity="0"
-          style={{ animation:"shoot 8s linear infinite 5.5s", transformOrigin:"80px 18px" }} />
-      </svg>
-
-      {/* Slow-drift particles — imperceptible until ~10s */}
-      {[
-        { x: 42,  y: 165, d: 48 }, { x: 72,  y: 108, d: 55 },
-        { x: 252, y: 132, d: 43 }, { x: 284, y: 172, d: 61 },
-        { x: 158, y: 198, d: 50 }, { x: 108, y: 184, d: 57 },
-        { x: 22,  y: 220, d: 44 }, { x: 296, y: 210, d: 53 },
-      ].map(({ x, y, d }, i) => (
-        <div key={i} style={{ position:"absolute", left:x, top:y, width:1.5, height:1.5, borderRadius:"50%",
-          background:"rgba(212,175,55,0.45)", pointerEvents:"none",
-          animation:`slow-drift ${d}s ease-in-out infinite ${i * 5.5}s` }} />
-      ))}
 
       {/* Top bar */}
       {children}
 
-      {/* Avatar + constelación — centrado */}
+      {/* Avatar — centrado */}
       <div style={{ position:"relative", width:"100%", display:"flex",
         justifyContent:"center", marginBottom:10, zIndex:5 }}>
 
-        {/* Constelación + avatar — centro */}
         <div style={{ position:"relative", display:"inline-block", flexShrink:0 }}>
-          {/* Ambient core glow */}
-          <div style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-50%)",
-            width:240, height:240, borderRadius:"50%", pointerEvents:"none",
-            background:"radial-gradient(circle,rgba(130,60,230,0.16) 0%,rgba(212,175,55,0.07) 40%,transparent 70%)",
-            filter:"blur(16px)", animation:"core-pulse 4.5s ease-in-out infinite" }} />
 
-        {/* Family constellation — 3 orbital rings, each slowly rotating */}
+        {/* Avatar ring — decorative */}
         <svg width="300" height="300" viewBox="0 0 300 300"
           style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-50%)",
             pointerEvents:"none", overflow:"visible" }} aria-hidden>
@@ -417,105 +197,26 @@ function GalaxyHero({ children, avatarInitial, avatarUrl, firstName }: {
               <feGaussianBlur stdDeviation="10"/>
             </filter>
           </defs>
-          {/* Avatar corona — gravitational center, breathes outward — radii tuned for 135px avatar (r≈67.5) */}
-          <circle cx="150" cy="150" r="90"  fill="rgba(212,175,55,0.09)" filter="url(#cglow)"/>
-          <circle cx="150" cy="150" r="82"  fill="none" stroke="rgba(242,180,60,0.22)" strokeWidth="0.7"
-            style={{ animation:"corona-pulse 4s ease-in-out infinite" }}/>
-          <circle cx="150" cy="150" r="96"  fill="none" stroke="rgba(242,180,60,0.10)" strokeWidth="0.5"
-            style={{ animation:"corona-pulse 4s ease-in-out infinite 1.5s" }}/>
-          <circle cx="150" cy="150" r="110" fill="none" stroke="rgba(242,180,60,0.05)" strokeWidth="0.4"
-            style={{ animation:"corona-pulse 4s ease-in-out infinite 3s" }}/>
-          {/* Orbital paths — gravitational trajectories, barely visible */}
-          <circle cx="150" cy="150" r="68"  fill="none" stroke="rgba(212,175,55,0.04)" strokeWidth="0.45"
-            style={{ animation:"section-glow 9s ease-in-out infinite" }}/>
-          <circle cx="150" cy="150" r="105" fill="none" stroke="rgba(212,175,55,0.03)" strokeWidth="0.35"
-            style={{ animation:"section-glow 12s ease-in-out infinite 3s" }}/>
-          <circle cx="150" cy="150" r="132" fill="none" stroke="rgba(212,175,55,0.02)" strokeWidth="0.3"
-            style={{ animation:"section-glow 15s ease-in-out infinite 6s" }}/>
-          {/* Background gas giants — very slow drift, appear behind orbital rings */}
-          <g transform="translate(150,150)" style={{ transformOrigin:"0px 0px", animation:"orbit-ring-cw 265s linear infinite -55s" }}>
-            <circle cx="70" cy="-54" r="26" fill="rgba(200,100,18,0.86)" style={{ filter:"drop-shadow(0 0 18px rgba(200,120,48,0.82))" }}/>
-            <ellipse cx="70" cy="-50" rx="26" ry="5.5" fill="rgba(255,195,75,0.24)"/>
-            <ellipse cx="70" cy="-58" rx="26" ry="4" fill="rgba(130,45,0,0.22)"/>
-            <circle cx="61" cy="-63" r="9" fill="white" opacity="0.18"/>
-            <circle cx="70" cy="-54" r="38" fill="rgba(200,100,18,0.06)"/>
-          </g>
-          <g transform="translate(150,150)" style={{ transformOrigin:"0px 0px", animation:"orbit-ring-ccw 188s linear infinite -35s" }}>
-            <circle cx="-74" cy="56" r="17" fill="rgba(88,148,228,0.82)" style={{ filter:"drop-shadow(0 0 11px rgba(110,170,255,0.68))" }}/>
-            <circle cx="-81" cy="49" r="6" fill="white" opacity="0.22"/>
-            <ellipse cx="-74" cy="56" rx="27" ry="6" fill="none" stroke="rgba(150,200,255,0.38)" strokeWidth="2.5"/>
-            <circle cx="-74" cy="56" r="26" fill="rgba(88,148,228,0.05)"/>
-          </g>
-          <g transform="translate(150,150)" style={{ transformOrigin:"0px 0px", animation:"orbit-ring-cw 318s linear infinite -90s" }}>
-            <circle cx="-50" cy="-71" r="12" fill="rgba(160,120,228,0.84)" style={{ filter:"drop-shadow(0 0 9px rgba(180,140,255,0.72))" }}/>
-            <circle cx="-57" cy="-78" r="4.5" fill="white" opacity="0.24"/>
-            <circle cx="-50" cy="-71" r="20" fill="rgba(160,120,228,0.06)"/>
-          </g>
-          {/* Inner orbit — 4 intimate planets, 65s CW */}
-          <g transform="translate(150,150)" style={{ transformOrigin:"0px 0px", animation:"orbit-ring-cw 65s linear infinite" }}>
-            {ORBIT_INNER.map((n,i) => (
-              <g key={i}>
-                <circle cx={n.dx} cy={n.dy} r={n.r*4.5} fill={n.color} opacity="0.10" filter="url(#sglow)"/>
-                <circle cx={n.dx} cy={n.dy} r={n.r*2}   fill={n.color} opacity="0.07"/>
-                <circle cx={n.dx} cy={n.dy} r={n.r}      fill={n.color} opacity="0.94"
-                  style={{ filter:`drop-shadow(0 0 ${Math.round(n.r*1.5)}px ${n.glow})` }}/>
-                <circle cx={n.dx - n.r*0.35} cy={n.dy - n.r*0.38} r={n.r*0.28} fill="white" opacity="0.55"/>
-              </g>
-            ))}
-          </g>
-          {/* Mid orbit — 5 close family planets, 95s CCW */}
-          <g transform="translate(150,150)" style={{ transformOrigin:"0px 0px", animation:"orbit-ring-ccw 95s linear infinite" }}>
-            {ORBIT_MID.map((n,i) => (
-              <g key={i}>
-                <circle cx={n.dx} cy={n.dy} r={n.r*4.5} fill={n.color} opacity="0.09" filter="url(#sglow)"/>
-                <circle cx={n.dx} cy={n.dy} r={n.r*2}   fill={n.color} opacity="0.06"/>
-                <circle cx={n.dx} cy={n.dy} r={n.r}      fill={n.color} opacity="0.90"
-                  style={{ filter:`drop-shadow(0 0 ${Math.round(n.r*1.2)}px ${n.glow})` }}/>
-                <circle cx={n.dx - n.r*0.32} cy={n.dy - n.r*0.35} r={n.r*0.25} fill="white" opacity="0.45"/>
-              </g>
-            ))}
-          </g>
-          {/* Outer orbit — 6 extended planets, 135s CW */}
-          <g transform="translate(150,150)" style={{ transformOrigin:"0px 0px", animation:"orbit-ring-cw 135s linear infinite" }}>
-            {ORBIT_OUTER.map((n,i) => (
-              <g key={i}>
-                <circle cx={n.dx} cy={n.dy} r={n.r*5}   fill={n.color} opacity="0.08" filter="url(#sglow)"/>
-                <circle cx={n.dx} cy={n.dy} r={n.r*2}   fill={n.color} opacity="0.05"/>
-                <circle cx={n.dx} cy={n.dy} r={n.r}      fill={n.color} opacity="0.85"
-                  style={{ filter:`drop-shadow(0 0 ${Math.round(n.r)}px ${n.glow})` }}/>
-                <circle cx={n.dx - n.r*0.28} cy={n.dy - n.r*0.32} r={n.r*0.22} fill="white" opacity="0.38"/>
-              </g>
-            ))}
-          </g>
+          {/* Subtle ring — Linaje */}
+          <circle cx="150" cy="150" r="58" fill="none" stroke="rgba(200,136,42,0.30)" strokeWidth="1"/>
+          <circle cx="150" cy="150" r="66" fill="none" stroke="rgba(200,136,42,0.12)" strokeWidth="0.6"/>
         </svg>
 
-        {/* Avatar — 30% larger (104→135px) with living animated ring */}
+        {/* Avatar */}
         <div style={{ position:"relative", width:90, height:90, zIndex:2 }}>
-          {/* Pulse glow — breathes independently */}
-          <div style={{ position:"absolute", inset:-11, borderRadius:"50%",
-            background:"radial-gradient(circle, rgba(242,180,60,0.30) 0%, rgba(130,60,230,0.10) 40%, transparent 70%)",
-            animation:"home-ring-breathe 3.5s ease-in-out infinite", pointerEvents:"none" }} />
-          {/* Conic ring — rotates continuously */}
-          <div style={{ position:"absolute", inset:-5, borderRadius:"50%",
-            background:"conic-gradient(from 0deg, rgba(242,180,60,0.95) 0deg, rgba(200,120,48,0.55) 80deg, rgba(184,160,216,0.30) 160deg, rgba(123,175,212,0.55) 230deg, rgba(242,180,60,0.80) 295deg, rgba(242,180,60,0.95) 360deg)",
-            animation:"home-ring-spin 7s linear infinite",
-            filter:"blur(1.5px)", pointerEvents:"none" }} />
-          {/* Dark gap between ring and photo */}
-          <div style={{ position:"absolute", inset:-1, borderRadius:"50%",
-            background:"#030208", pointerEvents:"none", zIndex:1 }} />
-          {/* Photo */}
-          <div style={{ width:90, height:90, borderRadius:"50%", background:"#0c0a18",
-            display:"flex", alignItems:"center", justifyContent:"center", position:"relative", zIndex:2,
-            boxShadow:"inset 0 3px 28px rgba(120,60,220,0.3), inset 0 -3px 14px rgba(0,0,0,0.7)" }}>
-            <div style={{ position:"absolute", inset:0, borderRadius:"50%",
-              background:"radial-gradient(circle at 35% 25%,rgba(212,175,55,0.18) 0%,transparent 55%)" }} />
+          <div style={{
+            width:90, height:90, borderRadius:"50%",
+            background:"rgba(255,255,255,0.12)",
+            border: "3px solid rgba(200,136,42,0.55)",
+            display:"flex", alignItems:"center", justifyContent:"center",
+            boxShadow:"0 4px 20px rgba(0,0,0,0.25)",
+          }}>
             {avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={avatarUrl} alt={firstName}
-                style={{ width:90, height:90, borderRadius:"50%", objectFit:"cover", position:"relative" }} />
+                style={{ width:90, height:90, borderRadius:"50%", objectFit:"cover" }} />
             ) : (
-              <span style={{ fontSize:36, color:"#d4af37", fontWeight:800, position:"relative",
-                textShadow:"0 0 20px rgba(212,175,55,0.6)" }}>
+              <span style={{ fontSize:36, color:"#C8882A", fontWeight:800 }}>
                 {avatarInitial}
               </span>
             )}
@@ -526,121 +227,70 @@ function GalaxyHero({ children, avatarInitial, avatarUrl, firstName }: {
       </div>{/* /avatar row */}
 
       {/* Name */}
-      <div style={{ fontSize:22, fontWeight:800, color:"#fff", letterSpacing:0.2, marginBottom:4,
-        position:"relative", zIndex:5, animation:"name-glow 5s ease-in-out infinite" }}>
+      <div style={{ fontSize:22, fontWeight:700, color:"#FDFCFA", letterSpacing:0.2, marginBottom:4,
+        position:"relative", zIndex:5, fontFamily:"var(--font-fraunces), Georgia, serif" }}>
         {firstName || "Cargando..."}
       </div>
 
-      {/* Universe label */}
-      <div style={{ fontSize:11, color:"rgba(212,175,55,0.48)",
-        marginBottom:14, position:"relative", zIndex:5, letterSpacing:"0.05em" }}>
-        Tu universo familiar
+      {/* Tagline */}
+      <div style={{ fontSize:11, color:"rgba(200,136,42,0.80)",
+        marginBottom:14, position:"relative", zIndex:5, letterSpacing:"0.06em", fontWeight:500 }}>
+        Tu linaje familiar
       </div>
 
       {/* Bottom breathing room */}
-      <div style={{ height: 16 }} />
+      <div style={{ height: 12 }} />
 
     </div>
   );
 }
 
-// ── Botón circular 3D flotante ────────────────────────────────────────────────
-function CircleBtn({ icon: Icon, label, href, color, shadowColor, delay = 0, badge = 0 }: {
+// ── Botón de acción rápida — Linaje ──────────────────────────────────────────
+function LinajeBtn({ icon: Icon, label, href, accent = false, badge = 0 }: {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   icon: React.ComponentType<any>;
   label: string; href: string;
-  color: string;    // "r,g,b"
-  shadowColor: string; // hex for 3D depth shadow
-  delay?: number;
+  accent?: boolean;
   badge?: number;
 }) {
   return (
     <Link href={href} style={{ display:"flex", flexDirection:"column", alignItems:"center",
-      gap:8, flexShrink:0, textDecoration:"none" }}>
-      <div style={{ position:"relative", width:72, height:72,
-        animation:`btn-float 3.8s ease-in-out infinite ${delay}s` }}>
-        {/* Outer pulsing glow halo */}
-        <div style={{
-          position:"absolute", inset:-10, borderRadius:"50%", pointerEvents:"none",
-          background:`radial-gradient(circle, rgba(${color},0.38) 0%, transparent 65%)`,
-          animation:`fab-outer-glow 2.6s ease-in-out infinite ${delay * 0.6}s`,
-        }} />
+      gap:6, flexShrink:0, textDecoration:"none" }}>
+      <div style={{ position:"relative" }}>
         {badge > 0 && (
           <div style={{
             position:"absolute", top:-4, right:-4, zIndex:10,
-            minWidth:18, height:18, borderRadius:9,
+            minWidth:16, height:16, borderRadius:8,
             background:"#ef4444", color:"#fff",
-            fontSize:10, fontWeight:800, lineHeight:1,
+            fontSize:9, fontWeight:800, lineHeight:1,
             display:"flex", alignItems:"center", justifyContent:"center",
             padding:"0 4px",
-            boxShadow:"0 2px 6px rgba(0,0,0,0.6), 0 0 10px rgba(239,68,68,0.7)",
-            border:"1.5px solid rgba(255,255,255,0.2)",
+            border:"1.5px solid #FDFCFA",
           }}>
             {badge > 99 ? "99+" : badge}
           </div>
         )}
         <div style={{
-          width:72, height:72, borderRadius:"50%",
-          background:`radial-gradient(circle at 38% 28%, rgba(${color},0.55) 0%, rgba(${color},0.12) 40%, rgba(3,1,8,0.96) 70%)`,
-          border:`2px solid rgba(${color},0.80)`,
-          boxShadow:[
-            `0 10px 0 ${shadowColor}`,
-            `0 18px 36px rgba(0,0,0,0.95)`,
-            `0 0 40px rgba(${color},0.35)`,
-            `0 0 80px rgba(${color},0.12)`,
-            `inset 0 2px 0 rgba(255,255,255,0.32)`,
-            `inset 0 -3px 8px rgba(0,0,0,0.70)`,
-            `inset 2px 0 6px rgba(255,255,255,0.06)`,
-          ].join(","),
+          width:56, height:56, borderRadius:16,
+          background: accent ? "#C8882A" : "#FDFCFA",
+          border: accent ? "1px solid #A56B1A" : "1px solid #DDD8CF",
+          boxShadow: accent
+            ? "0 4px 12px rgba(200,136,42,0.25)"
+            : "0 2px 8px rgba(30,46,74,0.09)",
           display:"flex", alignItems:"center", justifyContent:"center",
-          position:"relative", overflow:"hidden",
+          transition:"transform 0.12s ease",
         }}>
-          {/* Top dome highlight */}
-          <div style={{ position:"absolute", top:0, left:"8%", right:"8%", height:"52%",
-            background:"radial-gradient(ellipse at 50% 0%, rgba(255,255,255,0.32) 0%, rgba(255,255,255,0.06) 55%, transparent 80%)",
-            borderRadius:"50%", pointerEvents:"none" }}/>
-          {/* Side rim light */}
-          <div style={{ position:"absolute", top:"12%", bottom:"12%", left:0, width:"18%",
-            background:"linear-gradient(to right, rgba(255,255,255,0.10) 0%, transparent 100%)",
-            borderRadius:"50% 0 0 50%", pointerEvents:"none" }}/>
-          {/* Shimmer sweep */}
-          <div style={{
-            position:"absolute", top:0, width:"40%", height:"100%",
-            background:"linear-gradient(90deg, transparent, rgba(255,255,255,0.28), transparent)",
-            animation:`shimmer-sweep 3.4s ease-in-out infinite ${delay + 0.5}s`,
-            pointerEvents:"none",
-          }}/>
-          <Icon size={26} style={{ color:`rgb(${color})`, position:"relative",
-            filter:`drop-shadow(0 0 10px rgba(${color},0.90)) drop-shadow(0 2px 4px rgba(0,0,0,0.8))` }}/>
+          <Icon size={22} style={{ color: accent ? "#fff" : "#1E2E4A" }}/>
         </div>
       </div>
-      <span style={{ fontSize:10, fontWeight:700, color:"rgba(255,255,255,0.62)",
-        textAlign:"center", letterSpacing:"0.01em", lineHeight:1.35,
-        maxWidth:68, whiteSpace:"pre-line" }}>
+      <span style={{ fontSize:10, fontWeight:500, color:"#6B6258",
+        textAlign:"center", lineHeight:1.3, maxWidth:56, whiteSpace:"pre-line" }}>
         {label}
       </span>
     </Link>
   );
 }
 
-
-// ── Brillo superior de tarjeta ────────────────────────────────────────────────
-function CardShine({ ar }: { ar: string }) {
-  return (
-    <>
-      {/* Línea superior brillante */}
-      <div style={{ position: "absolute", top: 0, left: "10%", right: "10%",
-        height: 1, background: `rgba(${ar},0.6)` }} />
-      {/* Gradiente de luz entrando por arriba */}
-      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 50,
-        borderRadius: "18px 18px 0 0", pointerEvents: "none",
-        background: `linear-gradient(to bottom, rgba(${ar},0.12) 0%, transparent 100%)` }} />
-      {/* Reflejo esquina */}
-      <div style={{ position: "absolute", inset: 0, borderRadius: 18, pointerEvents: "none",
-        background: `radial-gradient(circle at 88% 12%, rgba(${ar},0.2) 0%, transparent 45%)` }} />
-    </>
-  );
-}
 
 // ── Página principal ──────────────────────────────────────────────────────────
 export default function HomePage() {
@@ -669,11 +319,6 @@ export default function HomePage() {
   const [answerSent,    setAnswerSent]    = useState(false);
   const [answerBusy,    setAnswerBusy]    = useState(false);
 
-  // Force dark body background — globals.css uses cream which bleeds through
-  useEffect(() => {
-    document.body.style.background = '#030208';
-    return () => { document.body.style.background = ''; };
-  }, []);
 
   const load = useCallback(async () => {
     let user: any;
@@ -895,13 +540,10 @@ export default function HomePage() {
 
 
   return (
-    <div style={{ minHeight: "100vh", background: "#030208", paddingBottom: 100, color: "#fff", position: "relative" }}>
-
-      {/* Full-screen universe background */}
-      <UniverseBackground />
+    <div style={{ minHeight: "100vh", background: "#F4F1EC", paddingBottom: 100, color: "#1A1612", position: "relative" }}>
 
       {/* ── HERO ─────────────────────────────────────────────────────────── */}
-      <GalaxyHero
+      <LinajeHero
         avatarInitial={avatarInitial}
         avatarUrl={profile?.avatar_url ?? getDiceBearUrl(profile?.first_name ?? 'user')}
         firstName={profile?.first_name ?? ""}
@@ -910,39 +552,34 @@ export default function HomePage() {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
           padding: "50px 20px 20px", position: "relative", zIndex: 5 }}>
           <Link href="/settings">
-            <div style={{ width: 36, height: 36, borderRadius: 11, background: "#0c0a1a",
-              borderTop: "1px solid rgba(212,175,55,0.28)", borderLeft: "1px solid rgba(212,175,55,0.12)",
-              borderBottom: "2px solid #000", borderRight: "1px solid rgba(0,0,0,0.6)",
-              boxShadow: "0 5px 0 #02010a, 0 7px 14px rgba(0,0,0,0.7)",
+            <div style={{ width: 36, height: 36, borderRadius: 11,
+              background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.20)",
               display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Menu size={18} style={{ color: "rgba(212,175,55,0.75)" }} />
+              <Menu size={18} style={{ color: "rgba(255,255,255,0.80)" }} />
             </div>
           </Link>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "center" }}>
-              <Sparkles size={15} style={{ color: "#d4af37" }} />
-              <span style={{ fontSize: 21, fontWeight: 700, color: "#d4af37", letterSpacing: 2.5 }}>CEIBA</span>
-              <span style={{ fontSize: 12, color: "#f0d060" }}>✦</span>
+              <span style={{ fontSize: 20, fontWeight: 800, color: "#FDFCFA", letterSpacing: 2,
+                fontFamily: "var(--font-fraunces), Georgia, serif" }}>CEIBA</span>
             </div>
-            <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: "0.24em",
-              color: "rgba(212,175,55,0.45)", textTransform: "uppercase", marginTop: 2 }}>
+            <div style={{ fontSize: 8, fontWeight: 600, letterSpacing: "0.20em",
+              color: "rgba(200,136,42,0.70)", textTransform: "uppercase", marginTop: 2, textAlign: "center" }}>
               Nuestras raíces
             </div>
           </div>
           <Link href="/feed">
-            <div style={{ position: "relative", width: 36, height: 36, borderRadius: "50%", background: "#0c0a1a",
-              borderTop: "1px solid rgba(212,175,55,0.28)", borderLeft: "1px solid rgba(212,175,55,0.12)",
-              borderBottom: "2px solid #000", borderRight: "1px solid rgba(0,0,0,0.6)",
-              boxShadow: "0 5px 0 #02010a, 0 7px 14px rgba(0,0,0,0.7)",
+            <div style={{ position: "relative", width: 36, height: 36, borderRadius: "50%",
+              background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.20)",
               display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Bell size={16} style={{ color: "rgba(212,175,55,0.75)" }} />
+              <Bell size={16} style={{ color: "rgba(255,255,255,0.80)" }} />
               {suggestions.filter(s => !dismissedIds.has(s.id)).length > 0 && (
                 <div style={{
                   position: "absolute", top: -3, right: -3,
                   width: 14, height: 14, borderRadius: "50%",
-                  background: "#d4af37", border: "1.5px solid #030208",
+                  background: "#C8882A", border: "1.5px solid #1E2E4A",
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 8, fontWeight: 800, color: "#030208", lineHeight: 1,
+                  fontSize: 8, fontWeight: 800, color: "#fff", lineHeight: 1,
                 }}>
                   {suggestions.filter(s => !dismissedIds.has(s.id)).length}
                 </div>
@@ -950,27 +587,27 @@ export default function HomePage() {
             </div>
           </Link>
         </div>
-      </GalaxyHero>
+      </LinajeHero>
 
       {/* ── PULSO CHIPS ─────────────────────────────────────────────────── */}
-      <div style={{ display:"flex", gap:8, padding:"0 18px 4px", flexWrap:"wrap" }}>
+      <div style={{ display:"flex", gap:8, padding:"12px 18px 4px", flexWrap:"wrap" }}>
         {recentMemories > 0 && (
-          <span style={{ background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.10)",
-            borderRadius:20, padding:"5px 12px", fontSize:10, color:"rgba(255,255,255,0.5)", fontWeight:600 }}>
+          <span style={{ background:"#FDFCFA", border:"1px solid #DDD8CF",
+            borderRadius:20, padding:"5px 12px", fontSize:10, color:"#6B6258", fontWeight:600 }}>
             {recentMemories} recuerdos esta semana
           </span>
         )}
         {!todayBirthday && birthdaysThisMonth > 0 && (
-          <span style={{ background:"rgba(212,175,55,0.10)", border:"1px solid rgba(212,175,55,0.25)",
-            borderRadius:20, padding:"5px 12px", fontSize:10, color:"rgba(212,175,55,0.7)", fontWeight:600 }}>
+          <span style={{ background:"rgba(200,136,42,0.08)", border:"1px solid rgba(200,136,42,0.22)",
+            borderRadius:20, padding:"5px 12px", fontSize:10, color:"#C8882A", fontWeight:600 }}>
             🎂 {birthdaysThisMonth} cumpleaños este mes
           </span>
         )}
       </div>
 
       {/* Divisor */}
-      <div style={{ margin: "20px 16px 0", height: 1,
-        background: "linear-gradient(90deg, transparent, rgba(212,175,55,0.18), transparent)" }} />
+      <div style={{ margin: "16px 16px 0", height: 1,
+        background: "linear-gradient(90deg, transparent, #DDD8CF, transparent)" }} />
 
       {/* ══ MOMENTO DEL DÍA ══════════════════════════════════════════════ */}
       <div style={{ padding: "14px 14px 0" }}>
@@ -978,49 +615,39 @@ export default function HomePage() {
         {/* — Caso A: Cumpleaños HOY — card dominante */}
         {todayBirthday && (
           <div style={{
-            borderRadius: 22, background: "linear-gradient(145deg,#1a0f00 0%,#0f0800 60%,#0a0500 100%)",
-            position: "relative", overflow: "hidden", minHeight: 200,
-            borderTop: "2px solid rgba(212,175,55,0.75)", borderLeft: "1px solid rgba(212,175,55,0.32)",
-            borderBottom: "5px solid #040200", borderRight: "1px solid rgba(0,0,0,0.7)",
-            animation: "bday-glow 3s ease-in-out infinite",
+            ...linCardNavy(),
+            minHeight: 180,
           }}>
-            {/* Nebula de fondo */}
-            <div style={{ position: "absolute", inset: 0, pointerEvents: "none",
-              background: "radial-gradient(ellipse at 20% 60%, rgba(212,175,55,0.18) 0%, transparent 55%), radial-gradient(ellipse at 80% 20%, rgba(200,120,48,0.12) 0%, transparent 45%)" }} />
-            {/* Línea superior */}
-            <div style={{ position: "absolute", top: 0, left: "10%", right: "10%", height: 1,
-              background: "rgba(212,175,55,0.7)" }} />
-            {/* Etiqueta */}
-            <div style={{ position: "absolute", top: 16, right: 16,
-              background: "rgba(212,175,55,0.12)", border: "1px solid rgba(212,175,55,0.35)",
-              borderRadius: 100, padding: "3px 10px",
-              fontSize: 9, fontWeight: 800, letterSpacing: "0.14em", color: "#d4af37",
-              textTransform: "uppercase" }}>Hoy</div>
-            <div style={{ padding: "22px 20px 20px", position: "relative" }}>
-              <div style={{ fontSize: 52, lineHeight: 1, marginBottom: 12 }}>🎂</div>
-              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em",
-                textTransform: "uppercase", color: "rgba(212,175,55,0.65)", marginBottom: 6 }}>
+            {/* Acento warm top */}
+            <div style={{ position:"absolute", top:0, left:0, right:0, height:3,
+              background:"linear-gradient(90deg,#C8882A,rgba(200,136,42,0.3))", borderRadius:"16px 16px 0 0" }} />
+            <div style={{ position:"absolute", top:14, right:14,
+              background:"rgba(200,136,42,0.15)", border:"1px solid rgba(200,136,42,0.35)",
+              borderRadius:100, padding:"3px 10px",
+              fontSize:9, fontWeight:800, letterSpacing:"0.14em", color:"#C8882A",
+              textTransform:"uppercase" }}>Hoy</div>
+            <div style={{ padding:"22px 20px 20px", position:"relative" }}>
+              <div style={{ fontSize:48, lineHeight:1, marginBottom:12 }}>🎂</div>
+              <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em",
+                textTransform:"uppercase", color:"rgba(200,136,42,0.70)", marginBottom:6 }}>
                 Cumpleaños de hoy
               </div>
-              <div style={{ fontSize: 26, fontWeight: 800, color: "#fff", lineHeight: 1.1, marginBottom: 6 }}>
+              <div style={{ fontSize:24, fontWeight:800, color:"#FDFCFA", lineHeight:1.1, marginBottom:6,
+                fontFamily:"var(--font-fraunces), Georgia, serif" }}>
                 {todayBirthday.first_name} {todayBirthday.last_name}
               </div>
-              <div style={{ fontSize: 13, color: "rgba(212,175,55,0.6)", marginBottom: 20 }}>
+              <div style={{ fontSize:13, color:"rgba(200,136,42,0.60)", marginBottom:20 }}>
                 {new Date().getFullYear() - new Date(todayBirthday.birth_date).getFullYear()} años
               </div>
               <button
                 onClick={() => greetPerson(todayBirthday.person_id)}
                 disabled={greetBusy}
-                style={{ display: "inline-flex", alignItems: "center", gap: 8,
-                  background: "#c9a820", color: "#030208", borderRadius: 50,
-                  padding: "12px 26px", fontSize: 13, fontWeight: 800,
-                  position: "relative", overflow: "hidden",
-                  borderTop: "2px solid #ffe060", border: "none", cursor: "pointer",
-                  animation: "aura-pulse 2.4s ease-in-out infinite",
-                  opacity: greetBusy ? 0.7 : 1 }}>
-                <div style={{ position:"absolute", top:0, width:"45%", height:"100%",
-                  background:"linear-gradient(90deg, transparent, rgba(255,255,255,0.38), transparent)",
-                  animation:"shimmer-sweep 2.8s ease-in-out infinite", pointerEvents:"none" }} />
+                style={{ display:"inline-flex", alignItems:"center", gap:8,
+                  background:"#C8882A", color:"#fff", borderRadius:50,
+                  padding:"12px 26px", fontSize:13, fontWeight:700,
+                  border:"none", cursor:"pointer",
+                  boxShadow:"0 4px 12px rgba(200,136,42,0.30)",
+                  opacity:greetBusy ? 0.7 : 1 }}>
                 {greetBusy ? "Abriendo chat…" : "🎉 Felicitar ahora"}
               </button>
             </div>
@@ -1036,37 +663,29 @@ export default function HomePage() {
           const isClose = upcomingBirthday.days <= 7;
           return (
             <div style={{
-              borderRadius: 16,
-              background: isClose
-                ? "linear-gradient(135deg, rgba(212,175,55,0.06) 0%, rgba(200,120,48,0.03) 100%)"
-                : "rgba(255,255,255,0.025)",
-              border: isClose ? "1px solid rgba(212,175,55,0.25)" : "1px solid rgba(255,255,255,0.07)",
-              borderTop: isClose ? "1.5px solid rgba(212,175,55,0.40)" : "1px solid rgba(255,255,255,0.10)",
+              ...linCard(),
+              border: isClose ? "1px solid rgba(200,136,42,0.30)" : "1px solid #DDD8CF",
               padding: "13px 16px",
               display: "flex", alignItems: "center", gap: 13,
             }}>
-              {/* Emoji pequeño */}
               <div style={{ fontSize: 28, lineHeight: 1, flexShrink: 0 }}>
                 {upcomingBirthday.days <= 3 ? "🎂" : "🎁"}
               </div>
-              {/* Info */}
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 800, color: "#fff",
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#1A1612",
                   overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {upcomingBirthday.first_name} {upcomingBirthday.last_name}
                 </div>
-                <div style={{ fontSize: 11, color: isClose ? "rgba(212,175,55,0.65)" : "rgba(255,255,255,0.35)",
-                  marginTop: 2 }}>
+                <div style={{ fontSize: 11, color: isClose ? "#C8882A" : "#9A9084", marginTop: 2 }}>
                   {upcomingBirthday.days === 1 ? "Mañana" : `En ${upcomingBirthday.days} días`}
                   {!isClose && ` · ${bdDate}`}
                 </div>
               </div>
-              {/* Cuenta regresiva — sin botón Felicitar antes del día */}
               <div style={{
                 padding: "6px 12px", borderRadius: 50, fontSize: 11, fontWeight: 700,
-                background: isClose ? "rgba(212,175,55,0.12)" : "rgba(255,255,255,0.04)",
-                color: isClose ? "#d4af37" : "rgba(255,255,255,0.25)",
-                border: isClose ? "1px solid rgba(212,175,55,0.30)" : "1px solid rgba(255,255,255,0.07)",
+                background: isClose ? "rgba(200,136,42,0.10)" : "#F4F1EC",
+                color: isClose ? "#C8882A" : "#9A9084",
+                border: isClose ? "1px solid rgba(200,136,42,0.25)" : "1px solid #DDD8CF",
                 whiteSpace: "nowrap", flexShrink: 0,
               }}>
                 {upcomingBirthday.days === 1 ? "Mañana 🎂" : `${upcomingBirthday.days}d 🎁`}
@@ -1077,67 +696,43 @@ export default function HomePage() {
 
         {/* — Caso Fallecido: hoy es el cumpleaños de alguien que ya no está — */}
         {deceasedBirthday && (
-          <div>
-            <div style={{
-              borderRadius:22,
-              background:"linear-gradient(145deg,#0d0b10 0%,#080608 100%)",
-              position:"relative", overflow:"hidden",
-              borderTop:"1.5px solid rgba(180,160,220,0.28)",
-              borderLeft:"1px solid rgba(140,120,180,0.14)",
-              borderBottom:"4px solid #030204",
-              borderRight:"1px solid rgba(0,0,0,0.65)",
-              boxShadow:"0 6px 0 #030204, 0 12px 28px rgba(0,0,0,0.88), 0 0 24px rgba(160,130,210,0.07)",
-              padding:"20px 20px 18px",
-            }}>
-              <div style={{ position:"absolute", inset:0, pointerEvents:"none",
-                background:"radial-gradient(ellipse at 10% 50%, rgba(160,130,210,0.07) 0%, transparent 55%)" }} />
-              <div style={{ position:"absolute", top:16, right:16,
-                background:"rgba(160,130,210,0.08)", border:"1px solid rgba(160,130,210,0.22)",
-                borderRadius:100, padding:"3px 10px",
-                fontSize:9, fontWeight:800, letterSpacing:"0.14em", color:"rgba(160,130,210,0.65)",
-                textTransform:"uppercase" }}>
-                En su memoria
-              </div>
-              <div style={{ fontSize:36, lineHeight:1, marginBottom:10 }}>🕊️</div>
-              <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em",
-                textTransform:"uppercase", color:"rgba(160,130,210,0.55)", marginBottom:6 }}>
-                Hoy en tu galaxia
-              </div>
-              <div style={{ fontSize:18, fontWeight:800, color:"rgba(255,255,255,0.88)", lineHeight:1.2, marginBottom:6 }}>
-                {deceasedBirthday.first_name} {deceasedBirthday.last_name}
-              </div>
-              <div style={{ fontSize:13, color:"rgba(255,255,255,0.45)", lineHeight:1.5 }}>
-                Hoy estaría cumpliendo {deceasedBirthday.age_would_be} años
-              </div>
+          <div style={{ ...linCard(), padding:"20px 20px 18px" }}>
+            <div style={{ position:"absolute", top:14, right:14,
+              background:"rgba(122,140,110,0.12)", border:"1px solid rgba(122,140,110,0.28)",
+              borderRadius:100, padding:"3px 10px",
+              fontSize:9, fontWeight:700, letterSpacing:"0.14em", color:"#7A8C6E",
+              textTransform:"uppercase" }}>
+              En su memoria
+            </div>
+            <div style={{ fontSize:36, lineHeight:1, marginBottom:10 }}>🕊️</div>
+            <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em",
+              textTransform:"uppercase", color:"#7A8C6E", marginBottom:6 }}>
+              Hoy en tu linaje
+            </div>
+            <div style={{ fontSize:18, fontWeight:700, color:"#1A1612", lineHeight:1.2, marginBottom:6,
+              fontFamily:"var(--font-fraunces), Georgia, serif" }}>
+              {deceasedBirthday.first_name} {deceasedBirthday.last_name}
+            </div>
+            <div style={{ fontSize:13, color:"#6B6258", lineHeight:1.5 }}>
+              Hoy estaría cumpliendo {deceasedBirthday.age_would_be} años
             </div>
           </div>
         )}
 
         {/* — Caso D: sin cumpleaños registrados — invita a completar perfiles */}
         {!todayBirthday && !upcomingBirthday && !deceasedBirthday && (
-          <div style={{
-            borderRadius:22,
-            background:"linear-gradient(145deg,#0a0c14 0%,#080a12 100%)",
-            position:"relative", overflow:"hidden",
-            borderTop:"1.5px solid rgba(130,100,255,0.35)",
-            borderLeft:"1px solid rgba(100,70,220,0.15)",
-            borderBottom:"4px solid #030208",
-            borderRight:"1px solid rgba(0,0,0,0.65)",
-            boxShadow:"0 6px 0 #030208, 0 12px 28px rgba(0,0,0,0.8), 0 0 28px rgba(120,80,255,0.08)",
-            padding:"20px 20px 18px",
-          }}>
-            <div style={{ position:"absolute", inset:0, pointerEvents:"none",
-              background:"radial-gradient(ellipse at 10% 50%, rgba(120,80,255,0.09) 0%, transparent 55%)" }} />
+          <div style={{ ...linCard(), padding:"20px 20px 18px" }}>
             <div style={{ fontSize:36, lineHeight:1, marginBottom:10 }}>🎂</div>
             <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em",
-              textTransform:"uppercase", color:"rgba(120,80,255,0.7)", marginBottom:6 }}>
+              textTransform:"uppercase", color:"#7A8C6E", marginBottom:6 }}>
               Celebra a tu familia
             </div>
-            <div style={{ fontSize:15, fontWeight:800, color:"#fff", lineHeight:1.3, marginBottom:8 }}>
+            <div style={{ fontSize:15, fontWeight:700, color:"#1A1612", lineHeight:1.3, marginBottom:8,
+              fontFamily:"var(--font-fraunces), Georgia, serif" }}>
               Agrega las fechas de nacimiento
             </div>
-            <div style={{ fontSize:12, color:"rgba(255,255,255,0.45)", lineHeight:1.5 }}>
-              Con {visibleCount} familiares en tu galaxia, habrá cumpleaños que celebrar cada semana.
+            <div style={{ fontSize:12, color:"#6B6258", lineHeight:1.5 }}>
+              Con {visibleCount} familiares en tu linaje, habrá cumpleaños que celebrar cada semana.
             </div>
           </div>
         )}
@@ -1146,36 +741,30 @@ export default function HomePage() {
 
       {/* ── PREGUNTA DEL DÍA ─────────────────────────────────────────── */}
       <div style={{ padding:"16px 14px 0" }}>
-        <div style={{
-          background:"#0c0a18", borderRadius:18,
-          border:"1px solid rgba(212,175,55,0.14)",
-          borderTop:"1.5px solid rgba(212,175,55,0.28)",
-          padding:"16px",
-        }}>
+        <div style={{ ...linCard(), padding:"16px" }}>
           <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.12em",
-            textTransform:"uppercase", color:"rgba(212,175,55,0.42)", marginBottom:10 }}>
+            textTransform:"uppercase", color:"#9A9084", marginBottom:10 }}>
             Pregunta del día
           </div>
-          <p style={{ fontSize:14, color:"rgba(255,255,255,0.82)", fontStyle:"italic",
-            margin:"0 0 14px", lineHeight:1.6, fontFamily:"var(--font-playfair), Georgia, serif" }}>
+          <p style={{ fontSize:14, color:"#3D3428", fontStyle:"italic",
+            margin:"0 0 14px", lineHeight:1.6, fontFamily:"var(--font-fraunces), Georgia, serif" }}>
             {dailyQuestion ?? "..."}
           </p>
 
           {/* ── Inline answer form ── */}
           {answerSent ? (
-            /* Success state */
             <div style={{ marginBottom:10 }}>
               <div style={{
                 display:"flex", alignItems:"center", justifyContent:"space-between",
                 padding:"10px 14px", borderRadius:14,
-                background:"rgba(60,200,120,0.08)",
-                border:"0.5px solid rgba(60,200,120,0.25)",
+                background:"rgba(122,140,110,0.10)",
+                border:"1px solid rgba(122,140,110,0.25)",
               }}>
-                <span style={{ fontSize:12, color:"rgba(80,220,140,0.85)", fontWeight:700 }}>
+                <span style={{ fontSize:12, color:"#7A8C6E", fontWeight:700 }}>
                   ✓ Respuesta compartida con tu familia
                 </span>
                 <Link href="/muro" style={{
-                  fontSize:11, color:"rgba(212,175,55,0.65)",
+                  fontSize:11, color:"#C8882A",
                   textDecoration:"none", fontWeight:700,
                 }}>
                   Ver muro →
@@ -1183,7 +772,6 @@ export default function HomePage() {
               </div>
             </div>
           ) : answerOpen ? (
-            /* Expanded write mode */
             <form onSubmit={submitAnswer} style={{ marginBottom:10 }}>
               <textarea
                 autoFocus
@@ -1193,12 +781,12 @@ export default function HomePage() {
                 rows={3}
                 style={{
                   width:"100%", boxSizing:"border-box",
-                  background:"rgba(255,255,255,0.03)",
-                  border:"0.5px solid rgba(180,140,255,0.28)",
+                  background:"#F4F1EC",
+                  border:"1px solid #DDD8CF",
                   borderRadius:12, padding:"10px 12px",
-                  color:"rgba(255,255,255,0.85)", fontSize:13, lineHeight:1.6,
-                  fontFamily:"Georgia, serif", fontStyle:"italic",
-                  resize:"none", outline:"none", caretColor:"#d4af37",
+                  color:"#1A1612", fontSize:13, lineHeight:1.6,
+                  fontFamily:"var(--font-fraunces), Georgia, serif", fontStyle:"italic",
+                  resize:"none", outline:"none", caretColor:"#C8882A",
                   marginBottom:8,
                 }}
               />
@@ -1206,17 +794,17 @@ export default function HomePage() {
                 <button type="button" onClick={() => { setAnswerOpen(false); setAnswerText(""); }}
                   style={{
                     flex:1, padding:"10px", borderRadius:50,
-                    background:"transparent", border:"0.5px solid rgba(255,255,255,0.08)",
-                    color:"rgba(255,255,255,0.3)", fontSize:12, fontWeight:700, cursor:"pointer",
+                    background:"transparent", border:"1px solid #DDD8CF",
+                    color:"#9A9084", fontSize:12, fontWeight:600, cursor:"pointer",
                   }}>
                   Cancelar
                 </button>
                 <button type="submit" disabled={!answerText.trim() || answerBusy}
                   style={{
                     flex:2, padding:"10px", borderRadius:50,
-                    background: answerText.trim() ? "rgba(180,140,255,0.15)" : "rgba(255,255,255,0.04)",
-                    border: answerText.trim() ? "0.5px solid rgba(180,140,255,0.45)" : "0.5px solid rgba(255,255,255,0.06)",
-                    color: answerText.trim() ? "rgba(200,170,255,0.9)" : "rgba(255,255,255,0.2)",
+                    background: answerText.trim() ? "#1E2E4A" : "#F4F1EC",
+                    border: answerText.trim() ? "1px solid #162338" : "1px solid #DDD8CF",
+                    color: answerText.trim() ? "#fff" : "#9A9084",
                     fontSize:12, fontWeight:700, cursor: answerText.trim() ? "pointer" : "default",
                     transition:"all 0.18s",
                   }}>
@@ -1225,38 +813,25 @@ export default function HomePage() {
               </div>
             </form>
           ) : (
-            /* Default: tap to open + video button */
             <div style={{ display:"flex", gap:8 }}>
               <button onClick={() => setAnswerOpen(true)}
                 style={{
                   flex:1, display:"flex", alignItems:"center", justifyContent:"center", gap:6,
-                  padding:"11px", borderRadius:50, cursor:"pointer",
-                  background:"#0e0c1e", fontFamily:"inherit",
-                  borderTop:"1.5px solid rgba(180,140,255,0.40)",
-                  border:"0.5px solid rgba(180,140,255,0.18)",
-                  color:"rgba(200,170,255,0.85)", fontSize:12, fontWeight:700,
-                  animation:"ghost-aura 2.8s ease-in-out infinite",
-                  position:"relative", overflow:"hidden",
+                  padding:"10px", borderRadius:50, cursor:"pointer",
+                  background:"#1E2E4A", fontFamily:"inherit",
+                  border:"none",
+                  color:"#fff", fontSize:12, fontWeight:600,
                 }}>
-                <div style={{ position:"absolute", top:0, width:"40%", height:"100%",
-                  background:"linear-gradient(90deg, transparent, rgba(180,140,255,0.22), transparent)",
-                  animation:"shimmer-sweep 3.4s ease-in-out infinite 1.2s", pointerEvents:"none" }} />
                 ✍️ Escribe tu respuesta
               </button>
               <Link href="/capsulas" style={{ textDecoration:"none", flex:1 }}>
                 <div style={{
                   display:"flex", alignItems:"center", justifyContent:"center", gap:6,
-                  padding:"11px", borderRadius:50,
-                  background:"#0e0c1e",
-                  borderTop:"1.5px solid rgba(212,175,55,0.40)",
-                  border:"0.5px solid rgba(212,175,55,0.12)",
-                  color:"rgba(240,210,100,0.85)", fontSize:12, fontWeight:700,
-                  position:"relative", overflow:"hidden",
-                  animation:"aura-pulse 2.8s ease-in-out infinite 0.6s",
+                  padding:"10px", borderRadius:50,
+                  background:"rgba(200,136,42,0.10)",
+                  border:"1px solid rgba(200,136,42,0.25)",
+                  color:"#C8882A", fontSize:12, fontWeight:600,
                 }}>
-                  <div style={{ position:"absolute", top:0, width:"40%", height:"100%",
-                    background:"linear-gradient(90deg, transparent, rgba(212,175,55,0.18), transparent)",
-                    animation:"shimmer-sweep 3.4s ease-in-out infinite 0.8s", pointerEvents:"none" }} />
                   🎥 Graba en video
                 </div>
               </Link>
@@ -1272,47 +847,37 @@ export default function HomePage() {
       {/* ── EMPTY STATE — sin familia aún ──────────────────────────────── */}
       {profile !== null && members.length === 0 && visibleCount === 0 && (
         <div style={{ padding: "20px 16px 0" }}>
-          <div style={{
-            borderRadius: 18, padding: "22px 20px",
-            background: "linear-gradient(135deg, #0e0b1f 0%, #0a0818 100%)",
-            border: "1px solid rgba(212,175,55,0.18)",
-            borderTop: "1.5px solid rgba(212,175,55,0.3)",
-            boxShadow: "0 4px 0 #000, 0 8px 24px rgba(0,0,0,0.5)",
-          }}>
+          <div style={{ ...linCard(), padding:"22px 20px" }}>
             <div style={{ fontSize: 36, marginBottom: 12 }}>🌱</div>
-            <div style={{ fontSize: 16, fontWeight: 800, color: "#fff", marginBottom: 6 }}>
-              Tu galaxia está esperando
+            <div style={{ fontSize: 16, fontWeight: 700, color: "#1A1612", marginBottom: 6,
+              fontFamily:"var(--font-fraunces), Georgia, serif" }}>
+              Tu linaje te está esperando
             </div>
-            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", lineHeight: 1.6, marginBottom: 18 }}>
-              Agrega a tu primer familiar para comenzar a construir tu universo familiar.
+            <div style={{ fontSize: 13, color: "#6B6258", lineHeight: 1.6, marginBottom: 18 }}>
+              Agrega a tu primer familiar para comenzar a construir tu árbol genealógico.
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <Link href="/tree" style={{ textDecoration: "none" }}>
                 <div style={{
                   display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
                   padding: "13px 20px", borderRadius: 50,
-                  background: "#c9a820",
-                  borderTop: "2px solid #ffe060",
-                  fontSize: 14, fontWeight: 800, color: "#030208",
-                  position: "relative", overflow: "hidden",
-                  animation: "aura-pulse 2.4s ease-in-out infinite",
+                  background: "#1E2E4A",
+                  fontSize: 14, fontWeight: 700, color: "#fff",
+                  boxShadow: "0 4px 12px rgba(30,46,74,0.25)",
                 }}>
-                  <div style={{ position:"absolute", top:0, width:"45%", height:"100%",
-                    background:"linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent)",
-                    animation:"shimmer-sweep 3s ease-in-out infinite", pointerEvents:"none" }} />
-                  <Users size={16} style={{ color: "#030208", position:"relative" }} />
-                  <span style={{ position:"relative" }}>Agregar mi primer familiar</span>
+                  <Users size={16} style={{ color: "#fff" }} />
+                  Agregar mi primer familiar
                 </div>
               </Link>
               <Link href="/invitar" style={{ textDecoration: "none" }}>
                 <div style={{
                   display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
                   padding: "12px 20px", borderRadius: 14,
-                  background: "rgba(212,175,55,0.06)",
-                  border: "1px solid rgba(212,175,55,0.2)",
-                  fontSize: 13, fontWeight: 700, color: "rgba(212,175,55,0.8)",
+                  background: "rgba(200,136,42,0.08)",
+                  border: "1px solid rgba(200,136,42,0.22)",
+                  fontSize: 13, fontWeight: 600, color: "#C8882A",
                 }}>
-                  <Send size={14} style={{ color: "rgba(212,175,55,0.7)" }} />
+                  <Send size={14} style={{ color: "#C8882A" }} />
                   Invitar a un familiar
                 </div>
               </Link>
@@ -1323,38 +888,20 @@ export default function HomePage() {
 
       {/* ── CTA PRINCIPAL ───────────────────────────────────────────────── */}
       {visibleCount > 0 && (
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "20px 16px 4px", gap: 10 }}>
-          <Link href="/tree" style={{ textDecoration: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
-            {/* 108px — mismo efecto 3D que el avatar principal (135px × 0.8) */}
-            <div style={{ position: "relative", width: 90, height: 90 }}>
-              {/* Glow exterior pulsante */}
-              <div style={{ position: "absolute", inset: -11, borderRadius: "50%", pointerEvents: "none",
-                background: "radial-gradient(circle, rgba(242,180,60,0.32) 0%, rgba(130,60,230,0.12) 40%, transparent 70%)",
-                animation: "home-ring-breathe 3.5s ease-in-out infinite" }} />
-              {/* Anillo cónico giratorio */}
-              <div style={{ position: "absolute", inset: -5, borderRadius: "50%", pointerEvents: "none",
-                background: "conic-gradient(from 0deg, rgba(242,180,60,0.95) 0deg, rgba(200,120,48,0.55) 80deg, rgba(184,160,216,0.30) 160deg, rgba(123,175,212,0.55) 230deg, rgba(242,180,60,0.80) 295deg, rgba(242,180,60,0.95) 360deg)",
-                animation: "home-ring-spin 7s linear infinite",
-                filter: "blur(1.5px)" }} />
-              {/* Gap oscuro entre anillo y botón */}
-              <div style={{ position: "absolute", inset: -1, borderRadius: "50%",
-                background: "#030208", pointerEvents: "none", zIndex: 1 }} />
-              {/* Cuerpo del botón */}
-              <div style={{
-                width: 90, height: 90, borderRadius: "50%", position: "relative", zIndex: 2,
-                background: "radial-gradient(circle at 38% 28%, rgba(242,180,60,0.55) 0%, rgba(180,100,20,0.25) 35%, rgba(8,5,20,0.98) 70%)",
-                boxShadow: "inset 0 3px 22px rgba(120,60,220,0.28), inset 0 -3px 12px rgba(0,0,0,0.7), 0 12px 0 rgba(90,60,0,0.7), 0 20px 36px rgba(0,0,0,0.9)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-              }}>
-                <div style={{ position: "absolute", inset: 0, borderRadius: "50%",
-                  background: "radial-gradient(circle at 35% 25%, rgba(212,175,55,0.22) 0%, transparent 55%)" }} />
-                <Sparkles size={28} style={{ color: "#d4af37", position: "relative",
-                  filter: "drop-shadow(0 0 8px rgba(212,175,55,0.7))" }} />
-              </div>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "20px 16px 4px" }}>
+          <Link href="/tree" style={{ textDecoration: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+            <div style={{
+              width: 64, height: 64, borderRadius: 20,
+              background: "#1E2E4A",
+              border: "1px solid #162338",
+              boxShadow: "0 4px 16px rgba(30,46,74,0.20)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              <Sparkles size={26} style={{ color: "rgba(200,136,42,0.90)" }} />
             </div>
-            <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(212,175,55,0.75)",
-              letterSpacing: "0.1em", textTransform: "uppercase", textAlign: "center" }}>
-              Ver mi galaxia
+            <span style={{ fontSize: 11, fontWeight: 600, color: "#9A9084",
+              letterSpacing: "0.08em", textTransform: "uppercase", textAlign: "center" }}>
+              Ver mi árbol
             </span>
           </Link>
         </div>
@@ -1362,33 +909,33 @@ export default function HomePage() {
 
       {/* ── EN LÍNEA AHORA ──────────────────────────────────────────────── */}
       {onlineFamily.length > 0 && (
-        <div style={{ padding: "14px 18px", borderBottom: "0.5px solid rgba(212,175,55,0.1)" }}>
+        <div style={{ padding: "14px 18px", borderBottom: "1px solid #E8E4DC" }}>
           <style>{`@keyframes home-online-pulse{0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,0.5)}50%{box-shadow:0 0 0 5px rgba(34,197,94,0)}}`}</style>
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
             <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e",
               animation: "home-online-pulse 2s infinite" }} />
             <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em",
-              textTransform: "uppercase", color: "rgba(34,197,94,0.75)" }}>En línea ahora</span>
+              textTransform: "uppercase", color: "#7A8C6E" }}>En línea ahora</span>
           </div>
           <div style={{ display: "flex", gap: 12 }}>
             {onlineFamily.slice(0, 6).map(m => (
               <Link key={m.user_id} href="/chat" style={{ textDecoration: "none",
                 display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
                 <div style={{ position: "relative" }}>
-                  <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#1a1030",
-                    border: "2px solid rgba(34,197,94,0.5)",
+                  <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#EDE9E1",
+                    border: "2px solid rgba(34,197,94,0.45)",
                     display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 15, fontWeight: 800, color: "#d4af37", overflow: "hidden" }}>
+                    fontSize: 15, fontWeight: 700, color: "#1E2E4A", overflow: "hidden" }}>
                     {m.photo_path
                       // eslint-disable-next-line @next/next/no-img-element
                       ? <img src={m.photo_path} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" />
                       : `${m.first_name[0] ?? ""}${(m.last_name || "")[0] ?? ""}`.toUpperCase()}
                   </div>
                   <div style={{ position: "absolute", bottom: 1, right: 1, width: 11, height: 11,
-                    borderRadius: "50%", background: "#22c55e", border: "2px solid #030208",
+                    borderRadius: "50%", background: "#22c55e", border: "2px solid #F4F1EC",
                     animation: "home-online-pulse 2s infinite" }} />
                 </div>
-                <span style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", fontWeight: 600,
+                <span style={{ fontSize: 10, color: "#9A9084", fontWeight: 500,
                   maxWidth: 44, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                   textAlign: "center" }}>{m.first_name}</span>
               </Link>
@@ -1410,19 +957,19 @@ export default function HomePage() {
       {/* ══ ACCESOS RÁPIDOS ══════════════════════════════════════════════ */}
       <div style={{ padding: "20px 16px 8px" }}>
         <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.14em",
-          textTransform: "uppercase", color: "rgba(212,175,55,0.4)", marginBottom: 16 }}>
+          textTransform: "uppercase", color: "#9A9084", marginBottom: 16 }}>
           Accesos rápidos
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "18px 8px", marginBottom: 22 }}>
-          <CircleBtn icon={CalendarDays}  label={"Un día\ncomo hoy"} href="/hoy"     color="212,175,55" shadowColor="#362000" delay={0}   />
-          <CircleBtn icon={Lock}          label="Cápsulas"           href="/capsulas" color="150,90,255" shadowColor="#060010" delay={0.3} badge={pendingCapsulas} />
-          <CircleBtn icon={Map}           label="Mapa"               href="/mapa"     color="80,220,250" shadowColor="#02101e" delay={0.6} />
-          <CircleBtn icon={Send}          label="Invitar"            href="/invitar"  color="212,175,55" shadowColor="#362000" delay={0.9} />
+          <LinajeBtn icon={CalendarDays}  label={"Un día\ncomo hoy"} href="/hoy"     />
+          <LinajeBtn icon={Lock}          label="Cápsulas"           href="/capsulas" badge={pendingCapsulas} />
+          <LinajeBtn icon={Map}           label="Mapa"               href="/mapa"     />
+          <LinajeBtn icon={Send}          label="Invitar"            href="/invitar"  accent />
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "18px 8px" }}>
-          <CircleBtn icon={MessageCircle} label="Chat"      href="/chat"    color="160,170,245" shadowColor="#060810" delay={0.15} badge={unreadChats} />
-          <CircleBtn icon={BookOpen}      label="Recuerdos" href="/muro"    color="242,180,60"  shadowColor="#362000" delay={0.45} />
-          <CircleBtn icon={Trophy}        label="Logros"    href="/profile" color="210,150,40"  shadowColor="#2a1a00" delay={0.75} />
+          <LinajeBtn icon={MessageCircle} label="Chat"      href="/chat"    badge={unreadChats} />
+          <LinajeBtn icon={BookOpen}      label="Recuerdos" href="/muro"    />
+          <LinajeBtn icon={Trophy}        label="Logros"    href="/profile" />
         </div>
       </div>
 
@@ -1430,7 +977,7 @@ export default function HomePage() {
       {photos.length > 0 && (
         <div style={{ padding: "20px 0 8px" }}>
           <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.14em",
-            textTransform: "uppercase", color: "rgba(212,175,55,0.4)", marginBottom: 16, paddingLeft: 16 }}>
+            textTransform: "uppercase", color: "#9A9084", marginBottom: 16, paddingLeft: 16 }}>
             Fotos de la familia
           </div>
           <div style={{
@@ -1451,8 +998,8 @@ export default function HomePage() {
                     cursor: "pointer",
                     position: "relative",
                     transform: tilt,
-                    border: "1.5px solid rgba(212,175,55,0.22)",
-                    boxShadow: "0 6px 0 rgba(0,0,0,0.5), 0 10px 22px rgba(0,0,0,0.65), 0 0 10px rgba(212,175,55,0.08)",
+                    border: "2px solid #FDFCFA",
+                    boxShadow: "0 2px 8px rgba(30,46,74,0.14)",
                     flexShrink: 0,
                   }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1467,17 +1014,12 @@ export default function HomePage() {
 
       {/* ── FUNCIONES ────────────────────────────────────────────────────── */}
       <div style={{ padding: "16px 14px 14px", position: "relative" }}>
-        {/* Glow atmosférico */}
-        <div style={{ position: "absolute", top: "20%", left: "50%", transform: "translateX(-50%)",
-          width: 300, height: 300, borderRadius: "50%", pointerEvents: "none", zIndex: 0,
-          background: "radial-gradient(circle, rgba(212,175,55,0.07) 0%, rgba(80,30,160,0.04) 40%, transparent 70%)",
-          filter: "blur(24px)", animation: "section-glow 6s ease-in-out infinite" }} />
         {/* ── Coincidencias familiares ──────────────────────────────────── */}
         {suggestions.filter(s => !dismissedIds.has(s.id)).length > 0 && (
           <div style={{ marginBottom: 9 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 9, paddingTop: 6 }}>
-              <Sparkles size={12} style={{ color: "#d4af37" }} />
-              <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(212,175,55,0.65)",
+              <Sparkles size={12} style={{ color: "#C8882A" }} />
+              <span style={{ fontSize: 11, fontWeight: 700, color: "#9A9084",
                 letterSpacing: "0.1em", textTransform: "uppercase" }}>
                 Posibles conexiones
               </span>
@@ -1493,27 +1035,21 @@ export default function HomePage() {
                   surname: "Apellido", birth_city: "Ciudad natal", birth_decade: "Época de nacimiento", birth_country: "País",
                 };
                 return (
-                  <div key={s.id} style={{
-                    ...s3dCard("#0c0a02","212,175,55","#040300",0.08),
-                    padding: "13px 13px 11px",
-                  }}>
-                    <div style={{ position: "absolute", top: 0, left: "18%", right: "18%",
-                      height: 1, background: "rgba(212,175,55,0.35)" }} />
-
+                  <div key={s.id} style={{ ...linCard(), padding:"13px 13px 11px" }}>
                     {/* header */}
                     <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 9 }}>
-                      <Sparkles size={12} style={{ color: "#d4af37" }} />
+                      <Sparkles size={12} style={{ color: "#C8882A" }} />
                       <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.11em",
-                        textTransform: "uppercase", color: "rgba(212,175,55,0.55)", flex: 1 }}>
+                        textTransform: "uppercase", color: "#9A9084", flex: 1 }}>
                         Posible conexión
                       </span>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: "#d4af37",
-                        background: "rgba(212,175,55,0.1)", padding: "2px 8px", borderRadius: 20 }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: "#C8882A",
+                        background: "rgba(200,136,42,0.10)", padding: "2px 8px", borderRadius: 20 }}>
                         {pct}% coincidencia
                       </span>
                       <button onClick={() => handleDismiss(s.id)}
                         style={{ background: "none", border: "none", cursor: "pointer", padding: 2,
-                          color: "rgba(255,255,255,0.2)", lineHeight: 0, marginLeft: 2 }}>
+                          color: "#C8C0B2", lineHeight: 0, marginLeft: 2 }}>
                         <X size={14} />
                       </button>
                     </div>
@@ -1524,21 +1060,21 @@ export default function HomePage() {
                         <div key={i} style={{ flex: 1, display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
                           {i === 1 && (
                             <div style={{ width: 22, height: 22, borderRadius: "50%", flexShrink: 0,
-                              background: "rgba(212,175,55,0.08)", border: "1px dashed rgba(212,175,55,0.3)",
+                              background: "rgba(200,136,42,0.08)", border: "1px dashed rgba(200,136,42,0.30)",
                               display: "flex", alignItems: "center", justifyContent: "center",
-                              fontSize: 10, fontWeight: 800, color: "rgba(212,175,55,0.4)" }}>?</div>
+                              fontSize: 10, fontWeight: 700, color: "rgba(200,136,42,0.55)" }}>?</div>
                           )}
                           <div style={{ width: 30, height: 30, borderRadius: "50%", flexShrink: 0,
-                            background: "rgba(212,175,55,0.1)", border: "1.5px solid rgba(212,175,55,0.3)",
+                            background: "#EAF0F8", border: "1.5px solid #DDD8CF",
                             display: "flex", alignItems: "center", justifyContent: "center",
-                            fontSize: 11, fontWeight: 800, color: "#d4af37" }}>
+                            fontSize: 11, fontWeight: 700, color: "#1E2E4A" }}>
                             {p.name.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase()}
                           </div>
                           <div style={{ minWidth: 0 }}>
-                            <p style={{ fontSize: 12, fontWeight: 700, color: "#fff", margin: 0,
+                            <p style={{ fontSize: 12, fontWeight: 600, color: "#1A1612", margin: 0,
                               overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</p>
                             {p.space && (
-                              <p style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", margin: 0,
+                              <p style={{ fontSize: 10, color: "#9A9084", margin: 0,
                                 overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.space}</p>
                             )}
                           </div>
@@ -1548,11 +1084,11 @@ export default function HomePage() {
 
                     {/* evidencia */}
                     {top && (
-                      <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", margin: "0 0 10px" }}>
+                      <p style={{ fontSize: 11, color: "#6B6258", margin: "0 0 10px" }}>
                         {EVIDENCE[top.type] || top.type}:&nbsp;
-                        <span style={{ color: "#d4af37", fontWeight: 600 }}>{top.detail}</span>
+                        <span style={{ color: "#C8882A", fontWeight: 600 }}>{top.detail}</span>
                         {s.evidence.length > 1 && (
-                          <span style={{ color: "rgba(212,175,55,0.35)" }}> +{s.evidence.length - 1} más</span>
+                          <span style={{ color: "rgba(200,136,42,0.45)" }}> +{s.evidence.length - 1} más</span>
                         )}
                       </p>
                     )}
@@ -1561,21 +1097,15 @@ export default function HomePage() {
                     <div style={{ display: "flex", gap: 7 }}>
                       <Link href={`/sugerencias/${s.id}`} style={{ textDecoration: "none", flex: 1 }}>
                         <button style={{ width: "100%", padding: "10px 0", borderRadius: 50, cursor: "pointer",
-                          background: "#c9a820", border: "none",
-                          borderTop: "1.5px solid #ffe060",
-                          animation: "aura-pulse 2.4s ease-in-out infinite",
-                          color: "#030208", fontSize: 12, fontWeight: 700,
-                          position: "relative", overflow: "hidden" }}>
-                          <div style={{ position:"absolute", top:0, width:"45%", height:"100%",
-                            background:"linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent)",
-                            animation:"shimmer-sweep 3s ease-in-out infinite", pointerEvents:"none" }} />
+                          background: "#1E2E4A", border: "none",
+                          color: "#fff", fontSize: 12, fontWeight: 700 }}>
                           Ver y confirmar
                         </button>
                       </Link>
                       <button onClick={() => handleDismiss(s.id)}
                         style={{ padding: "8px 12px", borderRadius: 10, cursor: "pointer",
-                          background: "#0c0a18", border: "1px solid rgba(255,255,255,0.08)",
-                          color: "rgba(255,255,255,0.3)", fontSize: 12, fontWeight: 600 }}>
+                          background: "#F4F1EC", border: "1px solid #DDD8CF",
+                          color: "#9A9084", fontSize: 12, fontWeight: 600 }}>
                         No es familia
                       </button>
                     </div>
@@ -1594,24 +1124,15 @@ export default function HomePage() {
       {/* ── MEMORIA VIVA — pregunta diaria sobre fallecido sin fecha ── */}
       {dailyDeceasedQuestion && (
         <div style={{ padding:"14px 14px 0" }}>
-          <div style={{
-            background:"linear-gradient(145deg,#0d0b10 0%,#080608 100%)",
-            borderRadius:18,
-            borderTop:"1.5px solid rgba(180,160,220,0.22)",
-            border:"1px solid rgba(140,120,180,0.12)",
-            padding:"16px",
-            position:"relative", overflow:"hidden",
-          }}>
-            <div style={{ position:"absolute", inset:0, pointerEvents:"none",
-              background:"radial-gradient(ellipse at 90% 20%, rgba(160,130,210,0.07) 0%, transparent 60%)" }} />
+          <div style={{ ...linCard(), padding:"16px" }}>
             <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.12em",
-              textTransform:"uppercase", color:"rgba(160,130,210,0.5)", marginBottom:10 }}>
+              textTransform:"uppercase", color:"#7A8C6E", marginBottom:10 }}>
               🕊️ Memoria familiar
             </div>
-            <p style={{ fontSize:14, color:"rgba(255,255,255,0.78)", fontStyle:"italic",
-              margin:"0 0 14px", lineHeight:1.6, fontFamily:"var(--font-playfair), Georgia, serif" }}>
+            <p style={{ fontSize:14, color:"#3D3428", fontStyle:"italic",
+              margin:"0 0 14px", lineHeight:1.6, fontFamily:"var(--font-fraunces), Georgia, serif" }}>
               ¿Quién sabe cuántos años tendría hoy{" "}
-              <span style={{ color:"rgba(200,180,255,0.9)", fontWeight:700 }}>
+              <span style={{ color:"#1E2E4A", fontWeight:700 }}>
                 {dailyDeceasedQuestion.first_name} {dailyDeceasedQuestion.last_name}
               </span>?
             </p>
@@ -1619,9 +1140,8 @@ export default function HomePage() {
               <div style={{
                 display:"inline-flex", alignItems:"center", justifyContent:"center", gap:6,
                 padding:"10px 20px", borderRadius:50,
-                background:"#0e0c1e",
-                borderTop:"1.5px solid rgba(180,140,255,0.35)",
-                color:"rgba(200,170,255,0.8)", fontSize:12, fontWeight:700,
+                background:"#1E2E4A",
+                color:"#fff", fontSize:12, fontWeight:600,
               }}>
                 Compartir lo que sabes →
               </div>
@@ -1633,33 +1153,26 @@ export default function HomePage() {
       {/* ── INVITE CTA (condicional) ──────────────────────────────────── */}
       {members.length > 0 && members.length < 5 && (
         <div style={{ padding:"14px 14px 0" }}>
-          <div style={{
-            background:"rgba(212,175,55,0.04)", borderRadius:16,
-            border:"1px solid rgba(212,175,55,0.16)",
+          <div style={{ ...linCard(),
             padding:"13px 14px",
             display:"flex", alignItems:"center", gap:12,
           }}>
             <span style={{ fontSize:28, flexShrink:0 }}>👥</span>
             <div style={{ flex:1 }}>
-              <p style={{ fontSize:13, fontWeight:700, color:"#fff", margin:"0 0 2px" }}>
+              <p style={{ fontSize:13, fontWeight:700, color:"#1A1612", margin:"0 0 2px" }}>
                 Invita a más familiares
               </p>
-              <p style={{ fontSize:10, color:"rgba(255,255,255,0.38)", margin:0 }}>
-                Tu galaxia tiene {visibleCount} personas — crécela
+              <p style={{ fontSize:10, color:"#9A9084", margin:0 }}>
+                Tu linaje tiene {visibleCount} personas — crécelo
               </p>
             </div>
             <Link href="/invitar" style={{ textDecoration:"none", flexShrink:0 }}>
               <div style={{
                 padding:"9px 18px", borderRadius:50,
-                background:"#c9a820",
-                borderTop:"1.5px solid #ffe060",
-                color:"#030208", fontSize:12, fontWeight:800,
-                animation:"aura-pulse 2.4s ease-in-out infinite 0.6s",
-                position:"relative", overflow:"hidden",
+                background:"#C8882A",
+                color:"#fff", fontSize:12, fontWeight:700,
+                boxShadow:"0 4px 10px rgba(200,136,42,0.25)",
               }}>
-                <div style={{ position:"absolute", top:0, width:"45%", height:"100%",
-                  background:"linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent)",
-                  animation:"shimmer-sweep 3s ease-in-out infinite 0.8s", pointerEvents:"none" }} />
                 Invitar
               </div>
             </Link>
@@ -1667,8 +1180,8 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Navegación inferior cósmica */}
-      <CosmicNav />
+      {/* Navegación inferior */}
+      <BottomNav />
 
       {/* ── Lightbox de foto ─────────────────────────────────────────────── */}
       {lightboxPhoto && (

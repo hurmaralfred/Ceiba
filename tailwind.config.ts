@@ -9,6 +9,55 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        /* ── LINAJE — paleta principal ─────────────── */
+        navy: {
+          50:  '#EAF0F8',
+          100: '#D0DFEE',
+          200: '#A2BFDD',
+          300: '#759FCB',
+          400: '#4A7FBA',
+          500: '#2E5A93',
+          600: '#1E2E4A',
+          700: '#162338',
+          800: '#0F1B2C',
+          900: '#081320',
+        },
+        sage: {
+          50:  '#EDF2E9',
+          100: '#D6E3D0',
+          200: '#ADC7A1',
+          300: '#87AD7A',
+          400: '#7A8C6E',
+          500: '#627258',
+          600: '#4D5A45',
+          700: '#3A4435',
+          800: '#293020',
+          900: '#1A1F14',
+        },
+        stone: {
+          50:  '#FDFCFA',
+          100: '#F4F1EC',
+          200: '#E8E4DC',
+          300: '#DDD8CF',
+          400: '#C8C0B2',
+          500: '#B0A898',
+          600: '#8A8278',
+          700: '#6B6258',
+          800: '#4D473E',
+          900: '#2E2A24',
+        },
+        honey: {
+          50:  '#FDF6E8',
+          100: '#FAEBD2',
+          200: '#F5D6A5',
+          300: '#EFC07A',
+          400: '#E4A84F',
+          500: '#C8882A',
+          600: '#A56B1A',
+          700: '#844F0F',
+          800: '#6A3C08',
+          900: '#522D04',
+        },
         ceiba: {
           50:  "#f2f7ee",
           100: "#e4eed9",
@@ -70,8 +119,8 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans:    ["var(--font-inter)", "system-ui", "sans-serif"],
-        display: ["var(--font-playfair)", "Georgia", "serif"],
+        sans:    ["var(--font-jakarta)", "system-ui", "sans-serif"],
+        display: ["var(--font-fraunces)", "Georgia", "serif"],
       },
       fontSize: {
         "display-xl": ["4rem",     { lineHeight: "1.05", letterSpacing: "-0.02em" }],

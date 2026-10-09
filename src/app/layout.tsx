@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Playfair_Display } from "next/font/google";
+import { Fraunces, Plus_Jakarta_Sans } from "next/font/google";
 import { Toaster } from "react-hot-toast";
 import { Analytics } from "@vercel/analytics/react";
 import InstallPrompt from "@/components/InstallPrompt";
@@ -12,8 +12,18 @@ import LuminousFrame from "@/components/LuminousFrame";
 import { FamilyPresenceProvider } from "@/contexts/FamilyPresenceContext";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
-const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-playfair" });
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  variable: "--font-fraunces",
+  weight: ["300", "400", "500", "600", "700", "800", "900"],
+  style: ["normal", "italic"],
+  axes: ["opsz"],
+});
+const plusJakarta = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  variable: "--font-jakarta",
+  weight: ["300", "400", "500", "600", "700", "800"],
+});
 
 export const metadata: Metadata = {
   title: "Ceiba – Conecta tu familia",
@@ -28,7 +38,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#030208",
+  themeColor: "#F4F1EC",
   width: "device-width",
   initialScale: 1,
 };
@@ -43,7 +53,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="Ceiba" />
       </head>
-      <body className={`${inter.variable} ${playfair.variable} font-sans bg-cream-100 text-ceiba-900 min-h-screen`}>
+      <body className={`${fraunces.variable} ${plusJakarta.variable} font-sans bg-stone-100 text-stone-900 min-h-screen`}>
         <Toaster position="top-center" />
         <LuminousFrame />
         <FamilyPresenceProvider>

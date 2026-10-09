@@ -5,11 +5,11 @@ import { usePathname } from "next/navigation";
 import { Home, Bell, Send, Camera, Settings } from "lucide-react";
 
 const TABS = [
-  { href: "/home",     icon: Home,      label: "Inicio",  pulse: false, highlight: false },
-  { href: "/feed",     icon: Bell,      label: "Feed",    pulse: false, highlight: false },
-  { href: "/invitar",  icon: Send,      label: "Invitar", pulse: false, highlight: true  },
-  { href: "/photos",   icon: Camera,    label: "Fotos",   pulse: false, highlight: false },
-  { href: "/settings", icon: Settings,  label: "Ajustes", pulse: false, highlight: false },
+  { href: "/home",     icon: Home,      label: "Inicio",  cta: false },
+  { href: "/feed",     icon: Bell,      label: "Feed",    cta: false },
+  { href: "/invitar",  icon: Send,      label: "Invitar", cta: true  },
+  { href: "/photos",   icon: Camera,    label: "Fotos",   cta: false },
+  { href: "/settings", icon: Settings,  label: "Ajustes", cta: false },
 ];
 
 const CACHE_KEY = "ceiba_birthday_today";
@@ -19,7 +19,6 @@ export default function BottomNav() {
   const [birthdayToday, setBirthdayToday] = useState(false);
 
   useEffect(() => {
-    // Read from sessionStorage first to avoid redundant fetches per session
     const cached = sessionStorage.getItem(CACHE_KEY);
     if (cached !== null) {
       setBirthdayToday(cached === "1");
@@ -42,35 +41,89 @@ export default function BottomNav() {
   }, []);
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-cream-50 border-t border-cream-300 safe-area-pb">
-      <div className="flex items-center justify-around max-w-lg mx-auto">
-        {TABS.map(({ href, icon: Icon, label, highlight }) => {
+    <nav
+      className="fixed bottom-0 left-0 right-0 z-50 safe-area-pb"
+      style={{
+        background: "var(--color-surface)",
+        borderTop: "1px solid var(--color-border)",
+      }}
+    >
+      <div className="flex items-stretch justify-around max-w-lg mx-auto">
+        {TABS.map(({ href, icon: Icon, label, cta }) => {
           const active = pathname === href || pathname.startsWith(href + "/");
           const showBadge = href === "/feed" && birthdayToday && !active;
+
+          if (cta) {
+            return (
+              <Link
+                key={href}
+                href={href}
+                className="relative flex flex-col items-center justify-center gap-1 px-3 py-2 flex-1 min-w-0"
+              >
+                <div
+                  className="flex items-center justify-center w-9 h-9 rounded-xl transition-all duration-150 active:scale-95"
+                  style={{
+                    background: active ? "var(--color-primary)" : "var(--color-honey)",
+                    color: "#fff",
+                    boxShadow: "0 2px 8px rgba(200,136,42,0.28)",
+                  }}
+                >
+                  <Icon size={18} strokeWidth={2.2} />
+                </div>
+                <span
+                  className="text-[10px] font-semibold"
+                  style={{ color: active ? "var(--color-primary)" : "var(--color-honey)" }}
+                >
+                  {label}
+                </span>
+              </Link>
+            );
+          }
+
           return (
             <Link
               key={href}
               href={href}
-              className={`relative flex flex-col items-center gap-0.5 px-3 py-2 transition-colors min-w-0 flex-1 ${
-                highlight && !active
-                  ? "text-earth-500"
-                  : active
-                  ? "text-ceiba-700"
-                  : "text-ceiba-400 hover:text-ceiba-600"
-              }`}
+              className="relative flex flex-col items-center justify-center gap-1 px-3 py-2 flex-1 min-w-0 transition-colors"
             >
+              {/* Active indicator — small honey dot at bottom */}
               {active && (
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-ceiba-700 rounded-b-full" />
+                <div
+                  className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full"
+                  style={{ background: "var(--color-honey)" }}
+                />
               )}
-              <div className={`relative ${highlight && !active ? "bg-earth-100 rounded-full p-1.5 -my-0.5" : ""}`}>
-                <Icon size={highlight && !active ? 20 : 22} strokeWidth={active ? 2.5 : 1.8} />
+              <div className="relative">
+                <Icon
+                  size={22}
+                  strokeWidth={active ? 2.3 : 1.7}
+                  style={{
+                    color: active
+                      ? "var(--color-primary)"
+                      : "var(--color-text-muted)",
+                    transition: "color 0.15s",
+                  }}
+                />
                 {showBadge && (
-                  <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-amber-400 rounded-full border-2 border-cream-50" />
+                  <span
+                    className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full border-2"
+                    style={{
+                      background: "var(--color-honey)",
+                      borderColor: "var(--color-surface)",
+                    }}
+                  />
                 )}
               </div>
-              <span className={`text-[10px] font-medium truncate ${
-                active ? "text-ceiba-700 font-bold" : highlight ? "text-earth-500" : "text-ceiba-400"
-              }`}>
+              <span
+                className="text-[10px] font-medium truncate"
+                style={{
+                  color: active
+                    ? "var(--color-primary)"
+                    : "var(--color-text-muted)",
+                  fontWeight: active ? 600 : 400,
+                  transition: "color 0.15s",
+                }}
+              >
                 {label}
               </span>
             </Link>
