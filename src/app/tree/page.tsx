@@ -29,6 +29,7 @@ import { CosmicNav } from "@/components/ui/cosmic";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useFamilyPresenceContext } from "@/contexts/FamilyPresenceContext";
 import RotateHintWeb from "@/components/RotateHintWeb";
+import RaicesPanel from "@/components/raices/RaicesPanel";
 import toast from "react-hot-toast";
 
 const FamilyTreeGraph = lazyLoad(
@@ -2081,6 +2082,8 @@ function TreePageContent() {
           </div>
         </>
       )}
+
+      <RaicesPanel />
 
       <CosmicNav />
 
