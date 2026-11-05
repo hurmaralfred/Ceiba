@@ -1,0 +1,17 @@
+{
+  "name": "Ceiba",
+  "install": "cd /agent/repos/Ceiba && npm install && { [ -f .env.local ] || [ -n \"$NEXT_PUBLIC_SUPABASE_URL\" ] || printf 'NEXT_PUBLIC_SUPABASE_URL=https://placeholder.supabase.co\\nNEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder-anon-key\\n' > .env.local; }",
+  "terminals": [
+    {
+      "name": "next-dev",
+      "command": "cd /agent/repos/Ceiba && npm run dev",
+      "description": "Next.js dev server on http://localhost:3000. With placeholder Supabase env, public pages render and protected routes redirect to /auth/login. Set real NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY secrets to enable auth and data flows."
+    }
+  ],
+  "ports": [
+    {
+      "name": "web",
+      "port": 3000
+    }
+  ]
+}
