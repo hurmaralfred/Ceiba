@@ -58,7 +58,7 @@ export default function BottomNav() {
               <Link
                 key={href}
                 href={href}
-                className="relative flex flex-col items-center justify-center gap-1 px-3 py-2 flex-1 min-w-0"
+                className="relative flex flex-col items-center justify-center gap-1 px-1 py-2 flex-1 min-w-0"
               >
                 <div
                   className="flex items-center justify-center w-9 h-9 rounded-xl transition-all duration-150 active:scale-95"
@@ -71,7 +71,7 @@ export default function BottomNav() {
                   <Icon size={18} strokeWidth={2.2} />
                 </div>
                 <span
-                  className="text-[10px] font-semibold"
+                  className="text-[0.9375rem] font-semibold leading-none"
                   style={{ color: active ? "var(--color-primary)" : "var(--color-honey)" }}
                 >
                   {label}
@@ -84,7 +84,7 @@ export default function BottomNav() {
             <Link
               key={href}
               href={href}
-              className="relative flex flex-col items-center justify-center gap-1 px-3 py-2 flex-1 min-w-0 transition-colors"
+              className="relative flex flex-col items-center justify-center gap-1 px-1 py-2 flex-1 min-w-0 transition-colors"
             >
               {/* Active indicator — small honey dot at bottom */}
               {active && (
@@ -115,7 +115,7 @@ export default function BottomNav() {
                 )}
               </div>
               <span
-                className="text-[10px] font-medium truncate"
+                className="text-[0.9375rem] font-medium leading-none"
                 style={{
                   color: active
                     ? "var(--color-primary)"

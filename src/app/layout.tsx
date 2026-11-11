@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Plus_Jakarta_Sans } from "next/font/google";
 import { Toaster } from "react-hot-toast";
 import { Analytics } from "@vercel/analytics/react";
 import InstallPrompt from "@/components/InstallPrompt";
@@ -10,48 +9,47 @@ import NotificationBanner from "@/components/NotificationBanner";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import LuminousFrame from "@/components/LuminousFrame";
 import { FamilyPresenceProvider } from "@/contexts/FamilyPresenceContext";
+import { atkinson, fraunces } from "./fonts";
+import { shareMetadata } from "@/lib/seo";
 import "./globals.css";
 
-const fraunces = Fraunces({
-  subsets: ["latin"],
-  variable: "--font-fraunces",
-  style: ["normal", "italic"],
-});
-const plusJakarta = Plus_Jakarta_Sans({
-  subsets: ["latin"],
-  variable: "--font-jakarta",
-  weight: ["300", "400", "500", "600", "700", "800"],
-});
-
 export const metadata: Metadata = {
-  title: "Ceiba – Conecta tu familia",
-  description: "Descubre y conecta con tus familiares, cerca o lejos, conocidos o por conocer.",
+  ...shareMetadata("/"),
   manifest: "/manifest.json",
+  applicationName: "Ceiba",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "default",
     title: "Ceiba",
   },
   formatDetection: { telephone: false },
+  icons: {
+    icon: [
+      { url: "/logo/favicon.svg", type: "image/svg+xml" },
+      { url: "/icons/icon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#F4F1EC",
+  themeColor: "#FBF6EE",
   width: "device-width",
   initialScale: 1,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es">
+    <html lang="es" className={`${fraunces.variable} ${atkinson.variable}`}>
       <head>
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Ceiba" />
       </head>
-      <body className={`${fraunces.variable} ${plusJakarta.variable} font-sans bg-stone-100 text-stone-900 min-h-screen`}>
+      <body className={`${fraunces.variable} ${atkinson.variable} font-sans min-h-screen`}>
         <Toaster position="top-center" />
         <LuminousFrame />
         <FamilyPresenceProvider>

@@ -12,7 +12,7 @@ function sendBrowserNotif(title: string, body: string) {
   if (typeof window === "undefined") return;
   if (!("Notification" in window)) return;
   if (Notification.permission === "granted") {
-    new Notification(title, { body, icon: "/icons/icon-192x192.png", badge: "/icons/icon-72x72.png" });
+    new Notification(title, { body, icon: "/icons/icon-192.png", badge: "/icons/icon-192.png" });
   }
 }
 

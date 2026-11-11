@@ -1,0 +1,27 @@
+/* Ceiba · Tokens (Dirección A) */
+:root{
+  --s-0:0; --s-1:.25rem; --s-2:.5rem; --s-3:.75rem; --s-4:1rem; --s-5:1.25rem;
+  --s-6:1.5rem; --s-8:2rem; --s-10:2.5rem; --s-12:3rem; --s-16:4rem;
+  --gutter:var(--s-5);
+  --touch-min:3rem;
+  --r-sm:.5rem;
+  --r-md:.75rem;
+  --r-lg:1rem;
+  --r-xl:1.5rem;
+  --r-full:9999px;
+  --b-hair:1px; --b-base:1.5px; --b-strong:2px; --b-focus:3px; --focus-offset:2px;
+  --e-0:none;
+  --e-1:0 1px 2px rgb(42 33 24 / .08), 0 1px 1px rgb(42 33 24 / .04);
+  --e-2:0 4px 10px -2px rgb(42 33 24 / .12), 0 2px 4px rgb(42 33 24 / .06);
+  --e-3:0 12px 28px -6px rgb(42 33 24 / .20), 0 4px 8px rgb(42 33 24 / .08);
+  --d-instant:80ms; --d-fast:150ms; --d-base:220ms; --d-slow:320ms;
+  --ease-standard:cubic-bezier(.2,0,0,1);
+  --ease-enter:cubic-bezier(0,0,0,1);
+  --ease-exit:cubic-bezier(.3,0,1,1);
+  --z-nav:40; --z-sheet:50; --z-modal:60; --z-toast:70;
+}
+[data-theme=dark]{
+  --e-1:0 0 0 1px var(--c-line);
+  --e-2:0 0 0 1px var(--c-line), 0 4px 12px rgb(0 0 0 / .45);
+  --e-3:0 0 0 1px var(--c-line), 0 12px 32px rgb(0 0 0 / .6);
+}

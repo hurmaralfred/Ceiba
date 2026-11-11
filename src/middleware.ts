@@ -51,7 +51,18 @@ export async function middleware(request: NextRequest) {
     (protectedPaths.some(p => request.nextUrl.pathname.startsWith(p)) ||
     request.nextUrl.pathname === '/invite')
 
-  if (!user && isProtected) {
+  // Link-preview crawlers have no session. This exception is only the exact
+  // paths /home and /invitar, so those crawlers can read the generic OG tags
+  // in the server-rendered head. It is not a prefix match and it does not
+  // include /invite (that route is the logged-in invite-others flow).
+  // /invite/[token] is already public and does not need this exception.
+  const linkPreviewPaths = new Set(["/home", "/invitar"]);
+  const linkPreviewBot = /facebookexternalhit|Facebot|Twitterbot|WhatsApp|LinkedInBot|Slackbot|TelegramBot|Discordbot|Pinterest/i;
+  const isLinkPreview =
+    linkPreviewPaths.has(request.nextUrl.pathname) &&
+    linkPreviewBot.test(request.headers.get("user-agent") ?? "");
+
+  if (!user && isProtected && !isLinkPreview) {
     const url = request.nextUrl.clone()
     url.pathname = '/auth/login'
     return NextResponse.redirect(url)

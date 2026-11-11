@@ -1,0 +1,69 @@
+/* Ceiba · Corteza y raíz (Dirección A). Valores exactos del handoff. */
+:root{
+  --c-bg:#FBF6EE;
+  --c-surface:#FFFFFF;
+  --c-surface-2:#F3EBDD;
+  --c-line:#D9CCB6;
+  --c-ink:#2A2118;
+  --c-muted:#6B5D4F;
+  --c-primary:#2F5233;
+  --c-primary-hover:#264429;
+  --c-primary-press:#1D361F;
+  --c-on-primary:#FFFFFF;
+  --c-primary-soft:#E3EBDD;
+  --c-secondary:#A9472A;
+  --c-secondary-hover:#8F3B22;
+  --c-on-secondary:#FFFFFF;
+  --c-secondary-soft:#F6E1D7;
+  --c-accent:#7A5A10;
+  --c-accent-deco:#C9962B;
+  --c-accent-soft:#F5E9C9;
+  --c-success:#2E6B3A;
+  --c-success-soft:#E2F0E3;
+  --c-error:#B3261E;
+  --c-error-soft:#FBE4E1;
+  --c-warning:#8A5A00;
+  --c-warning-soft:#FBEFD3;
+  --c-info:#2B5C8A;
+  --c-info-soft:#E1ECF6;
+  --c-rel-blood:#2F5233;
+  --c-rel-inlaw:#A9472A;
+  --c-rel-deceased:#7D7266;
+  --c-focus:#2B5C8A;
+  --c-line-strong:#8C7D6B;
+}
+/* Dark tokens stay opt-in. The approved chrome is light #FBF6EE;
+   cosmic screens keep their own backgrounds and do not follow the OS theme. */
+[data-theme=dark]{
+  --c-bg:#17130F;
+  --c-surface:#211C17;
+  --c-surface-2:#2B251F;
+  --c-line:#4A4036;
+  --c-ink:#F3EDE2;
+  --c-muted:#B9AE9C;
+  --c-primary:#8FBF8C;
+  --c-primary-hover:#A3CDA0;
+  --c-primary-press:#7AAE77;
+  --c-on-primary:#13200F;
+  --c-primary-soft:#24331F;
+  --c-secondary:#E39274;
+  --c-secondary-hover:#EBA68C;
+  --c-on-secondary:#2A1208;
+  --c-secondary-soft:#3A2219;
+  --c-accent:#E2B657;
+  --c-accent-deco:#E2B657;
+  --c-accent-soft:#3A2F14;
+  --c-success:#7DC48A;
+  --c-success-soft:#1D3322;
+  --c-error:#F2B8B5;
+  --c-error-soft:#3D1C1A;
+  --c-warning:#F0C062;
+  --c-warning-soft:#3A2C0E;
+  --c-info:#9CC3EA;
+  --c-info-soft:#1A2A3A;
+  --c-rel-blood:#8FBF8C;
+  --c-rel-inlaw:#E39274;
+  --c-rel-deceased:#A39888;
+  --c-focus:#9CC3EA;
+  --c-line-strong:#8A7E6E;
+}

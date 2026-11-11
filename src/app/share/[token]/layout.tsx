@@ -1,5 +1,6 @@
 import { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { OG_IMAGE_URL, absoluteUrl, ogImage } from "@/lib/seo";
 
 export async function generateMetadata({
   params,
@@ -27,24 +28,23 @@ export async function generateMetadata({
     ? `${ownerName} te invita a ver su galaxia familiar. Ubicado en ${location}. Únete a Ceiba y conecta con tu familia.`
     : `${ownerName} te invita a ver su galaxia familiar en Ceiba. Conecta con tu familia donde estés.`;
 
-  const avatarUrl = profile?.avatar_url || null;
-
   return {
     title,
     description,
     openGraph: {
       title,
       description,
+      url: absoluteUrl(`/share/${params.token}`),
       type: "website",
       locale: "es_ES",
-      siteName: "Ceiba — Tu familia, conectada",
-      ...(avatarUrl && { images: [{ url: avatarUrl, width: 400, height: 400, alt: ownerName }] }),
+      siteName: "Ceiba",
+      images: [ogImage],
     },
     twitter: {
-      card: avatarUrl ? "summary_large_image" : "summary",
+      card: "summary_large_image",
       title,
       description,
-      ...(avatarUrl && { images: [avatarUrl] }),
+      images: [OG_IMAGE_URL],
     },
   };
 }
