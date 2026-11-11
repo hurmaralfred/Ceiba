@@ -16,19 +16,18 @@ import { ModalSheet } from "@/components/ui/ModalSheet";
 import { FormField } from "@/components/ui/FormField";
 
 const PALETTE = [
-  { name: "Terracota 500", hex: "#c1603a", cls: "bg-earth-500"  },
-  { name: "Terracota 600", hex: "#a84f2f", cls: "bg-earth-600"  },
-  { name: "Terracota 100", hex: "#fae5d8", cls: "bg-earth-100"  },
-  { name: "Cream BG",      hex: "#f7edd9", cls: "bg-[#f7edd9]"  },
-  { name: "Cream 100",     hex: "#fdf8f1", cls: "bg-cream-100"  },
-  { name: "Cream 300",     hex: "#eedfc6", cls: "bg-cream-300"  },
-  { name: "Verde 600",     hex: "#5c7a52", cls: "bg-ceiba-600"  },
-  { name: "Verde 100",     hex: "#e4eed9", cls: "bg-ceiba-100"  },
-  { name: "Dorado 500",    hex: "#c4922a", cls: "bg-gold-500"   },
-  { name: "Dorado 300",    hex: "#edcf88", cls: "bg-gold-300"   },
-  { name: "Marrón 700",    hex: "#3d2b1a", cls: "bg-brown-700"  },
-  { name: "Marrón 800",    hex: "#2e1c0e", cls: "bg-brown-800"  },
-  { name: "Oscuro BG",     hex: "#0d1320", cls: "bg-[#0d1320]"  },
+  { name: "Musgo",         hex: "#2F5233", cls: "bg-ceiba-600"  },
+  { name: "Musgo hover",   hex: "#264429", cls: "bg-ceiba-700"  },
+  { name: "Musgo suave",   hex: "#E3EBDD", cls: "bg-ceiba-100"  },
+  { name: "Fondo",         hex: "#FBF6EE", cls: "bg-cream-100"  },
+  { name: "Superficie",    hex: "#FFFFFF", cls: "bg-white"      },
+  { name: "Terracota",     hex: "#A9472A", cls: "bg-earth-500"  },
+  { name: "Terracota suave", hex: "#F6E1D7", cls: "bg-earth-100" },
+  { name: "Acento",        hex: "#7A5A10", cls: "bg-gold-500"   },
+  { name: "Acento deco",   hex: "#C9962B", cls: "bg-gold-300"   },
+  { name: "Tinta",         hex: "#2A2118", cls: "bg-brown-700"  },
+  { name: "Apagado",       hex: "#6B5D4F", cls: "bg-brown-400"  },
+  { name: "Línea",         hex: "#D9CCB6", cls: "bg-cream-300"  },
 ];
 
 const NAV_ITEMS = [
@@ -49,7 +48,7 @@ export function DesignSystemPreview() {
       <div className="bg-cream-100 border-b border-cream-400 px-5 py-4 sticky top-0 z-40">
         <div className="max-w-3xl mx-auto flex items-center justify-between">
           <div>
-            <h1 className="font-display font-bold text-title-lg text-brown-800">
+            <h1 className="font-display font-semibold text-title-lg text-brown-800">
               Sistema Visual · Ceiba
             </h1>
             <p className="text-caption text-brown-400">Solo en desarrollo</p>
@@ -81,31 +80,31 @@ export function DesignSystemPreview() {
           <SectionHeader title="Tipografía" subtitle="Escala editorial" className="mb-6" />
           <Card variant="default" padding="lg" className="space-y-5">
             <div>
-              <p className="text-tiny text-brown-400 mb-1 font-mono">display-xl · Playfair Display · 64px</p>
-              <p className="font-display font-bold text-display-xl text-brown-800 leading-tight">90 años</p>
+              <p className="text-tiny text-brown-400 mb-1 font-mono">display · Fraunces 600</p>
+              <p className="font-display font-semibold text-display-xl text-brown-800 leading-tight">90 años</p>
             </div>
             <div>
-              <p className="text-tiny text-brown-400 mb-1 font-mono">display · Playfair Display · 48px</p>
-              <p className="font-display font-bold text-display text-brown-800">Nuestras Raíces</p>
+              <p className="text-tiny text-brown-400 mb-1 font-mono">h1 · Fraunces 600</p>
+              <p className="font-display font-semibold text-display text-brown-800">Nuestras Raíces</p>
             </div>
             <div>
-              <p className="text-tiny text-brown-400 mb-1 font-mono">heading · Playfair Display · 32px</p>
-              <p className="font-display font-bold text-heading text-brown-800">Abuela Carmen</p>
+              <p className="text-tiny text-brown-400 mb-1 font-mono">h2 · Fraunces 600</p>
+              <p className="font-display font-semibold text-heading text-brown-800">Abuela Carmen</p>
             </div>
             <div>
-              <p className="text-tiny text-brown-400 mb-1 font-mono">title-lg · Inter · 22px · 600</p>
+              <p className="text-tiny text-brown-400 mb-1 font-mono">h3 · Atkinson 700</p>
               <p className="text-title-lg font-semibold text-brown-800">Familiares Conectados</p>
             </div>
             <div>
-              <p className="text-tiny text-brown-400 mb-1 font-mono">title · Inter · 18px · 600</p>
+              <p className="text-tiny text-brown-400 mb-1 font-mono">body · Atkinson 400 · 18px</p>
               <p className="text-title font-semibold text-brown-700">María López · Hace 2 horas</p>
             </div>
             <div>
-              <p className="text-tiny text-brown-400 mb-1 font-mono">body · Inter · 15px · 400</p>
+              <p className="text-tiny text-brown-400 mb-1 font-mono">body · Atkinson 400</p>
               <p className="text-body text-brown-600">¡Qué recuerdos! Esta casa guarda tantas historias familiares de generaciones.</p>
             </div>
             <div>
-              <p className="text-tiny text-brown-400 mb-1 font-mono">caption · Inter · 13px · 400</p>
+              <p className="text-tiny text-brown-400 mb-1 font-mono">caption · Atkinson 400 · 15px</p>
               <p className="text-caption text-brown-400">recordemos con amor · 1934 – 2024</p>
             </div>
           </Card>

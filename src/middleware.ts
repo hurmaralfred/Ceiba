@@ -51,7 +51,12 @@ export async function middleware(request: NextRequest) {
     (protectedPaths.some(p => request.nextUrl.pathname.startsWith(p)) ||
     request.nextUrl.pathname === '/invite')
 
-  if (!user && isProtected) {
+  // Los crawlers de unfurl (WhatsApp, Facebook, X) no tienen sesión.
+  // Sin esta excepción, /home y /invitar redirigen a login y el <head> con og:* no se entrega.
+  const linkPreviewBot = /facebookexternalhit|Facebot|Twitterbot|WhatsApp|LinkedInBot|Slackbot|TelegramBot|Discordbot|Pinterest/i;
+  const isLinkPreview = linkPreviewBot.test(request.headers.get("user-agent") ?? "");
+
+  if (!user && isProtected && !isLinkPreview) {
     const url = request.nextUrl.clone()
     url.pathname = '/auth/login'
     return NextResponse.redirect(url)

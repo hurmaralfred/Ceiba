@@ -1,52 +1,56 @@
+@import "../styles/ceiba-colors.css";
+@import "../styles/ceiba-tokens.css";
+@import "../styles/ceiba-type.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    /* ── LINAJE — Paleta principal ─────────────────────────── */
-    --color-bg:            #F4F1EC;
-    --color-surface:       #FDFCFA;
-    --color-surface-warm:  #EDE9E1;
-    --color-primary:       #1E2E4A;
-    --color-primary-hover: #162338;
-    --color-primary-light: #EAF0F8;
-    --color-sage:          #7A8C6E;
-    --color-sage-light:    #EDF2E9;
-    --color-honey:         #C8882A;
-    --color-honey-hover:   #A56B1A;
-    --color-honey-light:   #FDF1E0;
-    --color-text-primary:  #1A1612;
-    --color-text-body:     #3D3428;
-    --color-text-secondary:#6B6258;
-    --color-text-muted:    #9A9084;
-    --color-border:        #DDD8CF;
-    --color-border-strong: #C8C0B2;
-    --color-divider:       #E8E4DC;
+    /* ── Corteza y raíz — alias de los tokens en ceiba-colors.css ── */
+    --color-bg:            var(--c-bg);
+    --color-surface:       var(--c-surface);
+    --color-surface-warm:  var(--c-surface-2);
+    --color-primary:       var(--c-primary);
+    --color-primary-hover: var(--c-primary-hover);
+    --color-primary-light: var(--c-primary-soft);
+    --color-sage:          var(--c-primary);
+    --color-sage-light:    var(--c-primary-soft);
+    --color-honey:         var(--c-accent);
+    --color-honey-hover:   var(--c-accent);
+    --color-honey-light:   var(--c-accent-soft);
+    --color-text-primary:  var(--c-ink);
+    --color-text-body:     var(--c-ink);
+    --color-text-secondary:var(--c-muted);
+    --color-text-muted:    var(--c-muted);
+    --color-border:        var(--c-line);
+    --color-border-strong: var(--c-line-strong);
+    --color-divider:       var(--c-line);
 
     /* ── backward compat (pantallas no migradas) ──────────── */
-    --color-terra:         #c1603a;
-    --color-terra-hover:   #a84f2f;
-    --color-terra-light:   #fae5d8;
-    --color-green:         #5c7a52;
-    --color-green-light:   #e4eed9;
-    --color-gold:          #c4922a;
-    --color-gold-light:    #fbf0d8;
+    --color-terra:         var(--c-secondary);
+    --color-terra-hover:   var(--c-secondary-hover);
+    --color-terra-light:   var(--c-secondary-soft);
+    --color-green:         var(--c-primary);
+    --color-green-light:   var(--c-primary-soft);
+    --color-gold:          var(--c-accent-deco);
+    --color-gold-light:    var(--c-accent-soft);
 
     /* ── Superficies oscuras (árbol / perfil) ─────────────── */
-    --color-dark-bg:      #0d1320;
-    --color-dark-surface: #1a2235;
-    --color-dark-glass:   rgba(14,18,32,0.90);
-    --color-dark-border:  rgba(255,255,255,0.10);
-    --color-dark-text:    rgba(255,255,255,0.92);
-    --color-dark-muted:   rgba(255,255,255,0.55);
+    --color-dark-bg:      #17130F;
+    --color-dark-surface: #211C17;
+    --color-dark-glass:   rgba(23,19,15,0.90);
+    --color-dark-border:  #4A4036;
+    --color-dark-text:    #F3EDE2;
+    --color-dark-muted:   #B9AE9C;
 
-    /* ── Sombras ───────────────────────────────────────────── */
-    --shadow-xs: 0 1px 2px rgba(30,46,74,0.06);
-    --shadow-sm: 0 1px 4px rgba(30,46,74,0.08), 0 1px 2px rgba(30,46,74,0.04);
-    --shadow:    0 4px 12px rgba(30,46,74,0.10), 0 2px 4px rgba(30,46,74,0.06);
-    --shadow-md: 0 6px 18px rgba(30,46,74,0.12), 0 3px 6px rgba(30,46,74,0.06);
-    --shadow-lg: 0 10px 28px rgba(30,46,74,0.14), 0 4px 8px rgba(30,46,74,0.08);
+    /* ── Sombras (tinta #2A2118) ──────────────────────────── */
+    --shadow-xs: 0 1px 2px rgb(42 33 24 / 0.06);
+    --shadow-sm: 0 1px 4px rgb(42 33 24 / 0.08), 0 1px 2px rgb(42 33 24 / 0.04);
+    --shadow:    0 4px 12px rgb(42 33 24 / 0.10), 0 2px 4px rgb(42 33 24 / 0.06);
+    --shadow-md: 0 6px 18px rgb(42 33 24 / 0.12), 0 3px 6px rgb(42 33 24 / 0.06);
+    --shadow-lg: 0 10px 28px rgb(42 33 24 / 0.14), 0 4px 8px rgb(42 33 24 / 0.08);
 
     /* ── Radios ────────────────────────────────────────────── */
     --radius-sm:   0.5rem;
@@ -58,27 +62,29 @@
     --radius-full: 9999px;
 
     /* backward-compat */
-    --ceiba-green: #5c7a52;
-    --ceiba-light: #e4eed9;
-    --earth-brown: #c1603a;
-    --cream-bg:    #F4F1EC;
-    --warm-border: #DDD8CF;
+    --ceiba-green: var(--c-primary);
+    --ceiba-light: var(--c-primary-soft);
+    --earth-brown: var(--c-secondary);
+    --cream-bg:    var(--c-bg);
+    --warm-border: var(--c-line);
   }
 
   * { box-sizing: border-box; }
 
   body {
     @apply antialiased;
-    background-color: var(--color-bg);
-    color: var(--color-text-primary);
-    font-family: var(--font-jakarta), system-ui, sans-serif;
+    background-color: var(--c-bg);
+    color: var(--c-ink);
+    font-family: var(--font-body);
+    font-size: var(--t-body);
+    line-height: var(--lh-body);
   }
 
   html { scroll-behavior: smooth; }
 
   :focus-visible {
-    outline: 2px solid var(--color-terra);
-    outline-offset: 2px;
+    outline: var(--b-focus) solid var(--c-focus);
+    outline-offset: var(--focus-offset);
     border-radius: var(--radius-sm);
   }
 
@@ -93,21 +99,37 @@
 }
 
 @layer components {
-  /* ── Botón principal: navy ──────────────────────────────── */
+  /* ── Botón principal: musgo ─────────────────────────────── */
   .btn-primary {
-    @apply bg-navy-600 hover:bg-navy-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply font-semibold py-3 px-6 rounded-xl transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+    background-color: var(--c-primary);
+    color: var(--c-on-primary);
     box-shadow: var(--shadow-sm);
   }
-  .btn-primary:hover:not(:disabled) { box-shadow: var(--shadow); }
+  .btn-primary:hover:not(:disabled) {
+    background-color: var(--c-primary-hover);
+    box-shadow: var(--shadow);
+  }
+  .btn-primary:active:not(:disabled) { background-color: var(--c-primary-press); }
   /* ── Botón secundario ───────────────────────────────────── */
   .btn-secondary {
-    @apply bg-stone-100 hover:bg-stone-200 text-navy-600 font-semibold py-3 px-6 rounded-xl border border-stone-300 transition-all duration-200 active:scale-95;
+    @apply font-semibold py-3 px-6 rounded-xl transition-all duration-200 active:scale-95;
+    background-color: var(--c-surface);
+    color: var(--c-primary);
+    border: 1px solid var(--c-line);
     box-shadow: var(--shadow-xs);
   }
-  .btn-secondary:hover { box-shadow: var(--shadow-sm); }
+  .btn-secondary:hover { box-shadow: var(--shadow-sm); background-color: var(--c-primary-soft); }
   /* ── Campo de entrada ───────────────────────────────────── */
   .input-field {
-    @apply w-full px-4 py-3 rounded-xl border border-stone-300 focus:border-navy-600 focus:ring-2 focus:ring-navy-100 outline-none transition-all bg-stone-50 text-stone-900;
+    @apply w-full px-4 py-3 rounded-xl outline-none transition-all;
+    border: 1px solid var(--c-line);
+    background-color: var(--c-surface);
+    color: var(--c-ink);
+  }
+  .input-field:focus {
+    border-color: var(--c-primary);
+    box-shadow: 0 0 0 2px var(--c-primary-soft);
   }
   /* ── Card base ──────────────────────────────────────────── */
   .card {

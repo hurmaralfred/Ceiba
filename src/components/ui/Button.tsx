@@ -18,13 +18,13 @@ const base =
 
 const variants: Record<NonNullable<ButtonProps["variant"]>, string> = {
   primary:
-    "bg-earth-500 hover:bg-earth-600 text-white shadow-warm-sm hover:shadow-warm focus-visible:ring-earth-400",
+    "bg-[var(--c-primary)] hover:bg-[var(--c-primary-hover)] active:bg-[var(--c-primary-press)] text-[var(--c-on-primary)] shadow-warm-sm hover:shadow-warm focus-visible:ring-[var(--c-focus)]",
   secondary:
     "bg-cream-100 hover:bg-cream-200 text-brown-700 border border-cream-400 shadow-warm-xs hover:shadow-warm-sm focus-visible:ring-earth-300",
   ghost:
     "bg-transparent hover:bg-earth-50 text-earth-500 hover:text-earth-600 focus-visible:ring-earth-300",
   gold:
-    "bg-gold-500 hover:bg-gold-600 text-white shadow-warm-sm hover:shadow-warm focus-visible:ring-gold-400",
+    "bg-[var(--c-accent)] hover:bg-[var(--c-accent)] text-[var(--c-on-primary)] shadow-warm-sm hover:shadow-warm focus-visible:ring-[var(--c-focus)]",
 };
 
 const sizes: Record<NonNullable<ButtonProps["size"]>, string> = {

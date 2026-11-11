@@ -171,25 +171,8 @@ function RegisterFormInner() {
 
         {/* Logo */}
         <Link href="/" className="flex flex-col items-center gap-1 mb-8 group">
-          <div className="w-14 h-14 rounded-2xl flex items-center justify-center"
-            style={{ background:"linear-gradient(135deg,#12082a 0%,#0a0520 100%)", boxShadow:"0 0 32px rgba(212,175,55,0.30), inset 0 1px 0 rgba(212,175,55,0.25)" }}>
-            <svg width="30" height="30" viewBox="0 0 38 38" fill="none">
-              <ellipse cx="19" cy="19" rx="15" ry="5.5" stroke="rgba(212,175,55,0.45)" strokeWidth="0.8" fill="none" transform="rotate(-25 19 19)"/>
-              <path d="M19 19 Q24 13 28 10" stroke="rgba(212,175,55,0.65)" strokeWidth="1.2" strokeLinecap="round" fill="none"/>
-              <path d="M19 19 Q14 25 10 28" stroke="rgba(212,175,55,0.55)" strokeWidth="1" strokeLinecap="round" fill="none"/>
-              <path d="M19 19 Q13 14 10 10" stroke="rgba(212,175,55,0.5)" strokeWidth="0.9" strokeLinecap="round" fill="none"/>
-              <path d="M19 19 Q25 24 28 28" stroke="rgba(212,175,55,0.45)" strokeWidth="0.8" strokeLinecap="round" fill="none"/>
-              <circle cx="25" cy="12" r="1.2" fill="rgba(255,240,180,0.9)"/>
-              <circle cx="12" cy="26" r="1.1" fill="rgba(255,240,180,0.8)"/>
-              <circle cx="12" cy="13" r="0.9" fill="rgba(212,175,55,0.7)"/>
-              <circle cx="26" cy="25" r="0.8" fill="rgba(212,175,55,0.65)"/>
-              <path d="M19 13.5 L19.6 17.4 L19 21 L18.4 17.4 Z" fill="rgba(255,245,200,0.92)"/>
-              <path d="M13.5 19 L17.4 19.6 L21 19 L17.4 18.4 Z" fill="rgba(255,245,200,0.92)"/>
-              <circle cx="19" cy="19" r="2.2" fill="rgba(255,245,200,0.95)"/>
-              <circle cx="19" cy="19" r="1" fill="white"/>
-            </svg>
-          </div>
-          <span className="font-display text-xl font-bold text-white mt-1">Ceiba</span>
+          <img src="/icons/icon-192.png" alt="" width={56} height={56} className="w-14 h-14 rounded-2xl" />
+          <span className="font-display text-xl font-semibold text-white mt-1">Ceiba</span>
         </Link>
 
         <div className="w-full max-w-sm">
@@ -285,12 +268,11 @@ function RegisterFormInner() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full flex items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-bold text-white transition-all active:scale-[0.98] disabled:opacity-50"
+                  className="w-full flex items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-bold transition-all active:scale-[0.98] disabled:opacity-50"
                   style={{
-                    background: loading
-                      ? "rgba(168,79,47,0.5)"
-                      : "linear-gradient(135deg, #c1603a 0%, #a84f2f 100%)",
-                    boxShadow: loading ? "none" : "0 4px 24px rgba(193,96,58,0.4)",
+                    background: loading ? "rgba(143,191,140,0.45)" : "#8FBF8C",
+                    color: "#13200F",
+                    boxShadow: loading ? "none" : "0 4px 24px rgba(143,191,140,0.28)",
                   }}
                 >
                   {loading ? "Creando tu cuenta..." : <>Crear cuenta <ArrowRight size={16} /></>}
@@ -321,7 +303,7 @@ export default function RegisterPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-ceiba-950 flex items-center justify-center">
-        <div className="w-12 h-12 rounded-2xl animate-pulse" style={{ background:"linear-gradient(135deg,#12082a,#0a0520)" }} />
+        <img src="/icons/icon-192.png" alt="" width={48} height={48} className="w-12 h-12 rounded-2xl" />
       </div>
     }>
       <RegisterFormInner />

@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Sparkles, Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 
@@ -63,8 +63,8 @@ export default function ResetPasswordPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2 text-white">
-            <Sparkles size={32} className="text-ceiba-300" />
-            <span className="font-display text-3xl font-bold">Ceiba</span>
+            <img src="/logo/isotipo-claro.svg" width={32} height={32} alt="" aria-hidden />
+            <span className="font-display text-3xl font-semibold">Ceiba</span>
           </Link>
           <p className="text-ceiba-300 mt-2">Nueva contraseña</p>
         </div>

@@ -276,12 +276,12 @@ export default function RaicesPanel() {
             width: 42px;
             height: 42px;
             border-radius: 50%;
-            background: #1E2E4A;
-            border-top: 2px solid #3a5080;
+            background: #2F5233;
+            border-top: 2px solid #8FBF8C;
             border-left: 1.5px solid rgba(255,255,255,0.12);
-            border-bottom: 4px solid #0d1a2e;
+            border-bottom: 4px solid #1D361F;
             border-right: 1.5px solid rgba(0,0,0,0.3);
-            box-shadow: 0 6px 0 #08101d, 0 12px 24px rgba(0,0,0,0.7);
+            box-shadow: 0 6px 0 #1D361F, 0 12px 24px rgba(0,0,0,0.7);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -293,11 +293,11 @@ export default function RaicesPanel() {
           }
           .raices-fab:hover {
             transform: scale(1.1) translateY(-2px);
-            box-shadow: 0 8px 0 #08101d, 0 16px 32px rgba(30,46,74,0.8);
+            box-shadow: 0 8px 0 #1D361F, 0 16px 32px rgba(47,82,51,0.8);
           }
           .raices-fab:active {
             transform: scale(0.94) translateY(2px);
-            box-shadow: 0 3px 0 #08101d, 0 6px 12px rgba(0,0,0,0.5);
+            box-shadow: 0 3px 0 #1D361F, 0 6px 12px rgba(0,0,0,0.5);
             border-bottom-width: 2px;
           }
           @media (min-width: 768px) {
@@ -337,7 +337,7 @@ export default function RaicesPanel() {
         <div style={{
           position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 81,
           background: "#0c0a18",
-          borderTop: "1.5px solid rgba(30,46,74,0.8)",
+          borderTop: "1.5px solid rgba(47,82,51,0.8)",
           borderRadius: "20px 20px 0 0",
           padding: "28px 24px calc(40px + env(safe-area-inset-bottom))",
           boxShadow: "0 -10px 40px rgba(0,0,0,0.9)",
@@ -345,14 +345,14 @@ export default function RaicesPanel() {
           {/* Handle */}
           <div style={{
             width: 36, height: 4, borderRadius: 2,
-            background: "rgba(30,46,74,0.5)", margin: "0 auto 24px",
+            background: "rgba(47,82,51,0.5)", margin: "0 auto 24px",
           }} />
 
           {/* Header */}
           <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 20 }}>
             <div style={{
               width: 44, height: 44, borderRadius: "50%",
-              background: "#1E2E4A", display: "flex", alignItems: "center",
+              background: "#2F5233", display: "flex", alignItems: "center",
               justifyContent: "center", fontSize: 22, flexShrink: 0,
             }}>🌿</div>
             <div>
@@ -361,7 +361,7 @@ export default function RaicesPanel() {
               </div>
               <div style={{
                 display: "inline-flex", alignItems: "center", gap: 4,
-                background: "rgba(30,46,74,0.6)", borderRadius: 20, padding: "3px 10px",
+                background: "rgba(47,82,51,0.6)", borderRadius: 20, padding: "3px 10px",
                 fontSize: 11, fontWeight: 700, color: "#8ba8d8", letterSpacing: "0.05em",
               }}>
                 10 consultas gratis · cada día
@@ -391,12 +391,12 @@ export default function RaicesPanel() {
             disabled={loading}
             style={{
               width: "100%", padding: "15px 0", borderRadius: 14, marginBottom: 10,
-              background: "#1E2E4A",
-              borderTop: "2px solid #3a5080",
+              background: "#2F5233",
+              borderTop: "2px solid #8FBF8C",
               borderLeft: "1.5px solid rgba(255,255,255,0.1)",
-              borderBottom: "4px solid #0d1a2e",
+              borderBottom: "4px solid #1D361F",
               borderRight: "1.5px solid rgba(0,0,0,0.3)",
-              boxShadow: "0 6px 0 #08101d, 0 12px 24px rgba(0,0,0,0.6)",
+              boxShadow: "0 6px 0 #1D361F, 0 12px 24px rgba(0,0,0,0.6)",
               color: "#fff", fontSize: 15, fontWeight: 800,
               cursor: loading ? "not-allowed" : "pointer",
               opacity: loading ? 0.6 : 1,
@@ -437,7 +437,7 @@ export default function RaicesPanel() {
       <div style={{
         position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 81,
         background: "#0c0a18",
-        borderTop: "1.5px solid rgba(30,46,74,0.6)",
+        borderTop: "1.5px solid rgba(47,82,51,0.6)",
         borderRadius: "20px 20px 0 0",
         maxHeight: "85vh",
         display: "flex", flexDirection: "column",
@@ -447,7 +447,7 @@ export default function RaicesPanel() {
         {/* Header */}
         <div style={{
           padding: "20px 20px 12px",
-          borderBottom: "1px solid rgba(30,46,74,0.4)",
+          borderBottom: "1px solid rgba(47,82,51,0.4)",
           display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0,
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -455,7 +455,7 @@ export default function RaicesPanel() {
             <span style={{ fontSize: 16, fontWeight: 800, color: "#fff" }}>Raíces IA</span>
             <span style={{
               fontSize: 10, fontWeight: 700, letterSpacing: "0.06em",
-              background: "rgba(30,46,74,0.6)", color: "#8ba8d8",
+              background: "rgba(47,82,51,0.6)", color: "#8ba8d8",
               borderRadius: 20, padding: "2px 8px",
             }}>
               {remaining}/{DAILY_LIMIT} consultas
@@ -579,7 +579,7 @@ export default function RaicesPanel() {
         {/* Input bar */}
         <div style={{
           padding: "10px 12px 12px",
-          borderTop: "1px solid rgba(30,46,74,0.4)",
+          borderTop: "1px solid rgba(47,82,51,0.4)",
           display: "flex", gap: 8, alignItems: "flex-end", flexShrink: 0,
         }}>
           <textarea
@@ -610,7 +610,7 @@ export default function RaicesPanel() {
             disabled={limitReached || loading}
             style={{
               width: 40, height: 40, borderRadius: "50%", flexShrink: 0,
-              background: limitReached || loading ? "rgba(30,46,74,0.4)" : "#1E2E4A",
+              background: limitReached || loading ? "rgba(47,82,51,0.4)" : "#2F5233",
               border: "none", cursor: limitReached || loading ? "not-allowed" : "pointer",
               display: "flex", alignItems: "center", justifyContent: "center",
               color: limitReached || loading ? "rgba(255,255,255,0.2)" : "#fff",
@@ -651,7 +651,7 @@ function SuggestionCard({
   return (
     <div style={{
       background: "rgba(255,255,255,0.04)",
-      border: "1px solid rgba(30,46,74,0.6)",
+      border: "1px solid rgba(47,82,51,0.6)",
       borderRadius: 14, marginBottom: 12, overflow: "hidden",
     }}>
       {/* Card header */}
@@ -669,8 +669,8 @@ function SuggestionCard({
           {/* Confidence badge */}
           <div style={{
             flexShrink: 0, marginLeft: 8, padding: "4px 10px", borderRadius: 20,
-            background: highConf ? "rgba(122,140,110,0.25)" : "rgba(30,46,74,0.5)",
-            border: `1px solid ${highConf ? "rgba(122,140,110,0.5)" : "rgba(30,46,74,0.7)"}`,
+            background: highConf ? "rgba(122,140,110,0.25)" : "rgba(47,82,51,0.5)",
+            border: `1px solid ${highConf ? "rgba(122,140,110,0.5)" : "rgba(47,82,51,0.7)"}`,
             fontSize: 11, fontWeight: 700,
             color: highConf ? "#a8c494" : "#8ba8d8",
           }}>
@@ -738,8 +738,8 @@ function SuggestionCard({
           disabled={!hasId}
           style={{
             flex: 1, minWidth: 80, padding: "10px 0", borderRadius: 10,
-            background: hasId ? "#1E2E4A" : "rgba(30,46,74,0.3)",
-            border: "1px solid rgba(30,46,74,0.6)",
+            background: hasId ? "#2F5233" : "rgba(47,82,51,0.3)",
+            border: "1px solid rgba(47,82,51,0.6)",
             color: hasId ? "#fff" : "rgba(255,255,255,0.3)",
             fontSize: 13, fontWeight: 700, cursor: hasId ? "pointer" : "not-allowed",
             display: "flex", alignItems: "center", justifyContent: "center", gap: 5,

@@ -47,32 +47,32 @@ interface KinshipSuggestion {
 // ── Helpers de estilo Linaje ──────────────────────────────────────────────────
 function linCard(): React.CSSProperties {
   return {
-    borderRadius: 16, background: "#FDFCFA", position: "relative", overflow: "hidden",
-    border: "1px solid #DDD8CF",
-    boxShadow: "0 2px 8px rgba(30,46,74,0.07), 0 1px 2px rgba(30,46,74,0.04)",
+    borderRadius: 16, background: "#FFFFFF", position: "relative", overflow: "hidden",
+    border: "1px solid #D9CCB6",
+    boxShadow: "0 2px 8px rgba(42,33,24,0.07), 0 1px 2px rgba(42,33,24,0.04)",
     transition: "box-shadow 0.15s ease",
   };
 }
 function linCardNavy(): React.CSSProperties {
   return {
-    borderRadius: 16, background: "#1E2E4A", position: "relative", overflow: "hidden",
-    border: "1px solid #162338",
-    boxShadow: "0 4px 16px rgba(30,46,74,0.20), 0 1px 4px rgba(30,46,74,0.12)",
+    borderRadius: 16, background: "#2F5233", position: "relative", overflow: "hidden",
+    border: "1px solid #1D361F",
+    boxShadow: "0 4px 16px rgba(42,33,24,0.20), 0 1px 4px rgba(42,33,24,0.12)",
   };
 }
 function linIcon(color: string): React.CSSProperties {
   return {
     width: 36, height: 36, borderRadius: 10, background: color, flexShrink: 0,
-    boxShadow: "0 2px 6px rgba(30,46,74,0.12)",
+    boxShadow: "0 2px 6px rgba(42,33,24,0.12)",
     display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16,
   };
 }
 function linChip(active = false): React.CSSProperties {
   return {
-    background: active ? "rgba(200,136,42,0.10)" : "#F4F1EC",
-    border: active ? "1px solid rgba(200,136,42,0.30)" : "1px solid #DDD8CF",
+    background: active ? "rgba(122,90,16,0.10)" : "#FBF6EE",
+    border: active ? "1px solid rgba(122,90,16,0.30)" : "1px solid #D9CCB6",
     borderRadius: 100, padding: "5px 12px", display: "flex", alignItems: "center", gap: 5,
-    fontSize: 10, color: active ? "#C8882A" : "#6B6258", fontWeight: 600,
+    fontSize: 10, color: active ? "#7A5A10" : "#6B5D4F", fontWeight: 600,
   };
 }
 
@@ -125,7 +125,7 @@ function FamilyRow({ members }: { members: FamilyMember[] }) {
   return (
     <div style={{ padding: "16px 16px 0" }}>
       <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.14em",
-        textTransform: "uppercase", color: "#9A9084", marginBottom: 14 }}>
+        textTransform: "uppercase", color: "#6B5D4F", marginBottom: 14 }}>
         Familia cercana
       </div>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-around" }}>
@@ -137,17 +137,17 @@ function FamilyRow({ members }: { members: FamilyMember[] }) {
             <Link key={g.key} href="/tree" style={{ textDecoration: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
               <div style={{
                 width: 58, height: 58, borderRadius: "50%",
-                background: "#F4F1EC",
-                border: "2px solid #DDD8CF",
-                boxShadow: "0 2px 8px rgba(30,46,74,0.10)",
+                background: "#FBF6EE",
+                border: "2px solid #D9CCB6",
+                boxShadow: "0 2px 8px rgba(42,33,24,0.10)",
                 overflow: "hidden",
               }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={imgSrc} alt={g.label} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               </div>
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
-                <span style={{ fontSize: 11, fontWeight: 500, color: "#6B6258" }}>{g.label}</span>
-                <span style={{ fontSize: 12, fontWeight: 700, color: "#C8882A" }}>{g.count}</span>
+                <span style={{ fontSize: 11, fontWeight: 500, color: "#6B5D4F" }}>{g.label}</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: "#7A5A10" }}>{g.count}</span>
               </div>
             </Link>
           );
@@ -166,13 +166,13 @@ function LinajeHero({ children, avatarInitial, avatarUrl, firstName }: {
   return (
     <div style={{
       position: "relative", overflow: "hidden", paddingBottom: 8, textAlign: "center",
-      background: "#1E2E4A",
+      background: "#2F5233",
     }}>
       {/* Subtle warm overlay */}
       <div style={{ position:"absolute", top:0, right:0, width:200, height:200, borderRadius:"50%", pointerEvents:"none",
-        background:"radial-gradient(circle,rgba(200,136,42,0.12) 0%,transparent 70%)" }} />
+        background:"radial-gradient(circle,rgba(245,233,201,0.16) 0%,transparent 70%)" }} />
       <div style={{ position:"absolute", bottom:0, left:0, width:160, height:160, borderRadius:"50%", pointerEvents:"none",
-        background:"radial-gradient(circle,rgba(122,140,110,0.10) 0%,transparent 70%)" }} />
+        background:"radial-gradient(circle,rgba(47,82,51,0.10) 0%,transparent 70%)" }} />
 
 
       {/* Top bar */}
@@ -198,8 +198,8 @@ function LinajeHero({ children, avatarInitial, avatarUrl, firstName }: {
             </filter>
           </defs>
           {/* Subtle ring — Linaje */}
-          <circle cx="150" cy="150" r="58" fill="none" stroke="rgba(200,136,42,0.30)" strokeWidth="1"/>
-          <circle cx="150" cy="150" r="66" fill="none" stroke="rgba(200,136,42,0.12)" strokeWidth="0.6"/>
+          <circle cx="150" cy="150" r="58" fill="none" stroke="rgba(245,233,201,0.55)" strokeWidth="1"/>
+          <circle cx="150" cy="150" r="66" fill="none" stroke="rgba(245,233,201,0.28)" strokeWidth="0.6"/>
         </svg>
 
         {/* Avatar */}
@@ -207,7 +207,7 @@ function LinajeHero({ children, avatarInitial, avatarUrl, firstName }: {
           <div style={{
             width:90, height:90, borderRadius:"50%",
             background:"rgba(255,255,255,0.12)",
-            border: "3px solid rgba(200,136,42,0.55)",
+            border: "3px solid #F5E9C9",
             display:"flex", alignItems:"center", justifyContent:"center",
             boxShadow:"0 4px 20px rgba(0,0,0,0.25)",
           }}>
@@ -216,7 +216,7 @@ function LinajeHero({ children, avatarInitial, avatarUrl, firstName }: {
               <img src={avatarUrl} alt={firstName}
                 style={{ width:90, height:90, borderRadius:"50%", objectFit:"cover" }} />
             ) : (
-              <span style={{ fontSize:36, color:"#C8882A", fontWeight:800 }}>
+              <span style={{ fontSize:36, color:"#F5E9C9", fontWeight:800 }}>
                 {avatarInitial}
               </span>
             )}
@@ -227,13 +227,13 @@ function LinajeHero({ children, avatarInitial, avatarUrl, firstName }: {
       </div>{/* /avatar row */}
 
       {/* Name */}
-      <div style={{ fontSize:22, fontWeight:700, color:"#FDFCFA", letterSpacing:0.2, marginBottom:4,
+      <div style={{ fontSize:22, fontWeight:600, color:"#FFFFFF", letterSpacing:0.2, marginBottom:4,
         position:"relative", zIndex:5, fontFamily:"var(--font-fraunces), Georgia, serif" }}>
         {firstName || "Cargando..."}
       </div>
 
       {/* Tagline */}
-      <div style={{ fontSize:11, color:"rgba(200,136,42,0.80)",
+      <div style={{ fontSize:11, color:"#F5E9C9",
         marginBottom:14, position:"relative", zIndex:5, letterSpacing:"0.06em", fontWeight:500 }}>
         Tu linaje familiar
       </div>
@@ -265,25 +265,25 @@ function LinajeBtn({ icon: Icon, label, href, accent = false, badge = 0 }: {
             fontSize:9, fontWeight:800, lineHeight:1,
             display:"flex", alignItems:"center", justifyContent:"center",
             padding:"0 4px",
-            border:"1.5px solid #FDFCFA",
+            border:"1.5px solid #FFFFFF",
           }}>
             {badge > 99 ? "99+" : badge}
           </div>
         )}
         <div style={{
           width:56, height:56, borderRadius:16,
-          background: accent ? "#C8882A" : "#FDFCFA",
-          border: accent ? "1px solid #A56B1A" : "1px solid #DDD8CF",
+          background: accent ? "#7A5A10" : "#FFFFFF",
+          border: accent ? "1px solid #1D361F" : "1px solid #D9CCB6",
           boxShadow: accent
-            ? "0 4px 12px rgba(200,136,42,0.25)"
-            : "0 2px 8px rgba(30,46,74,0.09)",
+            ? "0 4px 12px rgba(122,90,16,0.25)"
+            : "0 2px 8px rgba(42,33,24,0.09)",
           display:"flex", alignItems:"center", justifyContent:"center",
           transition:"transform 0.12s ease",
         }}>
-          <Icon size={22} style={{ color: accent ? "#fff" : "#1E2E4A" }}/>
+          <Icon size={22} style={{ color: accent ? "#fff" : "#2F5233" }}/>
         </div>
       </div>
-      <span style={{ fontSize:10, fontWeight:500, color:"#6B6258",
+      <span style={{ fontSize:10, fontWeight:500, color:"#6B5D4F",
         textAlign:"center", lineHeight:1.3, maxWidth:56, whiteSpace:"pre-line" }}>
         {label}
       </span>
@@ -540,7 +540,7 @@ export default function HomePage() {
 
 
   return (
-    <div style={{ minHeight: "100vh", background: "#F4F1EC", paddingBottom: 100, color: "#1A1612", position: "relative" }}>
+    <div style={{ minHeight: "100vh", background: "#FBF6EE", paddingBottom: 100, color: "#2A2118", position: "relative" }}>
 
       {/* ── HERO ─────────────────────────────────────────────────────────── */}
       <LinajeHero
@@ -559,12 +559,13 @@ export default function HomePage() {
             </div>
           </Link>
           <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "center" }}>
-              <span style={{ fontSize: 20, fontWeight: 800, color: "#FDFCFA", letterSpacing: 2,
-                fontFamily: "var(--font-fraunces), Georgia, serif" }}>CEIBA</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center" }}>
+              <img src="/logo/isotipo-claro.svg" width={22} height={22} alt="" aria-hidden />
+              <span style={{ fontSize: "1.25rem", fontWeight: 600, color: "#FBF6EE", letterSpacing: "-0.01em",
+                fontFamily: "var(--font-fraunces), Georgia, serif" }}>Ceiba</span>
             </div>
-            <div style={{ fontSize: 8, fontWeight: 600, letterSpacing: "0.20em",
-              color: "rgba(200,136,42,0.70)", textTransform: "uppercase", marginTop: 2, textAlign: "center" }}>
+            <div style={{ fontSize: "0.9375rem", fontWeight: 700, letterSpacing: "0.12em",
+              color: "#F5E9C9", textTransform: "uppercase", marginTop: 2, textAlign: "center" }}>
               Nuestras raíces
             </div>
           </div>
@@ -577,9 +578,9 @@ export default function HomePage() {
                 <div style={{
                   position: "absolute", top: -3, right: -3,
                   width: 14, height: 14, borderRadius: "50%",
-                  background: "#C8882A", border: "1.5px solid #1E2E4A",
+                  background: "#FBF6EE", border: "1.5px solid #FBF6EE",
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 8, fontWeight: 800, color: "#fff", lineHeight: 1,
+                  fontSize: 8, fontWeight: 700, color: "#2F5233", lineHeight: 1,
                 }}>
                   {suggestions.filter(s => !dismissedIds.has(s.id)).length}
                 </div>
@@ -592,14 +593,14 @@ export default function HomePage() {
       {/* ── PULSO CHIPS ─────────────────────────────────────────────────── */}
       <div style={{ display:"flex", gap:8, padding:"12px 18px 4px", flexWrap:"wrap" }}>
         {recentMemories > 0 && (
-          <span style={{ background:"#FDFCFA", border:"1px solid #DDD8CF",
-            borderRadius:20, padding:"5px 12px", fontSize:10, color:"#6B6258", fontWeight:600 }}>
+          <span style={{ background:"#FFFFFF", border:"1px solid #D9CCB6",
+            borderRadius:20, padding:"5px 12px", fontSize:10, color:"#6B5D4F", fontWeight:600 }}>
             {recentMemories} recuerdos esta semana
           </span>
         )}
         {!todayBirthday && birthdaysThisMonth > 0 && (
-          <span style={{ background:"rgba(200,136,42,0.08)", border:"1px solid rgba(200,136,42,0.22)",
-            borderRadius:20, padding:"5px 12px", fontSize:10, color:"#C8882A", fontWeight:600 }}>
+          <span style={{ background:"rgba(122,90,16,0.08)", border:"1px solid rgba(122,90,16,0.22)",
+            borderRadius:20, padding:"5px 12px", fontSize:10, color:"#7A5A10", fontWeight:600 }}>
             🎂 {birthdaysThisMonth} cumpleaños este mes
           </span>
         )}
@@ -607,7 +608,7 @@ export default function HomePage() {
 
       {/* Divisor */}
       <div style={{ margin: "16px 16px 0", height: 1,
-        background: "linear-gradient(90deg, transparent, #DDD8CF, transparent)" }} />
+        background: "linear-gradient(90deg, transparent, #D9CCB6, transparent)" }} />
 
       {/* ══ MOMENTO DEL DÍA ══════════════════════════════════════════════ */}
       <div style={{ padding: "14px 14px 0" }}>
@@ -620,33 +621,33 @@ export default function HomePage() {
           }}>
             {/* Acento warm top */}
             <div style={{ position:"absolute", top:0, left:0, right:0, height:3,
-              background:"linear-gradient(90deg,#C8882A,rgba(200,136,42,0.3))", borderRadius:"16px 16px 0 0" }} />
+              background:"linear-gradient(90deg,#C9962B,rgba(245,233,201,0.45))", borderRadius:"16px 16px 0 0" }} />
             <div style={{ position:"absolute", top:14, right:14,
-              background:"rgba(200,136,42,0.15)", border:"1px solid rgba(200,136,42,0.35)",
+              background:"rgba(245,233,201,0.16)", border:"1px solid #F5E9C9",
               borderRadius:100, padding:"3px 10px",
-              fontSize:9, fontWeight:800, letterSpacing:"0.14em", color:"#C8882A",
+              fontSize:9, fontWeight:700, letterSpacing:"0.14em", color:"#F5E9C9",
               textTransform:"uppercase" }}>Hoy</div>
             <div style={{ padding:"22px 20px 20px", position:"relative" }}>
               <div style={{ fontSize:48, lineHeight:1, marginBottom:12 }}>🎂</div>
               <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em",
-                textTransform:"uppercase", color:"rgba(200,136,42,0.70)", marginBottom:6 }}>
+                textTransform:"uppercase", color:"#F5E9C9", marginBottom:6 }}>
                 Cumpleaños de hoy
               </div>
-              <div style={{ fontSize:24, fontWeight:800, color:"#FDFCFA", lineHeight:1.1, marginBottom:6,
+              <div style={{ fontSize:24, fontWeight:600, color:"#FFFFFF", lineHeight:1.1, marginBottom:6,
                 fontFamily:"var(--font-fraunces), Georgia, serif" }}>
                 {todayBirthday.first_name} {todayBirthday.last_name}
               </div>
-              <div style={{ fontSize:13, color:"rgba(200,136,42,0.60)", marginBottom:20 }}>
+              <div style={{ fontSize:13, color:"#F5E9C9", marginBottom:20 }}>
                 {new Date().getFullYear() - new Date(todayBirthday.birth_date).getFullYear()} años
               </div>
               <button
                 onClick={() => greetPerson(todayBirthday.person_id)}
                 disabled={greetBusy}
                 style={{ display:"inline-flex", alignItems:"center", gap:8,
-                  background:"#C8882A", color:"#fff", borderRadius:50,
+                  background:"#FFFFFF", color:"#2F5233", borderRadius:50,
                   padding:"12px 26px", fontSize:13, fontWeight:700,
                   border:"none", cursor:"pointer",
-                  boxShadow:"0 4px 12px rgba(200,136,42,0.30)",
+                  boxShadow:"0 4px 12px rgba(122,90,16,0.30)",
                   opacity:greetBusy ? 0.7 : 1 }}>
                 {greetBusy ? "Abriendo chat…" : "🎉 Felicitar ahora"}
               </button>
@@ -664,7 +665,7 @@ export default function HomePage() {
           return (
             <div style={{
               ...linCard(),
-              border: isClose ? "1px solid rgba(200,136,42,0.30)" : "1px solid #DDD8CF",
+              border: isClose ? "1px solid rgba(122,90,16,0.30)" : "1px solid #D9CCB6",
               padding: "13px 16px",
               display: "flex", alignItems: "center", gap: 13,
             }}>
@@ -672,20 +673,20 @@ export default function HomePage() {
                 {upcomingBirthday.days <= 3 ? "🎂" : "🎁"}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#1A1612",
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#2A2118",
                   overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {upcomingBirthday.first_name} {upcomingBirthday.last_name}
                 </div>
-                <div style={{ fontSize: 11, color: isClose ? "#C8882A" : "#9A9084", marginTop: 2 }}>
+                <div style={{ fontSize: 11, color: isClose ? "#7A5A10" : "#6B5D4F", marginTop: 2 }}>
                   {upcomingBirthday.days === 1 ? "Mañana" : `En ${upcomingBirthday.days} días`}
                   {!isClose && ` · ${bdDate}`}
                 </div>
               </div>
               <div style={{
                 padding: "6px 12px", borderRadius: 50, fontSize: 11, fontWeight: 700,
-                background: isClose ? "rgba(200,136,42,0.10)" : "#F4F1EC",
-                color: isClose ? "#C8882A" : "#9A9084",
-                border: isClose ? "1px solid rgba(200,136,42,0.25)" : "1px solid #DDD8CF",
+                background: isClose ? "rgba(122,90,16,0.10)" : "#FBF6EE",
+                color: isClose ? "#7A5A10" : "#6B5D4F",
+                border: isClose ? "1px solid rgba(122,90,16,0.25)" : "1px solid #D9CCB6",
                 whiteSpace: "nowrap", flexShrink: 0,
               }}>
                 {upcomingBirthday.days === 1 ? "Mañana 🎂" : `${upcomingBirthday.days}d 🎁`}
@@ -698,22 +699,22 @@ export default function HomePage() {
         {deceasedBirthday && (
           <div style={{ ...linCard(), padding:"20px 20px 18px" }}>
             <div style={{ position:"absolute", top:14, right:14,
-              background:"rgba(122,140,110,0.12)", border:"1px solid rgba(122,140,110,0.28)",
+              background:"rgba(47,82,51,0.12)", border:"1px solid rgba(47,82,51,0.28)",
               borderRadius:100, padding:"3px 10px",
-              fontSize:9, fontWeight:700, letterSpacing:"0.14em", color:"#7A8C6E",
+              fontSize:9, fontWeight:700, letterSpacing:"0.14em", color:"#2F5233",
               textTransform:"uppercase" }}>
               En su memoria
             </div>
             <div style={{ fontSize:36, lineHeight:1, marginBottom:10 }}>🕊️</div>
             <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em",
-              textTransform:"uppercase", color:"#7A8C6E", marginBottom:6 }}>
+              textTransform:"uppercase", color:"#2F5233", marginBottom:6 }}>
               Hoy en tu linaje
             </div>
-            <div style={{ fontSize:18, fontWeight:700, color:"#1A1612", lineHeight:1.2, marginBottom:6,
+            <div style={{ fontSize:18, fontWeight:700, color:"#2A2118", lineHeight:1.2, marginBottom:6,
               fontFamily:"var(--font-fraunces), Georgia, serif" }}>
               {deceasedBirthday.first_name} {deceasedBirthday.last_name}
             </div>
-            <div style={{ fontSize:13, color:"#6B6258", lineHeight:1.5 }}>
+            <div style={{ fontSize:13, color:"#6B5D4F", lineHeight:1.5 }}>
               Hoy estaría cumpliendo {deceasedBirthday.age_would_be} años
             </div>
           </div>
@@ -724,14 +725,14 @@ export default function HomePage() {
           <div style={{ ...linCard(), padding:"20px 20px 18px" }}>
             <div style={{ fontSize:36, lineHeight:1, marginBottom:10 }}>🎂</div>
             <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em",
-              textTransform:"uppercase", color:"#7A8C6E", marginBottom:6 }}>
+              textTransform:"uppercase", color:"#2F5233", marginBottom:6 }}>
               Celebra a tu familia
             </div>
-            <div style={{ fontSize:15, fontWeight:700, color:"#1A1612", lineHeight:1.3, marginBottom:8,
+            <div style={{ fontSize:15, fontWeight:700, color:"#2A2118", lineHeight:1.3, marginBottom:8,
               fontFamily:"var(--font-fraunces), Georgia, serif" }}>
               Agrega las fechas de nacimiento
             </div>
-            <div style={{ fontSize:12, color:"#6B6258", lineHeight:1.5 }}>
+            <div style={{ fontSize:12, color:"#6B5D4F", lineHeight:1.5 }}>
               Con {visibleCount} familiares en tu linaje, habrá cumpleaños que celebrar cada semana.
             </div>
           </div>
@@ -743,10 +744,10 @@ export default function HomePage() {
       <div style={{ padding:"16px 14px 0" }}>
         <div style={{ ...linCard(), padding:"16px" }}>
           <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.12em",
-            textTransform:"uppercase", color:"#9A9084", marginBottom:10 }}>
+            textTransform:"uppercase", color:"#6B5D4F", marginBottom:10 }}>
             Pregunta del día
           </div>
-          <p style={{ fontSize:14, color:"#3D3428", fontStyle:"italic",
+          <p style={{ fontSize:14, color:"#2A2118", fontStyle:"normal",
             margin:"0 0 14px", lineHeight:1.6, fontFamily:"var(--font-fraunces), Georgia, serif" }}>
             {dailyQuestion ?? "..."}
           </p>
@@ -757,14 +758,14 @@ export default function HomePage() {
               <div style={{
                 display:"flex", alignItems:"center", justifyContent:"space-between",
                 padding:"10px 14px", borderRadius:14,
-                background:"rgba(122,140,110,0.10)",
-                border:"1px solid rgba(122,140,110,0.25)",
+                background:"rgba(47,82,51,0.10)",
+                border:"1px solid rgba(47,82,51,0.25)",
               }}>
-                <span style={{ fontSize:12, color:"#7A8C6E", fontWeight:700 }}>
+                <span style={{ fontSize:12, color:"#2F5233", fontWeight:700 }}>
                   ✓ Respuesta compartida con tu familia
                 </span>
                 <Link href="/muro" style={{
-                  fontSize:11, color:"#C8882A",
+                  fontSize:11, color:"#7A5A10",
                   textDecoration:"none", fontWeight:700,
                 }}>
                   Ver muro →
@@ -781,12 +782,12 @@ export default function HomePage() {
                 rows={3}
                 style={{
                   width:"100%", boxSizing:"border-box",
-                  background:"#F4F1EC",
-                  border:"1px solid #DDD8CF",
+                  background:"#FBF6EE",
+                  border:"1px solid #D9CCB6",
                   borderRadius:12, padding:"10px 12px",
-                  color:"#1A1612", fontSize:13, lineHeight:1.6,
-                  fontFamily:"var(--font-fraunces), Georgia, serif", fontStyle:"italic",
-                  resize:"none", outline:"none", caretColor:"#C8882A",
+                  color:"#2A2118", fontSize:13, lineHeight:1.6,
+                  fontFamily:"var(--font-fraunces), Georgia, serif", fontStyle:"normal",
+                  resize:"none", outline:"none", caretColor:"#7A5A10",
                   marginBottom:8,
                 }}
               />
@@ -794,17 +795,17 @@ export default function HomePage() {
                 <button type="button" onClick={() => { setAnswerOpen(false); setAnswerText(""); }}
                   style={{
                     flex:1, padding:"10px", borderRadius:50,
-                    background:"transparent", border:"1px solid #DDD8CF",
-                    color:"#9A9084", fontSize:12, fontWeight:600, cursor:"pointer",
+                    background:"transparent", border:"1px solid #D9CCB6",
+                    color:"#6B5D4F", fontSize:12, fontWeight:600, cursor:"pointer",
                   }}>
                   Cancelar
                 </button>
                 <button type="submit" disabled={!answerText.trim() || answerBusy}
                   style={{
                     flex:2, padding:"10px", borderRadius:50,
-                    background: answerText.trim() ? "#1E2E4A" : "#F4F1EC",
-                    border: answerText.trim() ? "1px solid #162338" : "1px solid #DDD8CF",
-                    color: answerText.trim() ? "#fff" : "#9A9084",
+                    background: answerText.trim() ? "#2F5233" : "#FBF6EE",
+                    border: answerText.trim() ? "1px solid #1D361F" : "1px solid #D9CCB6",
+                    color: answerText.trim() ? "#fff" : "#6B5D4F",
                     fontSize:12, fontWeight:700, cursor: answerText.trim() ? "pointer" : "default",
                     transition:"all 0.18s",
                   }}>
@@ -818,7 +819,7 @@ export default function HomePage() {
                 style={{
                   flex:1, display:"flex", alignItems:"center", justifyContent:"center", gap:6,
                   padding:"10px", borderRadius:50, cursor:"pointer",
-                  background:"#1E2E4A", fontFamily:"inherit",
+                  background:"#2F5233", fontFamily:"inherit",
                   border:"none",
                   color:"#fff", fontSize:12, fontWeight:600,
                 }}>
@@ -828,9 +829,9 @@ export default function HomePage() {
                 <div style={{
                   display:"flex", alignItems:"center", justifyContent:"center", gap:6,
                   padding:"10px", borderRadius:50,
-                  background:"rgba(200,136,42,0.10)",
-                  border:"1px solid rgba(200,136,42,0.25)",
-                  color:"#C8882A", fontSize:12, fontWeight:600,
+                  background:"rgba(122,90,16,0.10)",
+                  border:"1px solid rgba(122,90,16,0.25)",
+                  color:"#7A5A10", fontSize:12, fontWeight:600,
                 }}>
                   🎥 Graba en video
                 </div>
@@ -849,11 +850,11 @@ export default function HomePage() {
         <div style={{ padding: "20px 16px 0" }}>
           <div style={{ ...linCard(), padding:"22px 20px" }}>
             <div style={{ fontSize: 36, marginBottom: 12 }}>🌱</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: "#1A1612", marginBottom: 6,
+            <div style={{ fontSize: 16, fontWeight: 700, color: "#2A2118", marginBottom: 6,
               fontFamily:"var(--font-fraunces), Georgia, serif" }}>
               Tu linaje te está esperando
             </div>
-            <div style={{ fontSize: 13, color: "#6B6258", lineHeight: 1.6, marginBottom: 18 }}>
+            <div style={{ fontSize: 13, color: "#6B5D4F", lineHeight: 1.6, marginBottom: 18 }}>
               Agrega a tu primer familiar para comenzar a construir tu árbol genealógico.
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -861,9 +862,9 @@ export default function HomePage() {
                 <div style={{
                   display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
                   padding: "13px 20px", borderRadius: 50,
-                  background: "#1E2E4A",
+                  background: "#2F5233",
                   fontSize: 14, fontWeight: 700, color: "#fff",
-                  boxShadow: "0 4px 12px rgba(30,46,74,0.25)",
+                  boxShadow: "0 4px 12px rgba(42,33,24,0.25)",
                 }}>
                   <Users size={16} style={{ color: "#fff" }} />
                   Agregar mi primer familiar
@@ -873,11 +874,11 @@ export default function HomePage() {
                 <div style={{
                   display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
                   padding: "12px 20px", borderRadius: 14,
-                  background: "rgba(200,136,42,0.08)",
-                  border: "1px solid rgba(200,136,42,0.22)",
-                  fontSize: 13, fontWeight: 600, color: "#C8882A",
+                  background: "rgba(122,90,16,0.08)",
+                  border: "1px solid rgba(122,90,16,0.22)",
+                  fontSize: 13, fontWeight: 600, color: "#7A5A10",
                 }}>
-                  <Send size={14} style={{ color: "#C8882A" }} />
+                  <Send size={14} style={{ color: "#7A5A10" }} />
                   Invitar a un familiar
                 </div>
               </Link>
@@ -892,14 +893,14 @@ export default function HomePage() {
           <Link href="/tree" style={{ textDecoration: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
             <div style={{
               width: 64, height: 64, borderRadius: 20,
-              background: "#1E2E4A",
-              border: "1px solid #162338",
-              boxShadow: "0 4px 16px rgba(30,46,74,0.20)",
+              background: "#2F5233",
+              border: "1px solid #1D361F",
+              boxShadow: "0 4px 16px rgba(42,33,24,0.20)",
               display: "flex", alignItems: "center", justifyContent: "center",
             }}>
-              <Sparkles size={26} style={{ color: "rgba(200,136,42,0.90)" }} />
+              <Sparkles size={26} style={{ color: "#FFFFFF" }} />
             </div>
-            <span style={{ fontSize: 11, fontWeight: 600, color: "#9A9084",
+            <span style={{ fontSize: 11, fontWeight: 600, color: "#6B5D4F",
               letterSpacing: "0.08em", textTransform: "uppercase", textAlign: "center" }}>
               Ver mi árbol
             </span>
@@ -909,13 +910,13 @@ export default function HomePage() {
 
       {/* ── EN LÍNEA AHORA ──────────────────────────────────────────────── */}
       {onlineFamily.length > 0 && (
-        <div style={{ padding: "14px 18px", borderBottom: "1px solid #E8E4DC" }}>
+        <div style={{ padding: "14px 18px", borderBottom: "1px solid #D9CCB6" }}>
           <style>{`@keyframes home-online-pulse{0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,0.5)}50%{box-shadow:0 0 0 5px rgba(34,197,94,0)}}`}</style>
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
             <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e",
               animation: "home-online-pulse 2s infinite" }} />
             <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em",
-              textTransform: "uppercase", color: "#7A8C6E" }}>En línea ahora</span>
+              textTransform: "uppercase", color: "#2F5233" }}>En línea ahora</span>
           </div>
           <div style={{ display: "flex", gap: 12 }}>
             {onlineFamily.slice(0, 6).map(m => (
@@ -925,17 +926,17 @@ export default function HomePage() {
                   <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#EDE9E1",
                     border: "2px solid rgba(34,197,94,0.45)",
                     display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 15, fontWeight: 700, color: "#1E2E4A", overflow: "hidden" }}>
+                    fontSize: 15, fontWeight: 700, color: "#2F5233", overflow: "hidden" }}>
                     {m.photo_path
                       // eslint-disable-next-line @next/next/no-img-element
                       ? <img src={m.photo_path} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" />
                       : `${m.first_name[0] ?? ""}${(m.last_name || "")[0] ?? ""}`.toUpperCase()}
                   </div>
                   <div style={{ position: "absolute", bottom: 1, right: 1, width: 11, height: 11,
-                    borderRadius: "50%", background: "#22c55e", border: "2px solid #F4F1EC",
+                    borderRadius: "50%", background: "#22c55e", border: "2px solid #FBF6EE",
                     animation: "home-online-pulse 2s infinite" }} />
                 </div>
-                <span style={{ fontSize: 10, color: "#9A9084", fontWeight: 500,
+                <span style={{ fontSize: 10, color: "#6B5D4F", fontWeight: 500,
                   maxWidth: 44, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                   textAlign: "center" }}>{m.first_name}</span>
               </Link>
@@ -957,7 +958,7 @@ export default function HomePage() {
       {/* ══ ACCESOS RÁPIDOS ══════════════════════════════════════════════ */}
       <div style={{ padding: "20px 16px 8px" }}>
         <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.14em",
-          textTransform: "uppercase", color: "#9A9084", marginBottom: 16 }}>
+          textTransform: "uppercase", color: "#6B5D4F", marginBottom: 16 }}>
           Accesos rápidos
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "18px 8px", marginBottom: 22 }}>
@@ -977,7 +978,7 @@ export default function HomePage() {
       {photos.length > 0 && (
         <div style={{ padding: "20px 0 8px" }}>
           <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.14em",
-            textTransform: "uppercase", color: "#9A9084", marginBottom: 16, paddingLeft: 16 }}>
+            textTransform: "uppercase", color: "#6B5D4F", marginBottom: 16, paddingLeft: 16 }}>
             Fotos de la familia
           </div>
           <div style={{
@@ -998,8 +999,8 @@ export default function HomePage() {
                     cursor: "pointer",
                     position: "relative",
                     transform: tilt,
-                    border: "2px solid #FDFCFA",
-                    boxShadow: "0 2px 8px rgba(30,46,74,0.14)",
+                    border: "2px solid #FFFFFF",
+                    boxShadow: "0 2px 8px rgba(42,33,24,0.14)",
                     flexShrink: 0,
                   }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1018,8 +1019,8 @@ export default function HomePage() {
         {suggestions.filter(s => !dismissedIds.has(s.id)).length > 0 && (
           <div style={{ marginBottom: 9 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 9, paddingTop: 6 }}>
-              <Sparkles size={12} style={{ color: "#C8882A" }} />
-              <span style={{ fontSize: 11, fontWeight: 700, color: "#9A9084",
+              <Sparkles size={12} style={{ color: "#7A5A10" }} />
+              <span style={{ fontSize: 11, fontWeight: 700, color: "#6B5D4F",
                 letterSpacing: "0.1em", textTransform: "uppercase" }}>
                 Posibles conexiones
               </span>
@@ -1038,18 +1039,18 @@ export default function HomePage() {
                   <div key={s.id} style={{ ...linCard(), padding:"13px 13px 11px" }}>
                     {/* header */}
                     <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 9 }}>
-                      <Sparkles size={12} style={{ color: "#C8882A" }} />
+                      <Sparkles size={12} style={{ color: "#7A5A10" }} />
                       <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.11em",
-                        textTransform: "uppercase", color: "#9A9084", flex: 1 }}>
+                        textTransform: "uppercase", color: "#6B5D4F", flex: 1 }}>
                         Posible conexión
                       </span>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: "#C8882A",
-                        background: "rgba(200,136,42,0.10)", padding: "2px 8px", borderRadius: 20 }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: "#7A5A10",
+                        background: "rgba(122,90,16,0.10)", padding: "2px 8px", borderRadius: 20 }}>
                         {pct}% coincidencia
                       </span>
                       <button onClick={() => handleDismiss(s.id)}
                         style={{ background: "none", border: "none", cursor: "pointer", padding: 2,
-                          color: "#C8C0B2", lineHeight: 0, marginLeft: 2 }}>
+                          color: "#8C7D6B", lineHeight: 0, marginLeft: 2 }}>
                         <X size={14} />
                       </button>
                     </div>
@@ -1060,21 +1061,21 @@ export default function HomePage() {
                         <div key={i} style={{ flex: 1, display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
                           {i === 1 && (
                             <div style={{ width: 22, height: 22, borderRadius: "50%", flexShrink: 0,
-                              background: "rgba(200,136,42,0.08)", border: "1px dashed rgba(200,136,42,0.30)",
+                              background: "rgba(122,90,16,0.08)", border: "1px dashed rgba(122,90,16,0.30)",
                               display: "flex", alignItems: "center", justifyContent: "center",
-                              fontSize: 10, fontWeight: 700, color: "rgba(200,136,42,0.55)" }}>?</div>
+                              fontSize: 10, fontWeight: 700, color: "rgba(122,90,16,0.55)" }}>?</div>
                           )}
                           <div style={{ width: 30, height: 30, borderRadius: "50%", flexShrink: 0,
-                            background: "#EAF0F8", border: "1.5px solid #DDD8CF",
+                            background: "#E3EBDD", border: "1.5px solid #D9CCB6",
                             display: "flex", alignItems: "center", justifyContent: "center",
-                            fontSize: 11, fontWeight: 700, color: "#1E2E4A" }}>
+                            fontSize: 11, fontWeight: 700, color: "#2F5233" }}>
                             {p.name.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase()}
                           </div>
                           <div style={{ minWidth: 0 }}>
-                            <p style={{ fontSize: 12, fontWeight: 600, color: "#1A1612", margin: 0,
+                            <p style={{ fontSize: 12, fontWeight: 600, color: "#2A2118", margin: 0,
                               overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</p>
                             {p.space && (
-                              <p style={{ fontSize: 10, color: "#9A9084", margin: 0,
+                              <p style={{ fontSize: 10, color: "#6B5D4F", margin: 0,
                                 overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.space}</p>
                             )}
                           </div>
@@ -1084,11 +1085,11 @@ export default function HomePage() {
 
                     {/* evidencia */}
                     {top && (
-                      <p style={{ fontSize: 11, color: "#6B6258", margin: "0 0 10px" }}>
+                      <p style={{ fontSize: 11, color: "#6B5D4F", margin: "0 0 10px" }}>
                         {EVIDENCE[top.type] || top.type}:&nbsp;
-                        <span style={{ color: "#C8882A", fontWeight: 600 }}>{top.detail}</span>
+                        <span style={{ color: "#7A5A10", fontWeight: 600 }}>{top.detail}</span>
                         {s.evidence.length > 1 && (
-                          <span style={{ color: "rgba(200,136,42,0.45)" }}> +{s.evidence.length - 1} más</span>
+                          <span style={{ color: "rgba(122,90,16,0.45)" }}> +{s.evidence.length - 1} más</span>
                         )}
                       </p>
                     )}
@@ -1097,15 +1098,15 @@ export default function HomePage() {
                     <div style={{ display: "flex", gap: 7 }}>
                       <Link href={`/sugerencias/${s.id}`} style={{ textDecoration: "none", flex: 1 }}>
                         <button style={{ width: "100%", padding: "10px 0", borderRadius: 50, cursor: "pointer",
-                          background: "#1E2E4A", border: "none",
+                          background: "#2F5233", border: "none",
                           color: "#fff", fontSize: 12, fontWeight: 700 }}>
                           Ver y confirmar
                         </button>
                       </Link>
                       <button onClick={() => handleDismiss(s.id)}
                         style={{ padding: "8px 12px", borderRadius: 10, cursor: "pointer",
-                          background: "#F4F1EC", border: "1px solid #DDD8CF",
-                          color: "#9A9084", fontSize: 12, fontWeight: 600 }}>
+                          background: "#FBF6EE", border: "1px solid #D9CCB6",
+                          color: "#6B5D4F", fontSize: 12, fontWeight: 600 }}>
                         No es familia
                       </button>
                     </div>
@@ -1126,13 +1127,13 @@ export default function HomePage() {
         <div style={{ padding:"14px 14px 0" }}>
           <div style={{ ...linCard(), padding:"16px" }}>
             <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.12em",
-              textTransform:"uppercase", color:"#7A8C6E", marginBottom:10 }}>
+              textTransform:"uppercase", color:"#2F5233", marginBottom:10 }}>
               🕊️ Memoria familiar
             </div>
-            <p style={{ fontSize:14, color:"#3D3428", fontStyle:"italic",
+            <p style={{ fontSize:14, color:"#2A2118", fontStyle:"normal",
               margin:"0 0 14px", lineHeight:1.6, fontFamily:"var(--font-fraunces), Georgia, serif" }}>
               ¿Quién sabe cuántos años tendría hoy{" "}
-              <span style={{ color:"#1E2E4A", fontWeight:700 }}>
+              <span style={{ color:"#2F5233", fontWeight:700 }}>
                 {dailyDeceasedQuestion.first_name} {dailyDeceasedQuestion.last_name}
               </span>?
             </p>
@@ -1140,7 +1141,7 @@ export default function HomePage() {
               <div style={{
                 display:"inline-flex", alignItems:"center", justifyContent:"center", gap:6,
                 padding:"10px 20px", borderRadius:50,
-                background:"#1E2E4A",
+                background:"#2F5233",
                 color:"#fff", fontSize:12, fontWeight:600,
               }}>
                 Compartir lo que sabes →
@@ -1159,19 +1160,19 @@ export default function HomePage() {
           }}>
             <span style={{ fontSize:28, flexShrink:0 }}>👥</span>
             <div style={{ flex:1 }}>
-              <p style={{ fontSize:13, fontWeight:700, color:"#1A1612", margin:"0 0 2px" }}>
+              <p style={{ fontSize:13, fontWeight:700, color:"#2A2118", margin:"0 0 2px" }}>
                 Invita a más familiares
               </p>
-              <p style={{ fontSize:10, color:"#9A9084", margin:0 }}>
+              <p style={{ fontSize:10, color:"#6B5D4F", margin:0 }}>
                 Tu linaje tiene {visibleCount} personas — crécelo
               </p>
             </div>
             <Link href="/invitar" style={{ textDecoration:"none", flexShrink:0 }}>
               <div style={{
                 padding:"9px 18px", borderRadius:50,
-                background:"#C8882A",
+                background:"#7A5A10",
                 color:"#fff", fontSize:12, fontWeight:700,
-                boxShadow:"0 4px 10px rgba(200,136,42,0.25)",
+                boxShadow:"0 4px 10px rgba(122,90,16,0.25)",
               }}>
                 Invitar
               </div>

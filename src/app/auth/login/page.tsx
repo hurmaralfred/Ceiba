@@ -135,46 +135,16 @@ export default function LoginPage() {
         {/* Logo */}
         <Link href="/" className="flex flex-col items-center gap-1 mb-10 group">
           <div className="relative">
-            <div className="w-16 h-16 rounded-2xl flex items-center justify-center transition-shadow"
-              style={{ background: "linear-gradient(135deg,#12082a 0%,#0a0520 100%)", boxShadow: "0 0 40px rgba(212,175,55,0.35), inset 0 1px 0 rgba(212,175,55,0.3)" }}>
-              {/* Galaxy icon */}
-              <svg width="38" height="38" viewBox="0 0 38 38" fill="none">
-                {/* Outer orbital ring */}
-                <ellipse cx="19" cy="19" rx="15" ry="5.5" stroke="rgba(212,175,55,0.45)" strokeWidth="0.8" fill="none" transform="rotate(-25 19 19)"/>
-                {/* Spiral arm 1 */}
-                <path d="M19 19 Q24 13 28 10" stroke="rgba(212,175,55,0.65)" strokeWidth="1.2" strokeLinecap="round" fill="none"/>
-                <path d="M19 19 Q14 25 10 28" stroke="rgba(212,175,55,0.55)" strokeWidth="1" strokeLinecap="round" fill="none"/>
-                {/* Spiral arm 2 */}
-                <path d="M19 19 Q13 14 10 10" stroke="rgba(212,175,55,0.5)" strokeWidth="0.9" strokeLinecap="round" fill="none"/>
-                <path d="M19 19 Q25 24 28 28" stroke="rgba(212,175,55,0.45)" strokeWidth="0.8" strokeLinecap="round" fill="none"/>
-                {/* Star cluster dots along arms */}
-                <circle cx="25" cy="12" r="1.2" fill="rgba(255,240,180,0.9)"/>
-                <circle cx="28" cy="10" r="0.7" fill="rgba(255,240,180,0.7)"/>
-                <circle cx="12" cy="26" r="1.1" fill="rgba(255,240,180,0.8)"/>
-                <circle cx="10" cy="28" r="0.6" fill="rgba(255,240,180,0.6)"/>
-                <circle cx="12" cy="13" r="0.9" fill="rgba(212,175,55,0.7)"/>
-                <circle cx="26" cy="25" r="0.8" fill="rgba(212,175,55,0.65)"/>
-                {/* Field stars */}
-                <circle cx="8"  cy="8"  r="0.5" fill="white" opacity="0.5"/>
-                <circle cx="30" cy="7"  r="0.5" fill="white" opacity="0.4"/>
-                <circle cx="7"  cy="30" r="0.5" fill="white" opacity="0.45"/>
-                <circle cx="31" cy="31" r="0.4" fill="white" opacity="0.4"/>
-                <circle cx="15" cy="7"  r="0.4" fill="white" opacity="0.35"/>
-                <circle cx="30" cy="22" r="0.4" fill="white" opacity="0.35"/>
-                {/* Central 4-point star */}
-                <path d="M19 14.5 L19.7 18.3 L19 14.5 Z" fill="rgba(255,245,200,0)" />
-                <path d="M19 14 L19.5 18.5 L19 24 L18.5 18.5 Z" fill="rgba(255,245,200,0.9)"/>
-                <path d="M14 19 L18.5 19.5 L24 19 L18.5 18.5 Z" fill="rgba(255,245,200,0.9)"/>
-                <path d="M15.5 15.5 L18.8 18.8 L22.5 22.5 L18.8 18.8 Z" fill="rgba(255,245,200,0.45)"/>
-                <path d="M22.5 15.5 L18.8 18.8 L15.5 22.5 L18.8 18.8 Z" fill="rgba(255,245,200,0.45)"/>
-                {/* Core glow */}
-                <circle cx="19" cy="19" r="2.5" fill="rgba(255,245,200,0.95)"/>
-                <circle cx="19" cy="19" r="1.2" fill="white"/>
-              </svg>
-            </div>
-            <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-earth-400 border-2 border-ceiba-950 animate-pulse" />
+            <img
+              src="/icons/icon-192.png"
+              alt=""
+              width={64}
+              height={64}
+              className="w-16 h-16 rounded-2xl"
+            />
+            <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-earth-300 border-2 border-ceiba-950" />
           </div>
-          <span className="font-display text-2xl font-bold text-white mt-2 tracking-tight">Ceiba</span>
+          <span className="font-display text-2xl font-semibold text-white mt-2 tracking-tight">Ceiba</span>
           <span className="text-earth-300 text-xs font-medium tracking-widest uppercase">Tu galaxia familiar</span>
         </Link>
 
@@ -272,12 +242,11 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-bold text-white transition-all active:scale-[0.98] disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-bold transition-all active:scale-[0.98] disabled:opacity-50"
                 style={{
-                  background: loading
-                    ? "rgba(168,79,47,0.5)"
-                    : "linear-gradient(135deg, #c1603a 0%, #a84f2f 100%)",
-                  boxShadow: loading ? "none" : "0 4px 24px rgba(193,96,58,0.4)",
+                    background: loading ? "rgba(143,191,140,0.45)" : "#8FBF8C",
+                    color: "#13200F",
+                    boxShadow: loading ? "none" : "0 4px 24px rgba(143,191,140,0.28)",
                 }}
               >
                 {loading ? "Entrando..." : <>Iniciar sesión <ArrowRight size={16} /></>}
